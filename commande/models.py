@@ -13,7 +13,7 @@ class EnumEtatCmd(models.Model):
         ('non_affectee', 'Non affectée'),
         ('affectee', 'Affectée'),
         ('en_cours_confirmation', 'En cours de confirmation'),
-        ('confirmee', 'Confirmée'),
+        ('confirmee', 'Confirmée '),
         ('erronnee', 'Erronée'),
         ('doublon', 'Doublon'),
     ]

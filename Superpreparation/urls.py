@@ -1,9 +1,13 @@
 from django.urls import path
+from django.shortcuts import redirect
 from . import views
 from .barre_recherche_globale import views as search_views
 
 app_name = 'Superpreparation'
 
+# Fonction de redirection pour l'ancienne URL
+def redirect_historique_envois(request):
+    return redirect('Superpreparation:historique_envois')
 
 urlpatterns = [
     path('', views.home_view, name='home'),
@@ -19,15 +23,15 @@ urlpatterns = [
 
    
     path('commandes-confirmees/', views.commandes_confirmees, name='commandes_confirmees'),
-     path('livrees-partiellement/', views.commandes_livrees_partiellement, name='commandes_livrees_partiellement'),
+    path('livrees-partiellement/', views.commandes_livrees_partiellement, name='commandes_livrees_partiellement'),
     path('retournees/', views.commandes_retournees, name='commandes_retournees'),
     path('profile/', views.profile_view, name='profile'),
     path('modifier-profile/', views.modifier_profile_view, name='modifier_profile'),
     path('changer-mot-de-passe/', views.changer_mot_de_passe_view, name='changer_mot_de_passe'),
     path('detail-prepa/<int:pk>/', views.detail_prepa, name='detail_prepa'),
-    # URLs supprimées - fonctionnalités maintenant gérées depuis "Suivi des Commandes Confirmées"
-    # path('etiquettes/', views.etiquette_view, name='etiquette'),
-    # path('etiquettes-articles/', views.etiquettes_articles_view, name='etiquettes_articles'),
+
+
+
     path('api/commande/<int:commande_id>/articles/', views.api_articles_commande, name='api_articles_commande'),
     path('api/commandes-confirmees/', views.api_commandes_confirmees, name='api_commandes_confirmees'),
     path('api/commande-info/<int:commande_id>/', views.api_commande_info, name='api_commande_info'),
@@ -37,7 +41,7 @@ urlpatterns = [
     path('commande/<int:commande_id>/diagnostiquer-compteur/', views.diagnostiquer_compteur, name='diagnostiquer_compteur'),
 
     path('api/commande/<int:commande_id>/produits/', views.api_commande_produits, name='api_commande_produits'),
-    # path('api/commande/<int:commande_id>/changer-etat/', views.api_changer_etat_preparation, name='api_changer_etat_preparation'), # Supprimée - plus nécessaire
+    # path('api/commande/<int:commande_id>/changer-etat/', views.api_changer_etat_preparation, name='api_changer_etat_preparation') # Supprimée - plus nécessaire
     path('api/articles-disponibles-prepa/', views.api_articles_disponibles_prepa, name='api_articles_disponibles_prepa'),
     path('api/commande/<int:commande_id>/panier/', views.api_panier_commande_prepa, name='api_panier_commande'),
     path('api/commande/<int:commande_id>/panier-modal/', views.api_panier_commande, name='api_panier_commande_modal'),
@@ -66,9 +70,13 @@ urlpatterns = [
     # Gestion des envois
     path('envois/', views.envois_view, name='envois'),
     path('envois/historique/', views.historique_envois_view, name='historique_envois'),
+    # Redirection pour l'ancienne URL
+    path('historique-envois/', redirect_historique_envois, name='historique_envois_redirect'),
     path('envois/creer-region/', views.creer_envoi_region, name='creer_envoi_region'),
     path('envois/cloturer/', views.cloturer_envoi, name='cloturer_envoi'),
     path('envois/<int:envoi_id>/export-excel/', views.export_commandes_envoi_excel, name='export_commandes_envoi_excel'),
+    path('envois/<int:envoi_id>/commandes/', views.commandes_envoi, name='commandes_envoi'),
+    path('envois/<int:envoi_id>/commandes-historique/', views.commandes_envoi_historique, name='commandes_envoi_historique'),
 
     # URLs pour la gestion de stock
     path('stock/articles/', views.liste_articles, name='liste_articles'),
@@ -81,10 +89,7 @@ urlpatterns = [
     path('stock/statistiques/', views.statistiques_stock, name='statistiques_stock'),
     path('stock/variantes/creer-ajax/', views.creer_variantes_ajax, name='creer_variantes_ajax'),
     
-    # === URLs SUPPRIMÉES : RÉPARTITION AUTOMATIQUE (DÉPLACÉES VERS ADMIN) ===
-    # path('repartition-automatique/', views.repartition_automatique, name='repartition_automatique'),
-    # path('repartition-commandes/', views.repartition_commandes, name='repartition_commandes'),
-    # path('details-region/', views.details_region_view, name='details_region'),
+
     
     # === NOUVELLES URLs : EXPORTS CONSOLIDÉS ===
     path('export/region/<str:region_name>/csv/', views.export_region_consolidee_csv, name='export_region_consolidee_csv'),

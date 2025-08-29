@@ -373,24 +373,13 @@ def confirmer_commande_ajax(request, commande_id):
             )
             print(f"✅ DEBUG: Nouvel état créé: Confirmée")
 
-            # Immédiatement basculer en file de préparation pour les superviseurs
-            try:
-                # Clore l'état Confirmée pour n'avoir qu'un état actif
-                nouvel_etat.date_fin = timezone.now()
-                nouvel_etat.save(update_fields=['date_fin'])
-
-                # Créer l'état "À imprimer" (état d'entrée pour la préparation)
-                enum_a_imprimer = EnumEtatCmd.objects.get(libelle='À imprimer')
-                EtatCommande.objects.create(
-                    commande=commande,
-                    enum_etat=enum_a_imprimer,
-                    # On n'assigne pas d'opérateur spécifique: visible à tous les superviseurs
-                    date_debut=timezone.now(),
-                    commentaire=f"Commande reçue de la confirmation par {operateur.nom_complet}"
-                )
-                print("📨 DEBUG: État 'À imprimer' créé pour file préparation (superviseurs)")
-            except EnumEtatCmd.DoesNotExist:
-                print("⚠️ DEBUG: État 'À imprimer' introuvable. La commande reste en 'Confirmée'.")
+            # L'état "Confirmée" reste actif (pas de date_fin définie)
+            # La commande sera visible dans la liste des commandes confirmées
+            print("✅ DEBUG: État 'Confirmée' créé et maintenu actif")
+            
+            # Note: L'état "Confirmée" reste ouvert pour permettre le suivi
+            # La transition vers "À imprimer" se fera manuellement par les superviseurs
+            # ou automatiquement lors de la prochaine étape du processus
             
             # Log des articles décrémernts
             print(f"📊 DEBUG: Résumé de la décrémentation:")
