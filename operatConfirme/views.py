@@ -2257,7 +2257,7 @@ def modifier_commande(request, commande_id):
             messages.error(request, f'Erreur lors de la modification : {str(e)}')
     
     # Récupérer toutes les villes pour la liste déroulante
-    villes = Ville.objects.select_related('region').order_by('region__nom_region', 'nom')
+    villes = Ville.objects.select_related('region').order_by('nom')
     
     context = {
         'commande': commande,
