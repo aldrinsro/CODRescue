@@ -8561,8 +8561,7 @@ def historique_envois_view(request):
         # Pour les envois clôturés, on compte TOUTES les commandes de la région
         # peu importe leur état actuel
         nb_commandes = Commande.objects.filter(
-            ville__region=envoi.region,
-            date_creation__lte=envoi.date_livraison_effective or envoi.date_creation
+            envoi=envoi
         ).count()
         
         # Mettre à jour seulement si le nombre a changé
@@ -8668,8 +8667,6 @@ def creer_envoi_region(request):
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
-
-
 @csrf_exempt
 @login_required
 def cloturer_envoi(request):
@@ -8754,8 +8751,6 @@ def cloturer_envoi(request):
         return JsonResponse({'success': False, 'message': 'Envoi non trouvé'}, status=404)
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
-
-
 
 @superviseur_preparation_required
 def rafraichir_articles_commande_prepa(request, commande_id):
@@ -8924,8 +8919,6 @@ def rafraichir_articles_commande_prepa(request, commande_id):
         import traceback
         traceback.print_exc()
         return JsonResponse({'error': f'Erreur interne: {str(e)}'}, status=500)
-
-
 
 @superviseur_preparation_required
 def ajouter_article_commande_prepa(request, commande_id):
@@ -9152,8 +9145,6 @@ def ajouter_article_commande_prepa(request, commande_id):
         print(f"❌ Traceback: {traceback.format_exc()}")
         return JsonResponse({'error': f'Erreur interne: {str(e)}'}, status=500)
 
-
-
 @superviseur_preparation_required
 def modifier_quantite_article_prepa(request, commande_id):
     """Modifier la quantité d'un article dans la commande en préparation"""
@@ -9236,8 +9227,6 @@ def modifier_quantite_article_prepa(request, commande_id):
     except Exception as e:
         return JsonResponse({'error': f'Erreur interne: {str(e)}'}, status=500)
 
-
-
 @superviseur_preparation_required
 def supprimer_article_commande_prepa(request, commande_id):
     """Supprimer un article de la commande en préparation"""
@@ -9312,16 +9301,6 @@ def supprimer_article_commande_prepa(request, commande_id):
     except Exception as e:
         return JsonResponse({'error': f'Erreur interne: {str(e)}'}, status=500)
 
-
-
-# === VUES DE RÉPARTITION SUPPRIMÉES (DÉPLACÉES VERS ADMIN) ===
-
-# Les vues de répartition ont été déplacées vers l'interface admin
-
-# car ce sont les administrateurs qui s'en occupent maintenant
-
-
-
 @superviseur_preparation_required
 def api_panier_commande_livraison(request, commande_id):
     """API pour récupérer le panier d'une commande pour les opérateurs de livraison"""
@@ -9360,8 +9339,6 @@ def api_panier_commande_livraison(request, commande_id):
         'paniers': paniers_data,
         'total_commande': float(commande.total_cmd)
     })
-
-
 
 @superviseur_preparation_required
 def api_articles_commande_livree_partiellement(request, commande_id):

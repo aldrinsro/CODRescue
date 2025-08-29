@@ -113,15 +113,7 @@ function showCommandesModal(data, numeroEnvoi) {
     
     // Afficher les informations de l'envoi dans le titre
     let titleText = `Commandes de l'envoi ${numeroEnvoi}`;
-    if (data.envoi) {
-        titleText += ` (${data.envoi.region})`;
-        if (data.envoi.date_creation) {
-            titleText += ` - Créé le ${data.envoi.date_creation}`;
-        }
-        if (data.envoi.date_cloture) {
-            titleText += ` - Clôturé le ${data.envoi.date_cloture}`;
-        }
-    }
+
     
     modalTitle.textContent = titleText;
     modalBody.innerHTML = generateCommandesHTML(data.commandes, data.envoi);
@@ -205,15 +197,7 @@ function generateCommandesHTML(commandes, envoiInfo = null) {
         }
     }
     
-    // Ajouter les statistiques par état
-    Object.entries(etatsCount).forEach(([etat, count]) => {
-        statsHTML += `
-            <div class="commande-stat">
-                <div class="commande-stat-value">${count}</div>
-                <div class="commande-stat-label">${etat}</div>
-            </div>
-        `;
-    });
+
     
     statsHTML += '</div>';
     
@@ -225,8 +209,7 @@ function generateCommandesHTML(commandes, envoiInfo = null) {
                 <div>Client</div>
                 <div>Téléphone</div>
                 <div>Ville</div>
-                <div>État</div>
-                <div>Total</div>
+                <div>Prix</div>
                 <div>Articles</div>
             </div>
     `;
@@ -260,13 +243,7 @@ function generateCommandesHTML(commandes, envoiInfo = null) {
                 <div>${commande.client?.nom || 'N/A'}</div>
                 <div>${commande.client?.numero_tel || 'N/A'}</div>
                 <div>${commande.ville?.nom_ville || 'N/A'}</div>
-                <div>
-                    <span class="commande-status ${statusClass}">
-                        <i class="${statusIcon}"></i>
-                        ${commande.etat_actuel?.libelle || 'Inconnu'}
-                    </span>
-                </div>
-                <div>${(commande.total_cmd || 0).toFixed(2)} €</div>
+                <div>${(commande.total_cmd || 0).toFixed(2)} Dhs</div>
                 <div>${articlesHTML}</div>
             </div>
         `;

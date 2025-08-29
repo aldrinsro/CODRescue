@@ -424,7 +424,7 @@ function generateCommandesHTML(commandes, regionNom) {
                 <div class="header-cell">Téléphone</div>
                 <div class="header-cell">Ville</div>
                 <div class="header-cell">Articles</div>
-                <div class="header-cell">Total</div>
+                <div class="header-cell">Prix</div>
                 <div class="header-cell">État</div>
             </div>
             
