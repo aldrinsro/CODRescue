@@ -1739,3 +1739,375 @@ def supprimer_variante(request, id):
             return JsonResponse({'success': False, 'error': f'Erreur lors de la suppression : {str(e)}'}, content_type='application/json')
         messages.error(request, f'Erreur lors de la suppression : {str(e)}')
         return redirect('article:liste')
+
+@login_required
+def gestion_couleurs_pointures(request):
+    """Page de gestion des couleurs, pointures, catégories et genres"""
+    from django.core.paginator import Paginator, EmptyPage, InvalidPage
+    from article.models import Couleur, Pointure, Categorie, Genre
+    
+    # Paramètres de pagination
+    items_per_page = request.GET.get('items_per_page', '10')
+    try:
+        items_per_page = int(items_per_page)
+    except ValueError:
+        items_per_page = 10
+    
+    # Recherche pour les couleurs
+    search_couleur = request.GET.get('search_couleur', '')
+    couleurs = Couleur.objects.all()
+    if search_couleur:
+        couleurs = couleurs.filter(
+            Q(nom__icontains=search_couleur) |
+            Q(description__icontains=search_couleur) |
+            Q(code_hex__icontains=search_couleur)
+        )
+    couleurs = couleurs.order_by('nom')
+    
+    # Pagination pour les couleurs
+    paginator_couleurs = Paginator(couleurs, items_per_page)
+    page_couleur = request.GET.get('page_couleur', 1)
+    try:
+        couleurs = paginator_couleurs.page(page_couleur)
+    except (ValueError, EmptyPage, InvalidPage):
+        couleurs = paginator_couleurs.page(1)
+    
+    # Recherche pour les pointures
+    search_pointure = request.GET.get('search_pointure', '')
+    pointures = Pointure.objects.all()
+    if search_pointure:
+        pointures = pointures.filter(
+            Q(pointure__icontains=search_pointure) |
+            Q(description__icontains=search_pointure)
+        )
+    pointures = pointures.order_by('ordre', 'pointure')
+    
+    # Pagination pour les pointures
+    paginator_pointures = Paginator(pointures, items_per_page)
+    page_pointure = request.GET.get('page_pointure', 1)
+    try:
+        pointures = paginator_pointures.page(page_pointure)
+    except (ValueError, EmptyPage, InvalidPage):
+        pointures = paginator_pointures.page(1)
+    
+    # Recherche pour les catégories
+    search_categorie = request.GET.get('search_categorie', '')
+    categories = Categorie.objects.all()
+    if search_categorie:
+        categories = categories.filter(
+            Q(nom__icontains=search_categorie) |
+            Q(description__icontains=search_categorie)
+        )
+    categories = categories.order_by('nom')
+    
+    # Pagination pour les catégories
+    paginator_categories = Paginator(categories, items_per_page)
+    page_categorie = request.GET.get('page_categorie', 1)
+    try:
+        categories = paginator_categories.page(page_categorie)
+    except (ValueError, EmptyPage, InvalidPage):
+        categories = paginator_categories.page(1)
+    
+    # Recherche pour les genres
+    search_genre = request.GET.get('search_genre', '')
+    genres = Genre.objects.all()
+    if search_genre:
+        genres = genres.filter(
+            Q(nom__icontains=search_genre) |
+            Q(description__icontains=search_genre)
+        )
+    genres = genres.order_by('nom')
+    
+    # Pagination pour les genres
+    paginator_genres = Paginator(genres, items_per_page)
+    page_genre = request.GET.get('page_genre', 1)
+    try:
+        genres = paginator_genres.page(page_genre)
+    except (ValueError, EmptyPage, InvalidPage):
+        genres = paginator_genres.page(1)
+    
+    context = {
+        'couleurs': couleurs,
+        'pointures': pointures,
+        'categories': categories,
+        'genres': genres,
+        'couleurs_count': Couleur.objects.count(),
+        'pointures_count': Pointure.objects.count(),
+        'categories_count': Categorie.objects.count(),
+        'genres_count': Genre.objects.count(),
+        'search_couleur': search_couleur,
+        'search_pointure': search_pointure,
+        'search_categorie': search_categorie,
+        'search_genre': search_genre,
+        'items_per_page': str(items_per_page),
+        'total_couleurs': paginator_couleurs.count,
+        'total_pointures': paginator_pointures.count,
+        'total_categories': paginator_categories.count,
+        'total_genres': paginator_genres.count,
+    }
+    
+    return render(request, 'article/gestion_couleurs_pointures.html', context)
+
+@login_required
+def creer_pointure(request):
+    """Créer une nouvelle pointure"""
+    if request.method == 'POST':
+        try:
+            pointure = request.POST.get('pointure')
+            ordre = request.POST.get('ordre', 0)
+            description = request.POST.get('description', '')
+            actif = request.POST.get('actif') == 'on'
+            
+            # Créer la pointure
+            Pointure.objects.create(
+                pointure=pointure,
+                ordre=ordre,
+                description=description,
+                actif=actif
+            )
+            
+            messages.success(request, f'Pointure "{pointure}" créée avec succès.')
+            return redirect('article:gestion_couleurs_pointures')
+            
+        except Exception as e:
+            messages.error(request, f'Erreur lors de la création : {str(e)}')
+            return redirect('article:gestion_couleurs_pointures')
+    
+    return redirect('article:gestion_couleurs_pointures')
+
+@login_required
+def modifier_pointure(request, pointure_id):
+    """Modifier une pointure existante"""
+    if request.method == 'POST':
+        try:
+            pointure_obj = get_object_or_404(Pointure, id=pointure_id)
+            
+            pointure_obj.pointure = request.POST.get('pointure')
+            pointure_obj.ordre = request.POST.get('ordre', 0)
+            pointure_obj.description = request.POST.get('description', '')
+            pointure_obj.actif = request.POST.get('actif') == 'on'
+            
+            pointure_obj.save()
+            
+            messages.success(request, f'Pointure "{pointure_obj.pointure}" modifiée avec succès.')
+            return redirect('article:gestion_couleurs_pointures')
+            
+        except Exception as e:
+            messages.error(request, f'Erreur lors de la modification : {str(e)}')
+            return redirect('article:gestion_couleurs_pointures')
+    
+    return redirect('article:gestion_couleurs_pointures')
+
+@login_required
+def supprimer_pointure(request, pointure_id):
+    """Supprimer une pointure"""
+    try:
+        pointure = get_object_or_404(Pointure, id=pointure_id)
+        nom_pointure = pointure.pointure
+        pointure.delete()
+        
+        messages.success(request, f'Pointure "{nom_pointure}" supprimée avec succès.')
+        return redirect('article:gestion_couleurs_pointures')
+        
+    except Exception as e:
+        messages.error(request, f'Erreur lors de la suppression : {str(e)}')
+        return redirect('article:gestion_couleurs_pointures')
+
+@login_required
+def creer_categorie(request):
+    """Créer une nouvelle catégorie"""
+    if request.method == 'POST':
+        try:
+            nom = request.POST.get('nom')
+            description = request.POST.get('description', '')
+            actif = request.POST.get('actif') == 'on'
+            
+            # Créer la catégorie
+            Categorie.objects.create(
+                nom=nom,
+                description=description,
+                actif=actif
+            )
+            
+            messages.success(request, f'Catégorie "{nom}" créée avec succès.')
+            return redirect('article:gestion_couleurs_pointures')
+            
+        except Exception as e:
+            messages.error(request, f'Erreur lors de la création : {str(e)}')
+            return redirect('article:gestion_couleurs_pointures')
+    
+    return redirect('article:gestion_couleurs_pointures')
+
+@login_required
+def modifier_categorie(request, categorie_id):
+    """Modifier une catégorie existante"""
+    if request.method == 'POST':
+        try:
+            categorie_obj = get_object_or_404(Categorie, id=categorie_id)
+            
+            categorie_obj.nom = request.POST.get('nom')
+            categorie_obj.description = request.POST.get('description', '')
+            categorie_obj.actif = request.POST.get('actif') == 'on'
+            
+            categorie_obj.save()
+            
+            messages.success(request, f'Catégorie "{categorie_obj.nom}" modifiée avec succès.')
+            return redirect('article:gestion_couleurs_pointures')
+            
+        except Exception as e:
+            messages.error(request, f'Erreur lors de la modification : {str(e)}')
+            return redirect('article:gestion_couleurs_pointures')
+    
+    return redirect('article:gestion_couleurs_pointures')
+
+@login_required
+def supprimer_categorie(request, categorie_id):
+    """Supprimer une catégorie"""
+    try:
+        categorie = get_object_or_404(Categorie, id=categorie_id)
+        nom_categorie = categorie.nom
+        categorie.delete()
+        
+        messages.success(request, f'Catégorie "{nom_categorie}" supprimée avec succès.')
+        return redirect('article:gestion_couleurs_pointures')
+        
+    except Exception as e:
+        messages.error(request, f'Erreur lors de la suppression : {str(e)}')
+        return redirect('article:gestion_couleurs_pointures')
+
+@login_required
+def creer_genre(request):
+    """Créer un nouveau genre"""
+    if request.method == 'POST':
+        try:
+            nom = request.POST.get('nom')
+            description = request.POST.get('description', '')
+            actif = request.POST.get('actif') == 'on'
+            
+            # Créer le genre
+            Genre.objects.create(
+                nom=nom,
+                description=description,
+                actif=actif
+            )
+            
+            messages.success(request, f'Genre "{nom}" créé avec succès.')
+            return redirect('article:gestion_couleurs_pointures')
+            
+        except Exception as e:
+            messages.error(request, f'Erreur lors de la création : {str(e)}')
+            return redirect('article:gestion_couleurs_pointures')
+    
+    return redirect('article:gestion_couleurs_pointures')
+
+@login_required
+def modifier_genre(request, genre_id):
+    """Modifier un genre existant"""
+    if request.method == 'POST':
+        try:
+            genre_obj = get_object_or_404(Genre, id=genre_id)
+            
+            genre_obj.nom = request.POST.get('nom')
+            genre_obj.description = request.POST.get('description', '')
+            genre_obj.actif = request.POST.get('actif') == 'on'
+            
+            genre_obj.save()
+            
+            messages.success(request, f'Genre "{genre_obj.nom}" modifié avec succès.')
+            return redirect('article:gestion_couleurs_pointures')
+            
+        except Exception as e:
+            messages.error(request, f'Erreur lors de la modification : {str(e)}')
+            return redirect('article:gestion_couleurs_pointures')
+    
+    return redirect('article:gestion_couleurs_pointures')
+
+@login_required
+def supprimer_genre(request, genre_id):
+    """Supprimer un genre"""
+    try:
+        genre = get_object_or_404(Genre, id=genre_id)
+        nom_genre = genre.nom
+        genre.delete()
+        
+        messages.success(request, f'Genre "{nom_genre}" supprimé avec succès.')
+        return redirect('article:gestion_couleurs_pointures')
+        
+    except Exception as e:
+        messages.error(request, f'Erreur lors de la suppression : {str(e)}')
+        return redirect('article:gestion_couleurs_pointures')
+    
+
+
+
+@login_required
+@require_POST
+def creer_couleur(request):
+    """Créer une nouvelle couleur"""
+    nom = request.POST.get('nom')
+    code_hex = request.POST.get('code_hex', '').strip()
+    description = request.POST.get('description', '').strip()
+    actif = request.POST.get('actif') == 'on'
+    
+    if nom:
+        if Couleur.objects.filter(nom__iexact=nom).exists():
+            messages.error(request, f'Une couleur avec le nom "{nom}" existe déjà.')
+        else:
+            Couleur.objects.create(
+                nom=nom,
+                code_hex=code_hex if code_hex else None,
+                description=description if description else None,
+                actif=actif
+            )
+            messages.success(request, f'La couleur "{nom}" a été créée avec succès.')
+    else:
+        messages.error(request, 'Le nom de la couleur est requis.')
+    
+    return redirect('article:gestion_couleurs_pointures')
+
+
+@login_required
+@require_POST
+def modifier_couleur(request, couleur_id):
+    """Modifier une couleur existante"""
+    couleur = get_object_or_404(Couleur, id=couleur_id)
+    nom = request.POST.get('nom')
+    code_hex = request.POST.get('code_hex', '').strip()
+    description = request.POST.get('description', '').strip()
+    actif = request.POST.get('actif') == 'on'
+    
+    if nom:
+        if Couleur.objects.filter(nom__iexact=nom).exclude(id=couleur_id).exists():
+            messages.error(request, f'Une couleur avec le nom "{nom}" existe déjà.')
+        else:
+            couleur.nom = nom
+            couleur.code_hex = code_hex if code_hex else None
+            couleur.description = description if description else None
+            couleur.actif = actif
+            couleur.save()
+            messages.success(request, f'La couleur a été modifiée en "{nom}".')
+    else:
+        messages.error(request, 'Le nom de la couleur est requis.')
+    
+    return redirect('article:gestion_couleurs_pointures')
+
+
+@login_required
+@require_POST
+def supprimer_couleur(request, couleur_id):
+    """Supprimer une couleur"""
+    couleur = get_object_or_404(Couleur, id=couleur_id)
+    nom = couleur.nom
+    
+    # Vérifier si la couleur est utilisée dans des variantes d'articles
+    variantes_utilisant_couleur = VarianteArticle.objects.filter(couleur=couleur).count()
+    
+    if variantes_utilisant_couleur > 0:
+        messages.error(request, f'Impossible de supprimer la couleur "{nom}" car elle est utilisée dans {variantes_utilisant_couleur} variante(s) d\'article(s).')
+    else:
+        couleur.delete()
+        messages.success(request, f'La couleur "{nom}" a été supprimée avec succès.')
+    
+    return redirect('article:gestion_couleurs_pointures')
+
+

@@ -1,7 +1,7 @@
 {% extends 'composant_generale/admin/base.html' %}
 {% load static %}
 
-{% block title %}Gestion des Couleurs & Pointures - Administration{% endblock %}
+{% block title %}Gestion des Couleurs, Pointures, Catégories & Genres - Articles{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -71,90 +71,6 @@
     .tab-content.active {
         display: block;
         animation: slideInUp 0.3s ease-out;
-    }
-
-    /* Search and filter styles */
-    .search-filter-container {
-        background: #f8f9fa;
-        border-bottom: 1px solid #e5e7eb;
-        padding: 1.5rem;
-    }
-
-    .search-input {
-        width: 100%;
-        padding: 0.75rem 1rem 0.75rem 2.5rem;
-        border: 2px solid #e5e7eb;
-        border-radius: 8px;
-        font-size: 0.875rem;
-        transition: all 0.3s ease;
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'%3E%3C/path%3E%3C/svg%3E");
-        background-repeat: no-repeat;
-        background-position: 0.75rem center;
-        background-size: 1rem;
-    }
-
-    .search-input:focus {
-        outline: none;
-        border-color: var(--admin-accent-color);
-        box-shadow: 0 0 0 3px rgba(102, 204, 204, 0.1);
-    }
-
-    /* Pagination styles */
-    .pagination-container {
-        background: white;
-        border-top: 1px solid #e5e7eb;
-        padding: 1rem 1.5rem;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 1rem;
-    }
-
-    .pagination-info {
-        font-size: 0.875rem;
-        color: #6b7280;
-    }
-
-    .pagination-controls {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .pagination-select {
-        padding: 0.5rem;
-        border: 1px solid #d1d5db;
-        border-radius: 6px;
-        font-size: 0.875rem;
-        background: white;
-    }
-
-    .pagination-button {
-        padding: 0.5rem 0.75rem;
-        border: 1px solid #d1d5db;
-        background: white;
-        color: #374151;
-        border-radius: 6px;
-        font-size: 0.875rem;
-        cursor: pointer;
-        transition: all 0.2s ease;
-    }
-
-    .pagination-button:hover:not(:disabled) {
-        background: #f3f4f6;
-        border-color: #9ca3af;
-    }
-
-    .pagination-button:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-    }
-
-    .pagination-button.active {
-        background: var(--admin-color);
-        color: white;
-        border-color: var(--admin-color);
     }
 
     /* Search and filter styles */
@@ -391,14 +307,14 @@
         <div>
             <h1 class="text-3xl font-bold flex items-center mb-2">
                 <i class="fas fa-palette mr-3" style="color: var(--admin-accent-color);"></i>
-                Gestion des Couleurs & Pointures
+                Gestion des Couleurs, Pointures, Catégories & Genres
             </h1>
-            <p style="color: var(--admin-accent-color);">Gérez les couleurs et pointures disponibles pour les articles</p>
+            <p style="color: var(--admin-accent-color);">Gérez les couleurs, pointures, catégories et genres disponibles pour les articles</p>
         </div>
     </div>
 
     <!-- Statistiques -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <!-- Total Couleurs -->
         <div class="group bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:shadow-2xl hover:scale-105 border border-gray-100 hover:border-blue-300 animate-slideInUp" style="animation-delay: 0.1s;">
             <div class="flex items-center justify-between">
@@ -428,6 +344,36 @@
                 </div>
             </div>
         </div>
+
+        <!-- Total Catégories -->
+        <div class="group bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:shadow-2xl hover:scale-105 border border-gray-100 hover:border-purple-300 animate-slideInUp" style="animation-delay: 0.3s;">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <div class="p-4 rounded-full bg-gradient-to-r from-purple-100 to-purple-200 text-purple-600 transition-all duration-300 group-hover:from-purple-500 group-hover:to-purple-600 group-hover:text-white group-hover:scale-110">
+                        <i class="fas fa-tags text-2xl"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-600 group-hover:text-gray-700 transition-colors duration-300">Total Catégories</p>
+                        <p class="text-3xl font-bold text-gray-900 transition-all duration-300 group-hover:text-purple-600">{{ categories_count }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Genres -->
+        <div class="group bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:shadow-2xl hover:scale-105 border border-gray-100 hover:border-orange-300 animate-slideInUp" style="animation-delay: 0.4s;">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <div class="p-4 rounded-full bg-gradient-to-r from-orange-100 to-orange-200 text-orange-600 transition-all duration-300 group-hover:from-orange-500 group-hover:to-orange-600 group-hover:text-white group-hover:scale-110">
+                        <i class="fas fa-users text-2xl"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-600 group-hover:text-gray-700 transition-colors duration-300">Total Genres</p>
+                        <p class="text-3xl font-bold text-gray-900 transition-all duration-300 group-hover:text-orange-600">{{ genres_count }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Système d'onglets -->
@@ -441,6 +387,14 @@
             <button class="tab-button" onclick="switchTab('pointures')">
                 <i class="fas fa-shoe-prints"></i>
                 Pointures ({{ pointures_count }})
+            </button>
+            <button class="tab-button" onclick="switchTab('categories')">
+                <i class="fas fa-tags"></i>
+                Catégories ({{ categories_count }})
+            </button>
+            <button class="tab-button" onclick="switchTab('genres')">
+                <i class="fas fa-users"></i>
+                Genres ({{ genres_count }})
             </button>
         </div>
 
@@ -688,6 +642,238 @@
             </div>
             {% endif %}
         </div>
+
+        <!-- Contenu de l'onglet Catégories -->
+        <div id="categories-tab" class="tab-content">
+            <!-- Barre de recherche et filtres -->
+            <div class="search-filter-container">
+                <div class="flex flex-col md:flex-row gap-4">
+                    <div class="flex-1">
+                        <input type="text" 
+                               id="searchCategorie" 
+                               class="search-input" 
+                               placeholder="Rechercher une catégorie par nom ou description..."
+                               value="{{ search_categorie }}"
+                               onkeyup="handleSearch('categorie', this.value)">
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-sm" onclick="openModal('categorie', 'add')">
+                            <i class="fas fa-plus mr-2"></i>Ajouter
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- En-tête de la section -->
+            <div class="p-6 border-b border-gray-200">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-bold text-gray-800 flex items-center">
+                        <i class="fas fa-tags mr-3" style="color: var(--admin-color);"></i>
+                        Liste des Catégories
+                    </h2>
+                </div>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50" style="background-color: var(--admin-color);">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Nom</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Description</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Statut</th>
+                            <th scope="col" class="relative px-6 py-3">
+                                <span class="sr-only text-white">Actions</span>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for categorie in categories %}
+                        <tr class="hover:bg-gray-50 transition-colors duration-200">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ categorie.nom }}</td>
+                            <td class="px-6 py-4 text-sm text-gray-500">
+                                {{ categorie.description|default:"-"|truncatechars:50 }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full {% if categorie.actif %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                                    {% if categorie.actif %}Actif{% else %}Inactif{% endif %}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <button class="text-indigo-600 hover:text-indigo-900 mr-3" onclick="openModal('categorie', 'edit', {{ categorie.id }}, '{{ categorie.nom }}', {nom: '{{ categorie.nom }}', description: '{{ categorie.description|default:""|escapejs }}', actif: {{ categorie.actif|lower }}})">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="text-red-600 hover:text-red-900" onclick="confirmDelete('categorie', {{ categorie.id }}, '{{ categorie.nom }}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="px-6 py-4 text-center text-gray-500">
+                                <i class="fas fa-info-circle mr-2"></i>
+                                {% if search_categorie %}
+                                    Aucune catégorie trouvée pour "{{ search_categorie }}"
+                                {% else %}
+                                    Aucune catégorie enregistrée
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination pour les catégories -->
+            {% if categories.has_other_pages %}
+            <div class="pagination-container">
+                <div class="pagination-info">
+                    Affichage de {{ categories.start_index }} à {{ categories.end_index }} sur {{ total_categories }} catégories
+                </div>
+                <div class="pagination-controls">
+                    <select class="pagination-select" onchange="changeItemsPerPage(this.value)">
+                        <option value="5" {% if items_per_page == '5' %}selected{% endif %}>5 par page</option>
+                        <option value="10" {% if items_per_page == '10' %}selected{% endif %}>10 par page</option>
+                        <option value="15" {% if items_per_page == '15' %}selected{% endif %}>15 par page</option>
+                        <option value="20" {% if items_per_page == '20' %}selected{% endif %}>20 par page</option>
+                    </select>
+                    
+                    {% if categories.has_previous %}
+                        <button class="pagination-button" onclick="goToPage('categorie', 1)">«</button>
+                        <button class="pagination-button" onclick="goToPage('categorie', {{ categories.previous_page_number }})">‹</button>
+                    {% endif %}
+                    
+                    {% for num in categories.paginator.page_range %}
+                        {% if categories.number == num %}
+                            <button class="pagination-button active">{{ num }}</button>
+                        {% elif num > categories.number|add:'-3' and num < categories.number|add:'3' %}
+                            <button class="pagination-button" onclick="goToPage('categorie', {{ num }})">{{ num }}</button>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if categories.has_next %}
+                        <button class="pagination-button" onclick="goToPage('categorie', {{ categories.next_page_number }})">›</button>
+                        <button class="pagination-button" onclick="goToPage('categorie', {{ categories.paginator.num_pages }})">»</button>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Contenu de l'onglet Genres -->
+        <div id="genres-tab" class="tab-content">
+            <!-- Barre de recherche et filtres -->
+            <div class="search-filter-container">
+                <div class="flex flex-col md:flex-row gap-4">
+                    <div class="flex-1">
+                        <input type="text" 
+                               id="searchGenre" 
+                               class="search-input" 
+                               placeholder="Rechercher un genre par nom ou description..."
+                               value="{{ search_genre }}"
+                               onkeyup="handleSearch('genre', this.value)">
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-sm" onclick="openModal('genre', 'add')">
+                            <i class="fas fa-plus mr-2"></i>Ajouter
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- En-tête de la section -->
+            <div class="p-6 border-b border-gray-200">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-bold text-gray-800 flex items-center">
+                        <i class="fas fa-users mr-3" style="color: var(--admin-color);"></i>
+                        Liste des Genres
+                    </h2>
+                </div>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50" style="background-color: var(--admin-color);">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Nom</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Description</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Statut</th>
+                            <th scope="col" class="relative px-6 py-3">
+                                <span class="sr-only text-white">Actions</span>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for genre in genres %}
+                        <tr class="hover:bg-gray-50 transition-colors duration-200">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ genre.nom }}</td>
+                            <td class="px-6 py-4 text-sm text-gray-500">
+                                {{ genre.description|default:"-"|truncatechars:50 }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full {% if genre.actif %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                                    {% if genre.actif %}Actif{% else %}Inactif{% endif %}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <button class="text-indigo-600 hover:text-indigo-900 mr-3" onclick="openModal('genre', 'edit', {{ genre.id }}, '{{ genre.nom }}', {nom: '{{ genre.nom }}', description: '{{ genre.description|default:""|escapejs }}', actif: {{ genre.actif|lower }}})">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="text-red-600 hover:text-red-900" onclick="confirmDelete('genre', {{ genre.id }}, '{{ genre.nom }}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="px-6 py-4 text-center text-gray-500">
+                                <i class="fas fa-info-circle mr-2"></i>
+                                {% if search_genre %}
+                                    Aucun genre trouvé pour "{{ search_genre }}"
+                                {% else %}
+                                    Aucun genre enregistré
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination pour les genres -->
+            {% if genres.has_other_pages %}
+            <div class="pagination-container">
+                <div class="pagination-info">
+                    Affichage de {{ genres.start_index }} à {{ genres.end_index }} sur {{ total_genres }} genres
+                </div>
+                <div class="pagination-controls">
+                    <select class="pagination-select" onchange="changeItemsPerPage(this.value)">
+                        <option value="5" {% if items_per_page == '5' %}selected{% endif %}>5 par page</option>
+                        <option value="10" {% if items_per_page == '10' %}selected{% endif %}>10 par page</option>
+                        <option value="15" {% if items_per_page == '15' %}selected{% endif %}>15 par page</option>
+                        <option value="20" {% if items_per_page == '20' %}selected{% endif %}>20 par page</option>
+                    </select>
+                    
+                    {% if genres.has_previous %}
+                        <button class="pagination-button" onclick="goToPage('genre', 1)">«</button>
+                        <button class="pagination-button" onclick="goToPage('genre', {{ genres.previous_page_number }})">‹</button>
+                    {% endif %}
+                    
+                    {% for num in genres.paginator.page_range %}
+                        {% if genres.number == num %}
+                            <button class="pagination-button active">{{ num }}</button>
+                        {% elif num > genres.number|add:'-3' and num < genres.number|add:'3' %}
+                            <button class="pagination-button" onclick="goToPage('genre', {{ num }})">{{ num }}</button>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if genres.has_next %}
+                        <button class="pagination-button" onclick="goToPage('genre', {{ genres.next_page_number }})">›</button>
+                        <button class="pagination-button" onclick="goToPage('genre', {{ genres.paginator.num_pages }})">»</button>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
     </div>
 </div>
 
@@ -763,6 +949,68 @@
     </div>
 </div>
 
+<!-- Modal pour ajouter/modifier une catégorie -->
+<div id="categorieModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title" id="categorieModalTitle">Ajouter une catégorie</h3>
+            <span class="close" onclick="closeModal('categorie')">&times;</span>
+        </div>
+        <form id="categorieForm" method="POST">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="categorieNom" class="form-label">Nom de la catégorie *</label>
+                <input type="text" class="form-control" id="categorieNom" name="nom" required>
+            </div>
+            <div class="form-group">
+                <label for="categorieDescription" class="form-label">Description</label>
+                <textarea class="form-control" id="categorieDescription" name="description" rows="3" placeholder="Description optionnelle de la catégorie"></textarea>
+            </div>
+            <div class="form-group">
+                <div class="flex items-center">
+                    <input type="checkbox" id="categorieActif" name="actif" class="mr-2" checked>
+                    <label for="categorieActif" class="form-label mb-0">Actif</label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="closeModal('categorie')">Annuler</button>
+                <button type="submit" class="btn-primary">Enregistrer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal pour ajouter/modifier un genre -->
+<div id="genreModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title" id="genreModalTitle">Ajouter un genre</h3>
+            <span class="close" onclick="closeModal('genre')">&times;</span>
+        </div>
+        <form id="genreForm" method="POST">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="genreNom" class="form-label">Nom du genre *</label>
+                <input type="text" class="form-control" id="genreNom" name="nom" required>
+            </div>
+            <div class="form-group">
+                <label for="genreDescription" class="form-label">Description</label>
+                <textarea class="form-control" id="genreDescription" name="description" rows="3" placeholder="Description optionnelle du genre"></textarea>
+            </div>
+            <div class="form-group">
+                <div class="flex items-center">
+                    <input type="checkbox" id="genreActif" name="actif" class="mr-2" checked>
+                    <label for="genreActif" class="form-label mb-0">Actif</label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="closeModal('genre')">Annuler</button>
+                <button type="submit" class="btn-primary">Enregistrer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- Formulaire de suppression caché -->
 <form id="deleteForm" method="POST" style="display: none;">
     {% csrf_token %}
@@ -814,6 +1062,8 @@
         currentUrl.searchParams.set('items_per_page', value);
         currentUrl.searchParams.set('page_couleur', '1');
         currentUrl.searchParams.set('page_pointure', '1');
+        currentUrl.searchParams.set('page_categorie', '1');
+        currentUrl.searchParams.set('page_genre', '1');
         window.location.href = currentUrl.toString();
     }
 
@@ -823,38 +1073,62 @@
         const form = document.getElementById(type + 'Form');
         
         if (action === 'add') {
-            title.textContent = `Ajouter une ${type}`;
+            title.textContent = `Ajouter ${type === 'couleur' ? 'une couleur' : type === 'pointure' ? 'une pointure' : type === 'categorie' ? 'une catégorie' : 'un genre'}`;
             if (type === 'couleur') {
-                form.action = "{% url 'app_admin:creer_couleur' %}";
+                form.action = "{% url 'article:creer_couleur' %}";
                 // Reset tous les champs
                 document.getElementById('couleurNom').value = '';
                 document.getElementById('couleurCodeHex').value = '';
                 document.getElementById('couleurDescription').value = '';
                 document.getElementById('couleurActif').checked = true;
             } else if (type === 'pointure') {
-                form.action = "{% url 'app_admin:creer_pointure' %}";
+                form.action = "{% url 'article:creer_pointure' %}";
                 // Reset tous les champs
                 document.getElementById('pointureNom').value = '';
                 document.getElementById('pointureOrdre').value = '0';
                 document.getElementById('pointureDescription').value = '';
                 document.getElementById('pointureActif').checked = true;
+            } else if (type === 'categorie') {
+                form.action = "{% url 'article:creer_categorie' %}";
+                // Reset tous les champs
+                document.getElementById('categorieNom').value = '';
+                document.getElementById('categorieDescription').value = '';
+                document.getElementById('categorieActif').checked = true;
+            } else if (type === 'genre') {
+                form.action = "{% url 'article:creer_genre' %}";
+                // Reset tous les champs
+                document.getElementById('genreNom').value = '';
+                document.getElementById('genreDescription').value = '';
+                document.getElementById('genreActif').checked = true;
             }
         } else if (action === 'edit') {
-            title.textContent = `Modifier la ${type}`;
+            title.textContent = `Modifier ${type === 'couleur' ? 'la couleur' : type === 'pointure' ? 'la pointure' : type === 'categorie' ? 'la catégorie' : 'le genre'}: ${nom}`;
             if (type === 'couleur') {
-                form.action = "{% url 'app_admin:modifier_couleur' 0 %}".replace('0', id);
+                form.action = "{% url 'article:modifier_couleur' 0 %}".replace('0', id);
                 // Remplir les champs avec les données existantes
                 document.getElementById('couleurNom').value = data.nom || '';
                 document.getElementById('couleurCodeHex').value = data.code_hex || '';
                 document.getElementById('couleurDescription').value = data.description || '';
                 document.getElementById('couleurActif').checked = data.actif !== false;
             } else if (type === 'pointure') {
-                form.action = "{% url 'app_admin:modifier_pointure' 0 %}".replace('0', id);
+                form.action = "{% url 'article:modifier_pointure' 0 %}".replace('0', id);
                 // Remplir les champs avec les données existantes
                 document.getElementById('pointureNom').value = data.pointure || '';
                 document.getElementById('pointureOrdre').value = data.ordre || '0';
                 document.getElementById('pointureDescription').value = data.description || '';
                 document.getElementById('pointureActif').checked = data.actif !== false;
+            } else if (type === 'categorie') {
+                form.action = "{% url 'article:modifier_categorie' 0 %}".replace('0', id);
+                // Remplir les champs avec les données existantes
+                document.getElementById('categorieNom').value = data.nom || '';
+                document.getElementById('categorieDescription').value = data.description || '';
+                document.getElementById('categorieActif').checked = data.actif !== false;
+            } else if (type === 'genre') {
+                form.action = "{% url 'article:modifier_genre' 0 %}".replace('0', id);
+                // Remplir les champs avec les données existantes
+                document.getElementById('genreNom').value = data.nom || '';
+                document.getElementById('genreDescription').value = data.description || '';
+                document.getElementById('genreActif').checked = data.actif !== false;
             }
         }
         
@@ -862,8 +1136,12 @@
         // Focus sur le premier champ
         if (type === 'couleur') {
             document.getElementById('couleurNom').focus();
-        } else {
+        } else if (type === 'pointure') {
             document.getElementById('pointureNom').focus();
+        } else if (type === 'categorie') {
+            document.getElementById('categorieNom').focus();
+        } else if (type === 'genre') {
+            document.getElementById('genreNom').focus();
         }
     }
     
@@ -873,12 +1151,16 @@
     }
     
     function confirmDelete(type, id, nom) {
-        if (confirm(`Êtes-vous sûr de vouloir supprimer la ${type} "${nom}" ?`)) {
+        if (confirm(`Êtes-vous sûr de vouloir supprimer ${type === 'couleur' ? 'la couleur' : type === 'pointure' ? 'la pointure' : type === 'categorie' ? 'la catégorie' : 'le genre'} "${nom}" ?`)) {
             const form = document.getElementById('deleteForm');
             if (type === 'couleur') {
-                form.action = "{% url 'app_admin:supprimer_couleur' 0 %}".replace('0', id);
+                form.action = "{% url 'article:supprimer_couleur' 0 %}".replace('0', id);
             } else if (type === 'pointure') {
-                form.action = "{% url 'app_admin:supprimer_pointure' 0 %}".replace('0', id);
+                form.action = "{% url 'article:supprimer_pointure' 0 %}".replace('0', id);
+            } else if (type === 'categorie') {
+                form.action = "{% url 'article:supprimer_categorie' 0 %}".replace('0', id);
+            } else if (type === 'genre') {
+                form.action = "{% url 'article:supprimer_genre' 0 %}".replace('0', id);
             }
             form.submit();
         }
@@ -886,22 +1168,25 @@
     
     // Fermer les modals en cliquant à l'extérieur
     window.onclick = function(event) {
-        const couleurModal = document.getElementById('couleurModal');
-        const pointureModal = document.getElementById('pointureModal');
-        
-        if (event.target === couleurModal) {
-            closeModal('couleur');
-        }
-        if (event.target === pointureModal) {
-            closeModal('pointure');
-        }
+        const modals = ['couleur', 'pointure', 'categorie', 'genre'];
+        modals.forEach(type => {
+            const modal = document.getElementById(type + 'Modal');
+            if (event.target === modal) {
+                closeModal(type);
+            }
+        });
     }
     
     // Fermer les modals avec la touche Escape
     document.addEventListener('keydown', function(event) {
         if (event.key === 'Escape') {
-            closeModal('couleur');
-            closeModal('pointure');
+            const modals = ['couleur', 'pointure', 'categorie', 'genre'];
+            modals.forEach(type => {
+                const modal = document.getElementById(type + 'Modal');
+                if (modal.style.display === 'block') {
+                    closeModal(type);
+                }
+            });
         }
     });
 </script>

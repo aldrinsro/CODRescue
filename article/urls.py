@@ -17,9 +17,7 @@ urlpatterns = [
     path('variantes/', views.liste_variantes, name='liste_variantes'),
     path('variantes/creer-ajax/', views.creer_variantes_ajax, name='creer_variantes_ajax'),
     path('variantes/supprimer/<int:id>/', views.supprimer_variante, name='supprimer_variante'),
-    #path('variantes/creer/', views.creer_variante, name='creer_variante'),
-    #path('variantes/<int:id>/', views.detail_variante, name='detail_variante'),
-    #path('variantes/modifier/<int:id>/', views.modifier_variante, name='modifier_variante'),
+
     
     # Filtres par catégorie
     path('categorie/<str:categorie>/', views.articles_par_categorie, name='par_categorie'),
@@ -42,5 +40,23 @@ urlpatterns = [
     path('appliquer-liquidation/<int:id>/', views.appliquer_liquidation, name='appliquer_liquidation'),
     path('reinitialiser-prix/<int:id>/', views.reinitialiser_prix, name='reinitialiser_prix'),
     
+    # URLs pour la gestion des couleurs et pointures
+    path('gestion-couleurs-pointures/', views.gestion_couleurs_pointures, name='gestion_couleurs_pointures'),
+    path('pointures/creer/', views.creer_pointure, name='creer_pointure'),
+    path('pointures/modifier/<int:pointure_id>/', views.modifier_pointure, name='modifier_pointure'),
+    path('pointures/supprimer/<int:pointure_id>/', views.supprimer_pointure, name='supprimer_pointure'),
 
+    path('gestion-articles/couleurs/creer/', views.creer_couleur, name='creer_couleur'),
+    path('gestion-articles/couleurs/modifier/<int:couleur_id>/', views.modifier_couleur, name='modifier_couleur'),
+    path('gestion-articles/couleurs/supprimer/<int:couleur_id>/', views.supprimer_couleur, name='supprimer_couleur'),
+    
+    # URLs pour la gestion des catégories
+    path('categories/creer/', views.creer_categorie, name='creer_categorie'),
+    path('categories/modifier/<int:categorie_id>/', views.modifier_categorie, name='modifier_categorie'),
+    path('categories/supprimer/<int:categorie_id>/', views.supprimer_categorie, name='supprimer_categorie'),
+    
+    # URLs pour la gestion des genres
+    path('genres/creer/', views.creer_genre, name='creer_genre'),
+    path('genres/modifier/<int:genre_id>/', views.modifier_genre, name='modifier_genre'),
+    path('genres/supprimer/<int:genre_id>/', views.supprimer_genre, name='supprimer_genre'),
 ] 
