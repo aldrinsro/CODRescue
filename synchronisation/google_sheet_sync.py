@@ -875,15 +875,7 @@ class GoogleSheetSync:
                 # FORCER LA VÉRIFICATION ET L'INDEXATION
                 self._log(f"🔄 === VÉRIFICATION ET INDEXATION ===")
                 
-                # 1. Forcer la synchronisation de la base de données
-                connection.commit()
-                self._log(f"✅ Transaction commit forcé")
-                
-                # 2. Rafraîchir la commande depuis la base
-                commande.refresh_from_db()
-                self._log(f"✅ Commande rafraîchie depuis la base")
-                
-                # 3. Vérifier que l'état actuel est bien mis à jour
+                # Vérifier que l'état actuel est bien mis à jour
                 etat_actuel_apres = commande.etat_actuel
                 if etat_actuel_apres:
                     self._log(f"✅ Vérification réussie: État actuel après création: '{etat_actuel_apres.enum_etat.libelle}'")
@@ -893,7 +885,7 @@ class GoogleSheetSync:
                 else:
                     self._log(f"❌ PROBLÈME: Aucun état actuel après création!", "error")
                     
-                    # 4. Essayer de récupérer l'état créé manuellement
+                    # Essayer de récupérer l'état créé manuellement
                     self._log(f"🔍 Tentative de récupération manuelle...")
                     etat_test = EtatCommande.objects.filter(commande=commande).order_by('-date_debut').first()
                     if etat_test:
@@ -901,7 +893,7 @@ class GoogleSheetSync:
                         self._log(f"   📋 Date début: {etat_test.date_debut}")
                         self._log(f"   📋 Date fin: {etat_test.date_fin}")
                         
-                        # 5. Vérifier la relation dans la base
+                        # Vérifier la relation dans la base
                         self._log(f"🔍 Vérification de la relation dans la base...")
                         from django.db import connection
                         with connection.cursor() as cursor:
@@ -922,7 +914,7 @@ class GoogleSheetSync:
                     else:
                         self._log(f"🔍 Aucun état trouvé pour la commande {commande.num_cmd}", "error")
                 
-                # 6. Vérification finale
+                # Vérification finale
                 self._log(f"🔄 === VÉRIFICATION FINALE ===")
                 commande_finale = Commande.objects.get(id_yz=commande.id_yz)
                 etat_final = commande_finale.etat_actuel
@@ -1077,7 +1069,9 @@ class GoogleSheetSync:
                 print(f"🔄 Première synchronisation: traitement de toutes les lignes")
             
             # Filtrer les lignes à traiter selon la synchronisation incrémentale
-            rows_to_process = rows[start_row - 1:] if start_row > 1 else rows
+            # Correspondance: index 0 de 'rows' == ligne 2 de la feuille
+            start_index = (start_row - 2) if start_row > 2 else 0
+            rows_to_process = rows[start_index:]
             print(f"📊 Lignes à traiter: {len(rows_to_process)} (sur {len(rows)} total)")
             
             # Afficher les premiers en-têtes pour vérification
@@ -1097,40 +1091,47 @@ class GoogleSheetSync:
             print(f"🚀 === DÉBUT TRAITEMENT LIGNES ===")
             print(f"📈 Total lignes à traiter: {len(rows_to_process)}")
             
-            # Traiter chaque ligne
-            for i, row in enumerate(rows_to_process, start_row + 1):  # Commencer à start_row + 1 car start_row est 1-indexed
+            # Traiter chaque ligne (i = numéro réel de la ligne de la feuille)
+            for i, row in enumerate(rows_to_process, max(start_row, 2)):
                 print(f"\n📝 === TRAITEMENT LIGNE {i} ===")
-                
-                # Vérifier si la ligne est vide
-                if not any(cell.strip() for cell in row if cell):
-                    print(f"⚠️ Ligne {i} ignorée: ligne complètement vide")
-                    self._log(f"Ligne {i} ignorée : ligne complètement vide")
-                    self.skipped_rows += 1
-                    continue
-                    
-                if len(row) == len(headers):  # Vérifier que la ligne a le bon nombre de colonnes
-                    print(f"✅ Ligne {i} valide: {len(row)} colonnes vs {len(headers)} en-têtes")
-                    print(f"🔍 Aperçu: {dict(zip(headers[:3], row[:3]))}...")
-                    
-                    success = self.process_row(row, headers)
-                    if success:
-                        print(f"✅ Ligne {i} traitée avec succès")
-                        self._log(f"Ligne {i} traitée avec succès")
-                        self.processed_rows += 1
-                        
-                        # Mettre à jour la dernière ligne traitée pour la synchronisation incrémentale
-                        self.sheet_config.last_processed_row = i
-                        self.sheet_config.save(update_fields=['last_processed_row'])
-                        print(f"📍 Dernière ligne traitée mise à jour: {i}")
-                    else:
-                        print(f"❌ Échec traitement ligne {i}")
-                        self._log(f"Échec traitement ligne {i}")
+
+                try:
+                    # Vérifier si la ligne est vide
+                    if not any(cell.strip() for cell in row if cell):
+                        print(f"⚠️ Ligne {i} ignorée: ligne complètement vide")
+                        self._log(f"Ligne {i} ignorée : ligne complètement vide")
                         self.skipped_rows += 1
-                else:
-                    error_msg = f"❌ Ligne {i} ignorée: nombre de colonnes incorrect ({len(row)} vs {len(headers)})"
-                    print(error_msg)
-                    self._log(error_msg, "error")
+                    elif len(row) == len(headers):  # Vérifier que la ligne a le bon nombre de colonnes
+                        print(f"✅ Ligne {i} valide: {len(row)} colonnes vs {len(headers)} en-têtes")
+                        print(f"🔍 Aperçu: {dict(zip(headers[:3], row[:3]))}...")
+
+                        # Isolation transactionnelle par ligne pour éviter de bloquer les suivantes
+                        from django.db import transaction as dj_transaction
+                        with dj_transaction.atomic():
+                            success = self.process_row(row, headers)
+
+                        if success:
+                            print(f"✅ Ligne {i} traitée avec succès")
+                            self._log(f"Ligne {i} traitée avec succès")
+                            self.processed_rows += 1
+                        else:
+                            print(f"❌ Échec traitement ligne {i}")
+                            self._log(f"Échec traitement ligne {i}")
+                            self.skipped_rows += 1
+                    else:
+                        error_msg = f"❌ Ligne {i} ignorée: nombre de colonnes incorrect ({len(row)} vs {len(headers)})"
+                        print(error_msg)
+                        self._log(error_msg, "error")
+                        self.skipped_rows += 1
+                except Exception as row_error:
+                    print(f"💥 Exception inattendue lors du traitement de la ligne {i}: {row_error}")
+                    self._log(f"Exception inattendue ligne {i}: {row_error}", "error")
                     self.skipped_rows += 1
+                finally:
+                    # Toujours avancer le curseur d'incrémental pour ne pas bloquer les nouvelles commandes
+                    self.sheet_config.last_processed_row = i
+                    self.sheet_config.save(update_fields=['last_processed_row'])
+                    print(f"📍 Dernière ligne traitée mise à jour: {i}")
             
             # Marquer la fin de la synchronisation
             self.end_time = timezone.now()

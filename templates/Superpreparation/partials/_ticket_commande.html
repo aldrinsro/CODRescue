@@ -41,7 +41,7 @@
         <div class="articles-description">
             <div class="info-line">
                 <i class="fas fa-shopping-bag info-icon"></i>
-                <span class="info-text">{{ commande.articles_description|default:"Articles de la commande" }}</span>
+                <div class="info-text">{{ commande.articles_description|default:"Articles de la commande"|safe }}</div>
             </div>
         </div>
     </div>
