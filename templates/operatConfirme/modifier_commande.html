@@ -172,6 +172,54 @@
         #article-info .grid-cols-2 {
             grid-template-columns: 1fr;
         }
+        
+        /* Ajustements pour les modals sur mobile */
+        #articleModal, #variantModal {
+            padding: 0.5rem;
+        }
+        
+        #articleModal .bg-white, #variantModal .bg-white {
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        /* Réduction de la taille des badges sur mobile */
+        .badge-legend span {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+        }
+        
+        /* Ajustement des tableaux sur mobile */
+        #articlesScrollContainer {
+            max-height: 50vh;
+        }
+        
+        /* Boutons plus compacts sur mobile */
+        .btn-confirm, .btn-cancel {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+        }
+    }
+    
+    /* Ajustements pour les très petits écrans */
+    @media (max-width: 480px) {
+        #articleModal, #variantModal {
+            padding: 0.25rem;
+        }
+        
+        #articleModal .bg-white, #variantModal .bg-white {
+            padding: 0.75rem;
+        }
+        
+        .badge-legend {
+            grid-template-columns: 1fr;
+            gap: 0.25rem;
+        }
+        
+        .badge-legend span {
+            font-size: 0.7rem;
+            padding: 0.2rem 0.4rem;
+        }
     }
     
     /* Styles pour la liste déroulante d'articles avec badges */
@@ -693,15 +741,15 @@
 </div>
 
 <!-- Modale pour ajouter/modifier un article -->
-<div id="articleModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50" style="backdrop-filter: blur(8px); display: none;">
-    <div class="bg-white rounded-xl p-6 w-full max-w-6xl mx-4 shadow-2xl">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
+<div id="articleModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50 p-4" style="backdrop-filter: blur(8px); display: none;">
+    <div class="bg-white rounded-xl p-4 sm:p-6 w-full max-w-7xl mx-auto shadow-2xl max-h-[95vh] overflow-y-auto">
+        <h3 class="text-base sm:text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
             <div class="flex items-center">
-            <i class="fas fa-box text-blue-500 mr-3"></i>
+            <i class="fas fa-box text-blue-500 mr-2 sm:mr-3"></i>
             <span id="articleModalTitle">Ajouter un article</span>
             </div>
             <span id="FermerModalAjouterArticle" class="text-gray-500 hover:text-gray-700 cursor-pointer transition-colors" onclick="fermerModalAjouterArticle()">
-                <i class="fas fa-times text-xl"></i>
+                <i class="fas fa-times text-lg sm:text-xl"></i>
             </span>
         </h3>
 
@@ -709,7 +757,7 @@
            <div class="mt-3 mb-3">
             <p class="text-sm text-gray-500 mb-2">Rechercher un article</p>
             <input id="recherche-article-input" type="text" placeholder="Nom, référence, couleur, pointure..." 
-                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                   class="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base"
                    oninput="rechercherArticles(this.value)" />
         </div>
         
@@ -718,32 +766,32 @@
                 <!-- Sélection d'article (pour nouveaux articles) -->
                 <div id="article-selection-field">
                     <!-- Légende des badges -->
-                    <div class="mb-3 p-3 bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg border border-gray-200 shadow-sm">
-                        <div class="flex items-center justify-between mb-3">
-                            <div class="text-sm font-semibold text-gray-700 flex items-center">
-                                <i class="fas fa-info-circle mr-2 text-blue-500"></i>
+                    <div class="mb-3 p-2 sm:p-3 bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg border border-gray-200 shadow-sm">
+                        <div class="flex items-center justify-between mb-2 sm:mb-3">
+                            <div class="text-xs sm:text-sm font-semibold text-gray-700 flex items-center">
+                                <i class="fas fa-info-circle mr-1 sm:mr-2 text-blue-500"></i>
                              types d'articles :
                         </div>
                          
                         </div>
-                        <div class="badge-legend flex justify-between gap-3 text-sm">
-                            <span id="filter-all" class="flex-1 inline-flex items-center justify-center px-4 py-2 bg-gray-100 text-gray-700 rounded-full font-medium cursor-pointer filter-badge active whitespace-nowrap hover:bg-gray-200 transition-colors" 
+                        <div class="badge-legend grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-1 sm:gap-2 lg:gap-3 text-xs sm:text-sm">
+                            <span id="filter-all" class="inline-flex items-center justify-center px-2 sm:px-4 py-1 sm:py-2 bg-gray-100 text-gray-700 rounded-full font-medium cursor-pointer filter-badge active whitespace-nowrap hover:bg-gray-200 transition-colors" 
                                   onclick="filtrerArticles('all')" title="Afficher tous les articles">
                                 🔍 TOUS
                             </span>
-                            <span id="filter-promo" class="flex-1 inline-flex items-center justify-center px-4 py-2 bg-red-100 text-red-700 rounded-full font-medium cursor-pointer filter-badge whitespace-nowrap hover:bg-red-200 transition-colors" 
+                            <span id="filter-promo" class="inline-flex items-center justify-center px-2 sm:px-4 py-1 sm:py-2 bg-red-100 text-red-700 rounded-full font-medium cursor-pointer filter-badge whitespace-nowrap hover:bg-red-200 transition-colors" 
                                   onclick="filtrerArticles('promo')" title="Filtrer les articles en promotion">
                                 🔥 PROMO
                             </span>
-                            <span id="filter-liquidation" class="flex-1 inline-flex items-center justify-center px-4 py-2 bg-orange-100 text-orange-700 rounded-full font-medium cursor-pointer filter-badge whitespace-nowrap hover:bg-orange-200 transition-colors" 
+                            <span id="filter-liquidation" class="inline-flex items-center justify-center px-2 sm:px-4 py-1 sm:py-2 bg-orange-100 text-orange-700 rounded-full font-medium cursor-pointer filter-badge whitespace-nowrap hover:bg-orange-200 transition-colors" 
                                   onclick="filtrerArticles('liquidation')" title="Filtrer les articles en liquidation">
                                 🏷️ LIQUIDATION
                             </span>
-                            <span id="filter-test" class="flex-1 inline-flex items-center justify-center px-4 py-2 bg-blue-100 text-blue-700 rounded-full font-medium cursor-pointer filter-badge whitespace-nowrap hover:bg-blue-200 transition-colors" 
+                            <span id="filter-test" class="inline-flex items-center justify-center px-2 sm:px-4 py-1 sm:py-2 bg-blue-100 text-blue-700 rounded-full font-medium cursor-pointer filter-badge whitespace-nowrap hover:bg-blue-200 transition-colors" 
                                   onclick="filtrerArticles('test')" title="Filtrer les articles en test">
                                 🧪 TEST
                             </span>
-                            <span id="filter-upsell" class="flex-1 inline-flex items-center justify-center px-4 py-2 bg-green-100 text-green-700 rounded-full font-medium cursor-pointer filter-badge whitespace-nowrap hover:bg-green-200 transition-colors" 
+                            <span id="filter-upsell" class="inline-flex items-center justify-center px-2 sm:px-4 py-1 sm:py-2 bg-green-100 text-green-700 rounded-full font-medium cursor-pointer filter-badge whitespace-nowrap hover:bg-green-200 transition-colors" 
                                   onclick="filtrerArticles('upsell')" title="Filtrer les articles upsell">
                                 ⬆️ UPSELL
                             </span>
@@ -759,14 +807,14 @@
                 <!-- Section des articles avec navigation fixe -->
                 <div class="mt-4 border border-gray-200 rounded-lg overflow-hidden">
                     <!-- En-tête fixe du tableau -->
-                    <div class="bg-gray-50 border-b border-gray-200">
+                    <div class="bg-gray-50 border-b border-gray-200 overflow-x-auto">
                         <table class="min-w-full">
                             <thead>
                                 <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Article</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Prix</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Stock</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Action</th>
+                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Article</th>
+                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Prix</th>
+                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Stock</th>
+                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Action</th>
                                 </tr>
                             </thead>
                         </table>
@@ -775,7 +823,7 @@
                     <!-- Zone de scroll avec barre de navigation personnalisée -->
                     <div class="relative">
                         <!-- Conteneur principal avec scroll -->
-                        <div id="articlesScrollContainer" class="max-h-96 overflow-y-auto">
+                        <div id="articlesScrollContainer" class="max-h-64 sm:max-h-96 overflow-y-auto overflow-x-auto">
                             <table class="min-w-full">
                                 <tbody id="articlesTableBody" class="bg-white divide-y divide-gray-100">
                                     <!-- Lignes d'articles rendues dynamiquement -->
@@ -784,15 +832,15 @@
                         </div>
                         
                         <!-- Barre de navigation personnalisée -->
-                        <div id="customScrollbar" class="absolute right-0 top-0 bottom-0 w-3 bg-gray-100 rounded-r-lg">
-                            <div id="scrollThumb" class="w-3 bg-gray-400 rounded-full cursor-pointer hover:bg-gray-500 transition-colors" style="height: 50px; top: 0; position: absolute;"></div>
+                        <div id="customScrollbar" class="absolute right-0 top-0 bottom-0 w-2 sm:w-3 bg-gray-100 rounded-r-lg">
+                            <div id="scrollThumb" class="w-2 sm:w-3 bg-gray-400 rounded-full cursor-pointer hover:bg-gray-500 transition-colors" style="height: 50px; top: 0; position: absolute;"></div>
                         </div>
                     </div>
                     
                     <!-- Indicateur de navigation -->
-                    <div class="bg-gray-50 border-t border-gray-200 px-4 py-2 flex items-center justify-between text-xs text-gray-500">
+                    <div class="bg-gray-50 border-t border-gray-200 px-2 sm:px-4 py-2 flex items-center justify-between text-xs text-gray-500">
                         <span id="scrollInfo">Articles disponibles</span>
-                        <div class="flex items-center space-x-2">
+                        <div class="flex items-center space-x-1 sm:space-x-2">
                             <button id="scrollUp" class="p-1 hover:bg-gray-200 rounded" title="Monter">
                                 <i class="fas fa-chevron-up"></i>
                             </button>
@@ -819,47 +867,47 @@
             
             <!-- Informations de l'article sélectionné -->
             <div id="article-info" class="hidden mt-4">
-                <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200 p-4">
-                    <h4 class="text-lg font-semibold text-blue-800 mb-4 flex items-center">
+                <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200 p-3 sm:p-4">
+                    <h4 class="text-base sm:text-lg font-semibold text-blue-800 mb-3 sm:mb-4 flex items-center">
                         <i class="fas fa-info-circle mr-2"></i>Détails de l'article
                     </h4>
                     
                     <!-- Informations principales organisées en cartes -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 mb-3 sm:mb-4">
                         <!-- Carte Informations produit -->
-                        <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
-                            <h5 class="font-medium text-gray-800 mb-3 flex items-center">
+                        <div class="bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-gray-100">
+                            <h5 class="font-medium text-gray-800 mb-2 sm:mb-3 flex items-center text-sm sm:text-base">
                                 <i class="fas fa-tag mr-2 text-blue-600"></i>Informations produit
                             </h5>
                             <div class="space-y-2">
-                                <div class="flex justify-between">
+                                <div class="flex justify-between text-sm sm:text-base">
                                     <span class="text-gray-600">Référence :</span>
                                     <span id="info-reference" class="font-medium text-gray-800"></span>
                                 </div>
-                                <div class="flex justify-between">
+                                <div class="flex justify-between text-sm sm:text-base">
                                     <span class="text-gray-600">Prix unitaire :</span>
                                     <span id="info-prix" class="font-bold text-green-600"></span>
                                 </div>
-                                <div class="flex justify-between border-t pt-2">
+                                <div class="flex justify-between border-t pt-2 text-sm sm:text-base">
                                     <span class="text-gray-700 font-medium">Sous-total :</span>
-                                    <span id="info-sous-total" class="font-bold text-blue-600 text-lg"></span>
+                                    <span id="info-sous-total" class="font-bold text-blue-600 text-base sm:text-lg"></span>
                                 </div>
                             </div>
                         </div>
                         
                         <!-- Carte Caractéristiques -->
-                        <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
-                            <h5 class="font-medium text-gray-800 mb-3 flex items-center">
+                        <div class="bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-gray-100">
+                            <h5 class="font-medium text-gray-800 mb-2 sm:mb-3 flex items-center text-sm sm:text-base">
                                 <i class="fas fa-palette mr-2 text-purple-600"></i>Caractéristiques du produit
                             </h5>
                             
                             <!-- Conteneur pour les badges de caractéristiques -->
-                            <div id="caracteristiques-badges" class="flex flex-wrap gap-2 mb-3">
+                            <div id="caracteristiques-badges" class="flex flex-wrap gap-1 sm:gap-2 mb-2 sm:mb-3">
                                 <!-- Les badges seront ajoutés dynamiquement par JavaScript -->
                             </div>
                             
                             <!-- Affichage classique formaté -->
-                            <div class="space-y-2 text-sm">
+                            <div class="space-y-2 text-xs sm:text-sm">
                                 <div>
                                     <span class="text-gray-700 font-medium">Taille : </span>
                                     <span id="info-pointure" class="text-purple-600 font-medium"></span>
@@ -877,16 +925,16 @@
                     </div>
                     
                     <!-- Stock et description -->
-                    <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+                    <div class="bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-gray-100">
                         <div class="flex items-center justify-between mb-2">
-                            <h5 class="font-medium text-gray-800 flex items-center">
+                            <h5 class="font-medium text-gray-800 flex items-center text-sm sm:text-base">
                                 <i class="fas fa-boxes mr-2 text-teal-600"></i>Stock disponible
                             </h5>
-                            <span id="info-stock" class="px-3 py-1 rounded-full font-medium transition-all duration-300"></span>
+                            <span id="info-stock" class="px-2 sm:px-3 py-1 rounded-full font-medium transition-all duration-300 text-xs sm:text-sm"></span>
                         </div>
                         <div class="flex items-center mt-2 mb-2">
-                            <div class="w-full bg-gray-200 rounded-full h-2.5">
-                                <div id="stock-progress" class="h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+                            <div class="w-full bg-gray-200 rounded-full h-2 sm:h-2.5">
+                                <div id="stock-progress" class="h-2 sm:h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
                             </div>
                             <div id="stock-percentage" class="ml-2 text-xs font-medium"></div>
                         </div>
@@ -894,7 +942,7 @@
                             <i class="fas fa-info-circle mr-1"></i>
                             Le stock affiché est mis à jour en temps réel depuis la base de données
                         </div>
-                        <div id="info-description" class="text-sm text-gray-600 italic"></div>
+                        <div id="info-description" class="text-xs sm:text-sm text-gray-600 italic"></div>
                     </div>
                 </div>
             </div>
@@ -6994,51 +7042,51 @@ function modifierArticle(panierId) {
 </div>
 
 <!-- Modal de sélection des variantes -->
-<div id="variantModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50" style="backdrop-filter: blur(8px); display: none;">
-    <div class="bg-white rounded-xl p-6 w-full max-w-6xl mx-4 shadow-2xl">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
+<div id="variantModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50 p-4" style="backdrop-filter: blur(8px); display: none;">
+    <div class="bg-white rounded-xl p-4 sm:p-6 w-full max-w-7xl mx-auto shadow-2xl max-h-[95vh] overflow-y-auto">
+        <h3 class="text-base sm:text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
             <div class="flex items-center">
-                <i class="fas fa-table text-blue-500 mr-3"></i>
-                <span>Sélectionner des variantes - Tableau croisé</span>
+                <i class="fas fa-table text-blue-500 mr-2 sm:mr-3"></i>
+                <span class="text-sm sm:text-base">Sélectionner des variantes - Tableau croisé</span>
             </div>
             <span class="text-gray-500 hover:text-gray-700 cursor-pointer transition-colors" onclick="fermerModalVariantes()">
-                <i class="fas fa-times text-xl"></i>
+                <i class="fas fa-times text-lg sm:text-xl"></i>
             </span>
         </h3>
 
         <!-- Informations de l'article sélectionné -->
-        <div id="articleInfo" class="mb-4 p-4 bg-gray-50 rounded-lg">
-            <h4 id="articleNom" class="font-medium text-gray-900"></h4>
-            <p id="articleReference" class="text-sm text-gray-600"></p>
+        <div id="articleInfo" class="mb-4 p-3 sm:p-4 bg-gray-50 rounded-lg">
+            <h4 id="articleNom" class="font-medium text-gray-900 text-sm sm:text-base"></h4>
+            <p id="articleReference" class="text-xs sm:text-sm text-gray-600"></p>
         </div>
 
         <!-- Tableau croisé des variantes -->
-        <div id="variantsTableContainer" class="mb-4">
-            <div class="text-center py-8 text-gray-500">
-                <i class="fas fa-table text-4xl mb-4 text-gray-300"></i>
-                <p class="text-lg">Sélectionnez un article pour voir ses variantes</p>
+        <div id="variantsTableContainer" class="mb-4 overflow-x-auto">
+            <div class="text-center py-6 sm:py-8 text-gray-500">
+                <i class="fas fa-table text-3xl sm:text-4xl mb-3 sm:mb-4 text-gray-300"></i>
+                <p class="text-base sm:text-lg">Sélectionnez un article pour voir ses variantes</p>
             </div>
         </div>
 
         <!-- Informations des variantes sélectionnées -->
-        <div id="selectedVariantsInfo" class="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg hidden">
-            <h5 class="font-medium text-blue-900 mb-2">Variantes sélectionnées:</h5>
-            <div id="selectedVariantsDetails" class="text-sm text-blue-800"></div>
+        <div id="selectedVariantsInfo" class="mb-4 p-3 sm:p-4 bg-blue-50 border border-blue-200 rounded-lg hidden">
+            <h5 class="font-medium text-blue-900 mb-2 text-sm sm:text-base">Variantes sélectionnées:</h5>
+            <div id="selectedVariantsDetails" class="text-xs sm:text-sm text-blue-800"></div>
         </div>
 
-        <div class="flex justify-between items-center mt-6">
+        <div class="flex flex-col sm:flex-row justify-between items-center mt-6 gap-3">
             <button type="button" id="clearSelectionBtn" onclick="effacerSelectionVariantes()" 
-                    class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors hidden">
-                <i class="fas fa-times mr-2"></i>Effacer la sélection
+                    class="w-full sm:w-auto px-3 sm:px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors hidden text-sm sm:text-base">
+                <i class="fas fa-times mr-1 sm:mr-2"></i>Effacer la sélection
             </button>
             
-            <div class="flex space-x-3">
+            <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
                 <button type="button" id="addSelectedVariantsBtn" onclick="ajouterVariantesSelectionnees()" 
-                        class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors hidden">
-                    <i class="fas fa-plus mr-2"></i>Ajouter les variantes sélectionnées
+                        class="w-full sm:w-auto px-3 sm:px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors hidden text-sm sm:text-base">
+                    <i class="fas fa-plus mr-1 sm:mr-2"></i>Ajouter les variantes sélectionnées
                 </button>
                 <button type="button" onclick="fermerModalVariantes()" 
-                        class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg transition-colors">
+                        class="w-full sm:w-auto px-3 sm:px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg transition-colors text-sm sm:text-base">
                     Annuler
                 </button>
             </div>

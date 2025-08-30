@@ -877,14 +877,12 @@ function handleFormSubmit(event) {
         if (data && data.success) {
             showSuccessMessage(data.message || 'Article modifié avec succès !');
             
-            // Rediriger après un délai
-            setTimeout(() => {
-                if (data.redirect_url) {
-                    window.location.href = data.redirect_url;
-                } else {
-                    window.location.reload();
-                }
-            }, 1500);
+            // Rediriger immédiatement après la sauvegarde
+            if (data.redirect_url) {
+                window.location.href = data.redirect_url;
+            } else {
+                window.location.reload();
+            }
         }
     })
     .catch(error => {
@@ -909,6 +907,13 @@ document.addEventListener('DOMContentLoaded', function() {
             return true;
         };
         
+        // Méthode de fallback pour showAlert si elle n'existe pas
+        if (!window.variantesManager.showAlert) {
+            window.variantesManager.showAlert = function(message, type) {
+                alert(message);
+            };
+        }
+        
         // Override les méthodes pour le mode modification
         window.variantesManager.addVariante = async function() {
             const couleurSelect = document.getElementById('modal_couleur');
@@ -916,7 +921,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const quantiteInput = document.getElementById('modal_quantite');
 
             if (!couleurSelect || !pointureSelect || !quantiteInput) {
-                console.error('Éléments du formulaire non trouvés');
                 return;
             }
 
@@ -926,7 +930,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Vérifier qu'au moins une couleur ou une pointure est sélectionnée
             if (!couleur && !pointure) {
-                this.showAlert('Veuillez sélectionner au moins une couleur ou une pointure.', 'warning');
+                if (this.showAlert) {
+                    this.showAlert('Veuillez sélectionner au moins une couleur ou une pointure.', 'warning');
+                } else {
+                    alert('Veuillez sélectionner au moins une couleur ou une pointure.');
+                }
+                return;
+            }
+
+            // Vérifier que l'ID de l'article est disponible
+            if (!window.CURRENT_ARTICLE_ID) {
+                this.showAlert('Erreur: ID de l\'article non disponible', 'error');
                 return;
             }
 
@@ -951,7 +965,11 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             if (existsInTable) {
-                this.showAlert('Cette combinaison couleur/pointure existe déjà pour cet article.', 'error');
+                if (this.showAlert) {
+                    this.showAlert('Cette combinaison couleur/pointure existe déjà pour cet article.', 'error');
+                } else {
+                    alert('Cette combinaison couleur/pointure existe déjà pour cet article.');
+                }
                 return;
             }
 
@@ -972,36 +990,64 @@ document.addEventListener('DOMContentLoaded', function() {
                     headers: {
                         'Content-Type': 'application/json',
                         'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRFToken': this.getCSRFToken()
+                        'X-CSRFToken': this.getCSRFToken ? this.getCSRFToken() : (this.getCSRFTokenFallback ? this.getCSRFTokenFallback() : '')
                     }
                 });
 
-                const result = await response.json();
+                if (!response.ok) {
+                    throw new Error(`Erreur HTTP: ${response.status} ${response.statusText}`);
+                }
 
-                if (result.success && result.variantes_crees.length > 0) {
+                let result;
+                try {
+                    result = await response.json();
+                } catch (jsonError) {
+                    throw new Error('Réponse invalide du serveur (JSON invalide)');
+                }
+
+                if (!result) {
+                    throw new Error('Réponse vide du serveur');
+                }
+
+                if (result.success && result.variantes_crees && Array.isArray(result.variantes_crees) && result.variantes_crees.length > 0) {
                     const nouvelleVariante = result.variantes_crees[0];
                     
-                    // Ajouter la nouvelle variante au tableau
-                    this.ajouterVarianteAuTableau(nouvelleVariante);
+                    // Vérifier que la variante contient les données nécessaires
+                    if (!nouvelleVariante || !nouvelleVariante.id) {
+                        throw new Error('Réponse invalide du serveur: ID de variante manquant');
+                    }
                     
-                    this.closeVarianteModal();
+                    // Ajouter la nouvelle variante au tableau
+                    if (this.ajouterVarianteAuTableau) {
+                        this.ajouterVarianteAuTableau(nouvelleVariante);
+                    } else {
+                        throw new Error('Méthode ajouterVarianteAuTableau non disponible');
+                    }
+                    
+                    if (this.closeVarianteModal) {
+                        this.closeVarianteModal();
+                    }
                     
                     // Afficher un message de succès plus visible
-                    this.showAlert('Variante créée avec succès !', 'success');
+                    if (this.showAlert) {
+                        this.showAlert('Variante créée avec succès !', 'success');
+                    } else {
+                        alert('Variante créée avec succès !');
+                    }
                     
                     // Afficher une notification toast personnalisée
-                    this.showSuccessToast('Variante créée avec succès !', 'La nouvelle variante a été ajoutée au tableau.');
+                    if (this.showSuccessToast) {
+                        this.showSuccessToast('Variante créée avec succès !', 'La nouvelle variante a été ajoutée au tableau.');
+                    }
                     
-                    // Recharger le tableau complet après un délai pour s'assurer que tout est à jour
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 2000);
+                    // Recharger immédiatement la page pour afficher la nouvelle variante
+                    window.location.reload();
                 } else {
-                    throw new Error(result.error || 'Erreur lors de la création de la variante');
+                    const errorMsg = result.error || result.erreurs || 'Erreur lors de la création de la variante';
+                    throw new Error(Array.isArray(errorMsg) ? errorMsg.join(', ') : errorMsg);
                 }
                 
             } catch (error) {
-                console.error('Erreur:', error);
                 this.showAlert(`Erreur: ${error.message}`, 'error');
             } finally {
                 // Restaurer le bouton
@@ -1016,23 +1062,25 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!form) return;
 
             // Générer la référence de la variante
-            const referenceVariante = this.genererReferenceVariante(variante);
+            if (this.genererReferenceVariante) {
+                const referenceVariante = this.genererReferenceVariante(variante);
 
-            // Ajouter les champs cachés pour cette variante
-            const fields = [
-                { name: `variante_${variante.id}_couleur`, value: variante.couleur },
-                { name: `variante_${variante.id}_pointure`, value: variante.pointure },
-                { name: `variante_${variante.id}_quantite`, value: variante.quantite },
-                { name: `variante_${variante.id}_reference`, value: referenceVariante }
-            ];
+                // Ajouter les champs cachés pour cette variante
+                const fields = [
+                    { name: `variante_${variante.id}_couleur`, value: variante.couleur },
+                    { name: `variante_${variante.id}_pointure`, value: variante.pointure },
+                    { name: `variante_${variante.id}_quantite`, value: variante.quantite },
+                    { name: `variante_${variante.id}_reference`, value: referenceVariante }
+                ];
 
-            fields.forEach(field => {
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = field.name;
-                input.value = field.value;
-                form.appendChild(input);
-            });
+                fields.forEach(field => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = field.name;
+                    input.value = field.value;
+                    form.appendChild(input);
+                });
+            }
         };
         
         // Ajouter l'ID de l'article comme variable globale pour les variantes
@@ -1040,6 +1088,11 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Méthode pour ajouter une nouvelle variante au tableau matriciel
         window.variantesManager.ajouterVarianteAuTableau = function(variante) {
+                    // Vérifier que la variante est valide
+        if (!variante || !variante.id) {
+            return;
+        }
+            
             const table = document.querySelector('.variantes-table');
             if (!table) return;
             
@@ -1047,12 +1100,17 @@ document.addEventListener('DOMContentLoaded', function() {
             const couleurNom = variante.couleur || 'Aucune couleur';
             const pointureNom = variante.pointure || 'N/A';
             
+            // Vérifier et sécuriser la référence
+            const reference = variante.reference || variante.reference_variante || 'N/A';
+            
             // Déterminer le statut du stock
             let statusClass = 'bg-red-500';
             let statusText = 'Rupture';
             
-            if (variante.quantite > 0) {
-                if (variante.quantite < 5) {
+            const quantite = parseInt(variante.quantite || variante.qte_disponible || 0) || 0;
+            
+            if (quantite > 0) {
+                if (quantite < 5) {
                     statusClass = 'bg-orange-500';
                     statusText = 'Stock faible';
                 } else {
@@ -1120,7 +1178,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <input type="number" 
                                        id="quantite_${variante.id}" 
                                        name="variante_existante_${variante.id}_quantite" 
-                                       value="${variante.quantite}" 
+                                       value="${quantite}" 
                                        min="0" 
                                        class="quantite-input w-16 px-2 py-1 border border-gray-300 rounded text-xs text-center focus:ring-1 focus:ring-[#66cccc] focus:border-transparent"
                                        onchange="marquerVarianteModifiee(${variante.id})"
@@ -1128,8 +1186,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <span class="text-xs text-gray-500">pcs</span>
                                 
                                 <!-- Référence de la variante -->
-                                <div class="text-xs text-gray-400 font-mono mt-1" title="Référence: ${variante.reference || 'N/A'}">
-                                    ${(variante.reference || 'N/A').substring(0, 12)}
+                                <div class="text-xs text-gray-400 font-mono mt-1" title="Référence: ${reference}">
+                                    ${reference.toString().substring(0, 12)}
                                 </div>
                                 
                                 <!-- Indicateur de modification -->
@@ -1183,7 +1241,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <input type="number" 
                                            id="quantite_${variante.id}" 
                                            name="variante_existante_${variante.id}_quantite" 
-                                           value="${variante.quantite}" 
+                                           value="${quantite}" 
                                            min="0" 
                                            class="quantite-input w-16 px-2 py-1 border border-gray-300 rounded text-xs text-center focus:ring-1 focus:ring-[#66cccc] focus:border-transparent"
                                            onchange="marquerVarianteModifiee(${variante.id})"
@@ -1191,8 +1249,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <span class="text-xs text-gray-500">pcs</span>
                                     
                                     <!-- Référence de la variante -->
-                                    <div class="text-xs text-gray-400 font-mono mt-1" title="Référence: ${variante.reference || 'N/A'}">
-                                        ${(variante.reference || 'N/A').substring(0, 12)}
+                                    <div class="text-xs text-gray-400 font-mono mt-1" title="Référence: ${reference}">
+                                        ${reference.toString().substring(0, 12)}
                                     </div>
                                     
                                     <!-- Indicateur de modification -->
@@ -1222,8 +1280,13 @@ document.addEventListener('DOMContentLoaded', function() {
             // 5. Mettre à jour le compteur de variantes
             const countElement = document.querySelector('.bg-blue-100.text-blue-800');
             if (countElement) {
-                const currentCount = parseInt(countElement.textContent.match(/\d+/)[0]);
-                countElement.textContent = `${currentCount + 1} variante(s)`;
+                const match = countElement.textContent.match(/\d+/);
+                if (match && match[0]) {
+                    const currentCount = parseInt(match[0]);
+                    countElement.textContent = `${currentCount + 1} variante(s)`;
+                } else {
+                    countElement.textContent = '1 variante(s)';
+                }
             }
             
             // 6. Ajouter une animation pour la nouvelle variante
@@ -1247,7 +1310,9 @@ document.addEventListener('DOMContentLoaded', function() {
         // Override la méthode de suppression pour le mode modification
         window.variantesManager.removeVariante = function(id) {
             this.variantes = this.variantes.filter(v => v.id !== id);
-            this.updateVariantesDisplay();
+            if (this.updateVariantesDisplay) {
+                this.updateVariantesDisplay();
+            }
 
             // Supprimer les champs cachés correspondants
             const form = document.getElementById('articleForm');
@@ -1257,7 +1322,11 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             // Message de confirmation
-            this.showAlert('Variante supprimée avec succès !', 'success');
+            if (this.showAlert) {
+                this.showAlert('Variante supprimée avec succès !', 'success');
+            } else {
+                alert('Variante supprimée avec succès !');
+            }
         };
 
         // Override la méthode openVarianteModal pour s'assurer qu'elle fonctionne
@@ -1271,7 +1340,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     form.reset();
                 }
                 // Mettre à jour l'aperçu de la référence
-                this.updateReferencePreview();
+                if (this.updateReferencePreview) {
+                    this.updateReferencePreview();
+                }
             }
         };
 
@@ -1283,9 +1354,21 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         };
 
+        // Méthode de fallback pour le CSRF token
+        window.variantesManager.getCSRFTokenFallback = function() {
+            const token = document.querySelector('[name=csrfmiddlewaretoken]');
+            if (token) {
+                return token.value;
+            }
+            const metaToken = document.querySelector('meta[name=csrf-token]');
+            if (metaToken) {
+                return metaToken.getAttribute('content');
+            }
+            return '';
+        };
+        
         // Marquer que nous sommes en mode modification pour éviter les conflits
         window.MODIFICATION_MODE = true;
-        console.log('Mode modification activé - Gestionnaire AJAX désactivé');
         
         // Méthode pour afficher une notification toast de succès
         window.variantesManager.showSuccessToast = function(title, message) {
@@ -1324,29 +1407,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Fonctions globales pour assurer la compatibilité avec les onclick en mode modification
 function openVarianteModal() {
-    console.log('openVarianteModal appelée');
     if (window.variantesManager && typeof window.variantesManager.openVarianteModal === 'function') {
         window.variantesManager.openVarianteModal();
-    } else {
-        console.error('variantesManager non disponible ou méthode manquante');
     }
 }
 
 function closeVarianteModal() {
-    console.log('closeVarianteModal appelée');
     if (window.variantesManager && typeof window.variantesManager.closeVarianteModal === 'function') {
         window.variantesManager.closeVarianteModal();
-    } else {
-        console.error('variantesManager non disponible ou méthode manquante');
     }
 }
 
 function addVariante() {
-    console.log('addVariante appelée');
     if (window.variantesManager && typeof window.variantesManager.addVariante === 'function') {
         window.variantesManager.addVariante();
-    } else {
-        console.error('variantesManager non disponible ou méthode manquante');
     }
 }
 </script>

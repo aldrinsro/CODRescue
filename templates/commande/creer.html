@@ -131,10 +131,7 @@
 
             <!-- Options et Total -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 mb-6 pt-4 border-t" style="border-color: var(--admin-accent-color);">
-                <div class="flex items-center">
-                    <input type="checkbox" name="is_upsell" id="is_upsell" class="h-5 w-5 text-[var(--admin-color)] rounded focus:ring-2 focus:ring-[var(--admin-accent-color)]">
-                    <label for="is_upsell" class="ml-2 text-sm font-medium" style="color: var(--admin-color);">Commande Upsell</label>
-                </div>
+             
                 <div>
                     <label for="total_cmd" class="block text-sm font-medium mb-2" style="color: var(--admin-color);">Total Commande (DH)</label>
                     <input type="number" name="total_cmd" id="total_cmd" step="0.01" min="0" class="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed" readonly required>
@@ -241,11 +238,7 @@ function createArticleRow() {
             <label class="block text-sm font-medium mb-2" style="color: var(--admin-color);">Prix unitaire (DH)</label>
             <input type="text" class="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed prix-unitaire" readonly>
         </div>
-        <div>
-            <label class="block text-sm font-medium mb-2" style="color: var(--admin-color);">Sous-total (DH)</label>
-            <input type="text" name="sous_total_${articleCounter}" 
-                   class="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed sous-total" readonly>
-        </div>
+  
     `;
 
     // Ajouter un bouton de suppression

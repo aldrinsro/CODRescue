@@ -15,7 +15,6 @@ urlpatterns = [
 
      #Gestion des commandes 
     path('liste-prepa/', views.liste_prepa, name='liste_prepa'),
-
     path('commandes-en-preparation/', views.commandes_en_preparation, name='commandes_en_preparation'),
     path('commandes-emballees/', views.commandes_emballees, name='commandes_emballees'),
     path('commandes-preparees/', views.commandes_preparees, name='commandes_preparees'),
@@ -92,10 +91,9 @@ urlpatterns = [
 
     
     # === NOUVELLES URLs : EXPORTS CONSOLIDÉS ===
-    path('export/region/<str:region_name>/csv/', views.export_region_consolidee_csv, name='export_region_consolidee_csv'),
-    path('export/region/<str:region_name>/excel/', views.export_region_consolidee_excel, name='export_region_consolidee_excel'),
-    path('export/ville/<int:ville_id>/csv/', views.export_ville_consolidee_csv, name='export_ville_consolidee_csv'),
-    path('export/ville/<int:ville_id>/excel/', views.export_ville_consolidee_excel, name='export_ville_consolidee_excel'),
+ 
+
+
 
     # === URLs RECHERCHE GLOBALE ===
     path('recherche-globale/', search_views.global_search_view, name='global_search'),
