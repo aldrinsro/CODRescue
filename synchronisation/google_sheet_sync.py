@@ -339,10 +339,9 @@ class GoogleSheetSync:
             self._log(f"Statut non reconnu lors de la mise à jour: {str(e)} - commande {existing_commande.num_cmd} non mise à jour")
             return False
         
-        # PROTECTION CONTRE LA RÉGRESSION D'ÉTATS
-        # Si la commande a déjà un état avancé, ne pas la réinitialiser à "Non affectée" ou "En attente"
-        if self._is_advanced_status(current_status) and self._is_basic_status(new_status):
-            self._log(f"Protection activée: Commande {existing_commande.num_cmd} a l'état avancé '{current_status}' - ne pas régresser vers '{new_status}'")
+        # PROTECTION CONTRE LA RÉGRESSION D'ÉTATS - AUCUN RETOUR EN ARRIÈRE AUTORISÉ
+        if self._prevent_status_regression(current_status, new_status):
+            self._log(f"Protection anti-régression activée: Commande {existing_commande.num_cmd} conserve l'état '{current_status}' au lieu de régresser vers '{new_status}'")
             self.protected_orders_count += 1  # Incrémenter le compteur de protection
             # Ne pas mettre à jour le statut, mais continuer à vérifier les autres champs
             new_status = current_status  # Garder le statut actuel
@@ -376,16 +375,39 @@ class GoogleSheetSync:
         
         return False
     
-    def _is_advanced_status(self, status):
-        """Détermine si un statut est considéré comme avancé (ne doit pas être régressé)"""
+    def _prevent_status_regression(self, current_status, new_status):
+        """Empêche toute régression d'état - AUCUN retour en arrière autorisé"""
+        if current_status == new_status:
+            return False  # Pas de changement
+        
+        # Obtenir l'ordre des états depuis la base de données
+        try:
+            from commande.models import EnumEtatCmd
+            current_enum = EnumEtatCmd.objects.get(libelle=current_status)
+            new_enum = EnumEtatCmd.objects.get(libelle=new_status)
+            
+            # Si le nouvel état a un ordre inférieur, c'est une régression
+            if new_enum.ordre < current_enum.ordre:
+                self._log(f"🛡️ PROTECTION ANTI-RÉGRESSION: Empêche le passage de '{current_status}' (ordre {current_enum.ordre}) vers '{new_status}' (ordre {new_enum.ordre})")
+                return True  # Régression détectée
+            
+            return False  # Pas de régression
+            
+        except EnumEtatCmd.DoesNotExist:
+            # Si l'un des états n'existe pas, utiliser l'ancienne logique de sécurité
+            self._log(f"⚠️ État non trouvé dans la base, utilisation de la logique de fallback")
+            return self._is_advanced_status_fallback(current_status) and self._is_basic_status_fallback(new_status)
+    
+    def _is_advanced_status_fallback(self, status):
+        """Logique de fallback pour déterminer si un statut est avancé (DEPRECATED - utilisé uniquement si EnumEtatCmd manquant)"""
         advanced_statuses = [
             'Affectée', 'En cours de confirmation', 'Confirmée', 'En préparation', 
             'En livraison', 'Livrée', 'Expédiée', 'Payé', 'Partiellement payé'
         ]
         return status in advanced_statuses
     
-    def _is_basic_status(self, status):
-        """Détermine si un statut est considéré comme basique (peut être régressé)"""
+    def _is_basic_status_fallback(self, status):
+        """Logique de fallback pour déterminer si un statut est basique (DEPRECATED - utilisé uniquement si EnumEtatCmd manquant)"""
         basic_statuses = [
             'Non affectée', 'En attente', 'Erronée', 'Doublon', 'Annulée', 
             'Reportée', 'Hors zone', 'Injoignable', 'Pas de réponse', 
@@ -490,10 +512,9 @@ class GoogleSheetSync:
                 # Statut reconnu - procéder à la mise à jour
                 current_status = existing_commande.etat_actuel.enum_etat.libelle if existing_commande.etat_actuel else 'Non affectée'
                 
-                # PROTECTION CONTRE LA RÉGRESSION D'ÉTATS
-                # Si la commande a déjà un état avancé, ne pas la réinitialiser à un état basique
-                if self._is_advanced_status(current_status) and self._is_basic_status(new_status_raw):
-                    self._log(f"Protection activée lors de la mise à jour: Commande {existing_commande.num_cmd} garde l'état avancé '{current_status}' au lieu de régresser vers '{new_status_raw}'")
+                # PROTECTION CONTRE LA RÉGRESSION D'ÉTATS - AUCUN RETOUR EN ARRIÈRE AUTORISÉ
+                if self._prevent_status_regression(current_status, new_status_raw):
+                    self._log(f"Protection anti-régression lors de la mise à jour: Commande {existing_commande.num_cmd} conserve l'état '{current_status}' au lieu de régresser vers '{new_status_raw}'")
                     self.protected_orders_count += 1  # Incrémenter le compteur de protection
                     new_status_raw = current_status  # Garder le statut actuel
                 

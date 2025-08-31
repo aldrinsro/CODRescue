@@ -37,8 +37,7 @@ urlpatterns = [
     # Impression supprimée (gérée par Gestion des étiquettes)
     path('modifier-commande/<int:commande_id>/', views.modifier_commande_prepa, name='modifier_commande'),
     path('modifier-commande-superviseur/<int:commande_id>/', views.modifier_commande_superviseur, name='modifier_commande_superviseur'),
-    path('commande/<int:commande_id>/diagnostiquer-compteur/', views.diagnostiquer_compteur, name='diagnostiquer_compteur'),
-
+   
     path('api/commande/<int:commande_id>/produits/', views.api_commande_produits, name='api_commande_produits'),
     # path('api/commande/<int:commande_id>/changer-etat/', views.api_changer_etat_preparation, name='api_changer_etat_preparation') # Supprimée - plus nécessaire
     path('api/articles-disponibles-prepa/', views.api_articles_disponibles_prepa, name='api_articles_disponibles_prepa'),
@@ -77,17 +76,7 @@ urlpatterns = [
     path('envois/<int:envoi_id>/commandes/', views.commandes_envoi, name='commandes_envoi'),
     path('envois/<int:envoi_id>/commandes-historique/', views.commandes_envoi_historique, name='commandes_envoi_historique'),
 
-    # URLs pour la gestion de stock
-    path('stock/articles/', views.liste_articles, name='liste_articles'),
-    path('stock/article/creer/', views.creer_article, name='creer_article'),
-    path('stock/article/<int:article_id>/', views.detail_article, name='detail_article'),
-    path('stock/article/<int:article_id>/modifier/', views.modifier_article, name='modifier_article'),
-    path('stock/article/<int:article_id>/ajuster/', views.ajuster_stock, name='ajuster_stock'),
-    path('stock/mouvements/', views.mouvements_stock, name='mouvements_stock'),
-    path('stock/alertes/', views.alertes_stock, name='alertes_stock'),
-    path('stock/statistiques/', views.statistiques_stock, name='statistiques_stock'),
-    path('stock/variantes/creer-ajax/', views.creer_variantes_ajax, name='creer_variantes_ajax'),
-    
+
 
     
     # === NOUVELLES URLs : EXPORTS CONSOLIDÉS ===
@@ -100,6 +89,65 @@ urlpatterns = [
     path('api/recherche-globale/', search_views.global_search_api, name='global_search_api'),
     path('api/suggestions-recherche/', search_views.search_suggestions_api, name='search_suggestions_api'),
 
+
+    # === Urls des Gestions des Articles Stock === 
+
+
+     # Pages principales
+    path('articles/', views.liste_articles, name='liste_articles'),
+    path('articles/detail/<int:id>/', views.detail_article, name='detail_article'),
+    path('articles/modifier/<int:id>/', views.modifier_article, name='modifier_article'),
+    path('articles/creer/', views.creer_article, name='creer_article'),
+    path('articles/supprimer/<int:id>/', views.supprimer_article, name='supprimer_article'),
+    path('articles/supprimer-masse/', views.supprimer_articles_masse, name='supprimer_masse'),
+
+
+    # Gestion des variantes d'articles
+    path('articles/variantes/', views.liste_variantes, name='liste_variantes'),
+    path('articles/variantes/creer-ajax/', views.creer_variantes_ajax, name='creer_variantes_ajax'),
+    path('variantes/supprimer/<int:id>/', views.supprimer_variante, name='supprimer_variante'),
+
+    
+    # Filtres par catégorie
+    path('articles/categorie/<str:categorie>/', views.articles_par_categorie, name='par_categorie'),
+    
+    # Gestion du stock
+    path('articles/stock-faible/', views.stock_faible, name='stock_faible'),
+    path('articles/rupture-stock/', views.rupture_stock, name='rupture_stock'),
+    
+    # Gestion des promotions
+    path('articles/promotions/', views.liste_promotions, name='liste_promotions'),
+    path('articles/promotions/creer/', views.creer_promotion, name='creer_promotion'),
+    path('articles/promotions/<int:id>/', views.detail_promotion, name='detail_promotion'),
+    path('articles/promotions/modifier/<int:id>/', views.modifier_promotion, name='modifier_promotion'),
+    path('articles/promotions/supprimer/<int:id>/', views.supprimer_promotion, name='supprimer_promotion'),
+    path('articles/promotions/activer-desactiver/<int:id>/', views.activer_desactiver_promotion, name='activer_desactiver_promotion'),
+    path('articles/promotions/gerer-automatiquement/', views.gerer_promotions_automatiquement, name='gerer_promotions_automatiquement'),
+    
+    # Gestion des phases
+    path('articles/changer-phase/<int:id>/', views.changer_phase, name='changer_phase'),
+    path('articles/appliquer-liquidation/<int:id>/', views.appliquer_liquidation, name='appliquer_liquidation'),
+    path('reinitialiser-prix/<int:id>/', views.reinitialiser_prix, name='reinitialiser_prix'),
+    
+    # URLs pour la gestion des couleurs et pointures
+    path('articles/gestion-couleurs-pointures/', views.gestion_couleurs_pointures, name='gestion_couleurs_pointures'),
+    path('articles/pointures/creer/', views.creer_pointure, name='creer_pointure'),
+    path('articles/pointures/modifier/<int:pointure_id>/', views.modifier_pointure, name='modifier_pointure'),
+    path('articles/pointures/supprimer/<int:pointure_id>/', views.supprimer_pointure, name='supprimer_pointure'),
+
+    path('articles/ gestion-articles/couleurs/creer/', views.creer_couleur, name='creer_couleur'),
+    path('articles/gestion-articles/couleurs/modifier/<int:couleur_id>/', views.modifier_couleur, name='modifier_couleur'),
+    path('articles/gestion-articles/couleurs/supprimer/<int:couleur_id>/', views.supprimer_couleur, name='supprimer_couleur'),
+    
+    # URLs pour la gestion des catégories
+    path('articles/categories/creer/', views.creer_categorie, name='creer_categorie'),
+    path('articles/categories/modifier/<int:categorie_id>/', views.modifier_categorie, name='modifier_categorie'),
+    path('articles/categories/supprimer/<int:categorie_id>/', views.supprimer_categorie, name='supprimer_categorie'),
+    
+    # URLs pour la gestion des genres
+    path('articles/genres/creer/', views.creer_genre, name='creer_genre'),
+    path('articles/genres/modifier/<int:genre_id>/', views.modifier_genre, name='modifier_genre'),
+    path('articles/genres/supprimer/<int:genre_id>/', views.supprimer_genre, name='supprimer_genre'),
 
 
    

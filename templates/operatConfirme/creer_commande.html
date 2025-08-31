@@ -648,96 +648,53 @@
 </div>
 
 <!-- Modal de sélection des variantes -->
-<div id="modalVariantes" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
-
-    <div class="flex items-center justify-center min-h-screen p-4">
-        <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-            <!-- En-tête du modal -->
-            <div class="bg-gradient-to-r from-[#000000] to-[#080808] text-white p-4">
-                <div class="flex justify-between items-center">
-                    <h3 class="text-lg font-semibold flex items-center">
-                        <i class="fas fa-palette mr-2"></i>
-                        Choisir une variante
-                    </h3>
-                    <button type="button" id="fermerModalVariantes" class="text-white hover:text-red-300 transition-all p-3 rounded-full hover:bg-red-500/20 border-2 border-white/20 hover:border-red-300 hover:scale-110">
-                        <i class="fas fa-times text-xl"></i>
-                    </button>
-                </div>
-                <div id="infoArticle" class="mt-2 text-sm opacity-90">
-                    <!-- Informations de l'article sélectionné -->
-                </div>
+<div id="variantModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50 p-4" style="backdrop-filter: blur(8px); display: none;">
+    <div class="bg-white rounded-xl p-4 sm:p-6 w-full max-w-7xl mx-auto shadow-2xl max-h-[95vh] overflow-y-auto">
+        <h3 class="text-base sm:text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
+            <div class="flex items-center">
+                <i class="fas fa-table text-blue-500 mr-2 sm:mr-3"></i>
+                <span class="text-sm sm:text-base">Sélectionner des variantes - Tableau croisé</span>
             </div>
+            <span class="text-gray-500 hover:text-gray-700 cursor-pointer transition-colors" onclick="fermerModalVariantes()">
+                <i class="fas fa-times text-lg sm:text-xl"></i>
+            </span>
+        </h3>
 
-            <!-- Contenu du modal -->
-            <div class="p-6 overflow-y-scroll max-h-[60vh] min-h-[400px]">
-                <!-- Message de chargement -->
-                <div id="loadingVariantes" class="text-center py-8">
-                    <i class="fas fa-spinner fa-spin text-3xl text-gray-400 mb-4"></i>
-                    <p class="text-gray-600">Chargement des variantes...</p>
-                </div>
+        <!-- Informations de l'article sélectionné -->
+        <div id="articleInfo" class="mb-4 p-3 sm:p-4 bg-gray-50 rounded-lg">
+            <h4 id="articleNom" class="font-medium text-gray-900 text-sm sm:text-base"></h4>
+            <p id="articleReference" class="text-xs sm:text-sm text-gray-600"></p>
+        </div>
 
-                <!-- Message d'erreur -->
-                <div id="errorVariantes" class="hidden text-center py-8">
-                    <i class="fas fa-exclamation-triangle text-3xl text-red-500 mb-4"></i>
-                    <p class="text-red-600">Erreur lors du chargement des variantes</p>
-                </div>
-
-                <!-- Grille des variantes moderne -->
-                <div id="tableauVariantes" class="hidden">
-                    <!-- Filtre rapide des couleurs -->
-                    <div id="filtresCouleurs" class="mb-6 p-4 bg-gray-50 rounded-lg">
-                        <h4 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
-                            <i class="fas fa-filter mr-2"></i>
-                            Filtrer par couleur
-                        </h4>
-                        <div id="boutonsCouleurs" class="flex flex-wrap gap-2">
-                            <button class="filtre-couleur active px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border-2 border-blue-200" 
-                                    data-couleur="all">
-                                Toutes
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Grille des variantes -->
-                    <div id="grilleVariantes" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        <!-- Les cartes de variantes seront ajoutées ici dynamiquement -->
-                    </div>
-                    
-                    <!-- Résumé sélection -->
-                    <div id="resumeSelection" class="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200 hidden">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center text-blue-800">
-                                <i class="fas fa-shopping-cart mr-2"></i>
-                                <span id="texteResume" class="font-medium">0 variante(s) sélectionnée(s)</span>
-                            </div>
-                            <button id="ajouterToutesSelection" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors hidden">
-                                <i class="fas fa-plus mr-2"></i>
-                                Ajouter toutes au panier
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Message si aucune variante -->
-                <div id="aucuneVariante" class="hidden text-center py-8">
-                    <i class="fas fa-info-circle text-3xl text-blue-500 mb-4"></i>
-                    <p class="text-gray-600">Aucune variante disponible pour cet article</p>
-                </div>
+        <!-- Tableau croisé des variantes -->
+        <div id="variantsTableContainer" class="mb-4 overflow-x-auto">
+            <div class="text-center py-6 sm:py-8 text-gray-500">
+                <i class="fas fa-table text-3xl sm:text-4xl mb-3 sm:mb-4 text-gray-300"></i>
+                <p class="text-base sm:text-lg">Sélectionnez un article pour voir ses variantes</p>
             </div>
+        </div>
 
-            <!-- Pied du modal -->
-            <div class="bg-gray-50 p-4 flex justify-between items-center">
-                <div class="text-sm text-gray-600">
-                    <i class="fas fa-info-circle mr-1"></i>
-                    Sélectionnez une variante pour l'ajouter au panier
-                </div>
-                <div class="flex space-x-3">
-                    <button type="button" id="annulerVariantes" class="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition-colors">
-                        <i class="fas fa-times mr-1"></i>
-                        Fermer 
-                    </button>
+        <!-- Informations des variantes sélectionnées -->
+        <div id="selectedVariantsInfo" class="mb-4 p-3 sm:p-4 bg-blue-50 border border-blue-200 rounded-lg hidden">
+            <h5 class="font-medium text-blue-900 mb-2 text-sm sm:text-base">Variantes sélectionnées:</h5>
+            <div id="selectedVariantsDetails" class="text-xs sm:text-sm text-blue-800"></div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row justify-between items-center mt-6 gap-3">
+            <button type="button" id="clearSelectionBtn" onclick="effacerSelectionVariantes()" 
+                    class="w-full sm:w-auto px-3 sm:px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors hidden text-sm sm:text-base">
+                <i class="fas fa-times mr-1 sm:mr-2"></i>Effacer la sélection
+            </button>
             
-                </div>
+            <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
+                <button type="button" id="addSelectedVariantsBtn" onclick="ajouterVariantesSelectionnees()" 
+                        class="w-full sm:w-auto px-3 sm:px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors hidden text-sm sm:text-base">
+                    <i class="fas fa-plus mr-1 sm:mr-2"></i>Ajouter les variantes sélectionnées
+                </button>
+                <button type="button" onclick="fermerModalVariantes()" 
+                        class="w-full sm:w-auto px-3 sm:px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg transition-colors text-sm sm:text-base">
+                    Annuler
+                </button>
             </div>
         </div>
     </div>
@@ -1588,6 +1545,7 @@ function rechercherArticles(terme) {
 // Variables globales pour le modal des variantes
 let articleSelectionne = null;
 let quantiteInitiale = 1;
+let variantesSelectionnees = new Map(); // Map pour stocker les variantes sélectionnées
 
 // Fonction pour ouvrir le modal de sélection des variantes
 function ouvrirModalVariantes(articleId, articleData, quantite = 1) {
@@ -1596,27 +1554,26 @@ function ouvrirModalVariantes(articleId, articleData, quantite = 1) {
     articleSelectionne = articleData;
     quantiteInitiale = quantite;
     
-    // Afficher le modal
-    const modal = document.getElementById('modalVariantes');
-    const infoArticle = document.getElementById('infoArticle');
+    // Réinitialiser la sélection des variantes
+    variantesSelectionnees.clear();
     
-    if (!modal || !infoArticle) {
+    // Afficher le modal
+    const modal = document.getElementById('variantModal');
+    const articleNom = document.getElementById('articleNom');
+    const articleReference = document.getElementById('articleReference');
+    
+    if (!modal || !articleNom || !articleReference) {
         console.error('❌ Éléments du modal non trouvés');
         return;
     }
     
     // Mettre à jour les informations de l'article
-    infoArticle.innerHTML = `
-        <div class="flex items-center space-x-4">
-            <div>
-                <div class="font-medium">${articleData.nom}</div>
-                <div class="text-xs opacity-75">Réf: ${articleData.reference || 'N/A'} - Prix: ${articleData.prix_actuel} DH</div>
-            </div>
-        </div>
-    `;
+    articleNom.textContent = articleData.nom || 'Article sans nom';
+    articleReference.textContent = `Réf: ${articleData.reference || 'N/A'} - Prix: ${articleData.prix_actuel} DH`;
     
     // Afficher le modal
     modal.classList.remove('hidden');
+    modal.style.display = 'flex';
     
     // Charger les variantes
     chargerVariantesArticle(articleId);
@@ -1626,11 +1583,25 @@ function ouvrirModalVariantes(articleId, articleData, quantite = 1) {
 function chargerVariantesArticle(articleId) {
     console.log('📡 Chargement des variantes pour l\'article:', articleId);
     
+    // Masquer les informations des variantes sélectionnées
+    const selectedVariantsInfo = document.getElementById('selectedVariantsInfo');
+    const clearSelectionBtn = document.getElementById('clearSelectionBtn');
+    const addSelectedVariantsBtn = document.getElementById('addSelectedVariantsBtn');
+    
+    if (selectedVariantsInfo) selectedVariantsInfo.classList.add('hidden');
+    if (clearSelectionBtn) clearSelectionBtn.classList.add('hidden');
+    if (addSelectedVariantsBtn) addSelectedVariantsBtn.classList.add('hidden');
+    
     // Afficher le loading et masquer les autres éléments
-    document.getElementById('loadingVariantes').classList.remove('hidden');
-    document.getElementById('errorVariantes').classList.add('hidden');
-    document.getElementById('tableauVariantes').classList.add('hidden');
-    document.getElementById('aucuneVariante').classList.add('hidden');
+    const variantsTableContainer = document.getElementById('variantsTableContainer');
+    if (variantsTableContainer) {
+        variantsTableContainer.innerHTML = `
+            <div class="text-center py-6 sm:py-8 text-gray-500">
+                <i class="fas fa-spinner fa-spin text-3xl sm:text-4xl mb-3 sm:mb-4 text-gray-300"></i>
+                <p class="text-base sm:text-lg">Chargement des variantes...</p>
+            </div>
+        `;
+    }
     
     // Récupérer le token CSRF
     const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
@@ -1676,114 +1647,81 @@ function chargerVariantesArticle(articleId) {
     });
 }
 
-// Fonction pour afficher les variantes dans la grille moderne
+// Fonction pour afficher les variantes dans le tableau croisé
 function afficherVariantes(variantes) {
     console.log('📋 Affichage de', variantes.length, 'variantes');
     
-    // Masquer le loading
-    document.getElementById('loadingVariantes').classList.add('hidden');
-    
-    if (variantes.length === 0) {
-        document.getElementById('aucuneVariante').classList.remove('hidden');
+    const variantsTableContainer = document.getElementById('variantsTableContainer');
+    if (!variantsTableContainer) {
+        console.error('❌ Conteneur des variantes non trouvé');
         return;
     }
     
-    // Afficher la grille
-    document.getElementById('tableauVariantes').classList.remove('hidden');
-    
-    // Générer les filtres de couleurs
-    genererFiltresCouleurs(variantes);
-    
-    // Afficher les variantes en cartes
-    const grille = document.getElementById('grilleVariantes');
-    grille.innerHTML = '';
-    
-    variantes.forEach(variante => {
-        const carte = document.createElement('div');
-        carte.className = 'variante-card bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden';
-        carte.dataset.couleur = variante.couleur;
-        
-        // Déterminer les styles selon le stock
-        const stockInfo = getStockInfo(variante.stock);
-        const couleurBadge = getCouleurBadge(variante.couleur);
-        
-        carte.innerHTML = `
-            <div class="p-4">
-                <!-- En-tête de la carte -->
-                <div class="flex items-start justify-between mb-3">
-                    <div class="flex items-center space-x-2">
-                        ${couleurBadge}
-                        <div>
-                            <h5 class="font-semibold text-gray-900">${variante.couleur || 'Couleur standard'}</h5>
-                            <p class="text-xs text-gray-500">Pointure ${variante.pointure || 'N/A'}</p>
-                        </div>
-                    </div>
-                    <div class="text-right">
-                        <div class="text-lg font-bold text-[#4B352A]">${variante.prix_actuel?.toFixed(2) || '0.00'} DH</div>
-                        <div class="text-xs text-gray-500">Prix unitaire</div>
-                    </div>
-                </div>
-                
-                <!-- Badge de pointure -->
-                <div class="mb-3">
-                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
-                        <i class="fas fa-shoe-prints mr-1 text-xs"></i>
-                        ${variante.pointure || 'N/A'}
-                    </span>
-                </div>
-                
-                <!-- Indicateur de stock -->
-                <div class="mb-4">
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="text-sm font-medium text-gray-700">Stock disponible</span>
-                        <span class="px-2 py-1 rounded-full text-xs font-semibold ${stockInfo.class}">
-                            ${stockInfo.text}
-                        </span>
-                    </div>
-                    <div class="w-full bg-gray-200 rounded-full h-2">
-                        <div class="h-2 rounded-full ${stockInfo.barClass}" style="width: ${Math.min(variante.stock / 10 * 100, 100)}%"></div>
-                    </div>
-                </div>
-                
-                <!-- Contrôles de quantité et ajout -->
-                <div class="space-y-3">
-                    <div class="flex items-center justify-center space-x-3">
-                        <button type="button" class="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors ${variante.stock <= 0 ? 'opacity-50 cursor-not-allowed' : ''}" 
-                                onclick="changerQuantiteVariante(this, -1)" ${variante.stock <= 0 ? 'disabled' : ''}>
-                            <i class="fas fa-minus text-sm"></i>
-                        </button>
-                        <input type="number" min="1" max="${variante.stock || 0}" value="${quantiteInitiale}" 
-                               class="w-20 text-center border-2 border-gray-300 rounded-lg px-3 py-2 font-semibold focus:border-[#4B352A] focus:outline-none transition-colors" 
-                               ${variante.stock <= 0 ? 'disabled' : ''} />
-                        <button type="button" class="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors ${variante.stock <= 0 ? 'opacity-50 cursor-not-allowed' : ''}" 
-                                onclick="changerQuantiteVariante(this, 1)" ${variante.stock <= 0 ? 'disabled' : ''}>
-                            <i class="fas fa-plus text-sm"></i>
-                        </button>
-                    </div>
-                    
-                    <button type="button" class="w-full px-4 py-3 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center space-x-2 ${
-                        variante.stock <= 0 
-                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                            : 'bg-[#4B352A] hover:bg-[#6d4b3b] text-white hover:shadow-lg transform hover:-translate-y-0.5'
-                    }" 
-                            onclick="ajouterVarianteAuPanier(${JSON.stringify(variante).replace(/"/g, '&quot;')}, this)"
-                            ${variante.stock <= 0 ? 'disabled' : ''}>
-                        <i class="fas fa-shopping-cart"></i>
-                        <span>${variante.stock <= 0 ? 'Indisponible' : 'Ajouter au panier'}</span>
-                    </button>
-                </div>
-                
-                <!-- Référence de la variante -->
-                ${variante.reference_variante ? `
-                    <div class="mt-3 pt-3 border-t border-gray-100">
-                        <div class="text-xs text-gray-500 font-mono">${variante.reference_variante}</div>
-                    </div>
-                ` : ''}
+    if (variantes.length === 0) {
+        variantsTableContainer.innerHTML = `
+            <div class="text-center py-6 sm:py-8 text-gray-500">
+                <i class="fas fa-info-circle text-3xl sm:text-4xl mb-3 sm:mb-4 text-blue-500"></i>
+                <p class="text-base sm:text-lg">Aucune variante disponible pour cet article</p>
             </div>
         `;
-        
-        grille.appendChild(carte);
+        return;
+    }
+    
+    // Créer un tableau croisé des variantes
+    const couleurs = [...new Set(variantes.map(v => v.couleur).filter(Boolean))];
+    const pointures = [...new Set(variantes.map(v => v.pointure).filter(Boolean))];
+    
+    let tableHTML = `
+        <table class="min-w-full border border-gray-200 rounded-lg overflow-hidden">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border-b border-gray-200">Couleur/Pointure</th>
+    `;
+    
+    // En-têtes des pointures
+    pointures.forEach(pointure => {
+        tableHTML += `<th class="px-4 py-3 text-center text-sm font-semibold text-gray-700 border-b border-gray-200">${pointure}</th>`;
     });
+    
+    tableHTML += '</tr></thead><tbody>';
+    
+    // Lignes des couleurs
+    couleurs.forEach(couleur => {
+        tableHTML += `<tr class="border-b border-gray-100">
+            <td class="px-4 py-3 text-sm font-medium text-gray-900 bg-gray-50">${couleur}</td>`;
+        
+        pointures.forEach(pointure => {
+            const variante = variantes.find(v => v.couleur === couleur && v.pointure === pointure);
+            if (variante) {
+                const stockInfo = getStockInfo(variante.stock);
+                tableHTML += `
+                    <td class="px-4 py-3 text-center border-l border-gray-100">
+                        <div class="space-y-2">
+                            <div class="text-lg font-bold text-green-600">${variante.prix_actuel?.toFixed(2) || '0.00'} DH</div>
+                            <div class="px-2 py-1 rounded-full text-xs font-semibold ${stockInfo.class}">
+                                ${stockInfo.text}
+                            </div>
+                            <label class="flex items-center justify-center cursor-pointer ${variante.stock <= 0 ? 'opacity-50 cursor-not-allowed' : ''}">
+                                <input type="checkbox" 
+                                       class="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 ${variante.stock <= 0 ? 'disabled' : ''}"
+                                       data-variante='${JSON.stringify(variante).replace(/'/g, "\\'")}'
+                                       onchange="gererSelectionVariante(this, '${variante.id}')"
+                                       ${variante.stock <= 0 ? 'disabled' : ''}>
+                                
+                            </label>
+                        </div>
+                    </td>`;
+            } else {
+                tableHTML += '<td class="px-4 py-3 text-center border-l border-gray-100 text-gray-400">-</td>';
+            }
+        });
+        
+        tableHTML += '</tr>';
+    });
+    
+    tableHTML += '</tbody></table>';
+    
+    variantsTableContainer.innerHTML = tableHTML;
 }
 
 // Fonction pour générer les informations de stock
@@ -1792,7 +1730,7 @@ function getStockInfo(stock) {
         return {
             class: 'bg-red-100 text-red-800',
             barClass: 'bg-red-500',
-            text: 'Épuisé'
+            text: 'Rupture'
         };
     } else if (stock < 5) {
         return {
@@ -1839,84 +1777,22 @@ function getCouleurBadge(couleur) {
     `;
 }
 
-// Fonction pour générer les filtres de couleurs
-function genererFiltresCouleurs(variantes) {
-    const couleursUniques = [...new Set(variantes.map(v => v.couleur).filter(Boolean))];
-    const boutonsCouleurs = document.getElementById('boutonsCouleurs');
-    
-    // Garder le bouton "Toutes"
-    const boutonsExistants = boutonsCouleurs.innerHTML;
-    boutonsCouleurs.innerHTML = boutonsExistants;
-    
-    couleursUniques.forEach(couleur => {
-        const bouton = document.createElement('button');
-        bouton.className = 'filtre-couleur px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border-2 border-transparent hover:border-gray-300 transition-colors';
-        bouton.dataset.couleur = couleur;
-        bouton.innerHTML = `
-            <div class="flex items-center space-x-1">
-                ${getCouleurBadge(couleur).replace('w-8 h-8', 'w-3 h-3')}
-                <span>${couleur}</span>
-            </div>
-        `;
-        
-        bouton.addEventListener('click', () => filtrerParCouleur(couleur));
-        boutonsCouleurs.appendChild(bouton);
-    });
-}
-
-// Fonction pour filtrer les variantes par couleur
-function filtrerParCouleur(couleurFiltre) {
-    const cartes = document.querySelectorAll('.variante-card');
-    const boutons = document.querySelectorAll('.filtre-couleur');
-    
-    // Mettre à jour l'état actif des boutons
-    boutons.forEach(btn => {
-        btn.classList.remove('active', 'bg-blue-100', 'text-blue-800', 'border-blue-200');
-        btn.classList.add('bg-gray-100', 'text-gray-700', 'border-transparent');
-    });
-    
-    const boutonActif = document.querySelector(`[data-couleur="${couleurFiltre}"]`);
-    if (boutonActif) {
-        boutonActif.classList.add('active', 'bg-blue-100', 'text-blue-800', 'border-blue-200');
-        boutonActif.classList.remove('bg-gray-100', 'text-gray-700', 'border-transparent');
-    }
-    
-    // Filtrer les cartes
-    cartes.forEach(carte => {
-        if (couleurFiltre === 'all' || carte.dataset.couleur === couleurFiltre) {
-            carte.style.display = 'block';
-        } else {
-            carte.style.display = 'none';
-        }
-    });
-}
-
-// Gestionnaire pour le bouton "Toutes"
-document.addEventListener('DOMContentLoaded', function() {
-    const boutonToutes = document.querySelector('[data-couleur="all"]');
-    if (boutonToutes) {
-        boutonToutes.addEventListener('click', () => filtrerParCouleur('all'));
-    }
-});
+// Les fonctions de filtrage par couleur ne sont plus nécessaires avec le tableau croisé
 
 // Fonction pour afficher une erreur de chargement des variantes
 function afficherErreurVariantes(message) {
-    document.getElementById('loadingVariantes').classList.add('hidden');
-    document.getElementById('errorVariantes').classList.remove('hidden');
-    document.getElementById('errorVariantes').querySelector('p').textContent = message || 'Erreur lors du chargement des variantes';
-}
-
-// Fonction pour changer la quantité d'une variante
-function changerQuantiteVariante(button, delta) {
-    const input = button.parentNode.querySelector('input[type="number"]');
-    if (input && !input.disabled) {
-        let newValue = parseInt(input.value) + delta;
-        const max = parseInt(input.max) || 999;
-        if (newValue < 1) newValue = 1;
-        if (newValue > max) newValue = max;
-        input.value = newValue;
+    const variantsTableContainer = document.getElementById('variantsTableContainer');
+    if (variantsTableContainer) {
+        variantsTableContainer.innerHTML = `
+            <div class="text-center py-6 sm:py-8 text-red-500">
+                <i class="fas fa-exclamation-triangle text-3xl sm:text-4xl mb-3 sm:mb-4 text-red-500"></i>
+                <p class="text-base sm:text-lg">${message || 'Erreur lors du chargement des variantes'}</p>
+            </div>
+        `;
     }
 }
+
+// Cette fonction n'est plus nécessaire avec le tableau croisé
 
 // Fonction pour ajouter une variante au panier
 function ajouterVarianteAuPanier(variante, button) {
@@ -1925,19 +1801,14 @@ function ajouterVarianteAuPanier(variante, button) {
     console.log('Variante data:', variante);
     console.log('Article sélectionné:', articleSelectionne);
     
-    const carte = button.closest('.bg-white');
-    console.log('Carte trouvée:', carte);
-    
-    const quantiteInput = carte ? carte.querySelector('input[type="number"]') : null;
-    console.log('Input quantité trouvé:', quantiteInput);
-    
-    const quantite = quantiteInput ? parseInt(quantiteInput.value) || 1 : 1;
-    console.log('Quantité finale:', quantite);
-    
     if (!articleSelectionne) {
         console.error('❌ Aucun article sélectionné');
         return;
     }
+    
+    // Quantité par défaut pour le tableau croisé
+    const quantite = 1;
+    console.log('Quantité finale:', quantite);
     
     console.log('🛒 Ajout variante au panier:', {
         article: articleSelectionne.nom,
@@ -2049,46 +1920,79 @@ function ajouterVarianteAuPanierDetaille(articleData, variante, quantiteInitiale
     calculerTotal();
 }
 
+// Fonction pour gérer la sélection/désélection d'une variante
+function gererSelectionVariante(checkbox, varianteId) {
+    const varianteData = JSON.parse(checkbox.dataset.variante);
+    
+    if (checkbox.checked) {
+        // Ajouter la variante à la sélection
+        variantesSelectionnees.set(varianteId, varianteData);
+        console.log('✅ Variante sélectionnée:', varianteData);
+    } else {
+        // Retirer la variante de la sélection
+        variantesSelectionnees.delete(varianteId);
+        console.log('❌ Variante désélectionnée:', varianteData);
+    }
+    
+    // Mettre à jour l'affichage des variantes sélectionnées
+    mettreAJourAffichageVariantesSelectionnees();
+}
+
+// Fonction pour mettre à jour l'affichage des variantes sélectionnées
+function mettreAJourAffichageVariantesSelectionnees() {
+    const selectedVariantsInfo = document.getElementById('selectedVariantsInfo');
+    const selectedVariantsDetails = document.getElementById('selectedVariantsDetails');
+    const clearSelectionBtn = document.getElementById('clearSelectionBtn');
+    const addSelectedVariantsBtn = document.getElementById('addSelectedVariantsBtn');
+    
+    if (variantesSelectionnees.size === 0) {
+        // Aucune variante sélectionnée
+        selectedVariantsInfo.classList.add('hidden');
+        clearSelectionBtn.classList.add('hidden');
+        addSelectedVariantsBtn.classList.add('hidden');
+        return;
+    }
+    
+    // Afficher les informations des variantes sélectionnées
+    selectedVariantsInfo.classList.remove('hidden');
+    clearSelectionBtn.classList.remove('hidden');
+    addSelectedVariantsBtn.classList.remove('hidden');
+    
+    // Construire le HTML des détails
+    let detailsHTML = '';
+    variantesSelectionnees.forEach((variante, id) => {
+        detailsHTML += `
+            <div class="mb-2 p-2 bg-blue-100 rounded border border-blue-200">
+                <div class="font-medium">Prix: ${variante.prix_actuel?.toFixed(2) || '0.00'} DH | Stock: ${variante.stock || 0} en stock</div>
+                <div class="text-xs">Couleur: ${variante.couleur || 'N/A'} | Pointure: ${variante.pointure || 'N/A'}</div>
+            </div>
+        `;
+    });
+    
+    selectedVariantsDetails.innerHTML = detailsHTML;
+    
+    // Mettre à jour le bouton d'ajout
+    addSelectedVariantsBtn.innerHTML = `<i class="fas fa-plus mr-1 sm:mr-2"></i>Ajouter ${variantesSelectionnees.size} variante(s)`;
+}
+
 // Fonction pour fermer le modal des variantes
 function fermerModalVariantes() {
-    const modal = document.getElementById('modalVariantes');
+    const modal = document.getElementById('variantModal');
     if (modal) {
         modal.classList.add('hidden');
+        modal.style.display = 'none';
     }
     
     // Réinitialiser les variables
     articleSelectionne = null;
     quantiteInitiale = 1;
+    variantesSelectionnees.clear();
 }
 
 // Gestionnaires d'événements pour le modal des variantes
 document.addEventListener('DOMContentLoaded', function() {
-    // Bouton fermer modal
-    const fermerBtn = document.getElementById('fermerModalVariantes');
-    if (fermerBtn) {
-        fermerBtn.addEventListener('click', fermerModalVariantes);
-    }
-    
-    // Bouton annuler
-    const annulerBtn = document.getElementById('annulerVariantes');
-    if (annulerBtn) {
-        annulerBtn.addEventListener('click', fermerModalVariantes);
-    }
-    
-    // Bouton fermer (bas du modal)
-    const fermerBasBtn = document.getElementById('fermerVariantesBas');
-    if (fermerBasBtn) {
-        fermerBasBtn.addEventListener('click', fermerModalVariantes);
-    }
-    
-    // Bouton fermer flottant
-    const fermerFloatBtn = document.getElementById('fermerModalFloat');
-    if (fermerFloatBtn) {
-        fermerFloatBtn.addEventListener('click', fermerModalVariantes);
-    }
-    
     // Clic en dehors du modal pour fermer
-    const modal = document.getElementById('modalVariantes');
+    const modal = document.getElementById('variantModal');
     if (modal) {
         modal.addEventListener('click', function(e) {
             if (e.target === modal) {
@@ -2097,6 +2001,53 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// Fonction pour effacer la sélection des variantes
+function effacerSelectionVariantes() {
+    console.log('🗑️ Effacement de la sélection des variantes');
+    
+    // Décocher toutes les checkboxes
+    const checkboxes = document.querySelectorAll('#variantsTableContainer input[type="checkbox"]');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    
+    // Vider la sélection
+    variantesSelectionnees.clear();
+    
+    // Mettre à jour l'affichage
+    mettreAJourAffichageVariantesSelectionnees();
+    
+    showNotification('✅ Sélection des variantes effacée', 'success');
+}
+
+// Fonction pour ajouter toutes les variantes sélectionnées au panier
+function ajouterVariantesSelectionnees() {
+    console.log('📦 Ajout des variantes sélectionnées au panier:', variantesSelectionnees.size);
+    
+    if (variantesSelectionnees.size === 0) {
+        showNotification('⚠️ Aucune variante sélectionnée', 'warning');
+        return;
+    }
+    
+    let ajoutees = 0;
+    
+    // Ajouter chaque variante sélectionnée au panier
+    variantesSelectionnees.forEach((variante, id) => {
+        try {
+            ajouterVarianteAuPanierDetaille(articleSelectionne, variante, 1);
+            ajoutees++;
+        } catch (error) {
+            console.error('❌ Erreur lors de l\'ajout de la variante:', error);
+        }
+    });
+    
+    // Fermer le modal
+    fermerModalVariantes();
+    
+    // Notification de succès
+    showNotification(`✅ ${ajoutees} variante(s) ajoutée(s) au panier`, 'success');
+}
 
 // Initialisation au chargement de la page
 document.addEventListener('DOMContentLoaded', function() {

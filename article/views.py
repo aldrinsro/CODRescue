@@ -1373,8 +1373,6 @@ def reinitialiser_prix(request, id):
 
 @login_required
 def gerer_promotions_automatiquement(request):
-
-    
     """Gère automatiquement toutes les promotions selon leur date et statut"""
     now = timezone.now()
     
@@ -2037,8 +2035,6 @@ def supprimer_genre(request, genre_id):
         messages.error(request, f'Erreur lors de la suppression : {str(e)}')
         return redirect('article:gestion_couleurs_pointures')
     
-
-
 
 @login_required
 @require_POST
