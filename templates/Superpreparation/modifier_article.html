@@ -1,0 +1,1469 @@
+{% extends 'composant_generale/Superpreparation/base.html' %}
+{% load static %}
+
+{% block title %}Modifier Article - YZ-CMD{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/variantes-modal.css' %}">
+<style>
+    /* Styles pour les champs de quantité modifiés */
+    .quantite-modifiee {
+        border-color: #f59e0b !important;
+        background-color: #fef3c7 !important;
+        box-shadow: 0 0 0 1px #f59e0b;
+    }
+    
+    .quantite-modifiee:focus {
+        border-color: #d97706 !important;
+        box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
+    }
+    
+    /* Animation pour le statut de modification */
+    .status-modification {
+        animation: fadeIn 0.3s ease-in;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateX(-10px); }
+        to { opacity: 1; transform: translateX(0); }
+    }
+    
+    /* Amélioration de l'apparence des champs de quantité */
+    .quantite-input {
+        transition: all 0.2s ease;
+    }
+    
+    .quantite-input:hover {
+        border-color: #4a90e2;
+    }
+    
+    /* Styles pour le tableau des variantes */
+    .variantes-table {
+        font-size: 0.875rem;
+    }
+    
+    .variantes-table td {
+        vertical-align: top;
+        padding: 0.75rem 0.5rem;
+    }
+    
+    .variantes-table th {
+        background: linear-gradient(to bottom, #f9fafb, #f3f4f6);
+        font-weight: 600;
+    }
+    
+    .variante-cell {
+        min-height: 120px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+    
+    /* Animation pour les cellules au hover */
+    .variantes-table tbody tr:hover {
+        background-color: #f8fafc;
+        transform: scale(1.002);
+        transition: all 0.2s ease;
+    }
+    
+    /* Amélioration des badges de statut */
+    .status-badge {
+        font-size: 0.75rem;
+        font-weight: 500;
+        padding: 0.25rem 0.5rem;
+        border-radius: 9999px;
+        text-align: center;
+        white-space: nowrap;
+    }
+    
+    /* Styles pour la référence */
+    .reference-badge {
+        background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+        border: 1px solid #d1d5db;
+        font-family: 'Courier New', monospace;
+        font-size: 0.6rem;
+        padding: 0.125rem 0.25rem;
+        border-radius: 0.25rem;
+        color: #4b5563;
+        max-width: 80px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    /* Styles pour les messages toast */
+    .toast-message {
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        border-radius: 0.5rem;
+        font-weight: 500;
+        z-index: 9999;
+    }
+    
+    /* Animation pour les messages */
+    .toast-enter {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    
+    .toast-enter-active {
+        transform: translateX(0);
+        opacity: 1;
+        transition: all 0.3s ease;
+    }
+    
+    .toast-exit {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    
+    .toast-exit-active {
+        transform: translateX(100%);
+        opacity: 0;
+        transition: all 0.3s ease;
+    }
+    
+    /* Animation pour les nouvelles variantes */
+    @keyframes fadeIn {
+        from { 
+            opacity: 0; 
+            transform: scale(0.8); 
+        }
+        to { 
+            opacity: 1; 
+            transform: scale(1); 
+        }
+    }
+    
+    .nouvelle-variante {
+        animation: fadeIn 0.5s ease-in-out;
+    }
+    
+    /* Animation de surbrillance pour les nouvelles variantes */
+    @keyframes highlight {
+        0% { background-color: #fef3c7; }
+        50% { background-color: #fde68a; }
+        100% { background-color: transparent; }
+    }
+    
+    .highlight-nouvelle-variante {
+        animation: highlight 2s ease-in-out;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="main-content transition-all duration-300" id="mainContent">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 text-white p-6 rounded-xl shadow-lg" style="background: linear-gradient(to right, #0e1d3d, #1a2b5a);">
+        <div>
+            <h1 class="text-3xl font-bold flex items-center mb-2">
+                <i class="fas fa-edit mr-3" style="color: #4a90e2;"></i>
+                Modifier l'Article: {{ article.nom }}
+            </h1>
+            <p style="color: #7ba7d9;">Mettez à jour les informations de l'article</p>
+        </div>
+        <div class="flex items-center gap-4 mt-4 md:mt-0">
+            <a href="{% url 'Superpreparation:detail_article' article.id %}" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-sm">
+                <i class="fas fa-eye mr-2"></i>Voir Détails
+            </a>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-lg border p-6 mb-8" style="border-color: var(--preparation-border-accent);">
+        <h2 class="text-2xl font-bold mb-6" style="color: var(--preparation-primary);">Formulaire de Modification</h2>
+        
+        <form method="post" enctype="multipart/form-data" id="articleForm" onsubmit="return handleFormSubmit(event)">
+            {% csrf_token %}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div>
+                    <label for="id_nom" class="block text-sm font-semibold mb-2" style="color: var(--preparation-primary);">Nom de l'article:</label>
+                    <input type="text" name="nom" id="id_nom" value="{% if form_data.nom %}{{ form_data.nom }}{% else %}{{ article.nom|default_if_none:'' }}{% endif %}" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--preparation-border-accent)] focus:border-transparent transition duration-200" placeholder="Ex: Nike Air Max, Adidas Stan Smith..." required>
+                </div>
+                <div>
+                    <label for="id_reference" class="block text-sm font-semibold mb-2" style="color: var(--preparation-primary);">Référence:</label>
+                    {% if article.reference %}
+                        <div class="p-3 bg-green-50 border border-green-200 rounded-lg mb-2">
+                            <p class="text-sm text-green-700">
+                                <i class="fas fa-check-circle mr-2"></i>
+                                Référence actuelle : <strong>{{ article.reference }}</strong>
+                            </p>
+                        </div>
+                    {% endif %}
+                    <div class="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p class="text-sm text-blue-700">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            La référence sera régénérée automatiquement au format : <strong>{CATEGORIE}-{GENRE}-YZ-{MODELE}</strong>
+                        </p>
+                        <p class="text-xs text-blue-600 mt-1">
+                            Exemple : SPORT-HOMME-YZ-1001, CHAUSSURES-FEMME-YZ-2001
+                        </p>
+                    </div>
+                </div>
+                <div>
+                    <label for="id_modele" class="block text-sm font-semibold mb-2" style="color: var(--preparation-primary);">Numéro du Modèle:</label>
+                    <input type="number" name="modele" id="id_modele" value="{% if form_data.modele %}{{ form_data.modele }}{% else %}{{ article.modele|default_if_none:'' }}{% endif %}" min="1" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--preparation-border-accent)] focus:border-transparent transition duration-200" placeholder="Ex: 1001, 2001, 3001...">
+                    <small class="text-gray-600">Le numéro du modèle doit être unique et supérieur à 0</small>
+                    {% if article.modele %}
+                    <div class="mt-2 p-2 bg-blue-50 rounded-lg">
+                        <p class="text-sm text-blue-700">Modèle complet: <span class="font-semibold">YZ-{{ article.modele }}</span></p>
+                    </div>
+                    {% endif %}
+                </div>
+                <div>
+                    <label for="id_prix_unitaire" class="block text-sm font-semibold mb-2" style="color: #023535;">Prix Unitaire (DH):</label>
+                    <input type="number" name="prix_unitaire" id="id_prix_unitaire" value="{% if form_data.prix_unitaire %}{{ form_data.prix_unitaire }}{% else %}{{ article.prix_unitaire|stringformat:".2f" }}{% endif %}" step="0.01" min="0.01" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200" placeholder="Ex: 299.99, 450.00, 125.50..." required>
+                    <small class="text-gray-600">Le prix doit être supérieur à 0 DH</small>
+                    {% if article.has_promo_active or article.phase == 'LIQUIDATION' %}
+                    <div class="mt-2 p-3 bg-gray-50 rounded-lg">
+                        <p class="text-sm font-medium mb-1">Prix actuel:</p>
+                        <div class="flex items-center gap-2">
+                            <span class="{% if article.has_promo_active %}text-red-500{% else %}text-orange-500{% endif %} font-bold text-lg">{{ article.prix_actuel|floatformat:2 }} DH</span>
+                            <span class="text-gray-500 text-sm line-through">{{ article.prix_unitaire|floatformat:2 }} DH</span>
+                            {% if article.has_promo_active %}
+                            <span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full">En promotion</span>
+                            {% else %}
+                            <span class="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded-full">En liquidation</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                <div>
+                    <label for="id_prix_achat" class="block text-sm font-semibold mb-2" style="color: #023535;">Prix d'Achat (DH):</label>
+                    <input type="number" name="prix_achat" id="id_prix_achat" value="{% if form_data.prix_achat %}{{ form_data.prix_achat }}{% else %}{{ article.prix_achat|stringformat:".2f"|default:0 }}{% endif %}" step="0.01" min="0.01" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200" placeholder="Ex: 150.00, 200.00, 75.00..." required>
+                    <small class="text-gray-600">Le prix d'achat doit être supérieur à 0 DH</small>
+                </div>
+                <div>
+                    <label for="id_categorie" class="block text-sm font-semibold mb-2" style="color: #023535;">Catégorie:</label>
+                    <select name="categorie" id="id_categorie" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200">
+                        {% for categorie in categories %}
+                            <option value="{{ categorie.id }}" {% if article.categorie_id == categorie.id %}selected{% endif %}>{{ categorie.nom }}</option>
+                        {% endfor %}
+                    </select>
+                    <small class="text-gray-600">Catégorie de l'article</small>
+                </div>
+                <div>
+                    <label for="id_genre" class="block text-sm font-semibold mb-2" style="color: #023535;">Genre:</label>
+                    
+                    <select name="genre" id="id_genre" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200">
+                       {% for genre in genres %}
+                            <option value="{{ genre.id }}" {% if article.genre_id == genre.id %}selected{% endif %}>{{ genre.nom }}</option>
+                        {% endfor %}
+                    </select>
+                    <small class="text-gray-600">Genre de l'article</small>
+                </div>
+                <div>
+                    <label for="id_qte_disponible" class="block text-sm font-semibold mb-2" style="color: #023535;">Quantité Disponible:</label>
+                    
+                    <span class="inline-block px-3 py-1 bg-green-100 text-green-800 rounded-full font-medium">{{ article.qte_disponible }} paires en stock</span>
+                    <small class="text-gray-600">Nombre de paires en stock (minimum 0)</small>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-2" style="color: #023535;">Image actuelle:</label>
+                    {% if article.image %}
+                        <img src="{{ article.image.url }}" alt="{{ article.nom }}" class="w-32 h-32 object-cover rounded-lg shadow-sm mb-2" onerror="this.onerror=null;this.src='/static/img/default.png';"/>
+                    {% elif article.image_url %}
+                        <img src="{{ article.image_url }}" alt="{{ article.nom }}" class="w-32 h-32 object-cover rounded-lg shadow-sm mb-2" onerror="this.onerror=null;this.src='/static/img/default.png';"/>
+                    {% else %}
+                        <div class="w-32 h-32 bg-gray-200 rounded-lg flex items-center justify-center text-gray-500 text-3xl shadow-sm mb-2">
+                            <i class="fas fa-image"></i>
+                        </div>
+                    {% endif %}
+                    <label for="id_image" class="block text-sm font-semibold mb-2" style="color: #023535;">Changer l'image:</label>
+                    <input type="file" name="image" id="id_image" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200">
+                </div>
+                <div>
+                    <div class="flex items-center mb-4">
+                        {% if article.phase == 'LIQUIDATION' or article.phase == 'EN_TEST' %}
+                        <input type="checkbox" name="isUpsell" id="id_isUpsell" class="w-5 h-5 mr-2 text-gray-400 border-gray-300 rounded opacity-50 cursor-not-allowed" disabled>
+                        <label for="id_isUpsell" class="font-medium text-sm text-gray-500">Est un produit Upsell (désactivé pour les articles en {{ article.get_phase_display|lower }})</label>
+                        {% else %}
+                        <input type="checkbox" name="isUpsell" id="id_isUpsell" class="w-5 h-5 mr-2 text-[#023535] border-gray-300 rounded focus:ring-[#66cccc]" {% if article.isUpsell %}checked{% endif %}>
+                        <label for="id_isUpsell" class="font-medium text-sm" style="color: #023535;">Est un produit Upsell</label>
+                        {% endif %}
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-2" style="color: #023535;">Phase de l'article:</label>
+                    <div class="p-3 border border-gray-300 rounded-lg bg-gray-50">
+                        {% if article.phase == 'EN_COURS' %}
+                            <span class="inline-block px-3 py-1 bg-green-100 text-green-800 rounded-full font-medium">En Cours</span>
+                        {% elif article.phase == 'LIQUIDATION' %}
+                            <span class="inline-block px-3 py-1 bg-orange-100 text-orange-800 rounded-full font-medium">Liquidation</span>
+                        {% elif article.phase == 'EN_TEST' %}
+                            <span class="inline-block px-3 py-1 bg-blue-100 text-blue-800 rounded-full font-medium">En Test</span>
+                        {% else %}
+                            <span class="inline-block px-3 py-1 bg-gray-100 text-gray-800 rounded-full font-medium">{{ article.get_phase_display|default:"Non définie" }}</span>
+                        {% endif %}
+                    </div>
+                    <small class="text-gray-600">Utilisez le bouton "Mettre en liquidation" pour changer la phase</small>
+                </div>
+            </div>
+            <div class="mb-6">
+                <label for="id_description" class="block text-sm font-semibold mb-2" style="color: #023535;">Description:</label>
+                <textarea name="description" id="id_description" rows="4" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200" placeholder="Ex: Chaussure de sport confortable avec semelle en caoutchouc, idéale pour la course à pied et les activités quotidiennes...">{% if form_data.description %}{{ form_data.description }}{% else %}{{ article.description|default_if_none:'' }}{% endif %}</textarea>
+            </div>
+
+            <!-- Section des variantes -->
+            <div class="bg-gray-50 p-6 rounded-lg border border-gray-200 mb-6">
+                <!-- En-tête de la section -->
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+                    <div class="mb-4 md:mb-0">
+                        <h3 class="text-xl font-bold mb-2" style="color: #023535;">
+                            <i class="fas fa-tags mr-3 text-[#66cccc]"></i>
+                            Gestion des Variantes
+                        </h3>
+                        <p class="text-sm text-gray-600">Gérez les variantes de couleur et pointure de cet article</p>
+                    </div>
+                    <button type="button" onclick="openVarianteModal()" 
+                            class="btn-ajouter-variante text-white px-6 py-3 rounded-lg font-medium transition-all shadow-md hover:shadow-lg transform hover:scale-105">
+                        <i class="fas fa-plus mr-2"></i>Ajouter une variante
+                    </button>
+                </div>
+
+                <!-- Statistiques rapides -->
+                {% if article.variantes.all %}
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div class="bg-white p-4 rounded-lg border border-gray-200 text-center">
+                        <div class="text-2xl font-bold text-blue-600">{{ article.variantes.count }}</div>
+                        <div class="text-sm text-gray-600">Total Variantes</div>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg border border-gray-200 text-center">
+                        <div class="text-2xl font-bold text-green-600">{{ article.variantes.all|length }}</div>
+                        <div class="text-sm text-gray-600">En Stock</div>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg border border-gray-200 text-center">
+                        <div class="text-2xl font-bold text-orange-600">0</div>
+                        <div class="text-sm text-gray-600">Stock Faible</div>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg border border-gray-200 text-center">
+                        <div class="text-2xl font-bold text-red-600">0</div>
+                        <div class="text-sm text-gray-600">Rupture</div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Variantes existantes -->
+                <div id="variantesExistantes" class="mb-6">
+                    {% if article.variantes.all %}
+                        <div class="bg-white rounded-lg border shadow-sm overflow-hidden" style="border-color: #e6fffe;">
+                            <!-- En-tête du tableau -->
+                            <div class="bg-gray-50 px-6 py-4 border-b" style="border-color: #e6fffe;">
+                                <h4 class="text-lg font-semibold flex items-center" style="color: #023535;">
+                                    <i class="fas fa-layer-group mr-2 text-[#66cccc]"></i>
+                                    Variantes existantes
+                                    <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-medium text-sm ml-3">
+                                        {{ article.variantes.count }} variante(s)
+                                    </span>
+                                </h4>
+                            </div>
+                            
+                            <!-- Tableau croisé pointures/couleurs -->
+                            <div class="overflow-x-auto">
+                                {% if tableau_matrice %}
+                                    <table class="variantes-table w-full border-collapse">
+                                        <thead>
+                                            <tr class="bg-gray-50">
+                                                <!-- En-tête pour la colonne des pointures -->
+                                                <th class="p-3 text-center font-semibold border" style="color: #023535; border-color: #d1d5db; background: #66cccc; color: white;">
+                                                    <i class="fas fa-shoe-prints mr-2"></i>
+                                                    Pointure
+                                                </th>
+                                                <!-- En-têtes des couleurs -->
+                                                {% for couleur in couleurs_uniques %}
+                                                <th class="p-3 text-center font-semibold border min-w-24" style="border-color: #d1d5db; background: #66cccc; color: white;">
+                                                    <div class="flex flex-col items-center space-y-1">
+                                                        <i class="fas fa-palette text-sm"></i>
+                                                        <span class="text-sm font-medium">{{ couleur }}</span>
+                                                    </div>
+                                                </th>
+                                                {% endfor %}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for ligne in tableau_matrice %}
+                                            <tr class="hover:bg-gray-50 transition-all duration-200">
+                                                <!-- Colonne Pointure -->
+                                                <td class="p-3 text-center font-semibold border" style="border-color: #d1d5db; background: #66cccc; color: white;">
+                                                    {{ ligne.pointure }}
+                                                </td>
+                                                
+                                                <!-- Colonnes pour chaque couleur -->
+                                                {% for cellule in ligne.cellules %}
+                                                    {% if cellule.existe %}
+                                                        <td class="p-2 text-center border" style="border-color: #d1d5db;" data-variante-id="{{ cellule.id }}">
+                                                            <div class="flex flex-col items-center space-y-1">
+                                                                <!-- Indicateur de statut -->
+                                                                {% if cellule.status == 'normal' %}
+                                                                    <span class="inline-block w-3 h-3 rounded-full bg-green-500" title="En stock"></span>
+                                                                {% elif cellule.status == 'faible' %}
+                                                                    <span class="inline-block w-3 h-3 rounded-full bg-orange-500" title="Stock faible"></span>
+                                                                {% else %}
+                                                                    <span class="inline-block w-3 h-3 rounded-full bg-red-500" title="Rupture"></span>
+                                                                {% endif %}
+                                                                
+                                                                <!-- Champ de quantité -->
+                                                                <input type="number" 
+                                                                       id="quantite_{{ cellule.id }}" 
+                                                                       name="variante_existante_{{ cellule.id }}_quantite" 
+                                                                       value="{{ cellule.stock }}" 
+                                                                       min="0" 
+                                                                       class="quantite-input w-16 px-2 py-1 border border-gray-300 rounded text-xs text-center focus:ring-1 focus:ring-[#66cccc] focus:border-transparent"
+                                                                       onchange="marquerVarianteModifiee({{ cellule.id }})"
+                                                                       title="Modifier la quantité">
+                                                                <span class="text-xs text-gray-500">pcs</span>
+                                                                
+                                                                <!-- Référence de la variante -->
+                                                                <div class="text-xs text-gray-400 font-mono mt-1" title="Référence: {{ cellule.reference|default:'N/A' }}">
+                                                                    {{ cellule.reference|default:"N/A"|truncatechars:12 }}
+                                                                </div>
+                                                                
+                                                                <!-- Indicateur de modification -->
+                                                                <span id="status_{{ cellule.id }}" class="status-modification text-xs text-orange-600 font-medium hidden">
+                                                                    <i class="fas fa-edit"></i>
+                                                                </span>
+                                                            </div>
+                                                            <!-- Champ caché pour marquer la variante comme modifiée -->
+                                                            <input type="hidden" id="modifiee_{{ cellule.id }}" name="variante_existante_{{ cellule.id }}_modifiee" value="false">
+                                                        </td>
+                                                    {% else %}
+                                                        <!-- Cellule vide -->
+                                                        <td class="p-2 text-center border bg-gray-50" style="border-color: #d1d5db;">
+                                                            <div class="flex flex-col items-center space-y-1">
+                                                                <span class="text-gray-400 text-xs">-</span>
+                                                            </div>
+                                                        </td>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                {% else %}
+                                    <div class="text-center py-8">
+                                        <p class="text-gray-500">Aucune variante disponible</p>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Légende des indicateurs -->
+                        <div class="mt-6 p-4 bg-white rounded-lg border shadow-sm" style="border-color: #e6fffe;">
+                            <h5 class="text-sm font-semibold mb-3" style="color: #023535;">Légende des Indicateurs</h5>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                <div class="flex items-center">
+                                    <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium mr-3">En stock</span>
+                                    <span class="text-gray-600">5+ pièces</span>
+                                </div>
+                                <div class="flex items-center">
+                                    <span class="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-xs font-medium mr-3">Stock faible</span>
+                                    <span class="text-gray-600">1-4 pièces</span>
+                                </div>
+                                <div class="flex items-center">
+                                    <span class="bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-medium mr-3">Rupture</span>
+                                    <span class="text-gray-600">0 pièce</span>
+                                </div>
+                                <div class="flex items-center">
+                                    <span class="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs mr-3">
+                                        <i class="fas fa-edit"></i> Modifiée
+                                    </span>
+                                    <span class="text-gray-600">Quantité changée</span>
+                                </div>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-12 bg-white rounded-lg border shadow-sm" style="border-color: #e6fffe;">
+                            <div class="text-gray-400 text-6xl mb-4">
+                                <i class="fas fa-box-open"></i>
+                            </div>
+                            <h5 class="text-lg font-medium text-gray-600 mb-3">Aucune variante définie</h5>
+                            <p class="text-gray-500 mb-6">Cet article n'a pas encore de variantes (couleur/pointure) configurées.</p>
+                            <button type="button" onclick="openVarianteModal()" 
+                                    class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-medium transition-all shadow-md hover:shadow-lg">
+                                <i class="fas fa-plus mr-2"></i>Créer la première variante
+                            </button>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Nouvelles variantes ajoutées -->
+                <div id="variantesContainer" class="space-y-3">
+                    <div class="variantes-empty-state hidden">
+                        <i class="fas fa-tags"></i>
+                        <p class="text-sm text-gray-600 italic">Nouvelles variantes ajoutées apparaîtront ici.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
+                <h3 class="text-lg font-semibold mb-3" style="color: #023535;">Prix de substitution (Upsell)</h3>
+                <p class="text-sm text-gray-600 mb-4">Vous pouvez définir jusqu'à 4 prix alternatifs pour cet article</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="id_prix_upsell_1" class="block text-sm font-semibold mb-2" style="color: #023535;">Prix upsell 1 (DH):</label>
+                        <input type="number" name="prix_upsell_1" id="id_prix_upsell_1" 
+                               value="{{ article.prix_upsell_1|floatformat:"-2"|default:0 }}" 
+                               step="0.01" min="0" 
+                               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200" 
+                               placeholder="Ex: 349.99">
+                    </div>
+                    <div>
+                        <label for="id_prix_upsell_2" class="block text-sm font-semibold mb-2" style="color: #023535;">Prix upsell 2 (DH):</label>
+                        <input type="number" name="prix_upsell_2" id="id_prix_upsell_2" 
+                               value="{{ article.prix_upsell_2|floatformat:"-2"|default:0 }}" 
+                               step="0.01" min="0" 
+                               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200" 
+                               placeholder="Ex: 399.99">
+                    </div>
+                    <div>
+                        <label for="id_prix_upsell_3" class="block text-sm font-semibold mb-2" style="color: #023535;">Prix upsell 3 (DH):</label>
+                        <input type="number" name="prix_upsell_3" id="id_prix_upsell_3" 
+                               value="{{ article.prix_upsell_3|floatformat:"-2"|default:0 }}" 
+                               step="0.01" min="0" 
+                               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200" 
+                               placeholder="Ex: 449.99">
+                    </div>
+                    <div>
+                        <label for="id_prix_upsell_4" class="block text-sm font-semibold mb-2" style="color: #023535;">Prix upsell 4 (DH):</label>
+                        <input type="number" name="prix_upsell_4" id="id_prix_upsell_4" 
+                               value="{{ article.prix_upsell_4|floatformat:"-2"|default:0 }}" 
+                               step="0.01" min="0" 
+                               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200" 
+                               placeholder="Ex: 499.99">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ajouter un champ caché pour la phase qui sera mise à jour par le bouton -->
+            <input type="hidden" name="phase" id="id_phase" value="{% if form_data.phase %}{{ form_data.phase }}{% else %}{{ article.phase|default:'EN_COURS' }}{% endif %}">
+
+            <div class="flex flex-wrap justify-end gap-3 mt-8">
+                <button type="submit" class="inline-flex items-center text-white px-5 py-3 rounded-lg text-lg font-medium transition-all shadow-md hover:shadow-lg transform hover:scale-105" style="background-color: #023535; hover:background-color: #034a4a;">
+                    <i class="fas fa-save mr-2"></i>Sauvegarder
+                </button>
+                <div class="flex flex-wrap gap-2">
+                    {% if article.has_promo_active %}
+                    <div class="w-full bg-yellow-100 text-yellow-700 p-2 rounded-lg mb-2 text-sm">
+                        <i class="fas fa-exclamation-triangle mr-1"></i>
+                        Les changements de phase sont désactivés car cet article est actuellement en promotion.
+                    </div>
+                    <button type="button" disabled class="inline-flex items-center bg-gray-300 text-gray-500 px-4 py-2 rounded-lg text-md font-medium cursor-not-allowed opacity-60">
+                        <i class="fas fa-check-circle mr-2"></i>Mettre par défaut
+                    </button>
+                    <button type="button" disabled class="inline-flex items-center bg-gray-300 text-gray-500 px-4 py-2 rounded-lg text-md font-medium cursor-not-allowed opacity-60">
+                        <i class="fas fa-tag mr-2"></i>Mettre en liquidation
+                    </button>
+                    <button type="button" disabled class="inline-flex items-center bg-gray-300 text-gray-500 px-4 py-2 rounded-lg text-md font-medium cursor-not-allowed opacity-60">
+                        <i class="fas fa-flask mr-2"></i>Mettre en test
+                    </button>
+                    {% else %}
+                    <a href="#" onclick="document.getElementById('id_phase').value='EN_COURS'; this.closest('form').submit(); return false;" 
+                       class="inline-flex items-center bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-md font-medium transition-all shadow-md hover:shadow-lg">
+                        <i class="fas fa-check-circle mr-2"></i>Mettre par défaut
+                    </a>
+                    <a href="#" onclick="document.getElementById('id_phase').value='LIQUIDATION'; this.closest('form').submit(); return false;" 
+                       class="inline-flex items-center bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-md font-medium transition-all shadow-md hover:shadow-lg">
+                        <i class="fas fa-tag mr-2"></i>Mettre en liquidation
+                    </a>
+                    <a href="#" onclick="document.getElementById('id_phase').value='EN_TEST'; this.closest('form').submit(); return false;" 
+                       class="inline-flex items-center bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-md font-medium transition-all shadow-md hover:shadow-lg">
+                        <i class="fas fa-flask mr-2"></i>Mettre en test
+                    </a>
+                    {% endif %}
+                </div>
+                <a href="{% url 'Superpreparation:liste_articles' %}" class="inline-flex items-center bg-gray-400 hover:bg-gray-500 text-white px-5 py-3 rounded-lg text-lg font-medium transition-all shadow-md hover:shadow-lg transform hover:scale-105">
+                    <i class="fas fa-times mr-2"></i>Annuler
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal pour ajouter des variantes -->
+<div id="varianteModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <div class="modal-header">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-lg font-semibold" style="color: #023535;">
+                        <i class="fas fa-plus-circle mr-2 text-[#66cccc]"></i>
+                        Ajouter une variante
+                    </h3>
+                    <button onclick="closeVarianteModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <form id="varianteForm" class="space-y-4">
+                <div>
+                    <label for="modal_couleur" class="modal-label">Couleur (optionnel):</label>
+                    <select name="couleur" id="modal_couleur" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200">
+                        <option value="">-- Sélectionner une couleur --</option>
+                        {% for couleur in couleurs %}
+                            <option value="{{ couleur.id }}">{{ couleur.nom }}</option>
+                        {% endfor %}
+                    </select>
+                    <small class="help-text">Laissez vide si vous ne voulez pas spécifier de couleur</small>
+                </div>
+                
+                <div>
+                    <label for="modal_pointure" class="modal-label">Pointure (optionnel):</label>
+                    <select name="pointure" id="modal_pointure" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200">
+                        <option value="">-- Sélectionner une pointure --</option>
+                        {% for pointure in pointures %}
+                            <option value="{{ pointure.id }}">{{ pointure.pointure }}</option>
+                        {% endfor %}
+                    </select>
+                    <small class="help-text">Laissez vide si vous ne voulez pas spécifier de pointure</small>
+                </div>
+                
+                <div>
+                    <label for="modal_quantite" class="modal-label">Quantité disponible:</label>
+                    <input type="number" name="quantite" id="modal_quantite" min="0" value="0" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200" placeholder="Ex: 10, 25, 50...">
+                    <small class="help-text">La quantité par défaut est 0</small>
+                </div>
+                
+                <!-- Affichage de la référence générée -->
+                <div id="referencePreview" class="hidden">
+                    <label class="modal-label">Référence de la variante:</label>
+                    <div class="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p class="text-sm text-blue-700">
+                            <i class="fas fa-barcode mr-2"></i>
+                            <span id="referencePreviewText" class="font-mono font-semibold"></span>
+                        </p>
+                        <p class="text-xs text-blue-600 mt-1">
+                            Cette référence sera générée automatiquement
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                    <button type="button" onclick="closeVarianteModal()" class="bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                        Annuler
+                    </button>
+                    <button type="button" onclick="addVariante()" class="bg-[#66cccc] hover:bg-[#5bb8b8] text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                        <i class="fas fa-plus mr-2"></i>Ajouter
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Inclure le fichier JavaScript pour la gestion des variantes -->
+<script src="{% static 'js/variantes-modal.js' %}"></script>
+<script>
+// Fonction pour supprimer une variante existante
+function supprimerVarianteExistante(varianteId) {
+    if (confirm('Êtes-vous sûr de vouloir supprimer cette variante ?')) {
+        // Utiliser fetch pour éviter les problèmes de redirection
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        
+        fetch(`/article/variantes/supprimer/${varianteId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': csrfToken,
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            },
+            body: `csrfmiddlewaretoken=${csrfToken}`
+        })
+        .then(response => {
+            // Vérifier d'abord le type de contenu de la réponse
+            const contentType = response.headers.get('content-type');
+            
+            if (response.ok) {
+                // Si c'est du JSON, le parser
+                if (contentType && contentType.includes('application/json')) {
+                    return response.json().catch(jsonError => {
+                        console.warn('Erreur de parsing JSON:', jsonError);
+                        // En cas d'erreur de parsing, traiter comme succès
+                        return { success: true, message: 'Variante supprimée avec succès' };
+                    });
+                } else {
+                    // Si ce n'est pas du JSON, traiter comme succès
+                    return { success: true, message: 'Variante supprimée avec succès' };
+                }
+            } else {
+                // En cas d'erreur, essayer de parser le JSON d'erreur
+                if (contentType && contentType.includes('application/json')) {
+                    return response.json().then(errorData => {
+                        throw new Error(errorData.error || 'Erreur lors de la suppression');
+                    }).catch(jsonError => {
+                        console.warn('Erreur de parsing JSON d\'erreur:', jsonError);
+                        throw new Error('Erreur lors de la suppression');
+                    });
+                } else {
+                    throw new Error('Erreur lors de la suppression');
+                }
+            }
+        })
+        .then(data => {
+            if (data.success) {
+                // Supprimer la ligne du tableau
+                const row = document.querySelector(`tr[data-variante-id="${varianteId}"]`);
+                if (row) {
+                    row.remove();
+                    
+                    // Mettre à jour le compteur
+                    const countElement = document.querySelector('.bg-blue-100');
+                    if (countElement) {
+                        const currentCount = parseInt(countElement.textContent);
+                        countElement.textContent = Math.max(0, currentCount - 1);
+                    }
+                    
+                    // Afficher un message de succès
+                    showSuccessMessage(data.message || 'Variante supprimée avec succès !');
+                }
+            } else {
+                throw new Error(data.error || 'Erreur lors de la suppression');
+            }
+        })
+        .catch(error => {
+   
+            // Gérer les différents types d'erreurs
+            let errorMessage = 'Erreur lors de la suppression de la variante';
+            
+            if (error.message) {
+                errorMessage = error.message;
+            } else if (typeof error === 'string') {
+                errorMessage = error;
+            } else if (error.name === 'TypeError' && error.message.includes('JSON')) {
+                errorMessage = 'Erreur de communication avec le serveur';
+            }
+            
+            showErrorMessage(errorMessage);
+        });
+    }
+}
+
+// Fonction pour afficher un message de succès
+function showSuccessMessage(message) {
+    const toast = document.createElement('div');
+    toast.className = 'fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg bg-green-500 text-white transform translate-x-full transition-all duration-300';
+    toast.innerHTML = `
+        <div class="flex items-center space-x-2">
+            <i class="fas fa-check-circle"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    // Animation d'entrée
+    setTimeout(() => toast.classList.remove('translate-x-full'), 100);
+    
+    // Auto-suppression après 3 secondes
+    setTimeout(() => {
+        toast.classList.add('translate-x-full');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// Fonction pour afficher un message d'erreur
+function showErrorMessage(message) {
+    const toast = document.createElement('div');
+    toast.className = 'fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg bg-red-500 text-white transform translate-x-full transition-all duration-300 max-w-md';
+    toast.innerHTML = `
+        <div class="flex items-start space-x-2">
+            <i class="fas fa-exclamation-circle mt-1 flex-shrink-0"></i>
+            <div class="flex-1">
+                <span class="font-medium">Erreur</span>
+                <p class="text-sm mt-1">${message}</p>
+            </div>
+            <button onclick="this.parentElement.parentElement.remove()" class="text-white hover:text-gray-200 ml-2">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    // Animation d'entrée
+    setTimeout(() => toast.classList.remove('translate-x-full'), 100);
+    
+    // Auto-suppression après 3 secondes
+    setTimeout(() => {
+        toast.classList.add('translate-x-full');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// Fonction pour marquer une variante comme modifiée
+function marquerVarianteModifiee(varianteId) {
+    // Marquer le champ caché comme modifié
+    const champModifiee = document.getElementById(`modifiee_${varianteId}`);
+    if (champModifiee) {
+        champModifiee.value = 'true';
+    }
+    
+    // Afficher le statut de modification avec animation
+    const statusElement = document.getElementById(`status_${varianteId}`);
+    if (statusElement) {
+        statusElement.classList.remove('hidden');
+        statusElement.classList.add('status-modification');
+    }
+    
+    // Ajouter le style de modification au champ de quantité
+    const quantiteInput = document.getElementById(`quantite_${varianteId}`);
+    if (quantiteInput) {
+        quantiteInput.classList.add('quantite-modifiee');
+        quantiteInput.classList.remove('border-gray-300');
+    }
+}
+
+// Fonction pour valider les quantités avant soumission
+function validerQuantites() {
+    const inputs = document.querySelectorAll('input[name*="variante_existante"][name*="_quantite"]');
+    let valide = true;
+    
+    inputs.forEach(input => {
+        const valeur = parseInt(input.value);
+        if (isNaN(valeur) || valeur < 0) {
+            input.classList.add('border-red-500', 'bg-red-50');
+            valide = false;
+        } else {
+            input.classList.remove('border-red-500', 'bg-red-50');
+        }
+    });
+    
+    if (!valide) {
+        alert('Veuillez saisir des quantités valides (nombre entier ≥ 0) pour toutes les variantes.');
+        return false;
+    }
+    
+    return true;
+}
+
+// Fonction pour gérer la soumission du formulaire avec AJAX
+function handleFormSubmit(event) {
+    event.preventDefault();
+    
+    // D'abord valider les quantités
+    if (!validerQuantites()) {
+        return false;
+    }
+    
+    const form = document.getElementById('articleForm');
+    const formData = new FormData(form);
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    
+    // Afficher un indicateur de chargement
+    const submitButton = form.querySelector('button[type="submit"]');
+    const originalText = submitButton.innerHTML;
+    submitButton.disabled = true;
+    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Sauvegarde en cours...';
+    
+    fetch(window.location.href, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken,
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: formData
+    })
+    .then(response => {
+        const contentType = response.headers.get('content-type');
+        
+        if (response.ok) {
+            if (contentType && contentType.includes('application/json')) {
+                return response.json();
+            } else {
+                // Si ce n'est pas du JSON, rediriger normalement
+                window.location.reload();
+                return null;
+            }
+        } else {
+            throw new Error('Erreur lors de la sauvegarde');
+        }
+    })
+    .then(data => {
+        if (data && data.success) {
+            showSuccessMessage(data.message || 'Article modifié avec succès !');
+            
+            // Rediriger immédiatement après la sauvegarde
+            if (data.redirect_url) {
+                window.location.href = data.redirect_url;
+            } else {
+                window.location.reload();
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showErrorMessage('Erreur lors de la sauvegarde de l\'article');
+    })
+    .finally(() => {
+        // Restaurer le bouton
+        submitButton.disabled = false;
+        submitButton.innerHTML = originalText;
+    });
+    
+    return false;
+}
+
+// Adapter le gestionnaire de variantes pour le mode modification
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.variantesManager) {
+        // Désactiver la validation obligatoire des variantes en mode modification
+        window.variantesManager.validateForm = function() {
+            // En mode modification, on n'exige pas de variantes
+            return true;
+        };
+        
+        // Méthode de fallback pour showAlert si elle n'existe pas
+        if (!window.variantesManager.showAlert) {
+            window.variantesManager.showAlert = function(message, type) {
+                alert(message);
+            };
+        }
+        
+        // Override les méthodes pour le mode modification
+        window.variantesManager.addVariante = async function() {
+            const couleurSelect = document.getElementById('modal_couleur');
+            const pointureSelect = document.getElementById('modal_pointure');
+            const quantiteInput = document.getElementById('modal_quantite');
+
+            if (!couleurSelect || !pointureSelect || !quantiteInput) {
+                return;
+            }
+
+            const couleur = couleurSelect.value;
+            const pointure = pointureSelect.value;
+            const quantite = quantiteInput.value || 0;
+
+            // Vérifier qu'au moins une couleur ou une pointure est sélectionnée
+            if (!couleur && !pointure) {
+                if (this.showAlert) {
+                    this.showAlert('Veuillez sélectionner au moins une couleur ou une pointure.', 'warning');
+                } else {
+                    alert('Veuillez sélectionner au moins une couleur ou une pointure.');
+                }
+                return;
+            }
+
+            // Vérifier que l'ID de l'article est disponible
+            if (!window.CURRENT_ARTICLE_ID) {
+                this.showAlert('Erreur: ID de l\'article non disponible', 'error');
+                return;
+            }
+
+            // Créer l'objet variante
+            const variante = {
+                couleur_id: couleur || null,
+                pointure_id: pointure || null,
+                quantite: parseInt(quantite) || 0,
+                reference: ''
+            };
+
+            // Vérifier si cette combinaison existe déjà dans les variantes existantes
+            const existingVariantes = document.querySelectorAll('tr[data-variante-id]');
+            const existsInTable = Array.from(existingVariantes).some(row => {
+                const couleurText = row.querySelector('td:nth-child(2) span').textContent.trim();
+                const pointureText = row.querySelector('td:nth-child(1) span').textContent.trim();
+                
+                const couleurNom = couleur ? couleurSelect.options[couleurSelect.selectedIndex].text : 'Aucune couleur';
+                const pointureNom = pointure ? pointureSelect.options[pointureSelect.selectedIndex].text : 'N/A';
+                
+                return couleurText === couleurNom && pointureText === pointureNom;
+            });
+
+            if (existsInTable) {
+                if (this.showAlert) {
+                    this.showAlert('Cette combinaison couleur/pointure existe déjà pour cet article.', 'error');
+                } else {
+                    alert('Cette combinaison couleur/pointure existe déjà pour cet article.');
+                }
+                return;
+            }
+
+            // Afficher un indicateur de chargement
+            const addButton = document.querySelector('#varianteModal button[onclick="addVariante()"]');
+            const originalButtonText = addButton.innerHTML;
+            addButton.disabled = true;
+            addButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Création en cours...';
+            
+            // Créer la variante via AJAX
+            try {
+                const response = await fetch('{% url "Superpreparation:creer_variantes_ajax" %}', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        article_id: window.CURRENT_ARTICLE_ID,
+                        variantes: [variante]
+                    }),
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': this.getCSRFToken ? this.getCSRFToken() : (this.getCSRFTokenFallback ? this.getCSRFTokenFallback() : '')
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Erreur HTTP: ${response.status} ${response.statusText}`);
+                }
+
+                let result;
+                try {
+                    result = await response.json();
+                } catch (jsonError) {
+                    throw new Error('Réponse invalide du serveur (JSON invalide)');
+                }
+
+                if (!result) {
+                    throw new Error('Réponse vide du serveur');
+                }
+
+                if (result.success && result.variantes_crees && Array.isArray(result.variantes_crees) && result.variantes_crees.length > 0) {
+                    const nouvelleVariante = result.variantes_crees[0];
+                    
+                    // Vérifier que la variante contient les données nécessaires
+                    if (!nouvelleVariante || !nouvelleVariante.id) {
+                        throw new Error('Réponse invalide du serveur: ID de variante manquant');
+                    }
+                    
+                    // Ajouter la nouvelle variante au tableau
+                    if (this.ajouterVarianteAuTableau) {
+                        this.ajouterVarianteAuTableau(nouvelleVariante);
+                    } else {
+                        throw new Error('Méthode ajouterVarianteAuTableau non disponible');
+                    }
+                    
+                    if (this.closeVarianteModal) {
+                        this.closeVarianteModal();
+                    }
+                    
+                    // Afficher un message de succès plus visible
+                    if (this.showAlert) {
+                        this.showAlert('Variante créée avec succès !', 'success');
+                    } else {
+                        alert('Variante créée avec succès !');
+                    }
+                    
+                    // Afficher une notification toast personnalisée
+                    if (this.showSuccessToast) {
+                        this.showSuccessToast('Variante créée avec succès !', 'La nouvelle variante a été ajoutée au tableau.');
+                    }
+                    
+                    // Recharger immédiatement la page pour afficher la nouvelle variante
+                    window.location.reload();
+                } else {
+                    const errorMsg = result.error || result.erreurs || 'Erreur lors de la création de la variante';
+                    throw new Error(Array.isArray(errorMsg) ? errorMsg.join(', ') : errorMsg);
+                }
+                
+            } catch (error) {
+                this.showAlert(`Erreur: ${error.message}`, 'error');
+            } finally {
+                // Restaurer le bouton
+                addButton.disabled = false;
+                addButton.innerHTML = originalButtonText;
+            }
+        };
+        
+        // Ajouter une méthode pour créer les champs cachés en mode modification
+        window.variantesManager.addHiddenFieldsForModification = function(variante) {
+            const form = document.getElementById('articleForm');
+            if (!form) return;
+
+            // Générer la référence de la variante
+            if (this.genererReferenceVariante) {
+                const referenceVariante = this.genererReferenceVariante(variante);
+
+                // Ajouter les champs cachés pour cette variante
+                const fields = [
+                    { name: `variante_${variante.id}_couleur`, value: variante.couleur },
+                    { name: `variante_${variante.id}_pointure`, value: variante.pointure },
+                    { name: `variante_${variante.id}_quantite`, value: variante.quantite },
+                    { name: `variante_${variante.id}_reference`, value: referenceVariante }
+                ];
+
+                fields.forEach(field => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = field.name;
+                    input.value = field.value;
+                    form.appendChild(input);
+                });
+            }
+        };
+        
+        // Ajouter l'ID de l'article comme variable globale pour les variantes
+        window.CURRENT_ARTICLE_ID = {{ article.id }};
+        
+        // Méthode pour ajouter une nouvelle variante au tableau matriciel
+        window.variantesManager.ajouterVarianteAuTableau = function(variante) {
+                    // Vérifier que la variante est valide
+        if (!variante || !variante.id) {
+            return;
+        }
+            
+            const table = document.querySelector('.variantes-table');
+            if (!table) return;
+            
+            // Récupérer les noms des couleurs et pointures
+            const couleurNom = variante.couleur || 'Aucune couleur';
+            const pointureNom = variante.pointure || 'N/A';
+            
+            // Vérifier et sécuriser la référence
+            const reference = variante.reference || variante.reference_variante || 'N/A';
+            
+            // Déterminer le statut du stock
+            let statusClass = 'bg-red-500';
+            let statusText = 'Rupture';
+            
+            const quantite = parseInt(variante.quantite || variante.qte_disponible || 0) || 0;
+            
+            if (quantite > 0) {
+                if (quantite < 5) {
+                    statusClass = 'bg-orange-500';
+                    statusText = 'Stock faible';
+                } else {
+                    statusClass = 'bg-green-500';
+                    statusText = 'En stock';
+                }
+            }
+            
+            // 1. Vérifier si la couleur existe déjà dans l'en-tête
+            const thead = table.querySelector('thead tr');
+            let couleurHeaderExists = false;
+            let couleurHeaderIndex = -1;
+            
+            if (thead) {
+                const headers = thead.querySelectorAll('th');
+                headers.forEach((header, index) => {
+                    const headerText = header.textContent.trim();
+                    if (headerText === couleurNom) {
+                        couleurHeaderExists = true;
+                        couleurHeaderIndex = index;
+                    }
+                });
+            }
+            
+            // 2. Si la couleur n'existe pas, ajouter une nouvelle colonne dans l'en-tête
+            if (!couleurHeaderExists && thead) {
+                const newHeader = document.createElement('th');
+                newHeader.className = 'p-3 text-center font-semibold border min-w-24';
+                newHeader.style.borderColor = '#d1d5db';
+                newHeader.style.background = '#66cccc';
+                newHeader.style.color = 'white';
+                newHeader.innerHTML = `
+                    <div class="flex flex-col items-center space-y-1">
+                        <i class="fas fa-palette text-sm"></i>
+                        <span class="text-sm font-medium">${couleurNom}</span>
+                    </div>
+                `;
+                thead.appendChild(newHeader);
+                couleurHeaderIndex = thead.querySelectorAll('th').length - 1;
+            }
+            
+            // 3. Ajouter la nouvelle variante dans la ligne correspondante
+            const tbody = table.querySelector('tbody');
+            if (tbody) {
+                const rows = tbody.querySelectorAll('tr');
+                let pointureRowFound = false;
+                
+                rows.forEach(row => {
+                    const firstCell = row.querySelector('td:first-child');
+                    if (firstCell && firstCell.textContent.trim() === pointureNom) {
+                        pointureRowFound = true;
+                        
+                        // Ajouter une nouvelle cellule pour cette couleur
+                        const newCell = document.createElement('td');
+                        newCell.className = 'p-2 text-center border';
+                        newCell.style.borderColor = '#d1d5db';
+                        newCell.setAttribute('data-variante-id', variante.id);
+                        
+                        newCell.innerHTML = `
+                            <div class="flex flex-col items-center space-y-1">
+                                <!-- Indicateur de statut -->
+                                <span class="inline-block w-3 h-3 rounded-full ${statusClass}" title="${statusText}"></span>
+                                
+                                <!-- Champ de quantité -->
+                                <input type="number" 
+                                       id="quantite_${variante.id}" 
+                                       name="variante_existante_${variante.id}_quantite" 
+                                       value="${quantite}" 
+                                       min="0" 
+                                       class="quantite-input w-16 px-2 py-1 border border-gray-300 rounded text-xs text-center focus:ring-1 focus:ring-[#66cccc] focus:border-transparent"
+                                       onchange="marquerVarianteModifiee(${variante.id})"
+                                       title="Modifier la quantité">
+                                <span class="text-xs text-gray-500">pcs</span>
+                                
+                                <!-- Référence de la variante -->
+                                <div class="text-xs text-gray-400 font-mono mt-1" title="Référence: ${reference}">
+                                    ${reference.toString().substring(0, 12)}
+                                </div>
+                                
+                                <!-- Indicateur de modification -->
+                                <span id="status_${variante.id}" class="status-modification text-xs text-orange-600 font-medium hidden">
+                                    <i class="fas fa-edit"></i>
+                                </span>
+                            </div>
+                            <!-- Champ caché pour marquer la variante comme modifiée -->
+                            <input type="hidden" id="modifiee_${variante.id}" name="variante_existante_${variante.id}_modifiee" value="false">
+                        `;
+                        
+                        row.appendChild(newCell);
+                    }
+                });
+                
+                // 4. Si la pointure n'existe pas, créer une nouvelle ligne
+                if (!pointureRowFound) {
+                    const newRow = document.createElement('tr');
+                    newRow.className = 'hover:bg-gray-50 transition-all duration-200';
+                    
+                    // Cellule de la pointure
+                    const pointureCell = document.createElement('td');
+                    pointureCell.className = 'p-3 text-center font-semibold border';
+                    pointureCell.style.borderColor = '#d1d5db';
+                    pointureCell.style.background = '#66cccc';
+                    pointureCell.style.color = 'white';
+                    pointureCell.textContent = pointureNom;
+                    newRow.appendChild(pointureCell);
+                    
+                    // Cellules vides pour les autres couleurs
+                    const headers = thead.querySelectorAll('th');
+                    headers.forEach((header, index) => {
+                        if (index === 0) return; // Skip la première colonne (pointure)
+                        
+                        const cell = document.createElement('td');
+                        cell.className = 'p-2 text-center border bg-gray-50';
+                        cell.style.borderColor = '#d1d5db';
+                        
+                        if (header.textContent.trim() === couleurNom) {
+                            // Cellule pour la nouvelle variante
+                            cell.className = 'p-2 text-center border';
+                            cell.style.borderColor = '#d1d5db';
+                            cell.setAttribute('data-variante-id', variante.id);
+                            
+                            cell.innerHTML = `
+                                <div class="flex flex-col items-center space-y-1">
+                                    <!-- Indicateur de statut -->
+                                    <span class="inline-block w-3 h-3 rounded-full ${statusClass}" title="${statusText}"></span>
+                                    
+                                    <!-- Champ de quantité -->
+                                    <input type="number" 
+                                           id="quantite_${variante.id}" 
+                                           name="variante_existante_${variante.id}_quantite" 
+                                           value="${quantite}" 
+                                           min="0" 
+                                           class="quantite-input w-16 px-2 py-1 border border-gray-300 rounded text-xs text-center focus:ring-1 focus:ring-[#66cccc] focus:border-transparent"
+                                           onchange="marquerVarianteModifiee(${variante.id})"
+                                           title="Modifier la quantité">
+                                    <span class="text-xs text-gray-500">pcs</span>
+                                    
+                                    <!-- Référence de la variante -->
+                                    <div class="text-xs text-gray-400 font-mono mt-1" title="Référence: ${reference}">
+                                        ${reference.toString().substring(0, 12)}
+                                    </div>
+                                    
+                                    <!-- Indicateur de modification -->
+                                    <span id="status_${variante.id}" class="status-modification text-xs text-orange-600 font-medium hidden">
+                                        <i class="fas fa-edit"></i>
+                                    </span>
+                                </div>
+                                <!-- Champ caché pour marquer la variante comme modifiée -->
+                                <input type="hidden" id="modifiee_${variante.id}" name="variante_existante_${variante.id}_modifiee" value="false">
+                            `;
+                        } else {
+                            // Cellule vide
+                            cell.innerHTML = `
+                                <div class="flex flex-col items-center space-y-1">
+                                    <span class="text-gray-400 text-xs">-</span>
+                                </div>
+                            `;
+                        }
+                        
+                        newRow.appendChild(cell);
+                    });
+                    
+                    tbody.appendChild(newRow);
+                }
+            }
+            
+            // 5. Mettre à jour le compteur de variantes
+            const countElement = document.querySelector('.bg-blue-100.text-blue-800');
+            if (countElement) {
+                const match = countElement.textContent.match(/\d+/);
+                if (match && match[0]) {
+                    const currentCount = parseInt(match[0]);
+                    countElement.textContent = `${currentCount + 1} variante(s)`;
+                } else {
+                    countElement.textContent = '1 variante(s)';
+                }
+            }
+            
+            // 6. Ajouter une animation pour la nouvelle variante
+            const newVarianteCell = document.querySelector(`[data-variante-id="${variante.id}"]`);
+            if (newVarianteCell) {
+                newVarianteCell.classList.add('nouvelle-variante', 'highlight-nouvelle-variante');
+                
+                // Faire défiler vers la nouvelle variante
+                newVarianteCell.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'center' 
+                });
+                
+                // Supprimer les classes d'animation après l'animation
+                setTimeout(() => {
+                    newVarianteCell.classList.remove('nouvelle-variante', 'highlight-nouvelle-variante');
+                }, 2000);
+            }
+        };
+        
+        // Override la méthode de suppression pour le mode modification
+        window.variantesManager.removeVariante = function(id) {
+            this.variantes = this.variantes.filter(v => v.id !== id);
+            if (this.updateVariantesDisplay) {
+                this.updateVariantesDisplay();
+            }
+
+            // Supprimer les champs cachés correspondants
+            const form = document.getElementById('articleForm');
+            if (form) {
+                const fields = form.querySelectorAll(`[name^="variante_${id}_"]`);
+                fields.forEach(field => field.remove());
+            }
+
+            // Message de confirmation
+            if (this.showAlert) {
+                this.showAlert('Variante supprimée avec succès !', 'success');
+            } else {
+                alert('Variante supprimée avec succès !');
+            }
+        };
+
+        // Override la méthode openVarianteModal pour s'assurer qu'elle fonctionne
+        window.variantesManager.openVarianteModal = function() {
+            const modal = document.getElementById('varianteModal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                // Réinitialiser le formulaire
+                const form = document.getElementById('varianteForm');
+                if (form) {
+                    form.reset();
+                }
+                // Mettre à jour l'aperçu de la référence
+                if (this.updateReferencePreview) {
+                    this.updateReferencePreview();
+                }
+            }
+        };
+
+        // Override la méthode closeVarianteModal pour s'assurer qu'elle fonctionne
+        window.variantesManager.closeVarianteModal = function() {
+            const modal = document.getElementById('varianteModal');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+        };
+
+        // Méthode de fallback pour le CSRF token
+        window.variantesManager.getCSRFTokenFallback = function() {
+            const token = document.querySelector('[name=csrfmiddlewaretoken]');
+            if (token) {
+                return token.value;
+            }
+            const metaToken = document.querySelector('meta[name=csrf-token]');
+            if (metaToken) {
+                return metaToken.getAttribute('content');
+            }
+            return '';
+        };
+        
+        // Marquer que nous sommes en mode modification pour éviter les conflits
+        window.MODIFICATION_MODE = true;
+        
+        // Méthode pour afficher une notification toast de succès
+        window.variantesManager.showSuccessToast = function(title, message) {
+            const toast = document.createElement('div');
+            toast.className = 'fixed top-4 right-4 z-50 bg-green-500 text-white p-4 rounded-lg shadow-lg transform translate-x-full transition-all duration-300 max-w-sm';
+            toast.innerHTML = `
+                <div class="flex items-start">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-check-circle text-xl"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium">${title}</p>
+                        <p class="text-sm opacity-90">${message}</p>
+                    </div>
+                    <div class="ml-auto pl-3">
+                        <button onclick="this.parentElement.parentElement.parentElement.remove()" class="text-white hover:text-gray-200">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(toast);
+            
+            // Animation d'entrée
+            setTimeout(() => toast.classList.remove('translate-x-full'), 100);
+            
+            // Auto-suppression après 4 secondes
+            setTimeout(() => {
+                toast.classList.add('translate-x-full');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        };
+    }
+});
+
+// Fonctions globales pour assurer la compatibilité avec les onclick en mode modification
+function openVarianteModal() {
+    if (window.variantesManager && typeof window.variantesManager.openVarianteModal === 'function') {
+        window.variantesManager.openVarianteModal();
+    }
+}
+
+function closeVarianteModal() {
+    if (window.variantesManager && typeof window.variantesManager.closeVarianteModal === 'function') {
+        window.variantesManager.closeVarianteModal();
+    }
+}
+
+function addVariante() {
+    if (window.variantesManager && typeof window.variantesManager.addVariante === 'function') {
+        window.variantesManager.addVariante();
+    }
+}
+</script>
+
+<!-- Suppression locale des erreurs JSON génériques pour cette page uniquement -->
+<script>
+(function() {
+	const BLOCKED = "Unexpected token '<'";
+
+	// Filtrer les erreurs console spécifiques
+	const originalConsoleError = console.error;
+	console.error = function() {
+		try {
+			const args = Array.from(arguments);
+			if (args.some(arg => {
+				if (!arg) return false;
+				if (typeof arg === 'string') return arg.includes(BLOCKED);
+				if (arg.message && typeof arg.message === 'string') return arg.message.includes(BLOCKED);
+				return false;
+			})) {
+				return; // ne pas afficher cette erreur
+			}
+		} catch (_) {}
+		return originalConsoleError.apply(console, arguments);
+	};
+
+	// Ignorer les promesses rejetées avec ce message
+	window.addEventListener('unhandledrejection', function(e) {
+		try {
+			const r = e.reason;
+			const msg = typeof r === 'string' ? r : (r && r.message ? r.message : '');
+			if (msg && msg.indexOf(BLOCKED) !== -1) {
+				e.preventDefault();
+			}
+		} catch (_) {}
+	});
+})();
+</script>
+
+{% endblock %} 

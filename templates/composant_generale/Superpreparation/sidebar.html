@@ -1,5 +1,5 @@
 <!-- Sidebar avec animation - Thème Superviseur Préparation -->
-<div id="sidebar" class="text-white flex-shrink-0 relative h-full transition-all duration-300 ease-in-out shadow-2xl border-r overflow-hidden z-50 flex flex-col" style="background: linear-gradient(to bottom, var(--preparation-primary), var(--preparation-dark)); border-color: var(--preparation-dark);">
+<div id="sidebar" class="text-white flex-shrink-0 relative h-full transition-all duration-300 ease-in-out shadow-2xl border-r overflow-hidden z-50 flex flex-col" style="background-color: #0e1d3d; border-color: var(--preparation-dark);">
     <!-- En-tête -->
     <div class="p-4 flex items-center justify-between flex-shrink-0" style="border-bottom: 1px solid var(--preparation-dark);">
         <div>
@@ -89,35 +89,32 @@
         </div>
 
 
-        <!-- Section Gestion des  Articles -->
-           <!-- Section Gestion des Articles -->
+        <!-- Section Gestion des Articles -->
         <div class="mb-6">
-            <button class="flex items-center justify-between w-full px-4 py-3 text-white hover:text-white transition-all duration-200 transform hover:translate-x-1 border-l-4 border-transparent hover:border-indigo-400 hover:shadow-lg" style="hover:background-color: #045555;" onclick="toggleDropdown('articles-dropdown')">
+            <button class="flex items-center justify-between w-full px-4 py-3 text-white hover:text-white transition-all duration-200 transform hover:translate-x-1 border-l-4 border-transparent hover:border-indigo-400 hover:shadow-lg" style="hover:background-color: var(--preparation-hover-bg);" onclick="toggleDropdown('articles-dropdown')">
                 <div class="flex items-center">
                     <i class="fas fa-box text-lg mr-3 text-white transition-transform duration-200 flex-shrink-0"></i>
-                <span class="whitespace-nowrap">Gestion des Articles</span>
-            </div>
+                    <span class="whitespace-nowrap">Gestion des Articles</span>
+                </div>
                 <i class="fas fa-angle-down transition-transform duration-300" id="articles-dropdown-icon"></i>
             </button>
             <div class="mt-2 space-y-1 pl-8 hidden" id="articles-dropdown">
-                <a href="{% url 'Superpreparation:liste_articles' %}" class="flex items-center px-4 py-2 text-white hover:text-white transition-all duration-200 transform hover:translate-x-1 border-l-4 border-transparent hover:border-indigo-400 hover:shadow-lg" style="hover:background-color: #045555;">
+                <a href="{% url 'Superpreparation:liste_articles' %}" class="flex items-center px-4 py-2 text-white hover:text-white transition-all duration-200 transform hover:translate-x-1 border-l-4 border-transparent hover:border-indigo-400 hover:shadow-lg" style="hover:background-color: var(--preparation-hover-bg);">
                     <i class="fas fa-list mr-3 text-white transition-transform duration-200 flex-shrink-0"></i>
                     <span class="whitespace-nowrap">Liste des articles</span>
                 </a>
-                <a href="{% url 'article:liste_promotions' %}" class="flex items-center px-4 py-2 text-white hover:text-white transition-all duration-200 transform hover:translate-x-1 border-l-4 border-transparent hover:border-indigo-400 hover:shadow-lg" style="hover:background-color: #045555;">
+                <a href="{% url 'Superpreparation:liste_promotions' %}" class="flex items-center px-4 py-2 text-white hover:text-white transition-all duration-200 transform hover:translate-x-1 border-l-4 border-transparent hover:border-indigo-400 hover:shadow-lg" style="hover:background-color: var(--preparation-hover-bg);">
                     <i class="fas fa-list mr-3 text-white transition-transform duration-200 flex-shrink-0"></i>
-                    <span class="whitespace-nowrap">Liste des prommotions </span>
+                    <span class="whitespace-nowrap">Liste des promotions</span>
                 </a>
-
-                <a href="{% url 'article:liste_variantes' %}" class="flex items-center px-4 py-2 text-white hover:text-white transition-all duration-200 transform hover:translate-x-1 border-l-4 border-transparent hover:border-indigo-400 hover:shadow-lg" style="hover:background-color: #045555;">
+                <a href="{% url 'Superpreparation:liste_variantes' %}" class="flex items-center px-4 py-2 text-white hover:text-white transition-all duration-200 transform hover:translate-x-1 border-l-4 border-transparent hover:border-indigo-400 hover:shadow-lg" style="hover:background-color: var(--preparation-hover-bg);">
                     <i class="fas fa-list mr-3 text-white transition-transform duration-200 flex-shrink-0"></i>
-                    <span class="whitespace-nowrap">Liste des variantes d'articles </span>
+                    <span class="whitespace-nowrap">Liste des variantes d'articles</span>
                 </a>
-                <a href="{% url 'article:gestion_couleurs_pointures' %}" class="flex items-center px-4 py-2 text-white hover:text-white transition-all duration-200 transform hover:translate-x-1 border-l-4 border-transparent hover:border-indigo-400 hover:shadow-lg" style="hover:background-color: #045555;">
+                <a href="{% url 'Superpreparation:gestion_couleurs_pointures' %}" class="flex items-center px-4 py-2 text-white hover:text-white transition-all duration-200 transform hover:translate-x-1 border-l-4 border-transparent hover:border-indigo-400 hover:shadow-lg" style="hover:background-color: var(--preparation-hover-bg);">
                     <i class="fas fa-palette mr-3 text-white transition-transform duration-200 flex-shrink-0"></i>
                     <span class="whitespace-nowrap">Gestion des attributs des articles</span>
                 </a>
-             
             </div>
         </div>
         
@@ -177,7 +174,7 @@
 
 /* Handle au survol */
 .scrollbar-custom::-webkit-scrollbar-thumb:hover {
-    background: #b8825c;
+    background: var(--preparation-border-accent);
     opacity: 1;
 }
 

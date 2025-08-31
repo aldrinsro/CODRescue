@@ -27,6 +27,7 @@ from .decorators import superviseur_preparation_required, superviseur_only_requi
 from article.models import Article, Promotion, VarianteArticle, Categorie, Genre, Couleur, Pointure
 from django.views.decorators.http import require_POST
 from article.forms import PromotionForm
+from decimal import Decimal
 
 
 
@@ -8531,18 +8532,18 @@ def liste_articles(request):
             print(f"🔍 DEBUG - Page: {page_obj.number}, Total items: {page_obj.paginator.count}, Items in page: {len(items_in_page)}")
             
             # Rendre les templates partiels pour AJAX
-            html_cards_body = render_to_string('Superpreparation/partials/_articles_cards_body.html', {
+            html_cards_body = render_to_string('Superpreparation/partials/variantes_articles_cards_body.html', {
                 'page_obj': page_obj
             }, request=request)
             print(f"📄 Cards body length: {len(html_cards_body)}")
             
-            html_table_body = render_to_string('Superpreparation/partials/_articles_table_body.html', {
+            html_table_body = render_to_string('Superpreparation/partials/variantes_articles_table_body.html', {
                 'page_obj': page_obj
             }, request=request)
             print(f"📄 Table body length: {len(html_table_body)}")
             
-            # Vue grille
-            html_grid_body = render_to_string('Superpreparation/partials/_articles_grid_body.html', {
+            # Vue grille pour variantes
+            html_grid_body = render_to_string('Superpreparation/partials/variantes_articles_grid_body.html', {
                 'page_obj': page_obj
             }, request=request)
             
@@ -8606,7 +8607,7 @@ def liste_articles(request):
     }
     return render(request, 'Superpreparation/liste_articles.html', context)
 
-@login_required
+@superviseur_preparation_required
 def detail_article(request, id):
     """Détail d'un article"""
     article = get_object_or_404(Article, id=id, actif=True)
@@ -8647,7 +8648,7 @@ def detail_article(request, id):
                 tableau_croise[pointure][couleur] = {'stock': None, 'status': 'inexistant'}
     
     # Récupérer l'URL de la page précédente, avec fallback
-    previous_page = request.META.get('HTTP_REFERER', reverse('article:liste'))
+    previous_page = request.META.get('HTTP_REFERER', reverse('Superpreparation:liste_articles'))
     
     context = {
         'article': article,
@@ -8658,9 +8659,9 @@ def detail_article(request, id):
         'pointures_uniques': pointures_uniques,
         'couleurs_uniques': couleurs_uniques,
     }
-    return render(request, 'article/detail.html', context)
+    return render(request, 'Superpreparation/Detail_article.html', context)
 
-@login_required
+@superviseur_preparation_required
 def creer_article(request):
     """Créer un nouvel article"""
     categories = Categorie.objects.all()
@@ -8681,9 +8682,18 @@ def creer_article(request):
                 couleur_id=couleur_id, 
                 pointure_id=pointure_id
             ).exists():
-                messages.error(request, "Un article avec le même nom, couleur et pointure existe déjà.")
-                # Renvoyer le formulaire avec les données saisies
-                return render(request, 'article/creer.html', {
+                error_message = "Un article avec le même nom, couleur et pointure existe déjà."
+                
+                # Si c'est une requête AJAX, retourner une erreur JSON
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'success': False,
+                        'error': error_message
+                    }, status=400)
+                
+                # Sinon, afficher le message d'erreur normalement
+                messages.error(request, error_message)
+                return render(request, 'Superpreparation/creer_article.html', {
                     'form_data': request.POST,
                     'categories': categories,
                     'genres': genres,
@@ -8697,8 +8707,18 @@ def creer_article(request):
                 try:
                     modele_int = int(modele)
                     if modele_int <= 0:
-                        messages.error(request, "Le numéro du modèle doit être supérieur à 0.")
-                        return render(request, 'article/creer.html', {
+                        error_message = "Le numéro du modèle doit être supérieur à 0."
+                        
+                        # Si c'est une requête AJAX, retourner une erreur JSON
+                        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                            return JsonResponse({
+                                'success': False,
+                                'error': error_message
+                            }, status=400)
+                        
+                        # Sinon, afficher le message d'erreur normalement
+                        messages.error(request, error_message)
+                        return render(request, 'Superpreparation/creer_article.html', {
                             'form_data': request.POST,
                             'categories': categories,
                             'genres': genres,
@@ -8708,8 +8728,18 @@ def creer_article(request):
                     
                     # Vérifier si le modèle existe déjà
                     if Article.objects.filter(modele=modele_int).exists():
-                        messages.error(request, f"Le modèle {modele_int} est déjà utilisé par un autre article.")
-                        return render(request, 'article/creer.html', {
+                        error_message = f"Le modèle {modele_int} est déjà utilisé par un autre article."
+                        
+                        # Si c'est une requête AJAX, retourner une erreur JSON
+                        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                            return JsonResponse({
+                                'success': False,
+                                'error': error_message
+                            }, status=400)
+                        
+                        # Sinon, afficher le message d'erreur normalement
+                        messages.error(request, error_message)
+                        return render(request, 'Superpreparation/creer_article.html', {
                             'form_data': request.POST,
                             'categories': categories,
                             'genres': genres,
@@ -8717,8 +8747,18 @@ def creer_article(request):
                             'pointures': pointures
                         })
                 except ValueError:
-                    messages.error(request, "Le numéro du modèle doit être un nombre entier valide.")
-                    return render(request, 'article/creer.html', {
+                    error_message = "Le numéro du modèle doit être un nombre entier valide."
+                    
+                    # Si c'est une requête AJAX, retourner une erreur JSON
+                    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                        return JsonResponse({
+                            'success': False,
+                            'error': error_message
+                        }, status=400)
+                    
+                    # Sinon, afficher le message d'erreur normalement
+                    messages.error(request, error_message)
+                    return render(request, 'Superpreparation/creer_article.html', {
                         'form_data': request.POST,
                         'categories': categories,
                         'genres': genres,
@@ -8729,8 +8769,18 @@ def creer_article(request):
             # Valider et convertir le prix
             prix_str = request.POST.get('prix_unitaire', '').strip().replace(',', '.')
             if not prix_str:
-                messages.error(request, "Le prix unitaire est obligatoire.")
-                return render(request, 'article/creer.html', {
+                error_message = "Le prix unitaire est obligatoire."
+                
+                # Si c'est une requête AJAX, retourner une erreur JSON
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'success': False,
+                        'error': error_message
+                    }, status=400)
+                
+                # Sinon, afficher le message d'erreur normalement
+                messages.error(request, error_message)
+                return render(request, 'Superpreparation/creer_article.html', {
                     'form_data': request.POST,
                     'categories': categories,
                     'genres': genres,
@@ -8741,8 +8791,18 @@ def creer_article(request):
             try:
                 prix_unitaire = float(prix_str)
                 if prix_unitaire <= 0:
-                    messages.error(request, "Le prix unitaire doit être supérieur à 0.")
-                    return render(request, 'article/creer.html', {
+                    error_message = "Le prix unitaire doit être supérieur à 0."
+                    
+                    # Si c'est une requête AJAX, retourner une erreur JSON
+                    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                        return JsonResponse({
+                            'success': False,
+                            'error': error_message
+                        }, status=400)
+                    
+                    # Sinon, afficher le message d'erreur normalement
+                    messages.error(request, error_message)
+                    return render(request, 'Superpreparation/creer_article.html', {
                         'form_data': request.POST,
                         'categories': categories,
                         'genres': genres,
@@ -8750,8 +8810,18 @@ def creer_article(request):
                         'pointures': pointures
                     })
             except ValueError:
-                messages.error(request, "Le prix unitaire doit être un nombre valide.")
-                return render(request, 'article/creer.html', {
+                error_message = "Le prix unitaire doit être un nombre valide."
+                
+                # Si c'est une requête AJAX, retourner une erreur JSON
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'success': False,
+                        'error': error_message
+                    }, status=400)
+                
+                # Sinon, afficher le message d'erreur normalement
+                messages.error(request, error_message)
+                return render(request, 'Superpreparation/creer_article.html', {
                     'form_data': request.POST,
                     'categories': categories,
                     'genres': genres,
@@ -8823,11 +8893,21 @@ def creer_article(request):
             
             messages.success(request, f"L'article '{article.nom}' a été créé avec succès.")
             
-            return redirect('article:liste')
+            return redirect('Superpreparation:liste_articles')
             
         except Exception as e:
-            messages.error(request, f"Une erreur est survenue lors de la création de l'article : {str(e)}")
-            return render(request, 'article/creer.html', {
+            error_message = f"Une erreur est survenue lors de la création de l'article : {str(e)}"
+            
+            # Si c'est une requête AJAX, retourner une erreur JSON
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'error': error_message
+                }, status=500)
+            
+            # Sinon, afficher le message d'erreur normalement
+            messages.error(request, error_message)
+            return render(request, 'Superpreparation/creer_article.html', {
                 'form_data': request.POST,
                 'categories': categories,
                 'genres': genres,
@@ -8842,9 +8922,9 @@ def creer_article(request):
         'pointures': pointures,
     }
     
-    return render(request,'article/creer.html',context)
+    return render(request,'Superpreparation/creer_article.html',context)
 
-@login_required
+@superviseur_preparation_required
 def modifier_article(request, id):
     """Modifier un article existant"""
     article = get_object_or_404(Article, id=id, actif=True)
@@ -8866,7 +8946,7 @@ def modifier_article(request, id):
                 pointure_id=pointure_id
             ).exclude(article=article).exists():
                 messages.error(request, "Un autre article avec le même nom, couleur et pointure existe déjà.")
-                return render(request, 'article/modifier.html', {
+                return render(request, 'Superpreparation/modifier_article.html', {
                     'article': article, 
                     'form_data': request.POST,
                     'categories': categories,
@@ -8882,7 +8962,7 @@ def modifier_article(request, id):
                     modele_int = int(modele)
                     if modele_int <= 0:
                         messages.error(request, "Le numéro du modèle doit être supérieur à 0.")
-                        return render(request, 'article/modifier.html', {
+                        return render(request, 'Superpreparation/modifier_article.html', {
                             'article': article, 
                             'form_data': request.POST,
                             'categories': categories,
@@ -8894,7 +8974,7 @@ def modifier_article(request, id):
                     # Vérifier si le modèle existe déjà sur un autre article
                     if Article.objects.filter(modele=modele_int).exclude(id=article.id).exists():
                         messages.error(request, f"Le modèle {modele_int} est déjà utilisé par un autre article.")
-                        return render(request, 'article/modifier.html', {
+                        return render(request, 'Superpreparation/modifier_article.html', {
                             'article': article, 
                             'form_data': request.POST,
                             'categories': categories,
@@ -8904,7 +8984,7 @@ def modifier_article(request, id):
                         })
                 except ValueError:
                     messages.error(request, "Le numéro du modèle doit être un nombre entier valide.")
-                    return render(request, 'article/modifier.html', {
+                    return render(request, 'Superpreparation/modifier_article.html', {
                         'article': article, 
                         'form_data': request.POST,
                         'categories': categories,
@@ -8917,7 +8997,7 @@ def modifier_article(request, id):
             prix_str = request.POST.get('prix_unitaire', '').strip().replace(',', '.')
             if not prix_str:
                 messages.error(request, "Le prix unitaire est obligatoire.")
-                return render(request, 'article/modifier.html', {
+                return render(request, 'Superpreparation/modifier_article.html', {
                     'article': article, 
                     'form_data': request.POST,
                     'categories': categories,
@@ -8930,7 +9010,7 @@ def modifier_article(request, id):
                 prix_unitaire = float(prix_str)
                 if prix_unitaire <= 0:
                     messages.error(request, "Le prix unitaire doit être supérieur à 0.")
-                    return render(request, 'article/modifier.html', {
+                    return render(request, 'Superpreparation/modifier_article.html', {
                         'article': article, 
                         'form_data': request.POST,
                         'categories': categories,
@@ -8940,7 +9020,7 @@ def modifier_article(request, id):
                     })
             except ValueError:
                 messages.error(request, "Le prix unitaire doit être un nombre valide.")
-                return render(request, 'article/modifier.html', {
+                return render(request, 'Superpreparation/modifier_article.html', {
                     'article': article, 
                     'form_data': request.POST,
                     'categories': categories,
@@ -9149,11 +9229,11 @@ def modifier_article(request, id):
                 return JsonResponse({
                     'success': True,
                     'message': message_succes,
-                    'redirect_url': reverse('article:detail', args=[article.id])
+                    'redirect_url': reverse('Superpreparation:detail_article', args=[article.id])
                 })
                 
             messages.success(request, message_succes)
-            return redirect('article:detail', id=article.id)
+            return redirect('Superpreparation:detail_article', id=article.id)
             
         except Exception as e:
             messages.error(request, f"Une erreur est survenue lors de la modification de l'article : {str(e)}")
@@ -9172,7 +9252,7 @@ def modifier_article(request, id):
                 if article.variantes.filter(pointure__isnull=True).exists():
                     pointures_uniques.append("Aucune pointure")
             
-            return render(request, 'article/modifier.html', {
+            return render(request, 'Superpreparation/modifier_article.html', {
         'article': article,
                 'form_data': request.POST,
         'categories': categories,
@@ -9231,9 +9311,9 @@ def modifier_article(request, id):
         'pointures_uniques': pointures_uniques,
         'tableau_matrice': tableau_matrice,
     }
-    return render(request, 'article/modifier.html', context)
+    return render(request, 'Superpreparation/modifier_article.html', context)
 
-@login_required
+@superviseur_preparation_required
 @require_POST
 def supprimer_article(request, id):
     """Supprimer un article (méthode POST requise)"""
@@ -9243,15 +9323,15 @@ def supprimer_article(request, id):
         messages.success(request, f"L'article '{article.nom}' a été supprimé avec succès.")
     except Exception as e:
         messages.error(request, f"Une erreur est survenue lors de la suppression de l'article : {e}")
-    return redirect('article:liste')
+    return redirect('Superpreparation:liste_articles')
 
 @require_POST
-@login_required
+@superviseur_preparation_required
 def supprimer_articles_masse(request):
     selected_ids = request.POST.getlist('ids[]')
     if not selected_ids:
         messages.error(request, "Aucun article sélectionné pour la suppression.")
-        return redirect('article:liste')
+        return redirect('Superpreparation:liste_articles')
 
     try:
         count = Article.objects.filter(pk__in=selected_ids).delete()[0]
@@ -9259,9 +9339,9 @@ def supprimer_articles_masse(request):
     except Exception as e:
         messages.error(request, f"Une erreur est survenue lors de la suppression en masse : {e}")
     
-    return redirect('article:liste')
+    return redirect('Superpreparation:liste_articles')
 
-@login_required
+@superviseur_preparation_required
 def articles_par_categorie(request, categorie):
     """Articles filtrés par catégorie"""
     articles = Article.objects.filter(
@@ -9288,9 +9368,9 @@ def articles_par_categorie(request, categorie):
         'search': search,
         'total_articles': articles.count(),
     }
-    return render(request, 'article/categorie.html', context)
+    return render(request, 'Superpreparation/categorie.html', context)
 
-@login_required
+@superviseur_preparation_required
 def stock_faible(request):
     """Articles avec stock faible (moins de 5 unités)"""
     articles = Article.objects.filter(
@@ -9309,9 +9389,9 @@ def stock_faible(request):
         'page_obj': page_obj,
         'total_articles': articles.count(),
     }
-    return render(request, 'article/stock_faible.html', context)
+    return render(request, 'Superpreparation/stock_faible.html', context)
 
-@login_required
+@superviseur_preparation_required
 def rupture_stock(request):
     """Articles en rupture de stock"""
     articles = Article.objects.filter(
@@ -9329,9 +9409,9 @@ def rupture_stock(request):
         'page_obj': page_obj,
         'total_articles': articles.count(),
     }
-    return render(request, 'article/rupture_stock.html', context)
+    return render(request, 'Superpreparation/rupture_stock.html', context)
 
-@login_required
+@superviseur_preparation_required
 def liste_promotions(request):
     """Liste des promotions avec recherche et filtres"""
     promotions = Promotion.objects.all().order_by('-date_creation')
@@ -9423,12 +9503,12 @@ def liste_promotions(request):
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         from django.template.loader import render_to_string
         
-        # Rendre les templates partiels pour AJAX
-        html_table_body = render_to_string('article/partials/_promotions_table_body.html', {
+        # Rendre les templates partiels pour AJAX - Utiliser les templates Superpreparation
+        html_table_body = render_to_string('Superpreparation/partials/_promotions_table_body.html', {
             'page_obj': page_obj
         }, request=request)
         
-        html_pagination = render_to_string('article/partials/_promotions_pagination.html', {
+        html_pagination = render_to_string('Superpreparation/partials/_promotions_pagination.html', {
             'page_obj': page_obj,
             'search': search,
             'filtre': filtre,
@@ -9437,7 +9517,7 @@ def liste_promotions(request):
             'end_range': end_range
         }, request=request)
         
-        html_pagination_info = render_to_string('article/partials/_promotions_pagination_info.html', {
+        html_pagination_info = render_to_string('Superpreparation/partials/_promotions_pagination_info.html', {
             'page_obj': page_obj
         }, request=request)
         
@@ -9459,9 +9539,9 @@ def liste_promotions(request):
         'start_range': start_range,
         'end_range': end_range,
     }
-    return render(request, 'article/liste_promotions.html', context)
+    return render(request, 'Superpreparation/Liste_promotion_article.html', context)
 
-@login_required
+@superviseur_preparation_required
 def detail_promotion(request, id):
     """Détail d'une promotion"""
     promotion = get_object_or_404(Promotion, id=id)
@@ -9473,9 +9553,9 @@ def detail_promotion(request, id):
         'promotion': promotion,
         'articles': articles
     }
-    return render(request, 'article/detail_promotion.html', context)
+    return render(request, 'Superpreparation/detail_promotion.html', context)
 
-@login_required
+@superviseur_preparation_required
 def creer_promotion(request):
     """Créer une nouvelle promotion"""
     if request.method == 'POST':
@@ -9534,9 +9614,9 @@ def creer_promotion(request):
     else:
         # Cette partie ne devrait pas être appelée directement, mais au cas où
         form = PromotionForm()
-        return redirect('article:liste_promotions')
+        return redirect('Superpreparation:liste_promotions')
 
-@login_required
+@superviseur_preparation_required
 def modifier_promotion(request, id):
     """Modifier une promotion existante"""
     promotion = get_object_or_404(Promotion, id=id)
@@ -9605,7 +9685,7 @@ def modifier_promotion(request, id):
     }
     return render(request, 'article/modifier_promotion.html', context)
 
-@login_required
+@superviseur_preparation_required
 def supprimer_promotion(request, id):
     """Supprimer une promotion"""
     promotion = get_object_or_404(Promotion, id=id)
@@ -9616,9 +9696,9 @@ def supprimer_promotion(request, id):
         messages.success(request, f"La promotion '{nom}' a été supprimée avec succès.")
         return redirect('article:liste_promotions')
     
-    return render(request, 'article/supprimer_promotion.html', {'promotion': promotion})
+    return render(request, 'Superpreparation/supprimer_promotion.html', {'promotion': promotion})
 
-@login_required
+@superviseur_preparation_required
 def activer_desactiver_promotion(request, id):
     """Activer ou désactiver une promotion"""
     promotion = get_object_or_404(Promotion, id=id)
@@ -9647,9 +9727,9 @@ def activer_desactiver_promotion(request, id):
     referer = request.META.get('HTTP_REFERER')
     if referer:
         return redirect(referer)
-    return redirect('article:liste_promotions')
+    return redirect('Superpreparation:liste_promotions')
 
-@login_required
+@superviseur_preparation_required
 def changer_phase(request, id):
     """Changer la phase d'un article"""
     article = get_object_or_404(Article, id=id)
@@ -9687,7 +9767,7 @@ def changer_phase(request, id):
         return redirect(referer)
     return redirect('article:detail', id=article.id)
 
-@login_required
+@superviseur_preparation_required
 @require_POST
 def appliquer_liquidation(request, id):
     """Applique une réduction de liquidation à un article"""
@@ -9723,9 +9803,9 @@ def appliquer_liquidation(request, id):
     except (ValueError, TypeError):
         messages.error(request, "Le pourcentage de réduction n'est pas valide.")
     
-    return redirect('article:detail', id=article.id)
+    return redirect('Superpreparation:detail_article', id=article.id)
 
-@login_required
+@superviseur_preparation_required
 @require_POST
 def reinitialiser_prix(request, id):
     """Réinitialise le prix d'un article à son prix unitaire par défaut"""
@@ -9745,7 +9825,7 @@ def reinitialiser_prix(request, id):
         return redirect(referer)
     return redirect('article:detail', id=article.id)
 
-@login_required
+@superviseur_preparation_required
 def gerer_promotions_automatiquement(request):
     """Gère automatiquement toutes les promotions selon leur date et statut"""
     now = timezone.now()
@@ -9785,10 +9865,10 @@ def gerer_promotions_automatiquement(request):
         messages.info(request, "Aucune promotion à traiter automatiquement.")
     
     # Rediriger vers la liste des promotions
-    return redirect('article:liste_promotions')
+    return redirect('Superpreparation:liste_promotions')
 
 
-@login_required
+@superviseur_preparation_required
 def liste_variantes(request):
     """Liste des variantes d'articles avec recherche, filtres et pagination"""
     variantes_articles = VarianteArticle.objects.filter(actif=True).select_related(
@@ -9930,20 +10010,20 @@ def liste_variantes(request):
         from django.template.loader import render_to_string
         
         # Rendre les templates partiels pour AJAX
-        html_cards_body = render_to_string('article/partials/variantes_articles_cards_body.html', {
+        html_cards_body = render_to_string('Superpreparation/partials/variantes_articles_cards_body.html', {
             'page_obj': page_obj
         }, request=request)
         
-        html_table_body = render_to_string('article/partials/variantes_articles_table_body.html', {
+        html_table_body = render_to_string('Superpreparation/partials/variantes_articles_table_body.html', {
             'page_obj': page_obj
         }, request=request)
         
         # Vue grille pour variantes
-        html_grid_body = render_to_string('article/partials/variantes_articles_grid_body.html', {
+        html_grid_body = render_to_string('Superpreparation/partials/variantes_articles_grid_body.html', {
             'page_obj': page_obj
         }, request=request)
         
-        html_pagination = render_to_string('article/partials/_articles_pagination.html', {
+        html_pagination = render_to_string('Superpreparation/partials/_articles_pagination.html', {
             'page_obj': page_obj,
             'search': search,
             'filtre_phase': filtre_phase,
@@ -9954,7 +10034,7 @@ def liste_variantes(request):
             'end_range': end_range
         }, request=request)
         
-        html_pagination_info = render_to_string('article/partials/_articles_pagination_info.html', {
+        html_pagination_info = render_to_string('Superpreparation/partials/_articles_pagination_info.html', {
             'page_obj': page_obj
         }, request=request)
         
@@ -9980,9 +10060,9 @@ def liste_variantes(request):
         'start_range': start_range,
         'end_range': end_range,
     }
-    return render(request, 'article/Liste_variante_article.html', context)
+    return render(request, 'Superpreparation/Liste_variante_article.html', context)
 
-@login_required
+@superviseur_preparation_required
 def creer_variantes_ajax(request):
     """Créer des variantes via AJAX"""
     if request.method != 'POST':
@@ -10070,7 +10150,7 @@ def creer_variantes_ajax(request):
     except Exception as e:
         return JsonResponse({'success': False, 'error': f'Erreur serveur: {str(e)}'})
 
-@login_required
+@superviseur_preparation_required
 def supprimer_variante(request, id):
     """Supprimer une variante d'article"""
     if request.method != 'POST':
@@ -10112,7 +10192,7 @@ def supprimer_variante(request, id):
         messages.error(request, f'Erreur lors de la suppression : {str(e)}')
         return redirect('article:liste')
 
-@login_required
+@superviseur_preparation_required
 def gestion_couleurs_pointures(request):
     """Page de gestion des couleurs, pointures, catégories et genres"""
     from django.core.paginator import Paginator, EmptyPage, InvalidPage
@@ -10218,9 +10298,9 @@ def gestion_couleurs_pointures(request):
         'total_genres': paginator_genres.count,
     }
     
-    return render(request, 'article/gestion_couleurs_pointures.html', context)
+    return render(request, 'Superpreparation/gestion_attribut.html', context)
 
-@login_required
+@superviseur_preparation_required
 def creer_pointure(request):
     """Créer une nouvelle pointure"""
     if request.method == 'POST':
@@ -10239,15 +10319,15 @@ def creer_pointure(request):
             )
             
             messages.success(request, f'Pointure "{pointure}" créée avec succès.')
-            return redirect('article:gestion_couleurs_pointures')
+            return redirect('Superpreparation:gestion_couleurs_pointures')
             
         except Exception as e:
             messages.error(request, f'Erreur lors de la création : {str(e)}')
-            return redirect('article:gestion_couleurs_pointures')
+            return redirect('Superpreparation:gestion_couleurs_pointures')
     
-    return redirect('article:gestion_couleurs_pointures')
+    return redirect('Superpreparation:gestion_couleurs_pointures')
 
-@login_required
+@superviseur_preparation_required
 def modifier_pointure(request, pointure_id):
     """Modifier une pointure existante"""
     if request.method == 'POST':
@@ -10262,15 +10342,15 @@ def modifier_pointure(request, pointure_id):
             pointure_obj.save()
             
             messages.success(request, f'Pointure "{pointure_obj.pointure}" modifiée avec succès.')
-            return redirect('article:gestion_couleurs_pointures')
+            return redirect('Superpreparation:gestion_couleurs_pointures')
             
         except Exception as e:
             messages.error(request, f'Erreur lors de la modification : {str(e)}')
-            return redirect('article:gestion_couleurs_pointures')
+            return redirect('Superpreparation:gestion_couleurs_pointures')
     
-    return redirect('article:gestion_couleurs_pointures')
+    return redirect('Superpreparation:gestion_couleurs_pointures')
 
-@login_required
+@superviseur_preparation_required
 def supprimer_pointure(request, pointure_id):
     """Supprimer une pointure"""
     try:
@@ -10279,13 +10359,13 @@ def supprimer_pointure(request, pointure_id):
         pointure.delete()
         
         messages.success(request, f'Pointure "{nom_pointure}" supprimée avec succès.')
-        return redirect('article:gestion_couleurs_pointures')
+        return redirect('Superpreparation:gestion_couleurs_pointures')
         
     except Exception as e:
         messages.error(request, f'Erreur lors de la suppression : {str(e)}')
-        return redirect('article:gestion_couleurs_pointures')
+        return redirect('Superpreparation:gestion_couleurs_pointures')
 
-@login_required
+@superviseur_preparation_required
 def creer_categorie(request):
     """Créer une nouvelle catégorie"""
     if request.method == 'POST':
@@ -10302,15 +10382,15 @@ def creer_categorie(request):
             )
             
             messages.success(request, f'Catégorie "{nom}" créée avec succès.')
-            return redirect('article:gestion_couleurs_pointures')
+            return redirect('Superpreparation:gestion_couleurs_pointures')
             
         except Exception as e:
             messages.error(request, f'Erreur lors de la création : {str(e)}')
-            return redirect('article:gestion_couleurs_pointures')
+            return redirect('Superpreparation:gestion_couleurs_pointures')
     
-    return redirect('article:gestion_couleurs_pointures')
+    return redirect('Superpreparation:gestion_couleurs_pointures')
 
-@login_required
+@superviseur_preparation_required
 def modifier_categorie(request, categorie_id):
     """Modifier une catégorie existante"""
     if request.method == 'POST':
@@ -10324,15 +10404,15 @@ def modifier_categorie(request, categorie_id):
             categorie_obj.save()
             
             messages.success(request, f'Catégorie "{categorie_obj.nom}" modifiée avec succès.')
-            return redirect('article:gestion_couleurs_pointures')
+            return redirect('Superpreparation:gestion_couleurs_pointures')
             
         except Exception as e:
             messages.error(request, f'Erreur lors de la modification : {str(e)}')
-            return redirect('article:gestion_couleurs_pointures')
+            return redirect('Superpreparation:gestion_couleurs_pointures')
     
-    return redirect('article:gestion_couleurs_pointures')
+    return redirect('Superpreparation:gestion_couleurs_pointures')
 
-@login_required
+@superviseur_preparation_required
 def supprimer_categorie(request, categorie_id):
     """Supprimer une catégorie"""
     try:
@@ -10341,13 +10421,13 @@ def supprimer_categorie(request, categorie_id):
         categorie.delete()
         
         messages.success(request, f'Catégorie "{nom_categorie}" supprimée avec succès.')
-        return redirect('article:gestion_couleurs_pointures')
+        return redirect('Superpreparation:gestion_couleurs_pointures')
         
     except Exception as e:
         messages.error(request, f'Erreur lors de la suppression : {str(e)}')
-        return redirect('article:gestion_couleurs_pointures')
+        return redirect('Superpreparation:gestion_couleurs_pointures')
 
-@login_required
+@superviseur_preparation_required
 def creer_genre(request):
     """Créer un nouveau genre"""
     if request.method == 'POST':
@@ -10364,15 +10444,15 @@ def creer_genre(request):
             )
             
             messages.success(request, f'Genre "{nom}" créé avec succès.')
-            return redirect('article:gestion_couleurs_pointures')
+            return redirect('Superpreparation:gestion_couleurs_pointures')
             
         except Exception as e:
             messages.error(request, f'Erreur lors de la création : {str(e)}')
-            return redirect('article:gestion_couleurs_pointures')
+            return redirect('Superpreparation:gestion_couleurs_pointures')
     
-    return redirect('article:gestion_couleurs_pointures')
+    return redirect('Superpreparation:gestion_couleurs_pointures')
 
-@login_required
+@superviseur_preparation_required
 def modifier_genre(request, genre_id):
     """Modifier un genre existant"""
     if request.method == 'POST':
@@ -10386,15 +10466,15 @@ def modifier_genre(request, genre_id):
             genre_obj.save()
             
             messages.success(request, f'Genre "{genre_obj.nom}" modifié avec succès.')
-            return redirect('article:gestion_couleurs_pointures')
+            return redirect('Superpreparation:gestion_couleurs_pointures')
             
         except Exception as e:
             messages.error(request, f'Erreur lors de la modification : {str(e)}')
-            return redirect('article:gestion_couleurs_pointures')
+            return redirect('Superpreparation:gestion_couleurs_pointures')
     
-    return redirect('article:gestion_couleurs_pointures')
+    return redirect('Superpreparation:gestion_couleurs_pointures')
 
-@login_required
+@superviseur_preparation_required
 def supprimer_genre(request, genre_id):
     """Supprimer un genre"""
     try:
@@ -10403,14 +10483,14 @@ def supprimer_genre(request, genre_id):
         genre.delete()
         
         messages.success(request, f'Genre "{nom_genre}" supprimé avec succès.')
-        return redirect('article:gestion_couleurs_pointures')
+        return redirect('Superpreparation:gestion_couleurs_pointures')
         
     except Exception as e:
         messages.error(request, f'Erreur lors de la suppression : {str(e)}')
-        return redirect('article:gestion_couleurs_pointures')
+        return redirect('Superpreparation:gestion_couleurs_pointures')
     
 
-@login_required
+@superviseur_preparation_required
 @require_POST
 def creer_couleur(request):
     """Créer une nouvelle couleur"""
@@ -10433,10 +10513,10 @@ def creer_couleur(request):
     else:
         messages.error(request, 'Le nom de la couleur est requis.')
     
-    return redirect('article:gestion_couleurs_pointures')
+    return redirect('Superpreparation:gestion_couleurs_pointures')
 
 
-@login_required
+@superviseur_preparation_required
 @require_POST
 def modifier_couleur(request, couleur_id):
     """Modifier une couleur existante"""
@@ -10459,7 +10539,7 @@ def modifier_couleur(request, couleur_id):
     else:
         messages.error(request, 'Le nom de la couleur est requis.')
     
-    return redirect('article:gestion_couleurs_pointures')
+    return redirect('Superpreparation:gestion_couleurs_pointures')
 
 
 @superviseur_preparation_required
@@ -10477,5 +10557,5 @@ def supprimer_couleur(request, couleur_id):
         couleur.delete()
         messages.success(request, f'La couleur "{nom}" a été supprimée avec succès.')
     
-    return redirect('article:gestion_couleurs_pointures')
+    return redirect('Superpreparation:gestion_couleurs_pointures')
 

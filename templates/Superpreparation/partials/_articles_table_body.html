@@ -16,7 +16,7 @@
                     <i class="fas fa-box-open text-[var(--admin-accent-color)] text-xl opacity-70"></i>
             </div>
             {% endif %}
-            <a href="{% url 'article:detail' article.id %}" class="hover:text-[#034a4a] transition-colors" style="color: #023535;">{{ article.nom }}</a>
+            <a href="{% url 'Superpreparation:detail_article' article.id %}" class="hover:text-[#034a4a] transition-colors" style="color: #023535;">{{ article.nom }}</a>
         </div>
     </td>
     <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200">{{ article.categorie }}</td>
@@ -38,13 +38,13 @@
     </td>
     <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200">{{ article.qte_disponible }}</td>
     <td class="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
-        <a href="{% url 'article:detail' article.id %}" class="text-blue-500 hover:text-blue-700 mx-1 transition-colors" title="Voir Détails">
+        <a href="{% url 'Superpreparation:detail_article' article.id %}" class="text-blue-500 hover:text-blue-700 mx-1 transition-colors" title="Voir Détails">
                 <i class="fas fa-eye"></i>
             </a>
-        <a href="{% url 'article:modifier' article.id %}" class="text-yellow-500 hover:text-yellow-700 mx-1 transition-colors" title="Modifier">
+        <a href="{% url 'Superpreparation:modifier_article' article.id %}" class="text-yellow-500 hover:text-yellow-700 mx-1 transition-colors" title="Modifier">
                 <i class="fas fa-edit"></i>
             </a>
-        <a href="#" onclick="confirmDeleteArticle('{% url 'article:supprimer' article.id %}', '{{ article.nom|escapejs }}')" class="text-red-500 hover:text-red-700 mx-1 transition-colors" title="Supprimer">
+        <a href="#" onclick="confirmDeleteArticle('{% url 'Superpreparation:supprimer_article' article.id %}', '{{ article.nom|escapejs }}')" class="text-red-500 hover:text-red-700 mx-1 transition-colors" title="Supprimer">
             <i class="fas fa-trash-alt"></i>
         </a>
     </td>

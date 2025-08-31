@@ -1,7 +1,7 @@
 {% load commande_filters %}
 {% for article in page_obj %}
     <div class="bg-white rounded-xl shadow-lg border overflow-hidden transform hover:-translate-y-2 transition-transform duration-300" style="border-color: #e6fffe;">
-        <a href="{% url 'article:detail' article.id %}" class="block">
+        <a href="{% url 'Superpreparation:detail_article' article.id %}" class="block">
             {% if article.image %}
                 <img src="{{ article.image.url }}" alt="{{ article.nom }}" class="w-full h-56 object-cover" onerror="this.onerror=null;this.src='/static/img/default.png';">
             {% elif article.image_url %}
@@ -15,7 +15,7 @@
         <div class="p-4">
             <div class="flex justify-between items-start mb-2">
                 <h3 class="text-lg font-bold truncate" style="color: #023535;">
-                    <a href="{% url 'article:detail' article.id %}" class="hover:text-[#034a4a]">{{ article.nom }}</a>
+                    <a href="{% url 'Superpreparation:detail_article' article.id %}" class="hover:text-[#034a4a]">{{ article.nom }}</a>
                 </h3>
                 <div class="flex gap-1">
                     {% if article.has_promo_active %}
@@ -40,7 +40,7 @@
                         {% endif %}
                     {% endwith %}
                 </div>
-                <a href="{% url 'article:detail' article.id %}" class="inline-flex items-center text-white px-3 py-2 rounded-lg text-xs font-medium transition-all shadow-md hover:shadow-lg transform hover:scale-105" style="background-color: #023535;">
+                <a href="{% url 'Superpreparation:detail_article' article.id %}" class="inline-flex items-center text-white px-3 py-2 rounded-lg text-xs font-medium transition-all shadow-md hover:shadow-lg transform hover:scale-105" style="background-color: #023535;">
                     <i class="fas fa-eye mr-1"></i>Détails
                 </a>
             </div>

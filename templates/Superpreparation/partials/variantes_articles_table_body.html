@@ -1,0 +1,53 @@
+{% load commande_filters %}
+{% for variante in page_obj %}
+<tr class="hover:bg-gray-50 transition-colors">
+    <td class="px-4 py-4 whitespace-nowrap text-sm border-r border-gray-200">
+        <input type="checkbox" class="article-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" data-article-id="{{ variante.article.id }}" />
+    </td>
+    <td class="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900 border-r border-gray-200">
+        <div class="flex items-center">
+            {% if variante.article.image %}
+                <img src="{{ variante.article.image.url }}" alt="{{ variante.article.nom }}" class="h-10 w-10 rounded-full object-cover mr-2" onerror="this.onerror=null;this.src='/static/img/default.png';">
+            {% elif variante.article.image_url %}
+                <img src="{{ variante.article.image_url }}" alt="{{ variante.article.nom }}" class="h-10 w-10 rounded-full object-cover mr-2" onerror="this.onerror=null;this.src='/static/img/default.png';">
+            {% else %}
+                <div class="h-10 w-10 rounded-full flex items-center justify-center mr-2" style="background-color: var(--admin-light-accent);">
+                    <i class="fas fa-box-open text-[var(--admin-accent-color)] text-xl opacity-70"></i>
+                </div>
+            {% endif %}
+            <a href="{% url 'Superpreparation:detail_article' variante.article.id %}" class="hover:text-[#034a4a] transition-colors" style="color: #023535;">{{ variante.article.nom }}</a>
+        </div>
+    </td>
+    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200">{{ variante.article.categorie }}</td>
+    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200">{{ variante.couleur.nom }}</td>
+    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200">{{ variante.pointure.pointure }}</td>
+    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200">
+        {% with variante.article|get_prix_avec_phase_simple as prix_info %}
+            <div class="text-sm font-bold {{ prix_info.couleur_classe }}">{{ prix_info.prix|floatformat:2 }} DH</div>
+            <div class="text-xs text-gray-500">{{ prix_info.libelle }}</div>
+        {% endwith %}
+    </td>
+    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200">
+        {% if variante.qte_disponible > 5 %}
+            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">En stock</span>
+        {% elif variante.qte_disponible > 0 %}
+            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Stock faible</span>
+        {% else %}
+            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">Rupture</span>
+        {% endif %}
+    </td>
+    <td class="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+        <div class="flex items-center space-x-2">
+            <a href="{% url 'Superpreparation:detail_article' variante.article.id %}" class="text-indigo-600 hover:text-indigo-900 transition-colors">
+                <i class="fas fa-eye"></i>
+            </a>
+            <a href="{% url 'Superpreparation:modifier_article' variante.article.id %}" class="text-blue-600 hover:text-blue-900 transition-colors">
+                <i class="fas fa-edit"></i>
+            </a>
+            <button onclick="confirmDeleteArticle('{% url 'Superpreparation:supprimer_article' variante.article.id %}', '{{ variante.article.nom }}')" class="text-red-600 hover:text-red-900 transition-colors">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+    </td>
+</tr>
+{% endfor %}

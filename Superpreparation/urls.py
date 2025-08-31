@@ -90,64 +90,63 @@ urlpatterns = [
     path('api/suggestions-recherche/', search_views.search_suggestions_api, name='search_suggestions_api'),
 
 
-    # === Urls des Gestions des Articles Stock === 
-
-
-     # Pages principales
-    path('articles/', views.liste_articles, name='liste_articles'),
-    path('articles/detail/<int:id>/', views.detail_article, name='detail_article'),
-    path('articles/modifier/<int:id>/', views.modifier_article, name='modifier_article'),
-    path('articles/creer/', views.creer_article, name='creer_article'),
-    path('articles/supprimer/<int:id>/', views.supprimer_article, name='supprimer_article'),
-    path('articles/supprimer-masse/', views.supprimer_articles_masse, name='supprimer_masse'),
+    # === NOUVELLES URLs : GESTION DES PROMOTIONS (SUPERPREPARATION) === 
+    # Pages principales des promotions
+    path('promotions/', views.liste_promotions, name='liste_promotions'),
+    path('promotions/creer/', views.creer_promotion, name='creer_promotion'),
+    path('promotions/<int:id>/', views.detail_promotion, name='detail_promotion'),
+    path('promotions/modifier/<int:id>/', views.modifier_promotion, name='modifier_promotion'),
+    path('promotions/supprimer/<int:id>/', views.supprimer_promotion, name='supprimer_promotion'),
+    path('promotions/activer-desactiver/<int:id>/', views.activer_desactiver_promotion, name='activer_desactiver_promotion'),
+    path('promotions/gerer-automatiquement/', views.gerer_promotions_automatiquement, name='gerer_promotions_automatiquement'),
+    
+    # === NOUVELLES URLs : GESTION DES ARTICLES STOCK (SUPERPREPARATION) === 
+    # Pages principales
+    path('gestion-articles/', views.liste_articles, name='liste_articles'),
+    path('gestion-articles/detail/<int:id>/', views.detail_article, name='detail_article'),
+    path('gestion-articles/modifier/<int:id>/', views.modifier_article, name='modifier_article'),
+    path('gestion-articles/creer/', views.creer_article, name='creer_article'),
+    path('gestion-articles/supprimer/<int:id>/', views.supprimer_article, name='supprimer_article'),
+    path('gestion-articles/supprimer-masse/', views.supprimer_articles_masse, name='supprimer_masse'),
 
 
     # Gestion des variantes d'articles
-    path('articles/variantes/', views.liste_variantes, name='liste_variantes'),
-    path('articles/variantes/creer-ajax/', views.creer_variantes_ajax, name='creer_variantes_ajax'),
-    path('variantes/supprimer/<int:id>/', views.supprimer_variante, name='supprimer_variante'),
+    path('gestion-articles/variantes/', views.liste_variantes, name='liste_variantes'),
+    path('gestion-articles/variantes/creer-ajax/', views.creer_variantes_ajax, name='creer_variantes_ajax'),
+    path('gestion-articles/variantes/supprimer/<int:id>/', views.supprimer_variante, name='supprimer_variante'),
 
     
     # Filtres par catégorie
-    path('articles/categorie/<str:categorie>/', views.articles_par_categorie, name='par_categorie'),
+    path('gestion-articles/categorie/<str:categorie>/', views.articles_par_categorie, name='par_categorie'),
     
     # Gestion du stock
-    path('articles/stock-faible/', views.stock_faible, name='stock_faible'),
-    path('articles/rupture-stock/', views.rupture_stock, name='rupture_stock'),
-    
-    # Gestion des promotions
-    path('articles/promotions/', views.liste_promotions, name='liste_promotions'),
-    path('articles/promotions/creer/', views.creer_promotion, name='creer_promotion'),
-    path('articles/promotions/<int:id>/', views.detail_promotion, name='detail_promotion'),
-    path('articles/promotions/modifier/<int:id>/', views.modifier_promotion, name='modifier_promotion'),
-    path('articles/promotions/supprimer/<int:id>/', views.supprimer_promotion, name='supprimer_promotion'),
-    path('articles/promotions/activer-desactiver/<int:id>/', views.activer_desactiver_promotion, name='activer_desactiver_promotion'),
-    path('articles/promotions/gerer-automatiquement/', views.gerer_promotions_automatiquement, name='gerer_promotions_automatiquement'),
+    path('gestion-articles/stock-faible/', views.stock_faible, name='stock_faible'),
+    path('gestion-articles/rupture-stock/', views.rupture_stock, name='rupture_stock'),
     
     # Gestion des phases
-    path('articles/changer-phase/<int:id>/', views.changer_phase, name='changer_phase'),
-    path('articles/appliquer-liquidation/<int:id>/', views.appliquer_liquidation, name='appliquer_liquidation'),
-    path('reinitialiser-prix/<int:id>/', views.reinitialiser_prix, name='reinitialiser_prix'),
+    path('gestion-articles/changer-phase/<int:id>/', views.changer_phase, name='changer_phase'),
+    path('gestion-articles/appliquer-liquidation/<int:id>/', views.appliquer_liquidation, name='appliquer_liquidation'),
+    path('gestion-articles/reinitialiser-prix/<int:id>/', views.reinitialiser_prix, name='reinitialiser_prix'),
     
     # URLs pour la gestion des couleurs et pointures
-    path('articles/gestion-couleurs-pointures/', views.gestion_couleurs_pointures, name='gestion_couleurs_pointures'),
-    path('articles/pointures/creer/', views.creer_pointure, name='creer_pointure'),
-    path('articles/pointures/modifier/<int:pointure_id>/', views.modifier_pointure, name='modifier_pointure'),
-    path('articles/pointures/supprimer/<int:pointure_id>/', views.supprimer_pointure, name='supprimer_pointure'),
+    path('gestion-articles/gestion-couleurs-pointures/', views.gestion_couleurs_pointures, name='gestion_couleurs_pointures'),
+    path('gestion-articles/pointures/creer/', views.creer_pointure, name='creer_pointure'),
+    path('gestion-articles/pointures/modifier/<int:pointure_id>/', views.modifier_pointure, name='modifier_pointure'),
+    path('gestion-articles/pointures/supprimer/<int:pointure_id>/', views.supprimer_pointure, name='supprimer_pointure'),
 
-    path('articles/ gestion-articles/couleurs/creer/', views.creer_couleur, name='creer_couleur'),
-    path('articles/gestion-articles/couleurs/modifier/<int:couleur_id>/', views.modifier_couleur, name='modifier_couleur'),
-    path('articles/gestion-articles/couleurs/supprimer/<int:couleur_id>/', views.supprimer_couleur, name='supprimer_couleur'),
+    path('gestion-articles/couleurs/creer/', views.creer_couleur, name='creer_couleur'),
+    path('gestion-articles/couleurs/modifier/<int:couleur_id>/', views.modifier_couleur, name='modifier_couleur'),
+    path('gestion-articles/couleurs/supprimer/<int:couleur_id>/', views.supprimer_couleur, name='supprimer_couleur'),
     
     # URLs pour la gestion des catégories
-    path('articles/categories/creer/', views.creer_categorie, name='creer_categorie'),
-    path('articles/categories/modifier/<int:categorie_id>/', views.modifier_categorie, name='modifier_categorie'),
-    path('articles/categories/supprimer/<int:categorie_id>/', views.supprimer_categorie, name='supprimer_categorie'),
+    path('gestion-articles/categories/creer/', views.creer_categorie, name='creer_categorie'),
+    path('gestion-articles/categories/modifier/<int:categorie_id>/', views.modifier_categorie, name='modifier_categorie'),
+    path('gestion-articles/categories/supprimer/<int:categorie_id>/', views.supprimer_categorie, name='supprimer_categorie'),
     
     # URLs pour la gestion des genres
-    path('articles/genres/creer/', views.creer_genre, name='creer_genre'),
-    path('articles/genres/modifier/<int:genre_id>/', views.modifier_genre, name='modifier_genre'),
-    path('articles/genres/supprimer/<int:genre_id>/', views.supprimer_genre, name='supprimer_genre'),
+    path('gestion-articles/genres/creer/', views.creer_genre, name='creer_genre'),
+    path('gestion-articles/genres/modifier/<int:genre_id>/', views.modifier_genre, name='modifier_genre'),
+    path('gestion-articles/genres/supprimer/<int:genre_id>/', views.supprimer_genre, name='supprimer_genre'),
 
 
    
