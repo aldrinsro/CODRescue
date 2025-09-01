@@ -1,6 +1,14 @@
 {% extends 'composant_generale/admin/base.html' %}
 {% load static %}
 
+{# 
+Template de modification de promotion
+Gestion du fuseau horaire :
+- Les dates sont affichées dans le fuseau horaire configuré dans settings.py
+- TIME_ZONE = 'Africa/Casablanca' est respecté pour l'affichage
+- Les filtres Django |date et |timeuntil respectent automatiquement le fuseau horaire configuré
+#}
+
 {% block title %}Modifier la promotion {{ promotion.nom }}{% endblock %}
 
 {% block extra_css %}
@@ -1016,7 +1024,7 @@
                         </div>
                         <div class="date-info-content">
                             <h4>Date de début actuelle</h4>
-                            <p id="current-start-date">{{ promotion.date_debut|date:"d/m/Y à H:i" }}</p>
+                            <p id="current-start-date">{{ promotion.date_debut|date:"d/m/Y à H:i" }} ({{ promotion.date_debut|date:"T" }})</p>
                         </div>
                     </div>
                     <div class="date-info-card">
@@ -1025,7 +1033,7 @@
                         </div>
                         <div class="date-info-content">
                             <h4>Date de fin actuelle</h4>
-                            <p id="current-end-date">{{ promotion.date_fin|date:"d/m/Y à H:i" }}</p>
+                            <p id="current-end-date">{{ promotion.date_fin|date:"d/m/Y à H:i" }} ({{ promotion.date_fin|date:"T" }})</p>
                         </div>
                     </div>
                     <div class="date-info-card">
@@ -1036,7 +1044,9 @@
                             <h4>Durée totale</h4>
                             <p id="duration-display">
                                 {% if promotion.date_debut and promotion.date_fin %}
-                                    {{ promotion.date_fin|timeuntil:promotion.date_debut }}
+                                    {% with duration=promotion.date_fin|timeuntil:promotion.date_debut %}
+                                        {{ duration }} (fuseau horaire local)
+                                    {% endwith %}
                                 {% else %}
                                     Non définie
                                 {% endif %}

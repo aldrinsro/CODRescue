@@ -11,11 +11,11 @@
         </td>
     <td class="px-4 py-4 whitespace-nowrap">
         <div class="text-sm text-gray-900">{{ promotion.date_debut|date:"d/m/Y" }}</div>
-        <div class="text-xs text-gray-500">{{ promotion.date_debut|date:"H:i" }}</div>
+        <div class="text-xs text-gray-500">{{ promotion.date_debut|date:"H:i" }} ({{ promotion.date_debut|date:"T" }})</div>
         </td>
     <td class="px-4 py-4 whitespace-nowrap">
         <div class="text-sm text-gray-900">{{ promotion.date_fin|date:"d/m/Y" }}</div>
-        <div class="text-xs text-gray-500">{{ promotion.date_fin|date:"H:i" }}</div>
+        <div class="text-xs text-gray-500">{{ promotion.date_fin|date:"H:i" }} ({{ promotion.date_fin|date:"T" }})</div>
         </td>
     <td class="px-4 py-4 whitespace-nowrap">
         <div class="countdown-mini" 

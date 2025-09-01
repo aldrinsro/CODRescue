@@ -1084,6 +1084,7 @@ def liste_promotions(request):
         'items_per_page': items_per_page,
         'start_range': start_range,
         'end_range': end_range,
+        'current_time': now,  # Ajouter l'heure actuelle pour le fuseau horaire
     }
     return render(request, 'article/liste_promotions.html', context)
 
@@ -1228,6 +1229,7 @@ def modifier_promotion(request, id):
     context = {
         'promotion': promotion,
         'form': form,
+        'current_time': timezone.now(),  # Ajouter l'heure actuelle pour le fuseau horaire
     }
     return render(request, 'article/modifier_promotion.html', context)
 
