@@ -5607,8 +5607,7 @@ function appliquerFiltreSelect(typeFiltre) {
                                     <div class="text-xs text-gray-500">Réf: ${article.reference || '-'}</div>
                                     <div class="mt-1">${badgeHtml}</div>
                                     <div class="mt-1 flex flex-wrap gap-2 text-xs">
-                                        ${article.pointure ? `<span class=\"px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full\"><i class=\"fas fa-ruler-vertical mr-1\"></i>${article.pointure}</span>` : ''}
-                                        ${article.couleur ? `<span class=\"px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full\"><i class=\"fas fa-palette mr-1\"></i>${article.couleur}</span>` : ''}
+               
                                         ${typeof article.categorie === 'string' ? `<span class=\"px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full\"><i class=\"fas fa-tag mr-1\"></i>${article.categorie}</span>` : ''}
                                     </div>
                                 </div>
