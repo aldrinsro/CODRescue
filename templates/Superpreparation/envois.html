@@ -1318,13 +1318,36 @@
 
     <!-- Section des envois actifs -->
     <div class="mb-8">
-        <h2 class="section-title">
-            <i class="fas fa-truck text-blue-600"></i>
-            Envois actifs
-            <span class="status-badge en-cours animate-pulse">
-                {{ envois_actifs|length|default:0 }} en cours
-            </span>
-        </h2>
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+            <h2 class="section-title">
+                <i class="fas fa-truck text-blue-600"></i>
+                Envois actifs
+                <span class="status-badge en-cours animate-pulse">
+                    {{ envois_actifs|length|default:0 }} en cours
+                </span>
+            </h2>
+            
+            <!-- Actions multiples pour les envois actifs -->
+            <div class="flex items-center gap-4 mt-4 md:mt-0">
+                <button class="theme-button-secondary tooltip" 
+                        id="selectAllEnvoisActifs"
+                        data-tooltip="Sélectionner/Désélectionner tous les envois actifs"
+                        onclick="toggleSelectAllEnvoisActifs()"
+                        style="display: none;">
+                    <i class="fas fa-check-square mr-2"></i>
+                    <span id="selectAllEnvoisActifsText">Tout sélectionner</span>
+                </button>
+                
+                <button class="theme-button-primary tooltip" 
+                        id="cloturerMultiplesBtn"
+                        data-tooltip="Clôturer tous les envois sélectionnés"
+                        onclick="ouvrirModalCloturerMultiples()"
+                        style="display: none;">
+                    <i class="fas fa-check mr-2"></i>
+                    <span id="cloturerMultiplesText">Clôturer la sélection (0)</span>
+                </button>
+            </div>
+        </div>
         
         {% if envois_actifs %}
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -1332,13 +1355,26 @@
             <div class="envoi-card en-cours" data-envoi-id="{{ envoi.id }}">
                 <!-- Header de la card -->
                 <div class="flex justify-between items-start mb-4">
-                    <div>
-                        <h3 class="font-bold text-xl text-gray-800 tooltip" data-tooltip="Numéro d'envoi unique">{{ envoi.numero_envoi }}</h3>
-                        <p class="text-sm text-gray-600 flex items-center mt-1">
-                            <i class="fas fa-map-marker-alt mr-2 text-blue-600"></i>
-                            {{ envoi.region.nom_region }}
-                        </p>
+                    <div class="flex items-start gap-3 flex-1">
+                        <!-- Checkbox de sélection -->
+                        <div class="flex items-center mt-1">
+                            <input type="checkbox" 
+                                   class="envoi-actif-checkbox w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                   data-envoi-id="{{ envoi.id }}"
+                                   data-envoi-numero="{{ envoi.numero_envoi }}"
+                                   data-envoi-region="{{ envoi.region.nom_region }}"
+                                   onchange="updateEnvoiActifSelection()">
+                        </div>
+                        
+                        <div>
+                            <h3 class="font-bold text-xl text-gray-800 tooltip" data-tooltip="Numéro d'envoi unique">{{ envoi.numero_envoi }}</h3>
+                            <p class="text-sm text-gray-600 flex items-center mt-1">
+                                <i class="fas fa-map-marker-alt mr-2 text-blue-600"></i>
+                                {{ envoi.region.nom_region }}
+                            </p>
+                        </div>
                     </div>
+                    
                     <span class="status-badge en-cours">
                         <i class="fas fa-play-circle"></i>
                         En cours
@@ -1403,22 +1439,59 @@
 
     <!-- Section de création d'envois -->
     <div class="mb-8" id="createSection">
-        <h2 class="section-title">
-            <i class="fas fa-plus-circle text-green-600"></i>
-            Créer un nouvel envoi
-            <span class="status-badge disponible">
-                {{ regions|length|default:0 }} régions disponibles
-            </span>
-        </h2>
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+            <h2 class="section-title">
+                <i class="fas fa-plus-circle text-green-600"></i>
+                Créer un nouvel envoi
+                <span class="status-badge disponible">
+                    {{ regions|length|default:0 }} régions disponibles
+                </span>
+            </h2>
+            
+            <!-- Actions multiples pour la création d'envois -->
+            <div class="flex items-center gap-4 mt-4 md:mt-0">
+                <button class="theme-button-secondary tooltip" 
+                        id="selectAllRegions"
+                        data-tooltip="Sélectionner/Désélectionner toutes les régions disponibles"
+                        onclick="toggleSelectAllRegions()"
+                        style="display: none;">
+                    <i class="fas fa-check-square mr-2"></i>
+                    <span id="selectAllRegionsText">Tout sélectionner</span>
+                </button>
+                
+                <button class="theme-button-primary tooltip" 
+                        id="creerMultiplesBtn"
+                        data-tooltip="Créer des envois pour toutes les régions sélectionnées"
+                        onclick="ouvrirModalCreerMultiples()"
+                        style="display: none;">
+                    <i class="fas fa-plus mr-2"></i>
+                    <span id="creerMultiplesText">Créer la sélection (0)</span>
+                </button>
+            </div>
+        </div>
         
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {% for region in regions %}
             <div class="envoi-card" data-region-id="{{ region.id }}">
                 <div class="flex items-center justify-between mb-4">
-                    <div>
-                        <h3 class="font-bold text-lg text-gray-800 tooltip" data-tooltip="Région: {{ region.nom_region }}">{{ region.nom_region }}</h3>
-                        <p class="text-sm text-gray-600">Région</p>
+                    <div class="flex items-center gap-3 flex-1">
+                        <!-- Checkbox de sélection (visible seulement pour les régions disponibles) -->
+                        {% if region.id not in regions_avec_envoi_actif %}
+                        <div class="flex items-center">
+                            <input type="checkbox" 
+                                   class="region-checkbox w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                                   data-region-id="{{ region.id }}"
+                                   data-region-nom="{{ region.nom_region }}"
+                                   onchange="updateRegionSelection()">
+                        </div>
+                        {% endif %}
+                        
+                        <div>
+                            <h3 class="font-bold text-lg text-gray-800 tooltip" data-tooltip="Région: {{ region.nom_region }}">{{ region.nom_region }}</h3>
+                            <p class="text-sm text-gray-600">Région</p>
+                        </div>
                     </div>
+                    
                     <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
                         <i class="fas fa-map-marker-alt text-blue-600 text-xl"></i>
                     </div>
@@ -1468,6 +1541,82 @@
     </div>
 </div>
 
+<!-- Modal de création multiple d'envois -->
+<div id="creerMultiplesModal" class="custom-confirm-modal">
+    <div class="custom-confirm-content">
+        <div class="custom-confirm-header">
+            <div class="custom-confirm-icon">
+                <i class="fas fa-plus-circle"></i>
+            </div>
+            <div class="custom-confirm-title">Création multiple d'envois</div>
+        </div>
+        
+        <div class="custom-confirm-message">
+            <div class="mb-4">
+                <p class="text-lg font-medium text-gray-800 mb-3">Vous allez créer des envois pour les régions suivantes :</p>
+                <div id="regionsSelectionList" class="space-y-2 max-h-40 overflow-y-auto">
+                    <!-- Liste des régions sélectionnées sera générée en JavaScript -->
+                </div>
+            </div>
+            <div class="bg-blue-50 border-l-4 border-blue-400 p-3 rounded">
+                <p class="text-sm text-blue-700">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    Les envois seront créés automatiquement pour chaque région sélectionnée.
+                </p>
+            </div>
+        </div>
+        
+        <div class="custom-confirm-actions">
+            <button class="custom-confirm-btn cancel" onclick="fermerModalCreerMultiples()">
+                <i class="fas fa-times"></i>
+                Annuler
+            </button>
+            <button class="custom-confirm-btn confirm" onclick="executerCreationMultiple()">
+                <i class="fas fa-plus"></i>
+                <span id="creerMultiplesConfirmText">Créer les envois</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de clôture multiple d'envois -->
+<div id="cloturerMultiplesModal" class="custom-confirm-modal">
+    <div class="custom-confirm-content">
+        <div class="custom-confirm-header">
+            <div class="custom-confirm-icon">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="custom-confirm-title">Clôture multiple d'envois</div>
+        </div>
+        
+        <div class="custom-confirm-message">
+            <div class="mb-4">
+                <p class="text-lg font-medium text-gray-800 mb-3">Vous allez clôturer les envois suivants :</p>
+                <div id="envoisSelectionList" class="space-y-2 max-h-40 overflow-y-auto">
+                    <!-- Liste des envois sélectionnés sera générée en JavaScript -->
+                </div>
+            </div>
+            <div class="bg-orange-50 border-l-4 border-orange-400 p-3 rounded">
+                <p class="text-sm text-orange-700">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>
+                    <strong>Attention :</strong> Cette action est irréversible. Les envois clôturés ne pourront plus être modifiés.
+                </p>
+            </div>
+        </div>
+        
+        <div class="custom-confirm-actions">
+            <button class="custom-confirm-btn cancel" onclick="fermerModalCloturerMultiples()">
+                <i class="fas fa-times"></i>
+                Annuler
+            </button>
+            <button class="custom-confirm-btn danger" onclick="executerClotureMultiple()">
+                <i class="fas fa-check"></i>
+                <span id="cloturerMultiplesConfirmText">Clôturer les envois</span>
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- Modale de confirmation personnalisée -->
 <div id="customConfirmModal" class="custom-confirm-modal">
     <div class="custom-confirm-content">
@@ -1497,6 +1646,332 @@
 
 <!-- Script de gestion des envois -->
 <script src="{% static 'js/Superpreparation/envoi/envois-management.js' %}"></script>
+
+<!-- Script pour les actions multiples -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialiser les fonctionnalités de sélection multiple
+    initializeMultipleSelection();
+});
+
+// ===== GESTION DE LA SÉLECTION MULTIPLE =====
+
+function initializeMultipleSelection() {
+    // Vérifier s'il y a des envois actifs et des régions disponibles
+    updateEnvoiActifSelection();
+    updateRegionSelection();
+}
+
+// Gestion des envois actifs
+function updateEnvoiActifSelection() {
+    const checkboxes = document.querySelectorAll('.envoi-actif-checkbox');
+    const selectAllBtn = document.getElementById('selectAllEnvoisActifs');
+    const cloturerBtn = document.getElementById('cloturerMultiplesBtn');
+    const selectAllText = document.getElementById('selectAllEnvoisActifsText');
+    const cloturerText = document.getElementById('cloturerMultiplesText');
+    
+    const checkedBoxes = Array.from(checkboxes).filter(cb => cb.checked);
+    const totalBoxes = checkboxes.length;
+    
+    // Afficher/masquer les boutons selon qu'il y a des envois actifs
+    if (totalBoxes > 0) {
+        selectAllBtn.style.display = 'block';
+        if (checkedBoxes.length > 0) {
+            cloturerBtn.style.display = 'block';
+            cloturerText.textContent = `Clôturer la sélection (${checkedBoxes.length})`;
+        } else {
+            cloturerBtn.style.display = 'none';
+        }
+        
+        // Mettre à jour le texte du bouton "Tout sélectionner"
+        if (checkedBoxes.length === totalBoxes) {
+            selectAllText.textContent = 'Tout désélectionner';
+        } else {
+            selectAllText.textContent = 'Tout sélectionner';
+        }
+    } else {
+        selectAllBtn.style.display = 'none';
+        cloturerBtn.style.display = 'none';
+    }
+}
+
+function toggleSelectAllEnvoisActifs() {
+    const checkboxes = document.querySelectorAll('.envoi-actif-checkbox');
+    const checkedBoxes = Array.from(checkboxes).filter(cb => cb.checked);
+    const shouldCheck = checkedBoxes.length !== checkboxes.length;
+    
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = shouldCheck;
+    });
+    
+    updateEnvoiActifSelection();
+}
+
+// Gestion des régions
+function updateRegionSelection() {
+    const checkboxes = document.querySelectorAll('.region-checkbox');
+    const selectAllBtn = document.getElementById('selectAllRegions');
+    const creerBtn = document.getElementById('creerMultiplesBtn');
+    const selectAllText = document.getElementById('selectAllRegionsText');
+    const creerText = document.getElementById('creerMultiplesText');
+    
+    const checkedBoxes = Array.from(checkboxes).filter(cb => cb.checked);
+    const totalBoxes = checkboxes.length;
+    
+    // Afficher/masquer les boutons selon qu'il y a des régions disponibles
+    if (totalBoxes > 0) {
+        selectAllBtn.style.display = 'block';
+        if (checkedBoxes.length > 0) {
+            creerBtn.style.display = 'block';
+            creerText.textContent = `Créer la sélection (${checkedBoxes.length})`;
+        } else {
+            creerBtn.style.display = 'none';
+        }
+        
+        // Mettre à jour le texte du bouton "Tout sélectionner"
+        if (checkedBoxes.length === totalBoxes) {
+            selectAllText.textContent = 'Tout désélectionner';
+        } else {
+            selectAllText.textContent = 'Tout sélectionner';
+        }
+    } else {
+        selectAllBtn.style.display = 'none';
+        creerBtn.style.display = 'none';
+    }
+}
+
+function toggleSelectAllRegions() {
+    const checkboxes = document.querySelectorAll('.region-checkbox');
+    const checkedBoxes = Array.from(checkboxes).filter(cb => cb.checked);
+    const shouldCheck = checkedBoxes.length !== checkboxes.length;
+    
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = shouldCheck;
+    });
+    
+    updateRegionSelection();
+}
+
+// ===== MODALS POUR ACTIONS MULTIPLES =====
+
+function ouvrirModalCreerMultiples() {
+    const checkboxes = document.querySelectorAll('.region-checkbox:checked');
+    const regionsSelectionList = document.getElementById('regionsSelectionList');
+    const confirmText = document.getElementById('creerMultiplesConfirmText');
+    
+    // Construire la liste des régions sélectionnées
+    regionsSelectionList.innerHTML = '';
+    checkboxes.forEach(checkbox => {
+        const regionNom = checkbox.dataset.regionNom;
+        const regionId = checkbox.dataset.regionId;
+        
+        const div = document.createElement('div');
+        div.className = 'flex items-center p-2 bg-green-50 rounded border-l-4 border-green-400';
+        div.innerHTML = `
+            <i class="fas fa-map-marker-alt text-green-600 mr-3"></i>
+            <span class="font-medium text-green-800">${regionNom}</span>
+        `;
+        regionsSelectionList.appendChild(div);
+    });
+    
+    confirmText.textContent = `Créer ${checkboxes.length} envoi(s)`;
+    document.getElementById('creerMultiplesModal').classList.add('show');
+}
+
+function fermerModalCreerMultiples() {
+    document.getElementById('creerMultiplesModal').classList.remove('show');
+}
+
+function ouvrirModalCloturerMultiples() {
+    const checkboxes = document.querySelectorAll('.envoi-actif-checkbox:checked');
+    const envoisSelectionList = document.getElementById('envoisSelectionList');
+    const confirmText = document.getElementById('cloturerMultiplesConfirmText');
+    
+    // Construire la liste des envois sélectionnés
+    envoisSelectionList.innerHTML = '';
+    checkboxes.forEach(checkbox => {
+        const envoiNumero = checkbox.dataset.envoiNumero;
+        const envoiRegion = checkbox.dataset.envoiRegion;
+        
+        const div = document.createElement('div');
+        div.className = 'flex items-center p-2 bg-orange-50 rounded border-l-4 border-orange-400';
+        div.innerHTML = `
+            <i class="fas fa-truck text-orange-600 mr-3"></i>
+            <div>
+                <span class="font-medium text-orange-800">${envoiNumero}</span>
+                <span class="text-sm text-orange-600 ml-2">(${envoiRegion})</span>
+            </div>
+        `;
+        envoisSelectionList.appendChild(div);
+    });
+    
+    confirmText.textContent = `Clôturer ${checkboxes.length} envoi(s)`;
+    document.getElementById('cloturerMultiplesModal').classList.add('show');
+}
+
+function fermerModalCloturerMultiples() {
+    document.getElementById('cloturerMultiplesModal').classList.remove('show');
+}
+
+// ===== EXÉCUTION DES ACTIONS MULTIPLES =====
+
+function executerCreationMultiple() {
+    const checkboxes = document.querySelectorAll('.region-checkbox:checked');
+    const regionsIds = Array.from(checkboxes).map(cb => cb.dataset.regionId);
+    
+    if (regionsIds.length === 0) {
+        showToast('Aucune région sélectionnée', 'warning');
+        fermerModalCreerMultiples();
+        return;
+    }
+    
+    // Afficher un indicateur de chargement
+    const confirmBtn = document.querySelector('#creerMultiplesModal .custom-confirm-btn.confirm');
+    const originalContent = confirmBtn.innerHTML;
+    confirmBtn.innerHTML = '<div class="loading-spinner"></div> Création en cours...';
+    confirmBtn.disabled = true;
+    
+    // Envoyer la requête AJAX
+    fetch('{% url "Superpreparation:creer_envois_multiples" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+        },
+        body: JSON.stringify({
+            regions_ids: regionsIds
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        confirmBtn.innerHTML = originalContent;
+        confirmBtn.disabled = false;
+        fermerModalCreerMultiples();
+        
+        if (data.success) {
+            showToast(data.message, 'success');
+            // Recharger la page pour voir les nouveaux envois
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        } else {
+            showToast(data.message || 'Erreur lors de la création des envois', 'error');
+            if (data.erreurs && data.erreurs.length > 0) {
+                data.erreurs.forEach(erreur => {
+                    showToast(erreur, 'error');
+                });
+            }
+        }
+    })
+    .catch(error => {
+        confirmBtn.innerHTML = originalContent;
+        confirmBtn.disabled = false;
+        fermerModalCreerMultiples();
+        showToast('Erreur de communication avec le serveur', 'error');
+        console.error('Erreur:', error);
+    });
+}
+
+function executerClotureMultiple() {
+    const checkboxes = document.querySelectorAll('.envoi-actif-checkbox:checked');
+    const envoisIds = Array.from(checkboxes).map(cb => cb.dataset.envoiId);
+    
+    if (envoisIds.length === 0) {
+        showToast('Aucun envoi sélectionné', 'warning');
+        fermerModalCloturerMultiples();
+        return;
+    }
+    
+    // Afficher un indicateur de chargement
+    const confirmBtn = document.querySelector('#cloturerMultiplesModal .custom-confirm-btn.danger');
+    const originalContent = confirmBtn.innerHTML;
+    confirmBtn.innerHTML = '<div class="loading-spinner"></div> Clôture en cours...';
+    confirmBtn.disabled = true;
+    
+    // Envoyer la requête AJAX
+    fetch('{% url "Superpreparation:cloturer_envois_multiples" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+        },
+        body: JSON.stringify({
+            envois_ids: envoisIds
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        confirmBtn.innerHTML = originalContent;
+        confirmBtn.disabled = false;
+        fermerModalCloturerMultiples();
+        
+        if (data.success) {
+            showToast(data.message, 'success');
+            // Recharger la page pour voir les changements
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        } else {
+            showToast(data.message || 'Erreur lors de la clôture des envois', 'error');
+            if (data.erreurs && data.erreurs.length > 0) {
+                data.erreurs.forEach(erreur => {
+                    showToast(erreur, 'error');
+                });
+            }
+        }
+    })
+    .catch(error => {
+        confirmBtn.innerHTML = originalContent;
+        confirmBtn.disabled = false;
+        fermerModalCloturerMultiples();
+        showToast('Erreur de communication avec le serveur', 'error');
+        console.error('Erreur:', error);
+    });
+}
+
+// ===== UTILITAIRES =====
+
+function showToast(message, type = 'info') {
+    const toastContainer = document.getElementById('toastContainer');
+    if (!toastContainer) return;
+    
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    
+    const icon = type === 'success' ? 'fa-check-circle' : 
+                 type === 'error' ? 'fa-exclamation-circle' : 
+                 type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle';
+    
+    toast.innerHTML = `
+        <div class="flex items-center gap-3">
+            <i class="fas ${icon} text-lg"></i>
+            <span class="flex-1">${message}</span>
+            <button onclick="this.parentElement.parentElement.remove()" class="text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `;
+    
+    toastContainer.appendChild(toast);
+    
+    // Animer l'entrée
+    setTimeout(() => {
+        toast.classList.add('show');
+    }, 100);
+    
+    // Supprimer automatiquement après 5 secondes
+    setTimeout(() => {
+        if (toast.parentNode) {
+            toast.classList.remove('show');
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 300);
+        }
+    }, 5000);
+}
+</script>
 
 {% endblock %}
 

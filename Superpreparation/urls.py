@@ -71,7 +71,9 @@ urlpatterns = [
     # Redirection pour l'ancienne URL
     path('historique-envois/', redirect_historique_envois, name='historique_envois_redirect'),
     path('envois/creer-region/', views.creer_envoi_region, name='creer_envoi_region'),
+    path('envois/creer-multiples/', views.creer_envois_multiples, name='creer_envois_multiples'),
     path('envois/cloturer/', views.cloturer_envoi, name='cloturer_envoi'),
+    path('envois/cloturer-multiples/', views.cloturer_envois_multiples, name='cloturer_envois_multiples'),
     path('envois/<int:envoi_id>/export-excel/', views.export_commandes_envoi_excel, name='export_commandes_envoi_excel'),
     path('envois/<int:envoi_id>/commandes/', views.commandes_envoi, name='commandes_envoi'),
     path('envois/<int:envoi_id>/commandes-historique/', views.commandes_envoi_historique, name='commandes_envoi_historique'),

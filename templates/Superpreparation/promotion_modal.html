@@ -1,13 +1,13 @@
 <!-- Modal de création de promotion -->
 <div id="promotionModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50 flex items-center justify-center">
-    <div class="relative p-8 bg-white w-full max-w-4xl m-auto flex-col flex rounded-xl shadow-2xl animate-fade-in-down" style="border: 2px solid var(--admin-color);">
+    <div class="relative p-8 bg-white w-full max-w-4xl m-auto flex-col flex rounded-xl shadow-2xl animate-fade-in-down" style="border: 2px solid #0e1d3d;">
         <!-- En-tête du modal -->
-        <div class="flex justify-between items-center pb-4 border-b" style="border-color: var(--admin-color);">
+        <div class="flex justify-between items-center pb-4 border-b" style="border-color: #0e1d3d;">
             <div class="flex items-center">
-                <div class="w-12 h-12 rounded-full flex items-center justify-center mr-4" style="background-color: var(--admin-color);">
+                <div class="w-12 h-12 rounded-full flex items-center justify-center mr-4" style="background-color: #0e1d3d;">
                     <i class="fas fa-plus text-white text-xl"></i>
                 </div>
-                <h3 class="text-2xl font-bold" style="color: var(--admin-color);">Nouvelle Promotion</h3>
+                <h3 class="text-2xl font-bold" style="color: #0e1d3d;">Nouvelle Promotion</h3>
             </div>
             <button type="button" class="close-modal text-gray-400 hover:text-gray-600 transition-colors">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -18,14 +18,14 @@
         
         <!-- Contenu du modal -->
         <div class="py-6">
-            <form method="post" action="{% url 'article:creer_promotion' %}" class="space-y-6">
+            <form method="post" action="{% url 'Superpreparation:creer_promotion' %}" class="space-y-6">
                 {% csrf_token %}
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <!-- Nom -->
                     <div>
                         <label for="{{ form_promotion.nom.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                            <i class="fas fa-tag mr-2" style="color: var(--admin-color);"></i>Nom de la promotion <span class="text-red-500">*</span>
+                            <i class="fas fa-tag mr-2" style="color: #0e1d3d;"></i>Nom de la promotion <span class="text-red-500">*</span>
                         </label>
                         {{ form_promotion.nom }}
                         {% if form_promotion.nom.errors %}
@@ -38,7 +38,7 @@
                     <!-- Pourcentage de réduction -->
                     <div>
                         <label for="{{ form_promotion.pourcentage_reduction.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                            <i class="fas fa-percentage mr-2" style="color: var(--admin-color);"></i>Pourcentage de réduction <span class="text-red-500">*</span>
+                            <i class="fas fa-percentage mr-2" style="color: #0e1d3d;"></i>Pourcentage de réduction <span class="text-red-500">*</span>
                         </label>
                         <div class="relative">
                             {{ form_promotion.pourcentage_reduction }}
@@ -57,7 +57,7 @@
                 <!-- Description -->
                 <div>
                     <label for="{{ form_promotion.description.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-align-left mr-2" style="color: var(--admin-color);"></i>Description
+                        <i class="fas fa-align-left mr-2" style="color: #0e1d3d;"></i>Description
                     </label>
                     {{ form_promotion.description }}
                     {% if form_promotion.description.errors %}
@@ -96,16 +96,16 @@
                 <!-- Articles -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-3">
-                        <i class="fas fa-shopping-bag mr-2" style="color: var(--admin-color);"></i>Articles en promotion <span class="text-red-500">*</span>
+                        <i class="fas fa-shopping-bag mr-2" style="color: #0e1d3d;"></i>Articles en promotion <span class="text-red-500">*</span>
                     </label>
-                    <div class="border rounded-lg" style="border-color: #99dddd;">
+                    <div class="border rounded-lg" style="border-color: #4a90e2;">
                         <!-- Compteur d'articles -->
-                        <div class="px-4 py-3 bg-gray-50 border-b rounded-t-lg flex justify-between items-center" style="border-bottom-color: #99dddd;">
+                        <div class="px-4 py-3 bg-gray-50 border-b rounded-t-lg flex justify-between items-center" style="border-bottom-color: #4a90e2;">
                             <span class="text-sm text-gray-600 flex items-center">
-                                <i class="fas fa-info-circle mr-2" style="color: var(--admin-color);"></i>
+                                <i class="fas fa-info-circle mr-2" style="color: #0e1d3d;"></i>
                                 <span id="modal-selected-count">0</span> article(s) sélectionné(s) sur <span id="modal-total-count">0</span>
                             </span>
-                            <button type="button" id="selectAllBtn" class="text-sm font-medium transition-colors duration-200" style="color: var(--admin-color); hover:color: #045555;">
+                            <button type="button" id="selectAllBtn" class="text-sm font-medium transition-colors duration-200" style="color: #0e1d3d; hover:color: #1a2d5a;">
                                 Tout sélectionner
                             </button>
                         </div>
@@ -172,12 +172,12 @@
         </div>
         
         <!-- Boutons d'action -->
-        <div class="flex justify-end space-x-3 pt-6 border-t" style="border-color: var(--admin-color);">
+        <div class="flex justify-end space-x-3 pt-6 border-t" style="border-color: #0e1d3d;">
             <button type="button" class="close-modal px-6 py-3 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg font-medium transition-all duration-200">
                 <i class="fas fa-times mr-2"></i>
                 Annuler
             </button>
-            <button type="submit" form="promotionForm" class="px-6 py-3 text-white rounded-lg font-medium transition-all duration-200 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transform hover:-translate-y-0.5" style="background-color: var(--admin-color); focus:ring-color: var(--admin-color);">
+            <button type="submit" form="promotionForm" class="px-6 py-3 text-white rounded-lg font-medium transition-all duration-200 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transform hover:-translate-y-0.5" style="background-color: #0e1d3d; focus:ring-color: #0e1d3d;">
                 <i class="fas fa-plus mr-2"></i>
                 Créer la promotion
             </button>
@@ -231,16 +231,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const formInputs = modal.querySelectorAll('input[type="text"], input[type="number"], textarea, input[type="datetime-local"]');
     formInputs.forEach(function(input) {
         input.classList.add('w-full', 'p-3', 'border', 'border-gray-300', 'rounded-lg', 'focus:ring-2', 'focus:ring-offset-2', 'transition-all');
-        input.style.borderColor = '#99dddd';
-        input.style.setProperty('--tw-ring-color', '#023535');
+        input.style.borderColor = '#4a90e2';
+        input.style.setProperty('--tw-ring-color', '#0e1d3d');
         
         // Ajouter un effet de focus
         input.addEventListener('focus', function() {
-            this.style.borderColor = '#023535';
+            this.style.borderColor = '#0e1d3d';
         });
         
         input.addEventListener('blur', function() {
-            this.style.borderColor = '#99dddd';
+            this.style.borderColor = '#4a90e2';
         });
     });
 
@@ -250,7 +250,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const checkboxes = checkboxContainer.querySelectorAll('.article-item-modal input[type="checkbox"]');
         
         checkboxes.forEach(function(checkbox) {
-            checkbox.style.setProperty('--tw-ring-color', '#023535');
+            checkbox.style.setProperty('--tw-ring-color', '#0e1d3d');
             
             // Couleur personnalisée pour les checkboxes cochées
             checkbox.addEventListener('change', function() {

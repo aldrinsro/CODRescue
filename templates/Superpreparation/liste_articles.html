@@ -284,7 +284,7 @@
         <!-- Vue grille/mosaïque -->
         <div id="gridView" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-8">
         {% for article in page_obj %}
-            <div class="bg-white rounded-xl shadow-lg border overflow-hidden transform hover:-translate-y-2 transition-transform duration-300" style="border-color: #e8f0ff;">
+            <div class="bg-blue-950 rounded-xl shadow-lg border overflow-hidden transform hover:-translate-y-2 transition-transform duration-300" style="border-color: #e8f0ff;">
                 <a href="{% url 'Superpreparation:detail_article' article.id %}" class="block">
                 {% if article.image %}
                         <img src="{{ article.image.url }}" alt="{{ article.nom }}" class="w-full h-56 object-cover" onerror="this.onerror=null;this.src='/static/img/default.png';">
@@ -346,7 +346,7 @@
         <!-- Vue tableau -->
         <div class="overflow-x-auto mb-8 hidden" id="tableView">
             <table class="min-w-full divide-y divide-gray-200 border border-gray-200" style="border-collapse: collapse;">
-                <thead class="bg-gray-50" style="background-color: var(--admin-color);">
+                <thead class="bg-blue-950" style="background-color: #0e1d3d;">
                     <tr>
                         <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider border-r border-b border-gray-200">
                             <input type="checkbox" id="selectAllArticles" class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" />

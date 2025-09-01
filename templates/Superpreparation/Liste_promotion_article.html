@@ -5,6 +5,13 @@
 
 {% block extra_css %}
 <style>
+    :root {
+        --admin-color: #0e1d3d;
+        --admin-gradient-start: #0e1d3d;
+        --admin-gradient-end: #1a2d5a;
+        --admin-accent-color: #4a90e2;
+    }
+
     @keyframes slideInUp {
         from {
             opacity: 0;
@@ -61,7 +68,7 @@
     }
     
     .countdown-mini-number {
-        background: linear-gradient(135deg, var(--admin-gradient-start), var(--admin-gradient-end));
+        background: linear-gradient(135deg, #0e1d3d, #1a2d5a);
         background-clip: text;
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
@@ -253,7 +260,7 @@
         width: 20px;
         height: 20px;
         border-radius: 50%;
-        background: linear-gradient(135deg, var(--admin-color), #045555);
+        background: linear-gradient(135deg, #0e1d3d, #1a2d5a);
         color: white;
         cursor: pointer;
         transition: all 0.3s ease;
@@ -264,10 +271,10 @@
     }
     
     .info-icon-btn:hover {
-        background: linear-gradient(135deg, #045555, var(--admin-color));
+        background: linear-gradient(135deg, #1a2d5a, #0e1d3d);
         transform: scale(1.1);
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        border-color: #99dddd;
+        border-color: #4a90e2;
     }
     
     .info-icon-btn:active {
@@ -313,7 +320,7 @@
     }
     
     .prix-details-modal-header {
-        background: linear-gradient(135deg, var(--admin-color), #045555);
+        background: linear-gradient(135deg, #0e1d3d, #1a2d5a);
         color: white;
         padding: 1.5rem;
         border-radius: 12px 12px 0 0;
@@ -381,7 +388,7 @@
     .prix-details-card-value {
         font-size: 1.25rem;
         font-weight: 700;
-        color: var(--admin-color);
+        color: #0e1d3d;
     }
     
     .prix-details-card.economie {
@@ -522,7 +529,7 @@
     }
     
     .gestion-auto-modal-header {
-        background: linear-gradient(135deg, var(--admin-color), #045555);
+        background: linear-gradient(135deg, #0e1d3d, #1a2d5a);
         color: white;
         padding: 1.5rem;
         border-radius: 12px 12px 0 0;
@@ -602,7 +609,7 @@
     
     .feature-content h4 {
         font-weight: 600;
-        color: var(--admin-color);
+        color: #0e1d3d;
         margin-bottom: 0.5rem;
     }
     
@@ -619,13 +626,13 @@
 {% csrf_token %}
 <div class="main-content transition-all duration-300" id="mainContent">
     <!-- En-tête de la page -->
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 text-white p-6 rounded-xl shadow-lg" style="background: linear-gradient(to right, var(--admin-gradient-start), var(--admin-gradient-end));">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 text-white p-6 rounded-xl shadow-lg" style="background: linear-gradient(to right, #0e1d3d, #1a2d5a);">
         <div>
             <h1 class="text-3xl font-bold flex items-center mb-2">
-                <i class="fas fa-tags mr-3" style="color: var(--admin-accent-color);"></i>
+                <i class="fas fa-tags mr-3" style="color: #4a90e2;"></i>
                 Gestion des Promotions
             </h1>
-            <p style="color: var(--admin-accent-color);">Gérez vos promotions et offres spéciales</p>
+            <p style="color: #4a90e2;">Gérez vos promotions et offres spéciales</p>
         </div>
         <div class="flex items-center gap-4 mt-4 md:mt-0">
             <div class="flex items-center">
@@ -703,7 +710,7 @@
     </div>
 
     <!-- Barre de recherche et filtres -->
-    <div class="bg-white rounded-xl shadow-md border p-6 mb-8" style="border-color: #e6fffe;">
+    <div class="bg-white rounded-xl shadow-md border p-6 mb-8" style="border-color: #0e1d3d;">
         <div class="flex flex-col md:flex-row justify-between items-center gap-4">
             <form method="get" class="flex-grow flex items-center gap-4">
                 <div class="relative flex-grow">
@@ -714,7 +721,7 @@
                     <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
                 </div>
                 <button type="submit" class="px-6 py-2 rounded-lg text-white font-medium transition-all shadow-md hover:shadow-lg transform hover:scale-105" 
-                        style="background-color: #023535;">
+                        style="background-color: #0e1d3d;">
                     Rechercher
                 </button>
                 {% if search %}
@@ -726,7 +733,7 @@
             
             <!-- Filtres par statut -->
             <div class="flex gap-2">
-                <a href="?filtre=toutes" class="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 {% if filtre == 'toutes' %}text-white{% else %}text-gray-700 hover:text-white{% endif %}" style="{% if filtre == 'toutes' %}background-color: var(--admin-color);{% else %}background-color: #f3f4f6; hover:background-color: var(--admin-color);{% endif %}">
+                <a href="?filtre=toutes" class="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 {% if filtre == 'toutes' %}text-white{% else %}text-gray-700 hover:text-white{% endif %}" style="{% if filtre == 'toutes' %}background-color: #0e1d3d;{% else %}background-color: #f3f4f6; hover:background-color: #0e1d3d;{% endif %}">
                 Toutes
             </a>
                 <a href="?filtre=actives" class="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 {% if filtre == 'actives' %}bg-green-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-green-600 hover:text-white{% endif %}">
@@ -766,7 +773,7 @@
     {% if page_obj.object_list %}
     <div class="overflow-x-auto mb-8 bg-white rounded-xl shadow-lg">
             <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50" style="background-color: var(--admin-color);">
+                            <thead class="bg-gray-50" style="background-color: #0e1d3d;">
                 <tr>
                     <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Nom</th>
                     <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Réduction</th>
@@ -780,7 +787,7 @@
                     </tr>
                 </thead>
                 <tbody id="promotionsTableBody" class="bg-white divide-y divide-gray-200">
-                    {% include 'article/partials/_promotions_table_body.html' with page_obj=page_obj %}
+                    {% include 'Superpreparation/partials/_promotions_table_body.html' with page_obj=page_obj %}
 
                 </tbody>
             </table>
@@ -796,7 +803,7 @@
                     <i class="fas fa-list-ol text-sm" style="color: #023535;"></i>
                     <label class="text-xs font-semibold text-gray-700">Éléments par page:</label>
                 </div>
-                <select id="itemsPerPageSelect" class="px-3 py-1.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm transition-all duration-200 hover:border-gray-300 focus:shadow-md text-sm" style="color: #023535; border-color: #99dddd;">
+                <select id="itemsPerPageSelect" class="px-3 py-1.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm transition-all duration-200 hover:border-gray-300 focus:shadow-md text-sm" style="color: #0e1d3d; border-color: #4a90e2;">
                     <option value="5" {% if items_per_page == 5 %}selected{% endif %}>5</option>
                     <option value="10" {% if items_per_page == 10 %}selected{% endif %}>10</option>
                     <option value="20" {% if items_per_page == 20 %}selected{% endif %}>20</option>
@@ -816,11 +823,11 @@
                     <div class="flex items-center space-x-2">
                         <input type="number" id="startRangeInput" placeholder="Début" min="1" value="{{ start_range|default:'' }}" 
                                class="px-2 py-1 border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-16 text-center bg-white shadow-sm transition-all duration-200 hover:border-gray-300 focus:shadow-md text-sm" 
-                               style="color: #023535; border-color: #99dddd;">
+                               style="color: #0e1d3d; border-color: #4a90e2;">
                         <span class="text-gray-500 text-xs font-medium">à</span>
                         <input type="number" id="endRangeInput" placeholder="Fin" min="1" value="{{ end_range|default:'' }}" 
-                               class="px-2 py-1 border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-16 text-center bg-white shadow-sm transition-all duration-200 hover:border-gray-300 focus:shadow-md text-sm" 
-                               style="color: #023535; border-color: #99dddd;">
+                               class="px-2 py-1 border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-4a90e2 w-16 text-center bg-white shadow-sm transition-all duration-200 hover:border-gray-300 focus:shadow-md text-sm" 
+                               style="color: #0e1d3d; border-color: #4a90e2;">
                     </div>
                     <div class="flex items-center space-x-1">
                         <button id="applyRangeBtn" class="px-3 py-1 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-md hover:from-green-600 hover:to-green-700 transition-all duration-200 transform hover:scale-105 shadow-sm hover:shadow-md text-xs font-medium">
@@ -836,7 +843,7 @@
             <!-- Section Statistiques -->
             <div class="flex items-center space-x-2">
                 <div class="flex items-center space-x-2 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg px-3 py-1.5 border border-blue-200">
-                    <i class="fas fa-chart-bar text-sm" style="color: #023535;"></i>
+                    <i class="fas fa-chart-bar text-sm" style="color: #0e1d3d;"></i>
                     <span class="text-xs font-semibold text-gray-700">Total: <span class="text-blue-600 font-bold">{{ page_obj.paginator.count }}</span> promotion(s)</span>
                 </div>
             </div>
@@ -879,7 +886,7 @@
 </div>
 
 <!-- Inclure le modal de promotion -->
-{% include "article/promotion_modal.html" %}
+{% include "Superpreparation/promotion_modal.html" %}
 
 <!-- Modal des détails prix et économies -->
 <div id="prixDetailsModal" class="prix-details-modal">
