@@ -541,9 +541,9 @@
         switchView(savedView || 'grid'); // Défaut à la vue grille
     });
 
-    // Utiliser la modale de confirmation personnalisée pour la suppression d'article
+    // Utiliser la modale locale pour la suppression de variante d'article
     function confirmDeleteArticle(deleteUrl, articleNom) {
-        showCustomConfirmModal(deleteUrl, `l\'article ${articleNom}`);
+        openDeleteModal(deleteUrl, articleNom);
     }
 
     // --- Gestion de la modale de suppression ---
@@ -555,7 +555,37 @@
     function openDeleteModal(deleteUrl, articleName) {
         // Mettre à jour l'action du formulaire et le texte de la modale
         deleteForm.action = deleteUrl;
-        modalText.textContent = `Cette action est irréversible. L'article "${articleName}" sera définitivement supprimé.`;
+        modalText.textContent = `Cette action est irréversible. La variante de l'article "${articleName}" sera définitivement supprimée.`;
+        
+        // Réinitialiser le formulaire pour la suppression individuelle
+        deleteForm.innerHTML = `
+            {% csrf_token %}
+            <button type="submit" class="px-8 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors shadow-lg">
+                Confirmer la suppression
+            </button>
+        `;
+        
+        // Afficher la modale avec animation
+        deleteModal.classList.remove('hidden');
+        deleteModal.classList.add('flex');
+        setTimeout(() => {
+            modalContent.classList.remove('scale-95', 'opacity-0');
+        }, 10);
+    }
+
+    function openDeleteModalBulk(deleteUrl, selectedIds) {
+        // Mettre à jour l'action du formulaire et le texte de la modale
+        deleteForm.action = deleteUrl;
+        modalText.textContent = `Cette action est irréversible. Les ${selectedIds.length} variantes sélectionnées seront définitivement supprimées.`;
+        
+        // Créer le formulaire pour la suppression en masse avec les IDs
+        deleteForm.innerHTML = `
+            {% csrf_token %}
+            ${selectedIds.map(id => `<input type="hidden" name="ids[]" value="${id}">`).join('')}
+            <button type="submit" class="px-8 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors shadow-lg">
+                Confirmer la suppression (${selectedIds.length} variantes)
+            </button>
+        `;
         
         // Afficher la modale avec animation
         deleteModal.classList.remove('hidden');
@@ -584,6 +614,8 @@
             closeDeleteModal();
         }
     });
+
+
 
     document.addEventListener('DOMContentLoaded', function() {
         const selectAllArticlesCheckbox = document.getElementById('selectAllArticles');
@@ -649,46 +681,15 @@
             });
 
             if (selectedIds.length > 0) {
-                // Utiliser la même modale de confirmation, mais pour la suppression en masse des articles
-                const deleteUrl = "{% url 'Superpreparation:supprimer_masse' %}"; 
-                showCustomConfirmModal(deleteUrl, `les ${selectedIds.length} articles sélectionnés`, selectedIds);
+                // Utiliser la modale locale pour la suppression en masse des variantes
+                const deleteUrl = "{% url 'Superpreparation:supprimer_variante_masse' %}"; 
+                openDeleteModalBulk(deleteUrl, selectedIds);
             } else {
-                alert("Veuillez sélectionner au moins un article à supprimer.");
+                alert("Veuillez sélectionner au moins une variante à supprimer.");
             }
         });
 
-        // Surcharge de la fonction showCustomConfirmModal pour inclure les IDs lors de la suppression en masse
-        const originalShowCustomConfirmModal = window.showCustomConfirmModal;
-        window.showCustomConfirmModal = function(deleteUrl, itemDescription, selectedIds = null) {
-            const confirmBtn = document.getElementById('confirmDeleteBtn');
-            const modalText = document.getElementById('confirmModalText');
 
-            modalText.innerHTML = `Êtes-vous sûr de vouloir supprimer <strong>${itemDescription}</strong> ? Cette action est irréversible.`;
-            confirmBtn.onclick = function() {
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = deleteUrl;
-
-                const csrfInput = document.createElement('input');
-                csrfInput.type = 'hidden';
-                csrfInput.name = 'csrfmiddlewaretoken';
-                csrfInput.value = getCsrfToken();
-                form.appendChild(csrfInput);
-
-                if (selectedIds) {
-                    selectedIds.forEach(id => {
-                        const idInput = document.createElement('input');
-                        idInput.type = 'hidden';
-                        idInput.name = 'ids[]';
-                        idInput.value = id;
-                        form.appendChild(idInput);
-                    });
-                }
-                document.body.appendChild(form);
-                form.submit();
-            };
-            document.getElementById('customConfirmModal').classList.remove('hidden');
-        };
 
 
         updateBulkDeleteArticleButton(); // Initialiser l'état du bouton

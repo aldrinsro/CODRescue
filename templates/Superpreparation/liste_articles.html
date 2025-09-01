@@ -470,10 +470,7 @@
         </div>
         <div class="flex justify-center gap-4">
             <form id="delete-form" method="POST" class="inline">
-                {% csrf_token %}
-                <button type="submit" class="px-8 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors shadow-lg">
-                    Confirmer la suppression
-                </button>
+                <!-- Le contenu du formulaire sera généré dynamiquement par JavaScript -->
             </form>
             <button type="button" onclick="closeDeleteModal()" class="px-8 py-3 bg-gray-200 text-gray-800 rounded-lg font-semibold hover:bg-gray-300 transition-colors shadow-lg">
                 Annuler
@@ -496,41 +493,41 @@
 {% block extra_js %}
 <script>
     function switchView(viewType) {
-        document.getElementById('gridView').classList.add('hidden');
-        document.getElementById('listView').classList.add('hidden');
-        document.getElementById('tableView').classList.add('hidden');
-
+        // Cacher toutes les vues
+        ['grid', 'list', 'table'].forEach(type => {
+            document.getElementById(type + 'View').classList.add('hidden');
+        });
+    
+        // Afficher la vue sélectionnée
         document.getElementById(viewType + 'View').classList.remove('hidden');
-
-        // Mettre à jour les styles des boutons
-        document.getElementById('gridViewBtn').style.backgroundColor = 'white';
-        document.getElementById('gridViewBtn').style.color = 'var(--preparation-primary)';
-        document.getElementById('gridViewBtn').style.border = '2px solid var(--preparation-primary)';
-
-        document.getElementById('listViewBtn').style.backgroundColor = 'white';
-        document.getElementById('listViewBtn').style.color = 'var(--preparation-primary)';
-        document.getElementById('listViewBtn').style.border = '2px solid var(--preparation-primary)';
-
-        document.getElementById('tableViewBtn').style.backgroundColor = 'white';
-        document.getElementById('tableViewBtn').style.color = 'var(--preparation-primary)';
-        document.getElementById('tableViewBtn').style.border = '2px solid var(--preparation-primary)';
-
-        document.getElementById(viewType + 'ViewBtn').style.backgroundColor = 'var(--preparation-primary)';
-        document.getElementById(viewType + 'ViewBtn').style.color = 'white';
-        document.getElementById(viewType + 'ViewBtn').style.border = 'none';
-
+    
+        // Réinitialiser les styles des boutons
+        ['grid', 'list', 'table'].forEach(type => {
+            const btn = document.getElementById(type + 'ViewBtn');
+            btn.style.backgroundColor = 'white';
+            btn.style.color = '#0e1d3d';
+            btn.style.border = '2px solid #0e1d3d';
+        });
+    
+        // Style actif pour le bouton sélectionné
+        const activeBtn = document.getElementById(viewType + 'ViewBtn');
+        activeBtn.style.backgroundColor = 'var(--preparation-primary)';
+        activeBtn.style.color = 'white';
+        activeBtn.style.border = 'none';
+    
+        // Sauvegarde de la vue
         localStorage.setItem('articleView', viewType);
     }
-
+    
     // Charger la vue sauvegardée ou par défaut au chargement de la page
     document.addEventListener('DOMContentLoaded', function() {
         const savedView = localStorage.getItem('articleView');
         switchView(savedView || 'grid'); // Défaut à la vue grille
     });
 
-    // Utiliser la modale de confirmation personnalisée pour la suppression d'article
+    // Utiliser la modale locale pour la suppression d'article
     function confirmDeleteArticle(deleteUrl, articleNom) {
-        showCustomConfirmModal(deleteUrl, `l\'article ${articleNom}`);
+        openDeleteModal(deleteUrl, articleNom);
     }
 
     // --- Gestion de la modale de suppression ---
@@ -543,6 +540,36 @@
         // Mettre à jour l'action du formulaire et le texte de la modale
         deleteForm.action = deleteUrl;
         modalText.textContent = `Cette action est irréversible. L'article "${articleName}" sera définitivement supprimé.`;
+        
+        // Réinitialiser le formulaire pour la suppression individuelle
+        deleteForm.innerHTML = `
+            {% csrf_token %}
+            <button type="submit" class="px-8 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors shadow-lg">
+                Confirmer la suppression
+            </button>
+        `;
+        
+        // Afficher la modale avec animation
+        deleteModal.classList.remove('hidden');
+        deleteModal.classList.add('flex');
+        setTimeout(() => {
+            modalContent.classList.remove('scale-95', 'opacity-0');
+        }, 10);
+    }
+
+    function openDeleteModalBulk(deleteUrl, selectedIds) {
+        // Mettre à jour l'action du formulaire et le texte de la modale
+        deleteForm.action = deleteUrl;
+        modalText.textContent = `Cette action est irréversible. Les ${selectedIds.length} articles sélectionnés seront définitivement supprimés.`;
+        
+        // Créer le formulaire pour la suppression en masse avec les IDs
+        deleteForm.innerHTML = `
+            {% csrf_token %}
+            ${selectedIds.map(id => `<input type="hidden" name="ids[]" value="${id}">`).join('')}
+            <button type="submit" class="px-8 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors shadow-lg">
+                Confirmer la suppression (${selectedIds.length} articles)
+            </button>
+        `;
         
         // Afficher la modale avec animation
         deleteModal.classList.remove('hidden');
@@ -636,46 +663,16 @@
             });
 
             if (selectedIds.length > 0) {
-                // Utiliser la même modale de confirmation, mais pour la suppression en masse des articles
+                // Utiliser la modale locale pour la suppression en masse des articles
                 const deleteUrl = "{% url 'Superpreparation:supprimer_masse' %}"; 
-                showCustomConfirmModal(deleteUrl, `les ${selectedIds.length} articles sélectionnés`, selectedIds);
+                openDeleteModalBulk(deleteUrl, selectedIds);
             } else {
                 alert("Veuillez sélectionner au moins un article à supprimer.");
             }
         });
 
-        // Surcharge de la fonction showCustomConfirmModal pour inclure les IDs lors de la suppression en masse
-        const originalShowCustomConfirmModal = window.showCustomConfirmModal;
-        window.showCustomConfirmModal = function(deleteUrl, itemDescription, selectedIds = null) {
-            const confirmBtn = document.getElementById('confirmDeleteBtn');
-            const modalText = document.getElementById('confirmModalText');
-
-            modalText.innerHTML = `Êtes-vous sûr de vouloir supprimer <strong>${itemDescription}</strong> ? Cette action est irréversible.`;
-            confirmBtn.onclick = function() {
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = deleteUrl;
-
-                const csrfInput = document.createElement('input');
-                csrfInput.type = 'hidden';
-                csrfInput.name = 'csrfmiddlewaretoken';
-                csrfInput.value = '{{ csrf_token }}';
-                form.appendChild(csrfInput);
-
-                if (selectedIds) {
-                    selectedIds.forEach(id => {
-                        const idInput = document.createElement('input');
-                        idInput.type = 'hidden';
-                        idInput.name = 'ids[]';
-                        idInput.value = id;
-                        form.appendChild(idInput);
-                    });
-                }
-                document.body.appendChild(form);
-                form.submit();
-            };
-            document.getElementById('customConfirmModal').classList.remove('hidden');
-        };
+        // La fonction globale showCustomConfirmModal du template de base gère déjà tout correctement
+        // Pas besoin de surcharge ici
 
 
         updateBulkDeleteArticleButton(); // Initialiser l'état du bouton

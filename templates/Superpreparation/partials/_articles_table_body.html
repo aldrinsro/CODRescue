@@ -43,10 +43,10 @@
             </a>
         <a href="{% url 'Superpreparation:modifier_article' article.id %}" class="text-yellow-500 hover:text-yellow-700 mx-1 transition-colors" title="Modifier">
                 <i class="fas fa-edit"></i>
-            </a>
-        <a href="#" onclick="confirmDeleteArticle('{% url 'Superpreparation:supprimer_article' article.id %}', '{{ article.nom|escapejs }}')" class="text-red-500 hover:text-red-700 mx-1 transition-colors" title="Supprimer">
-            <i class="fas fa-trash-alt"></i>
         </a>
+        <button type="button" onclick="confirmDeleteArticle('{% url 'Superpreparation:supprimer_article' article.id %}', '{{ article.nom|escapejs }}')" class="text-red-500 hover:text-red-700 mx-1 transition-colors" title="Supprimer">
+            <i class="fas fa-trash-alt"></i>
+        </button>
     </td>
 </tr>
 {% endfor %}

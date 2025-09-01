@@ -42,7 +42,7 @@
             <a href="{% url 'Superpreparation:modifier_article' variante.article.id %}" class="text-blue-600 hover:text-blue-900 transition-colors">
                 <i class="fas fa-edit"></i>
             </a>
-            <button onclick="confirmDeleteArticle('{% url 'Superpreparation:supprimer_variante' variante.id %}', '{{ variante.article.nom }}')" class="text-red-600 hover:text-red-900 transition-colors">
+            <button onclick="confirmDeleteArticle('{% url 'Superpreparation:supprimer_variante' variante.id %}', '{{ variante.article.nom }} - {{ variante.couleur.nom }} / {{ variante.pointure.pointure }}')" class="text-red-600 hover:text-red-900 transition-colors">
                 <i class="fas fa-trash"></i>
             </button>
         </div>

@@ -8211,6 +8211,23 @@ def supprimer_articles_masse(request):
     
     return redirect('Superpreparation:liste_articles')
 
+@login_required
+@csrf_exempt
+def supprimer_variantes_masse(request):
+    """Suppression en masse des variantes d'articles"""
+    selected_ids = request.POST.getlist('ids[]')
+    if not selected_ids:
+        messages.error(request, "Aucune variante d'article sélectionnée pour la suppression.")
+        return redirect('Superpreparation:liste_variantes')
+
+    try:
+        count = VarianteArticle.objects.filter(pk__in=selected_ids).delete()[0]
+        messages.success(request, f"{count} variante(s) d'article(s) supprimée(s) avec succès.")
+    except Exception as e:
+        messages.error(request, f"Une erreur est survenue lors de la suppression en masse : {e}")
+    
+    return redirect('Superpreparation:liste_variantes')
+
 @superviseur_preparation_required
 def articles_par_categorie(request, categorie):
     """Articles filtrés par catégorie"""
