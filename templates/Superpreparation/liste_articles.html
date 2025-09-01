@@ -284,14 +284,14 @@
         <!-- Vue grille/mosaïque -->
         <div id="gridView" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-8">
         {% for article in page_obj %}
-            <div class="bg-blue-950 rounded-xl shadow-lg border overflow-hidden transform hover:-translate-y-2 transition-transform duration-300" style="border-color: #e8f0ff;">
+            <div class="bg-white rounded-xl shadow-lg border overflow-hidden transform hover:-translate-y-2 transition-transform duration-300" style="border-color: #e8f0ff;">
                 <a href="{% url 'Superpreparation:detail_article' article.id %}" class="block">
                 {% if article.image %}
                         <img src="{{ article.image.url }}" alt="{{ article.nom }}" class="w-full h-56 object-cover" onerror="this.onerror=null;this.src='/static/img/default.png';">
                     {% elif article.image_url %}
                         <img src="{{ article.image_url }}" alt="{{ article.nom }}" class="w-full h-56 object-cover" onerror="this.onerror=null;this.src='/static/img/default.png';">
                     {% else %}
-                        <div class="w-full h-56 flex items-center justify-center" style="background-color: var(--admin-light-accent);">
+                        <div class="w-full h-56 flex items-center justify-center" style="background-color: #e8f0ff;">
                             <i class="fas fa-box-open text-[var(--admin-accent-color)] text-7xl opacity-70"></i>
                         </div>
                     {% endif %}

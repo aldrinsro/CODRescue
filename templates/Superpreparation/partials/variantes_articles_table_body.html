@@ -28,10 +28,8 @@
         {% endwith %}
     </td>
     <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200">
-        {% if variante.qte_disponible > 5 %}
-            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">En stock</span>
-        {% elif variante.qte_disponible > 0 %}
-            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Stock faible</span>
+        {% if variante.qte_disponible > 0 %}
+            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">{{ variante.qte_disponible }}</span>
         {% else %}
             <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">Rupture</span>
         {% endif %}
@@ -44,7 +42,7 @@
             <a href="{% url 'Superpreparation:modifier_article' variante.article.id %}" class="text-blue-600 hover:text-blue-900 transition-colors">
                 <i class="fas fa-edit"></i>
             </a>
-            <button onclick="confirmDeleteArticle('{% url 'Superpreparation:supprimer_article' variante.article.id %}', '{{ variante.article.nom }}')" class="text-red-600 hover:text-red-900 transition-colors">
+            <button onclick="confirmDeleteArticle('{% url 'Superpreparation:supprimer_variante' variante.id %}', '{{ variante.article.nom }}')" class="text-red-600 hover:text-red-900 transition-colors">
                 <i class="fas fa-trash"></i>
             </button>
         </div>

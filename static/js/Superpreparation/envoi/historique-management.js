@@ -166,7 +166,7 @@ function generateCommandesHTML(commandes, envoiInfo = null) {
                 <div class="commande-stat-label">Total commandes</div>
             </div>
             <div class="commande-stat">
-                <div class="commande-stat-value">${totalValeur.toFixed(2)} €</div>
+                <div class="commande-stat-value">${totalValeur.toFixed(2)} DHS</div>
                 <div class="commande-stat-label">Valeur totale</div>
             </div>
     `;

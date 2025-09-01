@@ -26,6 +26,8 @@
 
 {% block content %}
 <div class="main-content transition-all duration-300" id="mainContent">
+    <!-- Token CSRF caché pour utilisation JavaScript -->
+
     <!-- En-tête de la page -->
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 text-white p-6 rounded-xl shadow-lg" style="background: linear-gradient(to right, var(--admin-gradient-start), var(--admin-gradient-end));">
         <div>
@@ -492,6 +494,10 @@
 
 {% block extra_js %}
 <script>
+    // Token CSRF depuis Django
+    window.DJANGO_CSRF_TOKEN = '{{ csrf_token }}';
+</script>
+<script>
     // CSRF helpers
     function getCookie(name) {
         let cookieValue = null;
@@ -507,7 +513,7 @@
         }
         return cookieValue;
     }
-    function getCsrfToken() { return getCookie('csrftoken'); }
+    function getCsrfToken() { return getCookie('yz_csrf_token'); }
     function switchView(viewType) {
         document.getElementById('gridView').classList.add('hidden');
         document.getElementById('listView').classList.add('hidden');
@@ -544,6 +550,11 @@
     // Utiliser la modale de confirmation personnalisée pour la suppression d'article
     function confirmDeleteArticle(deleteUrl, articleNom) {
         showCustomConfirmModal(deleteUrl, `l\'article ${articleNom}`);
+    }
+
+    // Fonction pour confirmer la suppression d'une variante spécifique
+    function confirmDeleteVariante(deleteUrl, varianteInfo) {
+        showCustomConfirmModal(deleteUrl, `la variante ${varianteInfo}`);
     }
 
     // --- Gestion de la modale de suppression ---
@@ -649,46 +660,16 @@
             });
 
             if (selectedIds.length > 0) {
-                // Utiliser la même modale de confirmation, mais pour la suppression en masse des articles
-                const deleteUrl = "{% url 'article:supprimer_masse' %}"; 
-                showCustomConfirmModal(deleteUrl, `les ${selectedIds.length} articles sélectionnés`, selectedIds);
+                // Utiliser la même modale de confirmation, mais pour la suppression en masse des VARIANTES d'articles
+                const deleteUrl = "{% url 'article:supprimer_variante_masse' %}"; 
+                showCustomConfirmModal(deleteUrl, `les ${selectedIds.length} variantes d'articles sélectionnées`, selectedIds);
             } else {
-                alert("Veuillez sélectionner au moins un article à supprimer.");
+                alert("Veuillez sélectionner au moins une variante d'article à supprimer.");
             }
         });
 
-        // Surcharge de la fonction showCustomConfirmModal pour inclure les IDs lors de la suppression en masse
-        const originalShowCustomConfirmModal = window.showCustomConfirmModal;
-        window.showCustomConfirmModal = function(deleteUrl, itemDescription, selectedIds = null) {
-            const confirmBtn = document.getElementById('confirmDeleteBtn');
-            const modalText = document.getElementById('confirmModalText');
-
-            modalText.innerHTML = `Êtes-vous sûr de vouloir supprimer <strong>${itemDescription}</strong> ? Cette action est irréversible.`;
-            confirmBtn.onclick = function() {
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = deleteUrl;
-
-                const csrfInput = document.createElement('input');
-                csrfInput.type = 'hidden';
-                csrfInput.name = 'csrfmiddlewaretoken';
-                csrfInput.value = getCsrfToken();
-                form.appendChild(csrfInput);
-
-                if (selectedIds) {
-                    selectedIds.forEach(id => {
-                        const idInput = document.createElement('input');
-                        idInput.type = 'hidden';
-                        idInput.name = 'ids[]';
-                        idInput.value = id;
-                        form.appendChild(idInput);
-                    });
-                }
-                document.body.appendChild(form);
-                form.submit();
-            };
-            document.getElementById('customConfirmModal').classList.remove('hidden');
-        };
+        // Utiliser la fonction showCustomConfirmModal originale du template de base
+        // Elle gère déjà correctement le CSRF et les suppressions en masse
 
 
         updateBulkDeleteArticleButton(); // Initialiser l'état du bouton

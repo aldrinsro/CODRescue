@@ -636,7 +636,7 @@
             });
 
             if (selectedIds.length > 0) {
-                // Utiliser la même modale de confirmation, mais pour la suppression en masse des articles
+                // Utiliser la même modale de confirmation, mais pour la suppression en masse des ARTICLES
                 const deleteUrl = "{% url 'article:supprimer_masse' %}"; 
                 showCustomConfirmModal(deleteUrl, `les ${selectedIds.length} articles sélectionnés`, selectedIds);
             } else {

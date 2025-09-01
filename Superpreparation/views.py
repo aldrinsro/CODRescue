@@ -7401,19 +7401,19 @@ def liste_articles(request):
             items_in_page = list(page_obj.object_list)  # Éviter de consommer l'itérateur
             print(f"🔍 DEBUG - Page: {page_obj.number}, Total items: {page_obj.paginator.count}, Items in page: {len(items_in_page)}")
             
-            # Rendre les templates partiels pour AJAX
-            html_cards_body = render_to_string('Superpreparation/partials/variantes_articles_cards_body.html', {
+            # Rendre les templates partiels pour AJAX - CORRIGÉ pour les ARTICLES
+            html_cards_body = render_to_string('Superpreparation/partials/_articles_cards_body.html', {
                 'page_obj': page_obj
             }, request=request)
             print(f"📄 Cards body length: {len(html_cards_body)}")
             
-            html_table_body = render_to_string('Superpreparation/partials/variantes_articles_table_body.html', {
+            html_table_body = render_to_string('Superpreparation/partials/_articles_table_body.html', {
                 'page_obj': page_obj
             }, request=request)
             print(f"📄 Table body length: {len(html_table_body)}")
             
-            # Vue grille pour variantes
-            html_grid_body = render_to_string('Superpreparation/partials/variantes_articles_grid_body.html', {
+            # Vue grille pour ARTICLES (pas variantes)
+            html_grid_body = render_to_string('Superpreparation/partials/_articles_grid_body.html', {
                 'page_obj': page_obj
             }, request=request)
             
@@ -9021,13 +9021,14 @@ def creer_variantes_ajax(request):
         return JsonResponse({'success': False, 'error': f'Erreur serveur: {str(e)}'})
 
 @superviseur_preparation_required
+@csrf_exempt
 def supprimer_variante(request, id):
     """Supprimer une variante d'article"""
     if request.method != 'POST':
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({'success': False, 'error': 'Méthode non autorisée'})
         messages.error(request, 'Méthode non autorisée')
-        return redirect('article:liste')
+        return redirect('Superpreparation:liste_variantes')
     
     try:
         variante = VarianteArticle.objects.get(id=id)
@@ -9049,18 +9050,18 @@ def supprimer_variante(request, id):
         
         # Sinon, rediriger normalement
         messages.success(request, f'Variante "{variante_info}" supprimée avec succès.')
-        return redirect('article:modifier', id=article.id)
+        return redirect('Superpreparation:liste_variantes', id=article.id)
         
     except VarianteArticle.DoesNotExist:
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({'success': False, 'error': 'Variante non trouvée.'}, content_type='application/json')
         messages.error(request, 'Variante non trouvée.')
-        return redirect('article:liste')
+        return redirect('Superpreparation:liste_variantes')
     except Exception as e:
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({'success': False, 'error': f'Erreur lors de la suppression : {str(e)}'}, content_type='application/json')
         messages.error(request, f'Erreur lors de la suppression : {str(e)}')
-        return redirect('article:liste')
+        return redirect('Superpreparation:liste_variantes')
 
 @superviseur_preparation_required
 def gestion_couleurs_pointures(request):

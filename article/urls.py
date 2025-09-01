@@ -17,6 +17,7 @@ urlpatterns = [
     path('variantes/', views.liste_variantes, name='liste_variantes'),
     path('variantes/creer-ajax/', views.creer_variantes_ajax, name='creer_variantes_ajax'),
     path('variantes/supprimer/<int:id>/', views.supprimer_variante, name='supprimer_variante'),
+    path('variantes/supprimer-masse/', views.supprimer_variantes_masse, name='supprimer_variante_masse'),
 
     
     # Filtres par catégorie

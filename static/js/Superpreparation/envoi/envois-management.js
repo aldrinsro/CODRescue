@@ -412,7 +412,7 @@ function generateCommandesHTML(commandes, regionNom) {
                 <div class="stat-item">
                     <i class="fas fa-money-bill-wave text-purple-600"></i>
                     <span class="stat-label">Valeur totale:</span>
-                    <span class="stat-value">${calculateTotalValue(commandes)} DH</span>
+                    <span class="stat-value">${calculateTotalValue(commandes)} DHS</span>
                 </div>
             </div>
         </div>

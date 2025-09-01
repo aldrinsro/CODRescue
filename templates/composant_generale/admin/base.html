@@ -216,7 +216,7 @@
                 const csrfTokenInput = document.createElement('input');
                 csrfTokenInput.type = 'hidden';
                 csrfTokenInput.name = 'csrfmiddlewaretoken';
-                csrfTokenInput.value = getCookie('csrftoken');
+                csrfTokenInput.value = window.DJANGO_CSRF_TOKEN || getCookie('yz_csrf_token');
                 form.appendChild(csrfTokenInput);
                 
                 // Si c'est une suppression en masse, ajouter les IDs
@@ -263,11 +263,27 @@
                 }
             }
             
-            // Si le cookie n'est pas trouvé et qu'on cherche le token CSRF, essayer la méta tag
-            if (!cookieValue && name === 'csrftoken') {
-                const metaTag = document.querySelector('meta[name="csrf-token"]');
-                if (metaTag) {
-                    cookieValue = metaTag.getAttribute('content');
+            // Si le cookie n'est pas trouvé et qu'on cherche le token CSRF, essayer d'autres sources
+            if (!cookieValue && (name === 'csrftoken' || name === 'yz_csrf_token')) {
+                // 1. Essayer la variable globale Django
+                if (window.DJANGO_CSRF_TOKEN) {
+                    cookieValue = window.DJANGO_CSRF_TOKEN;
+                }
+                
+                // 2. Essayer l'input caché csrf_token du template
+                if (!cookieValue) {
+                    const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+                    if (csrfInput) {
+                        cookieValue = csrfInput.value;
+                    }
+                }
+                
+                // 3. Essayer la méta tag
+                if (!cookieValue) {
+                    const metaTag = document.querySelector('meta[name="csrf-token"]');
+                    if (metaTag) {
+                        cookieValue = metaTag.getAttribute('content');
+                    }
                 }
             }
             

@@ -7,6 +7,7 @@ from django.db.models import Q, Count, Avg, Sum, Min, Max
 from .models import Article, Promotion, VarianteArticle, Categorie, Genre, Couleur, Pointure
 from django.urls import reverse
 from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 from .forms import PromotionForm
 from decimal import Decimal
@@ -888,6 +889,23 @@ def supprimer_articles_masse(request):
     return redirect('article:liste')
 
 @login_required
+@csrf_exempt
+def supprimer_variantes_masse(request):
+    """Suppression en masse des variantes d'articles"""
+    selected_ids = request.POST.getlist('ids[]')
+    if not selected_ids:
+        messages.error(request, "Aucune variante d'article sélectionnée pour la suppression.")
+        return redirect('article:liste_variantes')
+
+    try:
+        count = VarianteArticle.objects.filter(pk__in=selected_ids).delete()[0]
+        messages.success(request, f"{count} variante(s) d'article(s) supprimée(s) avec succès.")
+    except Exception as e:
+        messages.error(request, f"Une erreur est survenue lors de la suppression en masse : {e}")
+    
+    return redirect('article:liste_variantes')
+
+@login_required
 def articles_par_categorie(request, categorie):
     """Articles filtrés par catégorie"""
     articles = Article.objects.filter(
@@ -1699,8 +1717,13 @@ def creer_variantes_ajax(request):
         return JsonResponse({'success': False, 'error': f'Erreur serveur: {str(e)}'})
 
 @login_required
+@csrf_exempt
 def supprimer_variante(request, id):
     """Supprimer une variante d'article"""
+    # Debug CSRF
+    print(f"DEBUG CSRF - Token reçu: {request.POST.get('csrfmiddlewaretoken', 'AUCUN')}")
+    print(f"DEBUG CSRF - Cookies: {request.COOKIES.get('csrftoken', 'AUCUN')}")
+    
     if request.method != 'POST':
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({'success': False, 'error': 'Méthode non autorisée'})
@@ -1727,18 +1750,18 @@ def supprimer_variante(request, id):
         
         # Sinon, rediriger normalement
         messages.success(request, f'Variante "{variante_info}" supprimée avec succès.')
-        return redirect('article:modifier', id=article.id)
+        return redirect('article:liste_variantes', id=article.id)
         
     except VarianteArticle.DoesNotExist:
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({'success': False, 'error': 'Variante non trouvée.'}, content_type='application/json')
         messages.error(request, 'Variante non trouvée.')
-        return redirect('article:liste')
+        return redirect('article:liste_variantes')
     except Exception as e:
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({'success': False, 'error': f'Erreur lors de la suppression : {str(e)}'}, content_type='application/json')
         messages.error(request, f'Erreur lors de la suppression : {str(e)}')
-        return redirect('article:liste')
+        return redirect('article:liste_variantes')
 
 @login_required
 def gestion_couleurs_pointures(request):

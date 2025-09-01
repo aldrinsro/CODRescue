@@ -65,7 +65,8 @@
             <a href="{% url 'article:modifier' variante.article.id %}" class="text-yellow-500 hover:text-yellow-700" title="Modifier">
                 <i class="fas fa-edit"></i>
             </a>
-            <button type="button" onclick="confirmDeleteArticle('{% url 'article:supprimer' variante.article.id %}', '{{ variante.article.nom|escapejs }}')" class="text-red-500 hover:text-red-700" title="Supprimer">
+           
+            <button type="button" onclick="confirmDeleteVariante('{% url 'article:supprimer_variante' variante.id %}', '{{ variante.couleur.nom }} / {{ variante.pointure.pointure }}')" class="text-red-500 hover:text-red-700" title="Supprimer la variante">
                 <i class="fas fa-trash"></i>
             </button>
         </div>
