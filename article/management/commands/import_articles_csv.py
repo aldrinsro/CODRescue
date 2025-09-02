@@ -73,10 +73,10 @@ class Command(BaseCommand):
             'ESPADRILLE': 'ESPARILLE',
             'BASKET': 'BASKET',
             'MULES': 'MULES',
-            'PACK': 'PACK_SAC',
+            'PACK': 'PACK_SACKS',
             'BOTTE': 'BOTTE',
             'ESCARPINS': 'ESCARPINS',
-            'SAC': 'PACK_SAC'  # Les sacs sont dans la catégorie PACK_SAC
+            'SAC': 'PACK_SACKS'  # Les sacs sont dans la catégorie PACK_SACKS
         }
 
         # Mapping des genres du CSV vers les genres du modèle

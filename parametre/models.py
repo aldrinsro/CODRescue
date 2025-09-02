@@ -5,7 +5,7 @@ from django.utils import timezone
 # Create your models here.
 
 class Region(models.Model):
-    nom_region = models.CharField(max_length=100, unique=True)
+    nom_region = models.CharField(max_length=100, unique=True,default='CATHEDIS')
     actif = models.BooleanField(default=False)
     
     class Meta:
@@ -17,10 +17,14 @@ class Region(models.Model):
         return self.nom_region
 
 
+
+
+
 class Ville(models.Model):
     nom = models.CharField(max_length=100)
     frais_livraison = models.FloatField()
-    frequence_livraison = models.CharField(max_length=50)
+    Delai_livraison_min = models.IntegerField(default=0)
+    Delai_livraison_max = models.IntegerField(default=0)
     region = models.ForeignKey(Region, on_delete=models.CASCADE, related_name='villes')
     
     class Meta:

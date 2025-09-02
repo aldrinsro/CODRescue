@@ -41,11 +41,18 @@
                    style="border-color: #99dddd; focus:ring-color: #023535;">
         </div>
         <div>
-            <label for="frequence_livraison" class="block text-sm font-medium text-gray-700">Fréquence de Livraison</label>
-            <input type="text" name="frequence_livraison" id="frequence_livraison" placeholder="Ex: Quotidienne" required
+            <label for="Delai_livraison_min" class="block text-sm font-medium text-gray-700">Délai de Livraison Minimum (jours)</label>
+            <input type="number" name="Delai_livraison_min" id="Delai_livraison_min" placeholder="Ex: 1" min="0" required
                    class="mt-1 block w-full rounded-lg border focus:ring-2 focus:ring-offset-2 transition-all" 
                    style="border-color: #99dddd; focus:ring-color: #023535;">
         </div>
+        <div>
+            <label for="Delai_livraison_max" class="block text-sm font-medium text-gray-700">Délai de Livraison Maximum (jours)</label>
+            <input type="number" name="Delai_livraison_max" id="Delai_livraison_max" placeholder="Ex: 3" min="0" required
+                   class="mt-1 block w-full rounded-lg border focus:ring-2 focus:ring-offset-2 transition-all" 
+                   style="border-color: #99dddd; focus:ring-color: #023535;">
+        </div>
+
         <div>
             <label for="region" class="block text-sm font-medium text-gray-700">Région</label>
             <select name="region" id="region" required
