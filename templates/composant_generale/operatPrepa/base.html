@@ -38,12 +38,87 @@
 
         /* Comportement sur petit écran (overlay) */
         @media (max-width: 1023.98px) {
-            #sidebar { position: absolute; height: 100%; z-index: 100; }
-            body.sidebar-collapsed #sidebar { transform: translateX(-100%); }
-            body.sidebar-open #sidebar { transform: translateX(0); }
+            #sidebar { 
+                position: fixed; 
+                height: 100vh; 
+                z-index: 1000; 
+                transform: translateX(-100%);
+                transition: transform 0.3s ease-in-out;
+                box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+            }
+            body.sidebar-open #sidebar { 
+                transform: translateX(0); 
+            }
             
-            #content-overlay { display: none; position: fixed; inset: 0; background-color: rgba(0, 0, 0, 0.5); z-index: 99; }
-            body.sidebar-open #content-overlay { display: block; }
+            #content-overlay { 
+                display: none; 
+                position: fixed; 
+                inset: 0; 
+                background-color: rgba(0, 0, 0, 0.5); 
+                z-index: 999; 
+                opacity: 0;
+                transition: opacity 0.3s ease-in-out;
+            }
+            body.sidebar-open #content-overlay { 
+                display: block; 
+                opacity: 1;
+            }
+            
+            /* Amélioration du contenu principal sur mobile */
+            main {
+                padding: 1rem !important;
+            }
+        }
+        
+        /* Améliorations pour tablettes */
+        @media (min-width: 768px) and (max-width: 1023px) {
+            #sidebar { width: 280px; }
+            main {
+                padding: 1.5rem !important;
+            }
+        }
+        
+        /* Améliorations pour très petits écrans */
+        @media (max-width: 480px) {
+            #sidebar { width: 100vw; }
+            main {
+                padding: 0.75rem !important;
+            }
+        }
+        
+        /* Optimisations pour les interactions tactiles */
+        .touch-manipulation {
+            touch-action: manipulation;
+        }
+        
+        /* Amélioration des boutons pour mobile */
+        @media (max-width: 768px) {
+            button, .btn, a[role="button"] {
+                min-height: 44px;
+                min-width: 44px;
+            }
+            
+            /* Espacement des éléments cliquables */
+            .clickable-elements > * {
+                margin-bottom: 8px;
+            }
+        }
+        
+        /* Amélioration des modales pour mobile */
+        @media (max-width: 768px) {
+            .modal-force-top {
+                width: 95vw !important;
+                max-width: none !important;
+                left: 2.5vw !important;
+                right: 2.5vw !important;
+            }
+        }
+        
+        /* Amélioration des tableaux pour mobile */
+        @media (max-width: 1024px) {
+            .table-responsive {
+                -webkit-overflow-scrolling: touch;
+            }
         }
 
         /* Notifications SweetAlert2 personnalisées - avec haute spécificité */
@@ -130,36 +205,23 @@
         {% endif %}
 
         const body = document.body;
-        const menuToggle = document.getElementById('menu-toggle');
         const sidebarToggle = document.getElementById('sidebar-toggle');
-        const contentOverlay = document.getElementById('content-overlay');
         
-        function toggleSidebar() {
-            body.classList.toggle('sidebar-open');
-            body.classList.toggle('sidebar-collapsed');
-        }
-
-        function closeSidebarMobile() {
-            if (window.innerWidth <= 1023) {
-                body.classList.add('sidebar-collapsed');
-                body.classList.remove('sidebar-open');
-            }
-        }
-
+        // Initialisation de l'état de la sidebar
         if (window.innerWidth <= 1023) {
             body.classList.add('sidebar-collapsed');
         } else {
             body.classList.add('sidebar-open');
         }
-
-        if (menuToggle) {
-            menuToggle.addEventListener('click', toggleSidebar);
-        }
+        
+        // Gestion du bouton sidebar-toggle (si il existe)
         if (sidebarToggle) {
-            sidebarToggle.addEventListener('click', closeSidebarMobile);
-        }
-        if (contentOverlay) {
-            contentOverlay.addEventListener('click', closeSidebarMobile);
+            sidebarToggle.addEventListener('click', function() {
+                if (window.innerWidth <= 1023) {
+                    body.classList.add('sidebar-collapsed');
+                    body.classList.remove('sidebar-open');
+                }
+            });
         }
 
         document.querySelectorAll('.toggle-dropdown').forEach(dropdownToggle => {
@@ -175,10 +237,11 @@
             });
         });
 
+        // Gestion du redimensionnement de la fenêtre
         window.addEventListener('resize', () => {
             if (window.innerWidth > 1023) {
                 body.classList.add('sidebar-open');
-                body.classList.remove('sidebar-open');
+                body.classList.remove('sidebar-collapsed');
             } else {
                 body.classList.add('sidebar-collapsed');
                 body.classList.remove('sidebar-open');
