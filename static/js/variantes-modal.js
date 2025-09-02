@@ -294,6 +294,9 @@ class VariantesManager {
             // 1. Créer d'abord l'article
             const formData = new FormData(form);
             
+            console.log('Envoi de la requête vers:', form.action);
+            console.log('Données du formulaire:', Object.fromEntries(formData));
+            
             const articleResponse = await fetch(form.action, {
                 method: 'POST',
                 body: formData,
@@ -302,6 +305,20 @@ class VariantesManager {
                     'X-CSRFToken': this.getCSRFToken()
                 }
             });
+            
+            console.log('Réponse reçue:', {
+                status: articleResponse.status,
+                statusText: articleResponse.statusText,
+                headers: Object.fromEntries(articleResponse.headers.entries())
+            });
+            
+            // Vérifier le type de contenu de la réponse
+            const contentType = articleResponse.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                const responseText = await articleResponse.text();
+                console.error('Réponse non-JSON reçue:', responseText);
+                throw new Error('Le serveur a retourné une réponse invalide. Vérifiez l\'URL de l\'API.');
+            }
             
             const articleResult = await articleResponse.json();
             
@@ -320,7 +337,10 @@ class VariantesManager {
                     reference: this.genererReferenceVariante(variante)
                 }));
                 
-                const variantesResponse = await fetch('/Superpreparation/stock/variantes/creer-ajax/', {
+                console.log('Envoi des variantes vers:', '/article/variantes/creer-ajax/');
+                console.log('Données des variantes:', variantesData);
+                
+                const variantesResponse = await fetch('/article/variantes/creer-ajax/', {
                     method: 'POST',
                     body: JSON.stringify({
                         article_id: articleResult.article_id,
@@ -332,6 +352,20 @@ class VariantesManager {
                         'X-CSRFToken': this.getCSRFToken()
                     }
                 });
+                
+                console.log('Réponse variantes reçue:', {
+                    status: variantesResponse.status,
+                    statusText: variantesResponse.statusText,
+                    headers: Object.fromEntries(variantesResponse.headers.entries())
+                });
+                
+                // Vérifier le type de contenu de la réponse
+                const variantesContentType = variantesResponse.headers.get('content-type');
+                if (!variantesContentType || !variantesContentType.includes('application/json')) {
+                    const variantesResponseText = await variantesResponse.text();
+                    console.error('Réponse non-JSON reçue pour les variantes:', variantesResponseText);
+                    throw new Error('Le serveur a retourné une réponse invalide pour les variantes. Vérifiez l\'URL de l\'API.');
+                }
                 
                 const variantesResult = await variantesResponse.json();
                 
@@ -376,7 +410,7 @@ class VariantesManager {
                 reference: this.genererReferenceVariante(variante)
             }));
             
-            const response = await fetch('/Superpreparation/stock/variantes/creer-ajax/', {
+            const response = await fetch('/article/variantes/creer-ajax/', {
                 method: 'POST',
                 body: JSON.stringify({
                     article_id: articleId,
@@ -562,68 +596,121 @@ class VariantesManager {
 
 // Initialiser le gestionnaire de variantes quand le DOM est chargé
 document.addEventListener('DOMContentLoaded', function() {
-    window.variantesManager = new VariantesManager();
-    
-    // Ajouter la gestion AJAX au formulaire principal
-    const form = document.getElementById('articleForm');
-    if (form) {
-        form.addEventListener('submit', function(e) {
-            e.preventDefault(); // Empêcher la soumission normale
-            
-            if (window.variantesManager && !window.variantesManager.validateForm()) {
-                return false;
-            }
-            
-            // Soumettre via AJAX
-            window.variantesManager.submitFormWithAjax(form);
-        });
+    try {
+        window.variantesManager = new VariantesManager();
+        
+        // Ajouter la gestion AJAX au formulaire principal
+        const form = document.getElementById('articleForm');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault(); // Empêcher la soumission normale
+                
+                try {
+                    if (window.variantesManager && !window.variantesManager.validateForm()) {
+                        return false;
+                    }
+                    
+                    // Soumettre via AJAX
+                    window.variantesManager.submitFormWithAjax(form);
+                } catch (error) {
+                    console.warn('Erreur lors de la validation du formulaire:', error);
+                    // Fallback : soumission normale du formulaire
+                    form.submit();
+                }
+            });
+        }
+    } catch (error) {
+        console.warn('Erreur lors de l\'initialisation du gestionnaire de variantes:', error);
     }
     
     // Écouter les changements dans le formulaire principal pour mettre à jour l'aperçu de la référence
-    const categorieSelect = document.getElementById('id_categorie');
-    const genreSelect = document.getElementById('id_genre');
-    const modeleInput = document.getElementById('id_modele');
-    
-    if (categorieSelect) {
-        categorieSelect.addEventListener('change', () => {
-            if (window.variantesManager) {
-                window.variantesManager.updateReferencePreview();
-            }
-        });
+    try {
+        const categorieSelect = document.getElementById('id_categorie');
+        const genreSelect = document.getElementById('id_genre');
+        const modeleInput = document.getElementById('id_modele');
+        
+        if (categorieSelect) {
+            categorieSelect.addEventListener('change', () => {
+                try {
+                    if (window.variantesManager) {
+                        window.variantesManager.updateReferencePreview();
+                    }
+                } catch (error) {
+                    console.warn('Erreur lors de la mise à jour de l\'aperçu de référence:', error);
+                }
+            });
+        }
+        
+        if (genreSelect) {
+            genreSelect.addEventListener('change', () => {
+                try {
+                    if (window.variantesManager) {
+                        window.variantesManager.updateReferencePreview();
+                    }
+                } catch (error) {
+                    console.warn('Erreur lors de la mise à jour de l\'aperçu de référence:', error);
+                }
+            });
+        }
+        
+        if (modeleInput) {
+            modeleInput.addEventListener('input', () => {
+                try {
+                    if (window.variantesManager) {
+                        window.variantesManager.updateReferencePreview();
+                    }
+                } catch (error) {
+                    console.warn('Erreur lors de la mise à jour de l\'aperçu de référence:', error);
+                }
+            });
+        }
+    } catch (error) {
+        console.warn('Erreur lors de l\'ajout des écouteurs d\'événements:', error);
+    }
+});
+
+// Gestionnaire d'erreurs global pour capturer les erreurs des extensions
+window.addEventListener('error', function(event) {
+    // Ignorer les erreurs des extensions Chrome
+    if (event.filename && event.filename.includes('chrome-extension://')) {
+        event.preventDefault();
+        return false;
     }
     
-    if (genreSelect) {
-        genreSelect.addEventListener('change', () => {
-            if (window.variantesManager) {
-                window.variantesManager.updateReferencePreview();
-            }
-        });
-    }
-    
-    if (modeleInput) {
-        modeleInput.addEventListener('input', () => {
-            if (window.variantesManager) {
-                window.variantesManager.updateReferencePreview();
-            }
-        });
+    // Ignorer les erreurs de connexion des extensions
+    if (event.message && event.message.includes('Receiving end does not exist')) {
+        event.preventDefault();
+        return false;
     }
 });
 
 // Fonctions globales pour la compatibilité avec les onclick
 function openVarianteModal() {
-    if (window.variantesManager) {
-        window.variantesManager.openVarianteModal();
+    try {
+        if (window.variantesManager) {
+            window.variantesManager.openVarianteModal();
+        }
+    } catch (error) {
+        console.warn('Erreur lors de l\'ouverture du modal:', error);
     }
 }
 
 function closeVarianteModal() {
-    if (window.variantesManager) {
-        window.variantesManager.closeVarianteModal();
+    try {
+        if (window.variantesManager) {
+            window.variantesManager.closeVarianteModal();
+        }
+    } catch (error) {
+        console.warn('Erreur lors de la fermeture du modal:', error);
     }
 }
 
 function addVariante() {
-    if (window.variantesManager) {
-        window.variantesManager.addVariante();
+    try {
+        if (window.variantesManager) {
+            window.variantesManager.addVariante();
+        }
+    } catch (error) {
+        console.warn('Erreur lors de l\'ajout de variante:', error);
     }
 }
