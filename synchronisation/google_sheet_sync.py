@@ -94,16 +94,28 @@ class GoogleSheetSync:
             '%d/%m/%Y',
             '%d-%m-%Y',
             '%Y-%m-%d',
+            '%Y-%m-%d %H:%M:%S',
+            '%Y/%m/%d %H:%M:%S',
+            '%d/%m/%Y %H:%M:%S',
+            '%d-%m-%Y %H:%M:%S',
             '%d/%m/%y',
             '%d-%m-%y',
             '%Y/%m/%d',
             '%m/%d/%Y',
             '%m-%d-%Y',
+            
         ]
         
+        # Normaliser les variantes ISO: remplacer 'T' par espace et enlever les fractions de seconde
+        normalized = str(date_str).strip()
+        if 'T' in normalized:
+            normalized = normalized.replace('T', ' ')
+        if '.' in normalized:
+            normalized = normalized.split('.', 1)[0]
+
         for date_format in date_formats:
             try:
-                parsed_date = datetime.strptime(date_str.strip(), date_format)
+                parsed_date = datetime.strptime(normalized, date_format)
                 return parsed_date.date()
             except ValueError:
                 continue
