@@ -35,6 +35,10 @@ ALLOWED_HOSTS = [
     '192.168.216.*',    # Toutes les adresses de votre sous-réseau
     '192.168.8.114',
     '192.168.145.129',
+    '192.168.0.105',
+    '192.168.0.100',
+    '192.168.0.*',
+    
 ]
 
 
@@ -264,6 +268,9 @@ CORS_ALLOWED_ORIGINS = [
     "http://192.168.8.114:8000",
     "http://192.168.145.129:8000",
     "http://192.168.20.128:8000",
+    "http://192.168.0.105:8000",
+    "http://192.168.0.100:8000",
+    "http://192.168.0.*:8000",
 ]
 
 # Autoriser les requêtes depuis votre réseau local

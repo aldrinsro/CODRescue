@@ -18,6 +18,17 @@ class Region(models.Model):
 
 
 
+class livreur (models.Model):
+    nom = models.CharField(max_length=50)
+
+    class Meta : 
+        verbose_name = "Livreur"
+        verbose_name_plural = "Livreurs"
+        ordering = ['nom']
+    
+    def __str__(self):
+        return self.nom
+
 
 
 class Ville(models.Model):
@@ -26,7 +37,7 @@ class Ville(models.Model):
     Delai_livraison_min = models.IntegerField(default=0)
     Delai_livraison_max = models.IntegerField(default=0)
     region = models.ForeignKey(Region, on_delete=models.CASCADE, related_name='villes')
-    
+  
     class Meta:
         verbose_name = "Ville"
         verbose_name_plural = "Villes"
