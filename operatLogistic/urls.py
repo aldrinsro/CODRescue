@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from .service_apres_vente import views as sav_views
+from .barre_recherche_globale import views as search_views
 
 app_name = 'operatLogistic'
 
@@ -42,13 +43,17 @@ urlpatterns = [
     path('api/articles/', views.api_articles, name='api_articles'),
     path('api/commande/<int:commande_id>/panier/', views.api_panier_commande, name='api_panier_commande'),
     path('api/article/<int:article_id>/stock/', views.api_verifier_stock_article, name='api_verifier_stock_article'),
-    path('api/test-reintegration-stock/', views.api_test_reintegration_stock, name='api_test_reintegration_stock'),
+
     
     # URLs pour les listes SAV
     path('sav/reportees/', sav_views.commandes_reportees, name='commandes_reportees'),
     path('sav/livrees-partiellement/', sav_views.commandes_livrees_partiellement, name='commandes_livrees_partiellement'),
     path('sav/avec-changement/', sav_views.commandes_livrees_avec_changement, name='commandes_livrees_avec_changement'),
-    path('sav/annulees/', sav_views.commandes_annulees_sav, name='commandes_annulees_sav'),
     path('sav/retournees/', sav_views.commandes_retournees, name='commandes_retournees'),
     path('sav/livrees/', sav_views.commandes_livrees, name='commandes_livrees'),
+    
+    # URLs pour la recherche globale
+    path('recherche-globale/', search_views.global_search_view, name='global_search'),
+    path('recherche-globale/api/', search_views.global_search_api, name='global_search_api'),
+    path('recherche-globale/suggestions/', search_views.search_suggestions_api, name='search_suggestions_api'),
 ] 

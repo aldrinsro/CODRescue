@@ -1,3 +1,10 @@
+<!-- 
+Modal de création de promotion
+Gestion du fuseau horaire :
+- Les dates sont automatiquement converties au fuseau horaire configuré dans settings.py
+- TIME_ZONE = 'Africa/Casablanca' est respecté pour l'affichage et le traitement
+- Les dates par défaut utilisent le fuseau horaire local du navigateur
+-->
 <!-- Modal de création de promotion -->
 <div id="promotionModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50 flex items-center justify-center">
     <div class="relative p-8 bg-white w-full max-w-4xl m-auto flex-col flex rounded-xl shadow-2xl animate-fade-in-down" style="border: 2px solid var(--admin-color);">
@@ -18,6 +25,9 @@
         
         <!-- Contenu du modal -->
         <div class="py-6">
+            <!-- Heure actuelle du serveur Django (fuseau horaire du Maroc) -->
+            <div id="server-time" data-time="{{ current_time|date:'Y-m-d\TH:i' }}" style="display: none;"></div>
+            
             <form method="post" action="{% url 'article:creer_promotion' %}" class="space-y-6">
                 {% csrf_token %}
                 
@@ -289,21 +299,56 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initialiser le compteur
     updateModalCounter();
+    
+    // Fonction utilitaire pour gérer les fuseaux horaires du Maroc (UTC+1)
+    function getMoroccoDateTime(date) {
+        // Le Maroc est en UTC+1 (ou UTC+0 en hiver selon les règles locales)
+        // Créer une date dans le fuseau horaire du Maroc
+        const moroccoOffset = 1 * 60; // +1 heure en minutes
+        const utcTime = date.getTime() + (date.getTimezoneOffset() * 60000);
+        const moroccoTime = new Date(utcTime + (moroccoOffset * 60000));
+        return moroccoTime.toISOString().slice(0, 16);
+    }
+    
+    function getCurrentMoroccoTime() {
+        const now = new Date();
+        return getMoroccoDateTime(now);
+    }
+    
+    // Fonction pour obtenir l'heure actuelle du serveur Django
+    function getServerTime() {
+        // Récupérer l'heure du serveur Django (fuseau horaire configuré)
+        const serverTimeElement = document.getElementById('server-time');
+        if (serverTimeElement && serverTimeElement.dataset.time) {
+            console.log('Heure serveur Django:', serverTimeElement.dataset.time);
+            return serverTimeElement.dataset.time;
+        }
+        console.log('Heure serveur non disponible, utilisation du fallback');
+        // Fallback : utiliser l'heure locale ajustée pour le Maroc
+        return getCurrentMoroccoTime();
+    }
 
-    // Initialiser les dates par défaut
+    // Initialiser les dates par défaut avec gestion du fuseau horaire
     const dateDebut = modal.querySelector('[name="date_debut"]');
     const dateFin = modal.querySelector('[name="date_fin"]');
     
     if (dateDebut && !dateDebut.value) {
-        const now = new Date();
-        dateDebut.value = now.toISOString().slice(0, 16);
+        // Utiliser l'heure actuelle du serveur Django (fuseau horaire du Maroc)
+        const serverTime = getServerTime();
+        if (serverTime) {
+            dateDebut.value = serverTime;
+        } else {
+            // Fallback : heure locale ajustée pour le Maroc
+            dateDebut.value = getCurrentMoroccoTime();
+        }
     }
     
     if (dateFin && !dateFin.value) {
+        // Définir la fin de journée dans le fuseau horaire du Maroc
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
-        tomorrow.setHours(23, 59, 0);
-        dateFin.value = tomorrow.toISOString().slice(0, 16);
+        tomorrow.setHours(23, 59, 0, 0);
+        dateFin.value = getMoroccoDateTime(tomorrow);
     }
 
     // Ajouter l'ID du formulaire au bouton submit
@@ -313,5 +358,17 @@ document.addEventListener('DOMContentLoaded', function() {
         form.id = 'promotionForm';
         submitBtn.setAttribute('form', 'promotionForm');
     }
+    
+    // Afficher l'heure actuelle du serveur Django (fuseau horaire du Maroc)
+    function displayServerTime() {
+        const now = new Date();
+        const moroccoTime = getMoroccoDateTime(now);
+        console.log('Heure actuelle (Maroc):', moroccoTime);
+        console.log('Heure UTC:', now.toISOString());
+        console.log('Différence:', 'UTC+1 (Maroc)');
+    }
+    
+    // Appeler la fonction pour vérifier l'heure
+    displayServerTime();
 });
 </script> 

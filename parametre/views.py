@@ -2,12 +2,12 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from django.http import JsonResponse, HttpResponse
-from django.core.paginator import Paginator
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.db.models import Q, Count, Avg, Min, Max, Sum
 from django.contrib.auth.models import User, Group
 from django.contrib import messages
 from .models import Region, Ville, Operateur, HistoriqueMotDePasse
-from article.models import Article
+from article.models import Article, Couleur, Pointure, VarianteArticle
 from commande.models import Commande, EtatCommande, EnumEtatCmd
 from django.contrib.messages import success, error
 from django.views.decorators.http import require_POST
@@ -119,10 +119,59 @@ def liste_operateurs(request):
             Q(mail__icontains=search)
         )
     
-    # Pagination
-    paginator = Paginator(operateurs, 20)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
+    # Pagination flexible
+    items_per_page = request.GET.get('items_per_page', '20')
+    start_range = request.GET.get('start_range', '')
+    end_range = request.GET.get('end_range', '')
+    
+    # Gestion de la pagination flexible
+    if start_range and end_range and start_range.isdigit() and end_range.isdigit():
+        start_range = int(start_range)
+        end_range = int(end_range)
+        if start_range > 0 and end_range >= start_range:
+            # Pagination par plage personnalisée
+            total_count = operateurs.count()
+            if end_range > total_count:
+                end_range = total_count
+            
+            # Créer un paginator temporaire pour obtenir la page correspondante
+            temp_paginator = Paginator(operateurs, end_range - start_range + 1)
+            page_number = 1
+            page_obj = temp_paginator.get_page(page_number)
+            
+            # Ajuster les indices pour l'affichage
+            page_obj.start_index = start_range
+            page_obj.end_index = end_range
+            page_obj.number = 1
+            page_obj.has_previous = False
+            page_obj.has_next = False
+            page_obj.previous_page_number = None
+            page_obj.next_page_number = None
+            page_obj.num_pages = 1
+        else:
+            # Plage invalide, utiliser la pagination normale
+            if isinstance(items_per_page, str) and items_per_page.isdigit():
+                items_per_page = int(items_per_page)
+            elif not isinstance(items_per_page, int):
+                items_per_page = 20
+            paginator = Paginator(operateurs, items_per_page)
+            page_number = request.GET.get('page', 1)
+            page_obj = paginator.get_page(page_number)
+    else:
+        # Pagination normale
+        if items_per_page == 'all':
+            # Afficher tous les opérateurs
+            paginator = Paginator(operateurs, operateurs.count())
+            page_number = 1
+            page_obj = paginator.get_page(page_number)
+        else:
+            if isinstance(items_per_page, str) and items_per_page.isdigit():
+                items_per_page = int(items_per_page)
+            elif not isinstance(items_per_page, int):
+                items_per_page = 20
+            paginator = Paginator(operateurs, items_per_page)
+            page_number = request.GET.get('page', 1)
+            page_obj = paginator.get_page(page_number)
     
     context = {
         'page_obj': page_obj,
@@ -133,8 +182,109 @@ def liste_operateurs(request):
         'operateurs_actifs': operateurs_actifs,
         'operateurs_inactifs': operateurs_inactifs,
         'administrateurs': administrateurs,
+        'items_per_page': items_per_page,
+        'start_range': start_range,
+        'end_range': end_range,
     }
     return render(request, 'parametre/liste_operateurs.html', context)
+
+
+@login_required
+def liste_operateurs_ajax(request):
+    """Vue AJAX pour la pagination flexible des opérateurs"""
+    from django.template.loader import render_to_string
+    from django.http import JsonResponse
+    
+    operateurs = Operateur.objects.select_related('user').order_by('nom', 'prenom').exclude(type_operateur='ADMIN')
+    
+    # Récupérer les paramètres de pagination
+    search = request.GET.get('search', '')
+    type_filter = request.GET.get('type', '')
+    items_per_page = request.GET.get('items_per_page', '20')
+    start_range = request.GET.get('start_range', '')
+    end_range = request.GET.get('end_range', '')
+    page = request.GET.get('page', 1)
+    
+    # Filtrage par type si spécifié
+    if type_filter:
+        operateurs = operateurs.filter(type_operateur=type_filter)
+    
+    # Recherche
+    if search:
+        operateurs = operateurs.filter(
+            Q(nom__icontains=search) | 
+            Q(prenom__icontains=search) |
+            Q(mail__icontains=search)
+        )
+    
+    # Gestion de la pagination flexible
+    if start_range and end_range and start_range.isdigit() and end_range.isdigit():
+        start_range = int(start_range)
+        end_range = int(end_range)
+        if start_range > 0 and end_range >= start_range:
+            # Pagination par plage personnalisée
+            total_count = operateurs.count()
+            if end_range > total_count:
+                end_range = total_count
+            
+            # Créer un paginator temporaire pour obtenir la page correspondante
+            temp_paginator = Paginator(operateurs, end_range - start_range + 1)
+            page_obj = temp_paginator.get_page(1)
+            
+            # Ajuster les indices pour l'affichage
+            page_obj.start_index = start_range
+            page_obj.end_index = end_range
+            page_obj.number = 1
+            page_obj.has_previous = False
+            page_obj.has_next = False
+            page_obj.previous_page_number = None
+            page_obj.next_page_number = None
+            page_obj.num_pages = 1
+        else:
+            # Plage invalide, utiliser la pagination normale
+            if isinstance(items_per_page, str) and items_per_page.isdigit():
+                items_per_page = int(items_per_page)
+            elif not isinstance(items_per_page, int):
+                items_per_page = 20
+            paginator = Paginator(operateurs, items_per_page)
+            page_obj = paginator.get_page(page)
+    else:
+        # Pagination normale
+        if items_per_page == 'all':
+            # Afficher tous les opérateurs
+            paginator = Paginator(operateurs, operateurs.count())
+            page_obj = paginator.get_page(1)
+        else:
+            if isinstance(items_per_page, str) and items_per_page.isdigit():
+                items_per_page = int(items_per_page)
+            elif not isinstance(items_per_page, int):
+                items_per_page = 20
+            paginator = Paginator(operateurs, items_per_page)
+            page_obj = paginator.get_page(page)
+    
+    # Rendre les templates partiels
+    html_table_body = render_to_string('parametre/partials/_operateurs_table_body.html', {
+        'page_obj': page_obj
+    }, request=request)
+    
+    html_pagination = render_to_string('parametre/partials/_operateurs_pagination.html', {
+        'page_obj': page_obj,
+        'search': search,
+        'type_filter': type_filter
+    }, request=request)
+    
+    html_pagination_info = render_to_string('parametre/partials/_operateurs_pagination_info.html', {
+        'page_obj': page_obj
+    }, request=request)
+    
+    return JsonResponse({
+        'success': True,
+        'html_table_body': html_table_body,
+        'html_pagination': html_pagination,
+        'html_pagination_info': html_pagination_info,
+        'current_page': page_obj.number,
+        'total_count': page_obj.paginator.count,
+    })
 
 @staff_member_required
 @login_required
@@ -193,6 +343,8 @@ def creer_operateur(request):
             group_name_map = {
                 'CONFIRMATION': 'operateur_confirme',
                 'LOGISTIQUE': 'operateur_logistique',
+                'PREPARATION': 'operateur_preparation',
+                'SUPERVISEUR_PREPARATION': 'superviseur',
                 'ADMIN': 'administrateur', # Assurez-vous que ce groupe existe
             }
             group_name = group_name_map.get(type_operateur)
@@ -815,6 +967,10 @@ def changer_mot_de_passe_admin(request):
 def sav_commandes_retournees(request):
     """Vue admin pour afficher les commandes retournées"""
     from commande.models import Commande, EtatCommande
+    from django.core.paginator import Paginator
+    from django.shortcuts import render
+    from django.http import JsonResponse
+    from django.template.loader import render_to_string
     
     commandes = Commande.objects.filter(
         etats__enum_etat__libelle='Retournée',
@@ -823,9 +979,52 @@ def sav_commandes_retournees(request):
         'etats__enum_etat', 'etats__operateur', 'paniers__article'
     ).order_by('-etats__date_debut').distinct()
     
-    # Pagination
-    paginator = Paginator(commandes, 20)
-    page_number = request.GET.get('page')
+    # Pagination flexible pour les administrateurs
+    items_per_page = request.GET.get('items_per_page', '20')
+    start_range = request.GET.get('start_range', '')
+    end_range = request.GET.get('end_range', '')
+    
+    # Validation et conversion des paramètres
+    try:
+        if items_per_page == 'all':
+            items_per_page = commandes.count()  # Afficher tous les éléments
+        else:
+            items_per_page = int(items_per_page)
+            if items_per_page < 1:
+                items_per_page = 20
+            # Pas de limite supérieure pour permettre l'affichage de tous les éléments
+    except (ValueError, TypeError):
+        items_per_page = 20
+    
+    # Gestion des plages personnalisées (style Excel)
+    if start_range and end_range:
+        try:
+            start_range = int(start_range)
+            end_range = int(end_range)
+            if start_range > 0 and end_range >= start_range:
+                # Calculer la page correspondante
+                total_count = commandes.count()
+                if end_range > total_count:
+                    end_range = total_count
+                if start_range > total_count:
+                    start_range = 1
+                
+                # Calculer la page de départ
+                page_number = ((start_range - 1) // items_per_page) + 1
+                # Ajuster items_per_page pour couvrir la plage demandée
+                range_size = end_range - start_range + 1
+                if range_size < items_per_page:
+                    items_per_page = range_size
+            else:
+                start_range = ''
+                end_range = ''
+        except (ValueError, TypeError):
+            start_range = ''
+            end_range = ''
+    else:
+        page_number = request.GET.get('page', 1)
+    
+    paginator = Paginator(commandes, items_per_page)
     page_obj = paginator.get_page(page_number)
     
     context = {
@@ -833,8 +1032,35 @@ def sav_commandes_retournees(request):
         'title': 'Commandes Retournées',
         'subtitle': 'Commandes retournées par les clients ou opérateurs logistiques',
         'icon': 'fa-undo',
-        'color': 'red'
+        'color': 'red',
+        'items_per_page': items_per_page,
+        'start_range': start_range,
+        'end_range': end_range,
     }
+    
+    # Check if the request is AJAX
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        # Render only the table body and pagination as HTML
+        html_table_body = render_to_string('parametre/sav/partials/_commande_table_body.html', context, request=request)
+        html_pagination = render_to_string('parametre/sav/partials/_pagination.html', context, request=request)
+        
+        # Gérer le cas où start_index ou end_index peuvent être None
+        start_index = page_obj.start_index() if hasattr(page_obj, 'start_index') and callable(page_obj.start_index) else page_obj.start_index
+        end_index = page_obj.end_index() if hasattr(page_obj, 'end_index') and callable(page_obj.end_index) else page_obj.end_index
+        
+        # Vérifier que les valeurs sont valides
+        if start_index is None or end_index is None:
+            total_commands_display = f"Affichage de 0 à 0 sur {page_obj.paginator.count} commandes."
+        else:
+            total_commands_display = f"Affichage de {start_index} à {end_index} sur {page_obj.paginator.count} commandes."
+        
+        return JsonResponse({
+            'html_table_body': html_table_body,
+            'html_pagination': html_pagination,
+            'total_commands_display': total_commands_display,
+            'total_commands_count': page_obj.paginator.count
+        })
+    
     return render(request, 'parametre/sav/liste_commandes_sav.html', context)
 
 @staff_member_required
@@ -842,6 +1068,10 @@ def sav_commandes_retournees(request):
 def sav_commandes_reportees(request):
     """Vue admin pour afficher les commandes reportées"""
     from commande.models import Commande, EtatCommande
+    from django.core.paginator import Paginator
+    from django.shortcuts import render
+    from django.http import JsonResponse
+    from django.template.loader import render_to_string
     
     commandes = Commande.objects.filter(
         etats__enum_etat__libelle='Reportée',
@@ -849,10 +1079,53 @@ def sav_commandes_reportees(request):
     ).select_related('client', 'ville', 'ville__region').prefetch_related(
         'etats__enum_etat', 'etats__operateur', 'paniers__article'
     ).order_by('-etats__date_debut').distinct()
-            
-    # Pagination
-    paginator = Paginator(commandes, 20)
-    page_number = request.GET.get('page')
+    
+    # Pagination flexible pour les administrateurs
+    items_per_page = request.GET.get('items_per_page', '20')
+    start_range = request.GET.get('start_range', '')
+    end_range = request.GET.get('end_range', '')
+    
+    # Validation et conversion des paramètres
+    try:
+        if items_per_page == 'all':
+            items_per_page = commandes.count()  # Afficher tous les éléments
+        else:
+            items_per_page = int(items_per_page)
+            if items_per_page < 1:
+                items_per_page = 20
+            # Pas de limite supérieure pour permettre l'affichage de tous les éléments
+    except (ValueError, TypeError):
+        items_per_page = 20
+    
+    # Gestion des plages personnalisées (style Excel)
+    if start_range and end_range:
+        try:
+            start_range = int(start_range)
+            end_range = int(end_range)
+            if start_range > 0 and end_range >= start_range:
+                # Calculer la page correspondante
+                total_count = commandes.count()
+                if end_range > total_count:
+                    end_range = total_count
+                if start_range > total_count:
+                    start_range = 1
+                
+                # Calculer la page de départ
+                page_number = ((start_range - 1) // items_per_page) + 1
+                # Ajuster items_per_page pour couvrir la plage demandée
+                range_size = end_range - start_range + 1
+                if range_size < items_per_page:
+                    items_per_page = range_size
+            else:
+                start_range = ''
+                end_range = ''
+        except (ValueError, TypeError):
+            start_range = ''
+            end_range = ''
+    else:
+        page_number = request.GET.get('page', 1)
+    
+    paginator = Paginator(commandes, items_per_page)
     page_obj = paginator.get_page(page_number)
     
     context = {
@@ -860,8 +1133,35 @@ def sav_commandes_reportees(request):
         'title': 'Commandes Reportées',
         'subtitle': 'Commandes dont la livraison a été reportée',
         'icon': 'fa-clock',
-        'color': 'orange'
+        'color': 'orange',
+        'items_per_page': items_per_page,
+        'start_range': start_range,
+        'end_range': end_range,
     }
+    
+    # Check if the request is AJAX
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        # Render only the table body and pagination as HTML
+        html_table_body = render_to_string('parametre/sav/partials/_commande_table_body.html', context, request=request)
+        html_pagination = render_to_string('parametre/sav/partials/_pagination.html', context, request=request)
+        
+        # Gérer le cas où start_index ou end_index peuvent être None
+        start_index = page_obj.start_index() if hasattr(page_obj, 'start_index') and callable(page_obj.start_index) else page_obj.start_index
+        end_index = page_obj.end_index() if hasattr(page_obj, 'end_index') and callable(page_obj.end_index) else page_obj.end_index
+        
+        # Vérifier que les valeurs sont valides
+        if start_index is None or end_index is None:
+            total_commands_display = f"Affichage de 0 à 0 sur {page_obj.paginator.count} commandes."
+        else:
+            total_commands_display = f"Affichage de {start_index} à {end_index} sur {page_obj.paginator.count} commandes."
+        
+        return JsonResponse({
+            'html_table_body': html_table_body,
+            'html_pagination': html_pagination,
+            'total_commands_display': total_commands_display,
+            'total_commands_count': page_obj.paginator.count
+        })
+    
     return render(request, 'parametre/sav/liste_commandes_sav.html', context)
 
 @staff_member_required
@@ -869,6 +1169,10 @@ def sav_commandes_reportees(request):
 def sav_livrees_partiellement(request):
     """Vue admin pour afficher les commandes livrées partiellement"""
     from commande.models import Commande, EtatCommande
+    from django.core.paginator import Paginator
+    from django.shortcuts import render
+    from django.http import JsonResponse
+    from django.template.loader import render_to_string
     
     commandes = Commande.objects.filter(
         etats__enum_etat__libelle='Livrée Partiellement',
@@ -877,9 +1181,52 @@ def sav_livrees_partiellement(request):
         'etats__enum_etat', 'etats__operateur', 'paniers__article'
     ).order_by('-etats__date_debut').distinct()
     
-    # Pagination
-    paginator = Paginator(commandes, 20)
-    page_number = request.GET.get('page')
+    # Pagination flexible pour les administrateurs
+    items_per_page = request.GET.get('items_per_page', '20')
+    start_range = request.GET.get('start_range', '')
+    end_range = request.GET.get('end_range', '')
+    
+    # Validation et conversion des paramètres
+    try:
+        if items_per_page == 'all':
+            items_per_page = commandes.count()  # Afficher tous les éléments
+        else:
+            items_per_page = int(items_per_page)
+            if items_per_page < 1:
+                items_per_page = 20
+            # Pas de limite supérieure pour permettre l'affichage de tous les éléments
+    except (ValueError, TypeError):
+        items_per_page = 20
+    
+    # Gestion des plages personnalisées (style Excel)
+    if start_range and end_range:
+        try:
+            start_range = int(start_range)
+            end_range = int(end_range)
+            if start_range > 0 and end_range >= start_range:
+                # Calculer la page correspondante
+                total_count = commandes.count()
+                if end_range > total_count:
+                    end_range = total_count
+                if start_range > total_count:
+                    start_range = 1
+                
+                # Calculer la page de départ
+                page_number = ((start_range - 1) // items_per_page) + 1
+                # Ajuster items_per_page pour couvrir la plage demandée
+                range_size = end_range - start_range + 1
+                if range_size < items_per_page:
+                    items_per_page = range_size
+            else:
+                start_range = ''
+                end_range = ''
+        except (ValueError, TypeError):
+            start_range = ''
+            end_range = ''
+    else:
+        page_number = request.GET.get('page', 1)
+    
+    paginator = Paginator(commandes, items_per_page)
     page_obj = paginator.get_page(page_number)
     
     context = {
@@ -887,8 +1234,35 @@ def sav_livrees_partiellement(request):
         'title': 'Commandes Livrées Partiellement',
         'subtitle': 'Commandes avec livraison partielle',
         'icon': 'fa-box-open',
-        'color': 'yellow'
+        'color': 'yellow',
+        'items_per_page': items_per_page,
+        'start_range': start_range,
+        'end_range': end_range,
     }
+    
+    # Check if the request is AJAX
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        # Render only the table body and pagination as HTML
+        html_table_body = render_to_string('parametre/sav/partials/_commande_table_body.html', context, request=request)
+        html_pagination = render_to_string('parametre/sav/partials/_pagination.html', context, request=request)
+        
+        # Gérer le cas où start_index ou end_index peuvent être None
+        start_index = page_obj.start_index() if hasattr(page_obj, 'start_index') and callable(page_obj.start_index) else page_obj.start_index
+        end_index = page_obj.end_index() if hasattr(page_obj, 'end_index') and callable(page_obj.end_index) else page_obj.end_index
+        
+        # Vérifier que les valeurs sont valides
+        if start_index is None or end_index is None:
+            total_commands_display = f"Affichage de 0 à 0 sur {page_obj.paginator.count} commandes."
+        else:
+            total_commands_display = f"Affichage de {start_index} à {end_index} sur {page_obj.paginator.count} commandes."
+        
+        return JsonResponse({
+            'html_table_body': html_table_body,
+            'html_pagination': html_pagination,
+            'total_commands_display': total_commands_display,
+            'total_commands_count': page_obj.paginator.count
+        })
+    
     return render(request, 'parametre/sav/liste_commandes_sav.html', context)
 
 @staff_member_required
@@ -896,6 +1270,10 @@ def sav_livrees_partiellement(request):
 def sav_annulees_sav(request):
     """Vue admin pour afficher les commandes annulées au niveau SAV"""
     from commande.models import Commande, EtatCommande
+    from django.core.paginator import Paginator
+    from django.shortcuts import render
+    from django.http import JsonResponse
+    from django.template.loader import render_to_string
     
     commandes = Commande.objects.filter(
         etats__enum_etat__libelle='Annulée (SAV)',
@@ -904,9 +1282,52 @@ def sav_annulees_sav(request):
         'etats__enum_etat', 'etats__operateur', 'paniers__article'
     ).order_by('-etats__date_debut').distinct()
     
-    # Pagination
-    paginator = Paginator(commandes, 20)
-    page_number = request.GET.get('page')
+    # Pagination flexible pour les administrateurs
+    items_per_page = request.GET.get('items_per_page', '20')
+    start_range = request.GET.get('start_range', '')
+    end_range = request.GET.get('end_range', '')
+    
+    # Validation et conversion des paramètres
+    try:
+        if items_per_page == 'all':
+            items_per_page = commandes.count()  # Afficher tous les éléments
+        else:
+            items_per_page = int(items_per_page)
+            if items_per_page < 1:
+                items_per_page = 20
+            # Pas de limite supérieure pour permettre l'affichage de tous les éléments
+    except (ValueError, TypeError):
+        items_per_page = 20
+    
+    # Gestion des plages personnalisées (style Excel)
+    if start_range and end_range:
+        try:
+            start_range = int(start_range)
+            end_range = int(end_range)
+            if start_range > 0 and end_range >= start_range:
+                # Calculer la page correspondante
+                total_count = commandes.count()
+                if end_range > total_count:
+                    end_range = total_count
+                if start_range > total_count:
+                    start_range = 1
+                
+                # Calculer la page de départ
+                page_number = ((start_range - 1) // items_per_page) + 1
+                # Ajuster items_per_page pour couvrir la plage demandée
+                range_size = end_range - start_range + 1
+                if range_size < items_per_page:
+                    items_per_page = range_size
+            else:
+                start_range = ''
+                end_range = ''
+        except (ValueError, TypeError):
+            start_range = ''
+            end_range = ''
+    else:
+        page_number = request.GET.get('page', 1)
+    
+    paginator = Paginator(commandes, items_per_page)
     page_obj = paginator.get_page(page_number)
     
     context = {
@@ -914,8 +1335,35 @@ def sav_annulees_sav(request):
         'title': 'Commandes Annulées (SAV)',
         'subtitle': 'Commandes annulées lors de la livraison',
         'icon': 'fa-times-circle',
-        'color': 'gray'
+        'color': 'gray',
+        'items_per_page': items_per_page,
+        'start_range': start_range,
+        'end_range': end_range,
     }
+    
+    # Check if the request is AJAX
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        # Render only the table body and pagination as HTML
+        html_table_body = render_to_string('parametre/sav/partials/_commande_table_body.html', context, request=request)
+        html_pagination = render_to_string('parametre/sav/partials/_pagination.html', context, request=request)
+        
+        # Gérer le cas où start_index ou end_index peuvent être None
+        start_index = page_obj.start_index() if hasattr(page_obj, 'start_index') and callable(page_obj.start_index) else page_obj.start_index
+        end_index = page_obj.end_index() if hasattr(page_obj, 'end_index') and callable(page_obj.end_index) else page_obj.end_index
+        
+        # Vérifier que les valeurs sont valides
+        if start_index is None or end_index is None:
+            total_commands_display = f"Affichage de 0 à 0 sur {page_obj.paginator.count} commandes."
+        else:
+            total_commands_display = f"Affichage de {start_index} à {end_index} sur {page_obj.paginator.count} commandes."
+        
+        return JsonResponse({
+            'html_table_body': html_table_body,
+            'html_pagination': html_pagination,
+            'total_commands_display': total_commands_display,
+            'total_commands_count': page_obj.paginator.count
+        })
+    
     return render(request, 'parametre/sav/liste_commandes_sav.html', context)
 
 @staff_member_required
@@ -923,6 +1371,10 @@ def sav_annulees_sav(request):
 def sav_livrees_avec_changement(request):
     """Vue admin pour afficher les commandes livrées avec changement"""
     from commande.models import Commande, EtatCommande
+    from django.core.paginator import Paginator
+    from django.shortcuts import render
+    from django.http import JsonResponse
+    from django.template.loader import render_to_string
     
     commandes = Commande.objects.filter(
         etats__enum_etat__libelle='Livrée avec changement',
@@ -931,9 +1383,52 @@ def sav_livrees_avec_changement(request):
         'etats__enum_etat', 'etats__operateur', 'paniers__article'
     ).order_by('-etats__date_debut').distinct()
     
-    # Pagination
-    paginator = Paginator(commandes, 20)
-    page_number = request.GET.get('page')
+    # Pagination flexible pour les administrateurs
+    items_per_page = request.GET.get('items_per_page', '20')
+    start_range = request.GET.get('start_range', '')
+    end_range = request.GET.get('end_range', '')
+    
+    # Validation et conversion des paramètres
+    try:
+        if items_per_page == 'all':
+            items_per_page = commandes.count()  # Afficher tous les éléments
+        else:
+            items_per_page = int(items_per_page)
+            if items_per_page < 1:
+                items_per_page = 20
+            # Pas de limite supérieure pour permettre l'affichage de tous les éléments
+    except (ValueError, TypeError):
+        items_per_page = 20
+    
+    # Gestion des plages personnalisées (style Excel)
+    if start_range and end_range:
+        try:
+            start_range = int(start_range)
+            end_range = int(end_range)
+            if start_range > 0 and end_range >= start_range:
+                # Calculer la page correspondante
+                total_count = commandes.count()
+                if end_range > total_count:
+                    end_range = total_count
+                if start_range > total_count:
+                    start_range = 1
+                
+                # Calculer la page de départ
+                page_number = ((start_range - 1) // items_per_page) + 1
+                # Ajuster items_per_page pour couvrir la plage demandée
+                range_size = end_range - start_range + 1
+                if range_size < items_per_page:
+                    items_per_page = range_size
+            else:
+                start_range = ''
+                end_range = ''
+        except (ValueError, TypeError):
+            start_range = ''
+            end_range = ''
+    else:
+        page_number = request.GET.get('page', 1)
+    
+    paginator = Paginator(commandes, items_per_page)
     page_obj = paginator.get_page(page_number)
     
     context = {
@@ -941,8 +1436,35 @@ def sav_livrees_avec_changement(request):
         'title': 'Commandes Livrées avec Changement',
         'subtitle': 'Commandes livrées avec modifications',
         'icon': 'fa-exchange-alt',
-        'color': 'blue'
+        'color': 'blue',
+        'items_per_page': items_per_page,
+        'start_range': start_range,
+        'end_range': end_range,
     }
+    
+    # Check if the request is AJAX
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        # Render only the table body and pagination as HTML
+        html_table_body = render_to_string('parametre/sav/partials/_commande_table_body.html', context, request=request)
+        html_pagination = render_to_string('parametre/sav/partials/_pagination.html', context, request=request)
+        
+        # Gérer le cas où start_index ou end_index peuvent être None
+        start_index = page_obj.start_index() if hasattr(page_obj, 'start_index') and callable(page_obj.start_index) else page_obj.start_index
+        end_index = page_obj.end_index() if hasattr(page_obj, 'end_index') and callable(page_obj.end_index) else page_obj.end_index
+        
+        # Vérifier que les valeurs sont valides
+        if start_index is None or end_index is None:
+            total_commands_display = f"Affichage de 0 à 0 sur {page_obj.paginator.count} commandes."
+        else:
+            total_commands_display = f"Affichage de {start_index} à {end_index} sur {page_obj.paginator.count} commandes."
+        
+        return JsonResponse({
+            'html_table_body': html_table_body,
+            'html_pagination': html_pagination,
+            'total_commands_display': total_commands_display,
+            'total_commands_count': page_obj.paginator.count
+        })
+    
     return render(request, 'parametre/sav/liste_commandes_sav.html', context)
 
 @staff_member_required
@@ -950,6 +1472,10 @@ def sav_livrees_avec_changement(request):
 def sav_livrees(request):
     """Vue admin pour afficher les commandes livrées avec succès"""
     from commande.models import Commande, EtatCommande
+    from django.core.paginator import Paginator
+    from django.shortcuts import render
+    from django.http import JsonResponse
+    from django.template.loader import render_to_string
     
     commandes = Commande.objects.filter(
         etats__enum_etat__libelle='Livrée',
@@ -958,9 +1484,52 @@ def sav_livrees(request):
         'etats__enum_etat', 'etats__operateur', 'paniers__article'
     ).order_by('-etats__date_debut').distinct()
     
-    # Pagination
-    paginator = Paginator(commandes, 20)
-    page_number = request.GET.get('page')
+    # Pagination flexible pour les administrateurs
+    items_per_page = request.GET.get('items_per_page', '20')
+    start_range = request.GET.get('start_range', '')
+    end_range = request.GET.get('end_range', '')
+    
+    # Validation et conversion des paramètres
+    try:
+        if items_per_page == 'all':
+            items_per_page = commandes.count()  # Afficher tous les éléments
+        else:
+            items_per_page = int(items_per_page)
+            if items_per_page < 1:
+                items_per_page = 20
+            # Pas de limite supérieure pour permettre l'affichage de tous les éléments
+    except (ValueError, TypeError):
+        items_per_page = 20
+    
+    # Gestion des plages personnalisées (style Excel)
+    if start_range and end_range:
+        try:
+            start_range = int(start_range)
+            end_range = int(end_range)
+            if start_range > 0 and end_range >= start_range:
+                # Calculer la page correspondante
+                total_count = commandes.count()
+                if end_range > total_count:
+                    end_range = total_count
+                if start_range > total_count:
+                    start_range = 1
+                
+                # Calculer la page de départ
+                page_number = ((start_range - 1) // items_per_page) + 1
+                # Ajuster items_per_page pour couvrir la plage demandée
+                range_size = end_range - start_range + 1
+                if range_size < items_per_page:
+                    items_per_page = range_size
+            else:
+                start_range = ''
+                end_range = ''
+        except (ValueError, TypeError):
+            start_range = ''
+            end_range = ''
+    else:
+        page_number = request.GET.get('page', 1)
+    
+    paginator = Paginator(commandes, items_per_page)
     page_obj = paginator.get_page(page_number)
     
     context = {
@@ -968,8 +1537,35 @@ def sav_livrees(request):
         'title': 'Commandes Livrées',
         'subtitle': 'Commandes livrées avec succès',
         'icon': 'fa-check-circle',
-        'color': 'green'
+        'color': 'green',
+        'items_per_page': items_per_page,
+        'start_range': start_range,
+        'end_range': end_range,
     }
+    
+    # Check if the request is AJAX
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        # Render only the table body and pagination as HTML
+        html_table_body = render_to_string('parametre/sav/partials/_commande_table_body.html', context, request=request)
+        html_pagination = render_to_string('parametre/sav/partials/_pagination.html', context, request=request)
+        
+        # Gérer le cas où start_index ou end_index peuvent être None
+        start_index = page_obj.start_index() if hasattr(page_obj, 'start_index') and callable(page_obj.start_index) else page_obj.start_index
+        end_index = page_obj.end_index() if hasattr(page_obj, 'end_index') and callable(page_obj.end_index) else page_obj.end_index
+        
+        # Vérifier que les valeurs sont valides
+        if start_index is None or end_index is None:
+            total_commands_display = f"Affichage de 0 à 0 sur {page_obj.paginator.count} commandes."
+        else:
+            total_commands_display = f"Affichage de {start_index} à {end_index} sur {page_obj.paginator.count} commandes."
+        
+        return JsonResponse({
+            'html_table_body': html_table_body,
+            'html_pagination': html_pagination,
+            'total_commands_display': total_commands_display,
+            'total_commands_count': page_obj.paginator.count
+        })
+    
     return render(request, 'parametre/sav/liste_commandes_sav.html', context)
 
 @staff_member_required
@@ -2387,3 +2983,4 @@ def export_operateur_excel(request, operateur_id):
     
     wb.save(response)
     return response
+

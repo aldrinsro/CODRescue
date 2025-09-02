@@ -8,6 +8,7 @@ app_name = 'app_admin'
 urlpatterns = [
     path('', views.dashboard, name='home'),
     path('operateurs/', views.liste_operateurs, name='liste_operateurs'),
+    path('operateurs/ajax/', views.liste_operateurs_ajax, name='liste_operateurs_ajax'),
     path('operateurs/creer/', views.creer_operateur, name='creer_operateur'),
     path('operateurs/detail/<int:pk>/', views.detail_operateur, name='detail_operateur'),
     
@@ -62,5 +63,6 @@ urlpatterns = [
     # URLs Barre de Recherche Globale
     path('global-search/', global_search_views.global_search_view, name='global_search'),
     path('global-search/api/', global_search_views.global_search_api, name='global_search_api'),
-    path('global-search/suggestions/', global_search_views.search_suggestions_api, name='global_search_suggestions'),
+    path('global-search/suggestions/', global_search_views.search_suggestions_api, name='search_suggestions_api'),
+    
 ] 

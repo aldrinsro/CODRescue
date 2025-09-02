@@ -44,10 +44,18 @@ urlpatterns = [
     path('operatConfirme/', RedirectView.as_view(url='/operateur-confirme/', permanent=True)),
     path('operateur-logistique/', include('operatLogistic.urls')),
     path('operateur-preparation/', include('Prepacommande.urls')),
+    path('Superpreparation/', include('Superpreparation.urls')),
     path('livraison/', include('livraison.urls')),
     path('parametre/', include('parametre.urls')),
     path('synchronisation/', include('synchronisation.urls')),
     path('kpis/', include('kpis.urls')),
+    # Notifications app supprimée
+    
+    # Pages 404 personnalisées par interface
+    path('404/admin/', include('parametre.404.admin.urls')),
+    path('404/confirmation/', include('parametre.404.confirmation.urls')),
+    path('404/preparation/', include('parametre.404.preparation.urls')),
+    path('404/logistique/', include('parametre.404.logistique.urls')),
 
     # Django browser reload (développement)
     path("__reload__/", include("django_browser_reload.urls")),
