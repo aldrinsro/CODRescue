@@ -18,6 +18,7 @@ urlpatterns = [
     path('commandes-en-preparation/', views.commandes_en_preparation, name='commandes_en_preparation'),
     path('commandes-emballees/', views.commandes_emballees, name='commandes_emballees'),
     path('commandes-preparees/', views.commandes_preparees, name='commandes_preparees'),
+    
 
 
    
@@ -105,6 +106,8 @@ urlpatterns = [
     # === NOUVELLES URLs : GESTION DES ARTICLES STOCK (SUPERPREPARATION) === 
     # Pages principales
     path('gestion-articles/', views.liste_articles, name='liste_articles'),
+    # Redirection pour compatibilité avec l'ancienne URL
+    path('articles/', views.liste_articles, name='liste_articles_redirect'),
     path('gestion-articles/detail/<int:id>/', views.detail_article, name='detail_article'),
     path('gestion-articles/modifier/<int:id>/', views.modifier_article, name='modifier_article'),
     path('gestion-articles/creer/', views.creer_article, name='creer_article'),
