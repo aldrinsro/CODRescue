@@ -1,38 +1,38 @@
-<header class="bg-white shadow-md px-6 py-4 border-b" style="border-color: var(--preparation-border-accent);">
+<header class="bg-white shadow-md px-4 sm:px-6 py-3 sm:py-4 border-b" style="border-color: var(--preparation-border-accent);">
     <div class="flex items-center justify-between">
         <!-- Menu hamburger pour mobile -->
-        <button id="menu-toggle" class="p-2 rounded-lg transition-all duration-300 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-opacity-50" style="hover:background-color: var(--preparation-hover-bg); focus:ring-color: var(--preparation-primary); background-color: var(--preparation-light);">
+        <button id="menu-toggle" class="p-2 rounded-lg transition-all duration-300 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-opacity-50 touch-manipulation" style="hover:background-color: var(--preparation-hover-bg); focus:ring-color: var(--preparation-primary); background-color: var(--preparation-light);">
             <div class="space-y-1.5">
                 <span id="hamburger-line-1" class="block w-6 h-0.5 transition-all duration-300 transform origin-center" style="background-color: var(--preparation-primary);"></span>
                 <span id="hamburger-line-2" class="block w-6 h-0.5 mt-1.5 transition-all duration-300 transform origin-center" style="background-color: var(--preparation-primary);"></span>
                 <span id="hamburger-line-3" class="block w-6 h-0.5 mt-1.5 transition-all duration-300 transform origin-center" style="background-color: var(--preparation-primary);"></span>
             </div>
         </button>
-        <div>
-            <h1 class="text-2xl font-bold text-gray-800">{% block page_title %}Mes Préparations{% endblock %}</h1>
-            <p class="text-gray-600 text-sm">{% block page_subtitle %}Interface Opérateur de Préparation{% endblock %}</p>
+        <div class="flex-1 min-w-0">
+            <h1 class="text-lg sm:text-2xl font-bold text-gray-800 truncate">{% block page_title %}Mes Préparations{% endblock %}</h1>
+            <p class="text-gray-600 text-xs sm:text-sm truncate">{% block page_subtitle %}Interface Opérateur de Préparation{% endblock %}</p>
         </div>
         
-        <div class="flex items-center space-x-4">
-            <!-- Barre de recherche globale -->
-            {% include 'composant_generale/operatPrepa/global_search_component.html' %}
-
-            <!-- Centre de notifications supprimé -->
+        <div class="flex items-center space-x-2 sm:space-x-4">
+            <!-- Barre de recherche globale (masquée sur très petit écran) -->
+            <div class="hidden sm:block">
+                {% include 'composant_generale/operatPrepa/global_search_component.html' %}
+            </div>
 
             <!-- Profil utilisateur -->
             <div class="relative">
-                <button id="header-profile-dropdown" class="flex items-center space-x-3 transition-all duration-300 transform hover:scale-105 p-2 rounded-lg" style="hover:background-color: var(--preparation-light);">
-                    <div class="w-10 h-10 rounded-full border-2 flex items-center justify-center" style="border-color: var(--preparation-primary); hover:border-color: var(--preparation-dark);">
+                <button id="header-profile-dropdown" class="flex items-center space-x-2 sm:space-x-3 transition-all duration-300 transform hover:scale-105 p-1 sm:p-2 rounded-lg touch-manipulation" style="hover:background-color: var(--preparation-light);">
+                    <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 flex items-center justify-center" style="border-color: var(--preparation-primary); hover:border-color: var(--preparation-dark);">
                         {% if request.user.profil_operateur and request.user.profil_operateur.photo %}
                             <img src="{{ request.user.profil_operateur.photo.url }}" alt="Photo de profil" class="w-full h-full object-cover rounded-full">
                         {% else %}
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-8 h-8 text-gray-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6 sm:w-8 sm:h-8 text-gray-500">
                                 <path fill-rule="evenodd" d="M18.685 19.097A9.723 9.723 0 0021.75 12c0-5.385-4.365-9.75-9.75-9.75S2.25 6.615 2.25 12a9.723 9.723 0 003.065 7.097A9.716 9.716 0 0012 21.75a9.716 9.716 0 006.685-2.653zm-12.54-1.285A7.486 7.486 0 0112 15a7.486 7.486 0 015.855 2.812A8.224 8.224 0 0112 20.25a8.224 8.224 0 01-5.855-2.438zM15.75 9a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" clip-rule="evenodd" />
                             </svg>
                         {% endif %}
                     </div>
-                    <div class="text-left">
-                        <p class="text-sm font-semibold text-gray-700">
+                    <div class="text-left hidden sm:block">
+                        <p class="text-sm font-semibold text-gray-700 truncate max-w-32">
                             {% if request.user.profil_operateur.nom_complet %}
                                 {{ request.user.profil_operateur.nom_complet }}
                             {% elif request.user.get_full_name %}
@@ -41,17 +41,17 @@
                                 {{ request.user.username }}
                             {% endif %}
                         </p>
-                <p class="text-xs text-gray-500">
+                        <p class="text-xs text-gray-500 truncate max-w-32">
                             {% if request.user.profil_operateur %}
                                 {{ request.user.profil_operateur.mail }}
                             {% elif request.user.email %}
                                 {{ request.user.email }}
-                    {% else %}
-                        Email non défini
-                    {% endif %}
-                </p>
-            </div>
-                    <i class="fas fa-chevron-down text-gray-400 transition-transform duration-200" id="dropdown-arrow"></i>
+                            {% else %}
+                                Email non défini
+                            {% endif %}
+                        </p>
+                    </div>
+                    <i class="fas fa-chevron-down text-gray-400 transition-transform duration-200 text-sm" id="dropdown-arrow"></i>
                 </button>
 
                 <!-- Modal déplacé au niveau racine dans base.html -->
@@ -180,5 +180,66 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     console.log('✅ Initialisation terminée');
+    
+    // Gestion de la sidebar
+    const menuToggle = document.getElementById('menu-toggle');
+    const body = document.body;
+    const contentOverlay = document.getElementById('content-overlay');
+    
+    if (menuToggle) {
+        console.log('🔧 Bouton menu-toggle trouvé, ajout de la logique de sidebar');
+        
+        menuToggle.addEventListener('click', function() {
+            console.log('🖱️ Clic sur menu-toggle détecté');
+            
+            // Toggle des classes pour la sidebar
+            body.classList.toggle('sidebar-open');
+            body.classList.toggle('sidebar-collapsed');
+            
+            // Toggle de l'animation du hamburger
+            this.classList.toggle('hamburger-active');
+            
+            console.log('📊 État sidebar après toggle:', {
+                sidebarOpen: body.classList.contains('sidebar-open'),
+                sidebarCollapsed: body.classList.contains('sidebar-collapsed')
+            });
+        });
+    } else {
+        console.error('❌ Bouton menu-toggle non trouvé');
+    }
+    
+    // Gestion de l'overlay pour fermer la sidebar sur mobile
+    if (contentOverlay) {
+        contentOverlay.addEventListener('click', function() {
+            if (window.innerWidth <= 1023) {
+                body.classList.add('sidebar-collapsed');
+                body.classList.remove('sidebar-open');
+                if (menuToggle) {
+                    menuToggle.classList.remove('hamburger-active');
+                }
+            }
+        });
+    }
+    
+    // Gestion du bouton X (sidebar-toggle) pour fermer la sidebar
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    if (sidebarToggle) {
+        console.log('🔧 Bouton sidebar-toggle trouvé, ajout de la logique de fermeture');
+        
+        sidebarToggle.addEventListener('click', function() {
+            console.log('🖱️ Clic sur sidebar-toggle détecté');
+            
+            if (window.innerWidth <= 1023) {
+                body.classList.add('sidebar-collapsed');
+                body.classList.remove('sidebar-open');
+                if (menuToggle) {
+                    menuToggle.classList.remove('hamburger-active');
+                }
+                console.log('✅ Sidebar fermée via bouton X');
+            }
+        });
+    } else {
+        console.warn('⚠️ Bouton sidebar-toggle non trouvé');
+    }
 });
 </script> 
