@@ -18,6 +18,7 @@ urlpatterns = [
     path('commandes-en-preparation/', views.commandes_en_preparation, name='commandes_en_preparation'),
     path('commandes-emballees/', views.commandes_emballees, name='commandes_emballees'),
     path('commandes-preparees/', views.commandes_preparees, name='commandes_preparees'),
+    
 
 
    
@@ -105,6 +106,8 @@ urlpatterns = [
     # === NOUVELLES URLs : GESTION DES ARTICLES STOCK (SUPERPREPARATION) === 
     # Pages principales
     path('gestion-articles/', views.liste_articles, name='liste_articles'),
+    # Redirection pour compatibilité avec l'ancienne URL
+    path('articles/', views.liste_articles, name='liste_articles_redirect'),
     path('gestion-articles/detail/<int:id>/', views.detail_article, name='detail_article'),
     path('gestion-articles/modifier/<int:id>/', views.modifier_article, name='modifier_article'),
     path('gestion-articles/creer/', views.creer_article, name='creer_article'),
@@ -129,6 +132,7 @@ urlpatterns = [
     # Gestion des phases
     path('gestion-articles/changer-phase/<int:id>/', views.changer_phase, name='changer_phase'),
     path('gestion-articles/appliquer-liquidation/<int:id>/', views.appliquer_liquidation, name='appliquer_liquidation'),
+    path('gestion-articles/appliquer-liquidation-prix-db/<int:id>/', views.appliquer_liquidation_prix_db, name='appliquer_liquidation_prix_db'),
     path('gestion-articles/reinitialiser-prix/<int:id>/', views.reinitialiser_prix, name='reinitialiser_prix'),
     
     # URLs pour la gestion des couleurs et pointures

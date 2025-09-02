@@ -31,8 +31,9 @@
             {% csrf_token %}
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
-                    <label for="id_nom" class="block text-sm font-semibold mb-2" style="color: var(--preparation-primary);">Nom de l'article:</label>
-                    <input type="text" name="nom" id="id_nom" value="{{ form_data.nom|default:'' }}" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200" placeholder="Ex: Nike Air Max, Adidas Stan Smith..." required>
+                    <label for="id_nom" class="block text-sm font-semibold mb-2" style="color: var(--preparation-primary);">Nom de l'article: <span class="text-gray-500 text-xs">(optionnel)</span></label>
+                    <input type="text" name="nom" id="id_nom" value="{{ form_data.nom|default:'' }}" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200" placeholder="Ex: Nike Air Max, Adidas Stan Smith...">
+                    <small class="text-gray-600">Le nom de l'article est optionnel</small>
                 </div>
                 <div>
                     <label for="id_reference" class="block text-sm font-semibold mb-2" style="color: var(--preparation-primary);">Référence:</label>
@@ -94,18 +95,22 @@
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="text-lg font-semibold" style="color: var(--preparation-primary);">
                         <i class="fas fa-tags mr-2 text-[#4a90e2]"></i>
-                        Variantes de l'article
+                        Variantes de l'article <span class="text-gray-500 text-sm font-normal">(optionnel)</span>
                     </h3>
                     <button type="button" onclick="openVarianteModal()" class="btn-ajouter-variante text-white px-4 py-2 rounded-lg font-medium transition-all shadow-md hover:shadow-lg">
                         <i class="fas fa-plus mr-2"></i>Ajouter une variante
                     </button>
                 </div>
                 
+                <div class="mb-3">
+                    <p class="text-sm text-gray-600">Les variantes sont optionnelles. Vous pouvez créer l'article sans ajouter de variantes.</p>
+                </div>
+                
                 <div id="variantesContainer" class="space-y-3">
                     <!-- Les variantes ajoutées seront affichées ici -->
                     <div class="variantes-empty-state">
                         <i class="fas fa-tags"></i>
-                        <p class="text-sm text-gray-600 italic">Aucune variante ajoutée pour le moment. Cliquez sur "Ajouter une variante" pour en créer.</p>
+                        <p class="text-sm text-gray-600 italic">Aucune variante ajoutée pour le moment. Cliquez sur "Ajouter une variante" pour en créer, ou laissez vide si vous n'en avez pas besoin.</p>
                     </div>
                 </div>
             </div>
@@ -138,6 +143,31 @@
                     <div>
                         <label for="id_prix_upsell_4" class="block text-sm font-semibold mb-2" style="color: var(--preparation-primary);">Prix upsell 4 (DH):</label>
                         <input type="number" name="prix_upsell_4" id="id_prix_upsell_4" value="{{ form_data.prix_upsell_4|default:'' }}" step="0.01" min="0.01" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200" placeholder="Ex: 499.99">
+                    </div>
+                </div>
+                
+                <!-- Nouveaux champs pour prix_uspell_final et Prix_liquidation -->
+                <div class="mt-3 pt-2">
+                   
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="id_prix_uspell_final" class="block text-sm font-semibold mb-2" style="color: var(--preparation-primary);">Prix gros (DH):</label>
+                            <input type="number" name="prix_uspell_final" id="id_prix_uspell_final" 
+                                   value="{{ form_data.prix_uspell_final|default:'' }}" 
+                                   step="0.01" min="0" 
+                                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200" 
+                                   placeholder="Ex: 599.99">
+                            <small class="text-gray-600">Prix final pour les ventes upsell</small>
+                        </div>
+                        <div>
+                            <label for="id_Prix_liquidation" class="block text-sm font-semibold mb-2" style="color: var(--preparation-primary);">Prix de liquidation (DH):</label>
+                            <input type="number" name="Prix_liquidation" id="id_Prix_liquidation" 
+                                   value="{{ form_data.Prix_liquidation|default:'' }}" 
+                                   step="0.01" min="0" 
+                                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200" 
+                                   placeholder="Ex: 199.99">
+                            <small class="text-gray-600">Prix spécial pour la liquidation</small>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -227,6 +257,6 @@
 </div>
 
 <!-- Inclure le fichier JavaScript pour la gestion des variantes -->
-<script src="{% static 'js/Superpreparation/Creer/variantes_modal.js' %}"></script>
+<script src="{% static 'js/Superpreparation/Creer/variantes_modal.js' %}?v=2.1"></script>
 
 {% endblock %} 
