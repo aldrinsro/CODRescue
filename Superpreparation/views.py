@@ -362,32 +362,22 @@ def home_view(request):
 
 @superviseur_preparation_required
 def liste_prepa(request):
-
     """Liste des commandes à préparer pour les opérateurs de préparation"""
-
     from commande.models import Operation
-
-    
-
     try:
         operateur_profile = request.user.profil_operateur
-        
         # Autoriser superviseur ou équipe préparation
         if not operateur_profile.is_preparation:
             messages.error(request, "Accès non autorisé. Réservé à l'équipe préparation.")
             return redirect('Superpreparation:home')
-            
     except Operateur.DoesNotExist:
         messages.error(request, "Votre profil opérateur n'existe pas.")
         return redirect('login')
-
     # Récupérer les commandes dont l'état ACTUEL est "À imprimer" ou "En préparation" (toutes les commandes en préparation)
     # On cherche les commandes qui ont un état "À imprimer" ou "En préparation" actif (sans date_fin)
     from django.db.models import Q, Max
-    
     # Définir le type de filtre en premier
     filter_type = request.GET.get('filter', 'all')
-    
     if filter_type == 'livrees_partiellement':
         # Filtrer les commandes qui ont été livrées partiellement et sont maintenant en préparation
         commandes_affectees = []
@@ -395,17 +385,14 @@ def liste_prepa(request):
             Q(etats__enum_etat__libelle='À imprimer') | Q(etats__enum_etat__libelle='En préparation'),
             etats__date_fin__isnull=True
         ).select_related('client', 'ville', 'ville__region').prefetch_related('paniers__article', 'etats').distinct()
-        
         for commande in commandes_base:
             etats_commande = commande.etats.all().order_by('date_debut')
             etat_prepa_actuel = None
-            
             # Trouver l'état actuel de préparation
             for etat in etats_commande:
                 if etat.enum_etat.libelle in ['À imprimer', 'En préparation'] and not etat.date_fin:
                     etat_prepa_actuel = etat
                     break
-            
             if etat_prepa_actuel:
                 # Vérifier si la commande a un historique de livraison partielle
                 has_partially_delivered_history = False
@@ -415,72 +402,34 @@ def liste_prepa(request):
                         etat.date_fin < etat_prepa_actuel.date_debut):
                         has_partially_delivered_history = True
                         break
-                
                 if has_partially_delivered_history:
                     commandes_affectees.append(commande)
-
     elif filter_type == 'renvoyees_logistique':
-
         # Pour les commandes renvoyées par la logistique, ne pas exclure les états problématiques
-
         # car on veut inclure les commandes avec opération de renvoi même si elles ont des états ultérieurs
-
         commandes_affectees = Commande.objects.filter(
-
-            Q(etats__enum_etat__libelle='À imprimer') | Q(etats__enum_etat__libelle='En préparation'),
-
+            Q(etats__enum_etat__libelle='En préparation'),
             etats__date_fin__isnull=True  # État actif (en cours)
-
         ).select_related('client', 'ville', 'ville__region').prefetch_related('paniers__article', 'etats').distinct()
-
     elif filter_type == 'retournees':
-
         # Obsolète: rediriger vers la page dédiée
-
         return redirect('Superpreparation:commandes_retournees')
-
-
-
     else:  # filter_type == 'all'
-
         # Pour "Toutes les commandes", afficher TOUTES les commandes en préparation (quel que soit leur état)
-
         commandes_affectees = []
-
         commandes_base = Commande.objects.filter(
-
-            Q(etats__enum_etat__libelle='À imprimer') | 
-
             Q(etats__enum_etat__libelle='En préparation') |
-
             Q(etats__enum_etat__libelle='Collectée') |
-
             Q(etats__enum_etat__libelle='Emballée') |
-
             Q(etats__enum_etat__libelle='Préparée'),
-
             etats__date_fin__isnull=True
-
         ).select_related('client', 'ville', 'ville__region').prefetch_related('paniers__article', 'etats').distinct()
-
-        
-
         for commande in commandes_base:
-
             etats_commande = commande.etats.all().order_by('date_debut')
-
             etat_prepa_actuel = None
-
-            
-
-            # Trouver l'état actuel de préparation (peu importe l'état)
-
             for etat in etats_commande:
-
-                if etat.enum_etat.libelle in ['À imprimer', 'En préparation', 'Collectée', 'Emballée', 'Préparée'] and not etat.date_fin:
-
+                if etat.enum_etat.libelle in ['En préparation', 'Collectée', 'Emballée', 'Préparée'] and not etat.date_fin:
                     etat_prepa_actuel = etat
-
                     break
             if etat_prepa_actuel:
                 # Initialiser la variable
@@ -593,7 +542,6 @@ def liste_prepa(request):
         has_commandes = commandes_affectees.exists()
     if not has_commandes:
         commandes_affectees = Commande.objects.filter(
-            Q(etats__enum_etat__libelle='À imprimer') | 
             Q(etats__enum_etat__libelle='En préparation') |
             Q(etats__enum_etat__libelle='Collectée') |
             Q(etats__enum_etat__libelle='Emballée') |
@@ -620,530 +568,198 @@ def liste_prepa(request):
                             etat_precedent = etat
                             break
                 commande.etat_precedent = etat_precedent
-
-                
-
-                # Trouver l'état de confirmation : priorité à l'opérateur de CONFIRMATION
-
                 etat_conf_op = commande.etats.filter(
-
                     enum_etat__libelle='Confirmée',
-
                     operateur__type_operateur='CONFIRMATION'
-
                 ).order_by('-date_debut').first()
-
-
-
                 if etat_conf_op:
-
                     commande.etat_confirmation = etat_conf_op
-
                 else:
-
                     etat_conf_any = commande.etats.filter(enum_etat__libelle='Confirmée').order_by('date_debut').first()
-
                     commande.etat_confirmation = etat_conf_any
-
-                
-
-                # Ajouter l'état actuel pour l'affichage des étapes de préparation
-
                 commande.etat_actuel_preparation = etat_actuel
-
-    
-
-    # Suppression du filtre 'nouvelles' car redondant avec l'affectation automatique
-
-    # Suppression du filtre 'renvoyees_preparation' car non nécessaire
-
-    
-
-    # Recherche
-
     search_query = request.GET.get('search', '')
-
     if search_query:
-
         if isinstance(commandes_affectees, list):
-
             # Si c'est une liste (après filtrage)
-
             commandes_affectees = [cmd for cmd in commandes_affectees if 
-
                 search_query.lower() in str(cmd.id_yz).lower() or
-
                 search_query.lower() in (cmd.num_cmd or '').lower() or
-
                 search_query.lower() in cmd.client.nom.lower() or
-
                 search_query.lower() in cmd.client.prenom.lower() or
-
                 search_query.lower() in (cmd.client.numero_tel or '').lower()
-
             ]
-
         else:
-
-            # Si c'est un QuerySet
-
             commandes_affectees = commandes_affectees.filter(
-
                 Q(id_yz__icontains=search_query) |
-
                 Q(num_cmd__icontains=search_query) |
-
                 Q(client__nom__icontains=search_query) |
-
                 Q(client__prenom__icontains=search_query) |
-
                 Q(client__numero_tel__icontains=search_query)
-
             ).distinct()
-
-    
-
-    # Tri par date d'affectation (plus récentes en premier)
-
     if isinstance(commandes_affectees, list):
-
         commandes_affectees.sort(key=lambda x: x.etats.filter(date_fin__isnull=True).first().date_debut if x.etats.filter(date_fin__isnull=True).first() else timezone.now(), reverse=True)
-
     else:
-
         commandes_affectees = commandes_affectees.order_by('-etats__date_debut')
-
-
-
-    # Générer les codes-barres pour chaque commande et s'assurer que etat_actuel_preparation est défini
-
     code128 = barcode.get_barcode_class('code128')
-
     for commande in commandes_affectees:
-
-        # S'assurer que etat_actuel_preparation est défini
-
         if not hasattr(commande, 'etat_actuel_preparation') or commande.etat_actuel_preparation is None:
-
             commande.etat_actuel_preparation = commande.etat_actuel
-
-        
-
         if commande.id_yz:
-
             barcode_instance = code128(str(commande.id_yz), writer=ImageWriter())
-
             buffer = BytesIO()
-
             barcode_instance.write(buffer, options={'write_text': False, 'module_height': 10.0})
-
             barcode_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
-
             commande.barcode_base64 = barcode_base64
-
         else:
-
             commande.barcode_base64 = None
-
-    
-
-    # Statistiques
-
     if isinstance(commandes_affectees, list):
-
         total_affectees = len(commandes_affectees)
-
         valeur_totale = sum(cmd.total_cmd or 0 for cmd in commandes_affectees)
-
-        
-
-        # Commandes urgentes (affectées depuis plus de 1 jour)
-
         date_limite_urgence = timezone.now() - timedelta(days=1)
-
         commandes_urgentes = sum(1 for cmd in commandes_affectees if 
-
             cmd.etats.filter(date_debut__lt=date_limite_urgence).exists()
-
         )
-
     else:
-
         total_affectees = commandes_affectees.count()
-
         valeur_totale = commandes_affectees.aggregate(total=Sum('total_cmd'))['total'] or 0
-
-        
-
-        # Commandes urgentes (affectées depuis plus de 1 jour)
-
         date_limite_urgence = timezone.now() - timedelta(days=1)
-
         commandes_urgentes = commandes_affectees.filter(
-
             etats__date_debut__lt=date_limite_urgence
-
         ).count()
-
-    
-
-    # Statistiques par type pour les onglets
-
     stats_par_type = {
-
         'renvoyees_logistique': 0,
-
         'livrees_partiellement': 0,
-
         'retournees': 0,
-
         'affectees_moi': 0,
-
     }
-
-    
-
-    # Recalculer les statistiques pour tous les types
-
-    # D'abord, récupérer toutes les commandes en préparation (sans filtre d'opérateur)
-
     toutes_commandes = Commande.objects.filter(
-
-        Q(etats__enum_etat__libelle='À imprimer') | Q(etats__enum_etat__libelle='En préparation'),
-
+        Q(etats__enum_etat__libelle='En préparation'),
         etats__date_fin__isnull=True  # État actif (en cours)
-
     ).select_related('client', 'ville', 'ville__region').prefetch_related('paniers__article', 'etats').distinct()
-
-    
-
     for cmd in toutes_commandes:
-
-        # Vérifier si c'est une commande renvoyée par la logistique
-
         operation_renvoi = Operation.objects.filter(
-
             commande=cmd,
-
             type_operation='RENVOI_PREPARATION'
-
         ).first()
-
-        
-
         if operation_renvoi:
-
             stats_par_type['renvoyees_logistique'] += 1
-
             continue
-
-        
-
-        # Vérifier si c'est une commande de renvoi créée lors d'une livraison partielle
-
         if cmd.num_cmd and cmd.num_cmd.startswith('RENVOI-'):
-
-            # Chercher la commande originale
-
             num_cmd_original = cmd.num_cmd.replace('RENVOI-', '')
-
             commande_originale = Commande.objects.filter(
-
                 num_cmd=num_cmd_original,
-
                 etats__enum_etat__libelle='Livrée Partiellement'
-
             ).first()
-
-            
-
             if commande_originale:
-
                 stats_par_type['renvoyees_logistique'] += 1
-
                 continue
-
-        
-
-        # Vérifier l'état précédent
-
         etats_commande = cmd.etats.all().order_by('date_debut')
-
         etat_actuel = None
 
-        
-
-        # Trouver l'état actuel
-
         for etat in etats_commande:
-
             if etat.enum_etat.libelle in ['À imprimer', 'En préparation'] and not etat.date_fin:
-
                 etat_actuel = etat
-
                 break
-
-        
-
         if etat_actuel:
-
-            # Vérifier s'il y a des états ultérieurs problématiques
-
             a_etats_ultérieurs_problematiques = False
-
             for etat in etats_commande:
-
                 if (etat.date_debut > etat_actuel.date_debut and 
-
                     etat.enum_etat.libelle in ['Livrée', 'Livrée Partiellement', 'Préparée', 'En cours de livraison']):
-
                     a_etats_ultérieurs_problematiques = True
-
                     break
-
-            
-
-            # Si il y a des états ultérieurs problématiques, ignorer cette commande
-
             if a_etats_ultérieurs_problematiques:
-
                 continue
-
-            
-
-            # Trouver l'état précédent
-
             for etat in reversed(etats_commande):
-
                 if etat.date_fin and etat.date_fin < etat_actuel.date_debut:
-
                     if etat.enum_etat.libelle == 'En cours de livraison':
-
                         stats_par_type['renvoyees_logistique'] += 1
-
                         break
-
                     elif etat.enum_etat.libelle == 'Livrée Partiellement':
-
                         stats_par_type['livrees_partiellement'] += 1
-
                         break
-
-            
-
-    # Recalculer le compteur des livraisons partielles en utilisant la même logique que la vue séparée
-
-    # Chercher les commandes de renvoi créées lors de livraisons partielles
-
     commandes_renvoi_livraison_partielle = Commande.objects.filter(
-
         num_cmd__startswith='RENVOI-',
-
         etats__enum_etat__libelle='En préparation',
-
         etats__date_fin__isnull=True
-
     ).distinct()
-
-    
-
     livrees_partiellement_count = 0
-
     for commande_renvoi in commandes_renvoi_livraison_partielle:
-
         # Extraire le numéro de commande original
-
         num_cmd_original = commande_renvoi.num_cmd.replace('RENVOI-', '')
-
-        
-
         # Vérifier que la commande originale a été livrée partiellement
-
         commande_originale = Commande.objects.filter(
-
             num_cmd=num_cmd_original,
-
             etats__enum_etat__libelle='Livrée Partiellement'
-
         ).first()
-
-        
-
         if commande_originale:
-
             livrees_partiellement_count += 1
-
-    
-
-    # Mettre à jour le compteur avec la valeur correcte
-
     stats_par_type['livrees_partiellement'] = livrees_partiellement_count
-
-    
-
-
-
-    
-
-
-
-
-
-    # Compter les commandes affectées par le superviseur connecté
-
     try:
-
         superviseur_nom = operateur_profile.nom_complet
-
     except Exception:
-
         superviseur_nom = ''
-
     if superviseur_nom:
-
         stats_par_type['affectees_moi'] = Commande.objects.filter(
-
             etats__enum_etat__libelle='En préparation',
-
             etats__commentaire__icontains=f"Affectée à la préparation par {superviseur_nom}"
-
         ).distinct().count()
-
-    
-
-    # Pour l'onglet "Toutes les commandes", le total doit être la somme des 2 autres onglets
-
     if filter_type == 'all':
-
         total_affectees = (
-
             stats_par_type['affectees_moi'] +
-
             stats_par_type['renvoyees_logistique'] +
-
             stats_par_type['livrees_partiellement']
-
         )
-
-    
-
-    # ===== Pagination (par onglet) =====
-
     items_per_page = request.GET.get('items_per_page', 10)
-
     try:
-
         items_per_page = int(items_per_page)
-
         if items_per_page <= 0:
-
             items_per_page = 10
-
     except (ValueError, TypeError):
-
         items_per_page = 10
-
-
-
     from django.core.paginator import Paginator
-
     paginator = Paginator(commandes_affectees if isinstance(commandes_affectees, list) or hasattr(commandes_affectees, '__iter__') else list(commandes_affectees), items_per_page)
-
     page_number = request.GET.get('page', 1)
-
     commandes_page = paginator.get_page(page_number)
-
-
-
     context = {
-
         'page_title': 'Suivi Général - Préparation',
-
         'page_subtitle': f'Vue d\'ensemble des commandes en file de préparation ({total_affectees})',
-
         'commandes_affectees': commandes_page,
-
         'search_query': search_query,
-
         'filter_type': filter_type,
-
         'items_per_page': items_per_page,
-
         'stats': {
-
             'total_affectees': total_affectees,
-
             'valeur_totale': valeur_totale,
-
             'commandes_urgentes': commandes_urgentes,
-
         },
-
         'stats_par_type': stats_par_type,
-
         'operateur_profile': operateur_profile,
-
         'api_produits_url_base': reverse('Superpreparation:api_commande_produits', args=[99999999]),
-
     }
-
     return render(request, 'Superpreparation/liste_prepa.html', context)
 
 @superviseur_preparation_required
 def commandes_preparees(request):
-
     """Liste des commandes préparées (état final) pour les superviseurs"""
-
     try:
-
         operateur_profile = request.user.profil_operateur
-
-        
-
-        # Autoriser superviseur ou équipe préparation
-
         if not (operateur_profile.is_preparation or operateur_profile.is_superviseur_preparation):
-
             messages.error(request, "Accès non autorisé. Réservé à l'équipe préparation.")
-
             return redirect('Superpreparation:home')
-
-            
-
     except Operateur.DoesNotExist:
-
         messages.error(request, "Votre profil opérateur n'existe pas.")
-
         return redirect('login')
-
-
-
-    # Récupérer les commandes dans l'état "Préparée" (état final)
-
     commandes_preparees = Commande.objects.filter(
-
         etats__enum_etat__libelle='Préparée',
-
         etats__date_fin__isnull=True  # État actif
-
     ).select_related('client', 'ville', 'ville__region').prefetch_related('paniers__article', 'etats').distinct()
-
-
-
-    # Recherche
-
     search_query = request.GET.get('search', '')
-
     if search_query:
-
         commandes_preparees = commandes_preparees.filter(
-
             Q(id_yz__icontains=search_query) |
-
             Q(num_cmd__icontains=search_query) |
-
             Q(client__nom__icontains=search_query) |
-
             Q(client__prenom__icontains=search_query) |
             Q(client__numero_tel__icontains=search_query)
         ).distinct()
@@ -1192,101 +808,43 @@ def commandes_en_preparation(request):
     """Page de suivi (lecture seule) des commandes en préparation"""
     try:
         operateur_profile = request.user.profil_operateur
-
-        
-
-        # Autoriser superviseur ou équipe préparation
-
         if not (operateur_profile.is_preparation or operateur_profile.is_superviseur_preparation):
-
             messages.error(request, "Accès non autorisé. Réservé à l'équipe préparation.")
-
             return redirect('Superpreparation:home')
-
-            
-
     except Operateur.DoesNotExist:
-
         messages.error(request, "Votre profil opérateur n'existe pas.")
-
         return redirect('Superpreparation:home')
-
-
-
-    # Récupérer TOUTES les commandes dont l'état ACTUEL est "En préparation" (pas seulement celles de l'opérateur connecté)
-
     commandes_en_preparation = Commande.objects.filter(
-
         etats__enum_etat__libelle='En préparation',
-
         etats__date_fin__isnull=True  # État actif (en cours)
-
     ).select_related('client', 'ville', 'ville__region').prefetch_related('paniers__article', 'etats__operateur').distinct()
-
-
-
-    # Recherche
-
     search_query = request.GET.get('search', '')
-
     if search_query:
-
         commandes_en_preparation = commandes_en_preparation.filter(
-
             Q(id_yz__icontains=search_query) |
-
             Q(num_cmd__icontains=search_query) |
-
             Q(client__nom__icontains=search_query) |
-
             Q(client__prenom__icontains=search_query) |
-
             Q(client__numero_tel__icontains=search_query)
-
         ).distinct()
-
-
-
-    # Statistiques
-
     stats = {
-
         'total_commandes': commandes_en_preparation.count(),
-
         'commandes_urgentes': commandes_en_preparation.filter(
-
             etats__date_debut__lt=timezone.now() - timedelta(days=1)
-
         ).count(),
-
         'valeur_totale': commandes_en_preparation.aggregate(total=Sum('total_cmd'))['total'] or 0
-
     }
-
-
-
     context = {
-
         'page_title': 'Suivi - Commandes en Préparation',
-
         'page_subtitle': f'Suivi en temps réel de {commandes_en_preparation.count()} commande(s) en cours de préparation',
-
         'profile': operateur_profile,
-
         'commandes': commandes_en_preparation,
-
         'search_query': search_query,
-
         'stats': stats,
-
         'active_tab': 'en_preparation',
-
         'is_readonly': True,
-
         'is_tracking_page': True
-
     }
-
     return render(request, 'Superpreparation/commandes_en_preparation.html', context)
 
 @superviseur_preparation_required
@@ -1349,151 +907,56 @@ def commandes_emballees(request):
 
 @superviseur_preparation_required
 def commandes_livrees_partiellement(request):
-
     """Page de suivi (lecture seule) des commandes livrées partiellement"""
-
     try:
-
-        operateur_profile = request.user.profil_operateur
-
-        
-
-        # Autoriser superviseur ou équipe préparation
-
+        operateur_profile = request.user.profil_operateur  # Autoriser superviseur ou équipe préparation
         if not operateur_profile.is_preparation:
-
             messages.error(request, "Accès non autorisé. Réservé à l'équipe préparation.")
-
             return redirect('Superpreparation:home')
-
-            
-
     except Operateur.DoesNotExist:
-
         messages.error(request, "Votre profil opérateur n'existe pas.")
-
         return redirect('login')
-
-
-
-    # Nouvel objectif: récupérer les commandes livrées partiellement
-
-    # qui ont été préparées (envoyées à la logistique) par cet opérateur
-
-    # L'opérateur de préparation crée l'état 'En préparation', pas 'Préparée'
-
     commandes_livrees_partiellement_qs = (
-
         Commande.objects
-
         .filter(etats__enum_etat__libelle='Livrée Partiellement')
-
         .filter(etats__enum_etat__libelle='En préparation', etats__operateur=operateur_profile)
-
         .select_related('client', 'ville', 'ville__region')
-
         .prefetch_related('paniers__article', 'etats')
-
         .distinct()
-
     )
-
-    
-
-
-
-    
-
-    # Pour chaque commande originale, essayer de retrouver une éventuelle commande de renvoi associée
-
     commandes_livrees_partiellement = []
-
     for commande_originale in commandes_livrees_partiellement_qs:
-
         commande_renvoi = Commande.objects.filter(
-
             num_cmd__startswith=f"RENVOI-{commande_originale.num_cmd}",
-
             client=commande_originale.client
-
         ).first()
-
         if commande_renvoi:
-
             commande_originale.commande_renvoi = commande_renvoi
-
         commandes_livrees_partiellement.append(commande_originale)
-
-
-
-    # Les commandes sont déjà filtrées et pertinentes
-
     commandes_filtrees = commandes_livrees_partiellement
-
-
-
-    # Pour chaque commande, récupérer les détails de la livraison partielle
-
     for commande in commandes_livrees_partiellement:
-
-        # Trouver l'état "Livrée Partiellement" le plus récent
-
         etat_livraison_partielle = commande.etats.filter(
-
             enum_etat__libelle='Livrée Partiellement'
-
         ).order_by('-date_debut').first()
-
-        
-
         if etat_livraison_partielle:
-
             commande.date_livraison_partielle = etat_livraison_partielle.date_debut
-
             commande.commentaire_livraison_partielle = etat_livraison_partielle.commentaire
-
             commande.operateur_livraison = etat_livraison_partielle.operateur
-
-            
-
-            # Le statut est toujours "Renvoyée en préparation" car nous ne récupérons que les commandes avec renvoi
-
             commande.statut_actuel = "Renvoyée en préparation"
-
-            
-
-            # Ajouter les informations de la commande de renvoi
-
             if hasattr(commande, 'commande_renvoi'):
-
                 commande.commande_renvoi_id = commande.commande_renvoi.id
-
                 commande.commande_renvoi_num = commande.commande_renvoi.num_cmd
-
                 commande.commande_renvoi_id_yz = commande.commande_renvoi.id_yz
-
-
-
     context = {
-
         'page_title': 'Suivi - Commandes Livrées Partiellement',
-
         'page_subtitle': f'Suivi en temps réel de {len(commandes_livrees_partiellement)} commande(s) livrées partiellement',
-
         'profile': operateur_profile,
-
         'commandes_livrees_partiellement': commandes_livrees_partiellement,
-
         'commandes_count': len(commandes_livrees_partiellement),
-
         'active_tab': 'livrees_partiellement',
-
         'is_readonly': True,
-
         'is_tracking_page': True
-
     }
-
     return render(request, 'Superpreparation/commandes_livrees_partiellement.html', context)
 
 @superviseur_preparation_required
@@ -1544,53 +1007,23 @@ def commandes_retournees(request):
 
 @superviseur_preparation_required
 def traiter_commande_retournee_api(request, commande_id):
-
     """API pour traiter une commande retournée et gérer la réincrémentation du stock"""
-
     if request.method != 'POST':
-
         return JsonResponse({'success': False, 'message': 'Méthode non autorisée'})
-
-    
-
     try:
-
         operateur_profile = request.user.profil_operateur
-
         if not operateur_profile.is_preparation:
-
             return JsonResponse({'success': False, 'message': "Accès réservé à l'équipe préparation"})
-
-        
-
-        # Récupérer la commande
-
         commande = get_object_or_404(Commande, id=commande_id)
-
-        
-
-        # Vérifier que la commande est bien retournée et préparée par cet opérateur
-
         if not commande.etats.filter(
-
             enum_etat__libelle='Retournée',
-
             date_fin__isnull=True
-
         ).exists():
-
             return JsonResponse({'success': False, 'message': 'Commande non retournée'})
-
-        
-
         if not commande.etats.filter(
-
             enum_etat__libelle='En préparation',
-
             operateur=operateur_profile
-
         ).exists():
-
             return JsonResponse({'success': False, 'message': 'Commande non préparée par vous'})
 
         
@@ -7750,17 +7183,6 @@ def creer_article(request):
                         # Ignorer les valeurs non numériques
                         pass
             
-            # Gérer le prix upsell final
-            prix_upsell_final_str = request.POST.get('prix_uspell_final', '').strip().replace(',', '.')
-            if prix_upsell_final_str:
-                try:
-                    prix_upsell_final = float(prix_upsell_final_str)
-                    if prix_upsell_final > 0:
-                        article.prix_uspell_final = prix_upsell_final
-                except ValueError:
-                    # Ignorer les valeurs non numériques
-                    pass
-            
             # Gérer le prix de liquidation
             prix_liquidation_str = request.POST.get('Prix_liquidation', '').strip().replace(',', '.')
             if prix_liquidation_str:
@@ -8001,23 +7423,7 @@ def modifier_article(request, id):
                             setattr(article, f'prix_upsell_{i}', prix_upsell)
                     except ValueError:
                         # Ignorer les valeurs non numériques
-                        pass
-            
-            # Gérer le prix upsell final
-            prix_upsell_final_str = request.POST.get('prix_uspell_final', '').strip().replace(',', '.')
-            if prix_upsell_final_str:
-                try:
-                    prix_upsell_final = float(prix_upsell_final_str)
-                    if prix_upsell_final > 0:
-                        article.prix_uspell_final = prix_upsell_final
-                    else:
-                        article.prix_uspell_final = None
-                except ValueError:
-                    # Ignorer les valeurs non numériques
-                    article.prix_uspell_final = None
-            else:
-                article.prix_uspell_final = None
-            
+                        pass      
             # Gérer le prix de liquidation
             prix_liquidation_str = request.POST.get('Prix_liquidation', '').strip().replace(',', '.')
             if prix_liquidation_str:
@@ -8724,7 +8130,7 @@ def changer_phase(request, id):
     referer = request.META.get('HTTP_REFERER')
     if referer:
         return redirect(referer)
-    return redirect('article:detail', id=article.id)
+    return redirect('Superpreparation:detail_article', id=article.id)
 
 @superviseur_preparation_required
 @require_POST
