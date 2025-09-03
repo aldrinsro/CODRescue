@@ -4,94 +4,7 @@
 {% block title %}{{ page_title }} - YZ-CMD{% endblock %}
 
 {% block extra_css %}
-<style>
-    @keyframes slideInUp {
-        from {
-            opacity: 0;
-            transform: translateY(30px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-    
-    .animate-slideInUp {
-        animation: slideInUp 0.6s ease-out forwards;
-        opacity: 0;
-    }
 
-    .status-badge {
-        display: inline-flex;
-        align-items: center;
-        padding: 0.375rem 0.75rem;
-        border-radius: 9999px;
-        font-size: 0.875rem;
-        font-weight: 500;
-        text-transform: capitalize;
-    }
-
-    /* Toast simple */
-    .toast-notification {
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: #22c55e;
-        color: white;
-        padding: 12px 20px;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        z-index: 1000;
-        animation: slideInRight 0.3s ease-out;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-weight: 500;
-        min-width: 300px;
-    }
-
-    @keyframes slideInRight {
-        from {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-        to {
-            transform: translateX(0);
-            opacity: 1;
-        }
-    }
-
-    @keyframes slideOutRight {
-        from {
-            transform: translateX(0);
-            opacity: 1;
-        }
-        to {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-    }
-    .tab-active {
-        border-color: #6d4b3b;
-        background-color: #ede0d3;
-        color: #4B352A;
-        font-weight: 600;
-    }
-    .tab-inactive {
-        border-color: transparent;
-        color: #6B7280;
-    }
-    .tab-badge {
-        background-color: #4B352A;
-        color: white;
-    }
-    .row-retour {
-        background-color: #FFFBEB !important; /* Jaune très clair */
-    }
-    .row-retour:hover {
-        background-color: #FEF3C7 !important; /* Jaune un peu plus foncé au survol */
-    }
-</style>
 {% endblock %}
 
 {% block content %}
@@ -376,8 +289,6 @@
     {% endif %}
     {% endif %}
 </div>
-
-
 
 <!-- Modal de détail du panier -->
 <div id="cartModal" class="fixed inset-0 flex items-center justify-center z-50 hidden" style="background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(8px);">

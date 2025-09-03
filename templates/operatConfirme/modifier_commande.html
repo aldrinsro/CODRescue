@@ -5,292 +5,7 @@
 {% block title %}Modifier Commande {{ commande.id_yz }} - YZ-CMD{% endblock %}
 
 {% block extra_css %}
-<style>
-    @keyframes slideInUp {
-        from {
-            opacity: 0;
-            transform: translateY(30px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-    
-    .animate-slideInUp {
-        animation: slideInUp 0.6s ease-out forwards;
-        opacity: 0;
-    }
 
-    .verification-item {
-        transition: all 0.3s ease;
-    }
-    
-    .verification-item.verified {
-        background-color: #dcfce7 !important;
-        border-color: #16a34a !important;
-    }
-    
-    .check-icon {
-        display: none;
-        color: #16a34a;
-    }
-    
-    .verification-item.verified .check-icon {
-        display: inline;
-    }
-    
-    .btn-verification {
-        background: linear-gradient(to right, #16a34a, #15803d);
-        color: white;
-        transition: all 0.3s ease;
-    }
-    
-    .btn-verification:hover {
-        transform: scale(1.05);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    }
-    
-    .btn-operation {
-        background-color: #8B5A2B !important;
-        color: white !important;
-        transition: all 0.3s ease;
-    }
-    
-    .btn-operation:hover {
-        background-color: #6d4b3b !important;
-        transform: scale(1.05);
-    }
-    
-    .btn-confirm {
-        background: linear-gradient(to right, #4B352A, #6d4b3b);
-        color: white;
-        transition: all 0.3s ease;
-    }
-    
-    .btn-confirm:hover {
-        transform: scale(1.05);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    }
-
-    /* Styles pour la modale d'articles - amélioration de l'affichage */
-    #articleModal {
-        z-index: 9999;
-    }
-    
-    /* Styles pour la barre de navigation personnalisée */
-    #articlesScrollContainer {
-        scrollbar-width: none; /* Firefox */
-        -ms-overflow-style: none; /* IE/Edge */
-    }
-    
-    #articlesScrollContainer::-webkit-scrollbar {
-        display: none; /* Chrome/Safari/Opera */
-    }
-    
-    #customScrollbar {
-        opacity: 0.3;
-        transition: opacity 0.3s ease;
-        pointer-events: auto;
-    }
-    
-    #articlesScrollContainer:hover ~ #customScrollbar,
-    #customScrollbar:hover {
-        opacity: 1;
-    }
-    
-    #scrollThumb {
-        transition: all 0.2s ease;
-        position: absolute;
-        cursor: grab;
-    }
-    
-    #scrollThumb:active {
-        cursor: grabbing;
-    }
-    
-    #scrollThumb:hover {
-        background-color: #6b7280;
-        transform: scaleX(1.2);
-    }
-    
-    /* Animation pour les boutons de navigation */
-    #scrollUp, #scrollDown {
-        transition: all 0.2s ease;
-        cursor: pointer;
-    }
-    
-    #scrollUp:hover, #scrollDown:hover {
-        background-color: #e5e7eb;
-        transform: scale(1.1);
-    }
-    
-    /* Amélioration de la visibilité */
-    #customScrollbar {
-        background-color: #f3f4f6;
-        border-left: 1px solid #e5e7eb;
-    }
-    
-    #articleModal .bg-white.rounded-xl {
-        max-height: 90vh;
-        overflow-y: auto;
-    }
-    
-    /* Animation pour la modale */
-    #articleModal.flex {
-        animation: fadeIn 0.3s ease-out;
-    }
-    
-    @keyframes fadeIn {
-        from {
-            opacity: 0;
-            transform: scale(0.95);
-        }
-        to {
-            opacity: 1;
-            transform: scale(1);
-        }
-    }
-    
-    /* Amélioration de l'affichage des badges */
-    .article-card .gap-2 span {
-        white-space: nowrap;
-    }
-    
-    /* Style pour les informations d'article dans la modale */
-    #article-info {
-        transition: all 0.3s ease;
-    }
-    
-    /* Amélioration du responsiveness */
-    @media (max-width: 768px) {
-        #articleModal .max-w-2xl {
-            margin: 1rem;
-            max-width: calc(100% - 2rem);
-        }
-        
-        #article-info .grid-cols-2 {
-            grid-template-columns: 1fr;
-        }
-        
-        /* Ajustements pour les modals sur mobile */
-        #articleModal, #variantModal {
-            padding: 0.5rem;
-        }
-        
-        #articleModal .bg-white, #variantModal .bg-white {
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-        
-        /* Réduction de la taille des badges sur mobile */
-        .badge-legend span {
-            font-size: 0.75rem;
-            padding: 0.25rem 0.5rem;
-        }
-        
-        /* Ajustement des tableaux sur mobile */
-        #articlesScrollContainer {
-            max-height: 50vh;
-        }
-        
-        /* Boutons plus compacts sur mobile */
-        .btn-confirm, .btn-cancel {
-            padding: 0.5rem 1rem;
-            font-size: 0.875rem;
-        }
-    }
-    
-    /* Ajustements pour les très petits écrans */
-    @media (max-width: 480px) {
-        #articleModal, #variantModal {
-            padding: 0.25rem;
-        }
-        
-        #articleModal .bg-white, #variantModal .bg-white {
-            padding: 0.75rem;
-        }
-        
-        .badge-legend {
-            grid-template-columns: 1fr;
-            gap: 0.25rem;
-        }
-        
-        .badge-legend span {
-            font-size: 0.7rem;
-            padding: 0.2rem 0.4rem;
-        }
-    }
-    
-    /* Styles pour la liste déroulante d'articles avec badges */
-    #articleSelect option {
-        padding: 8px 12px;
-        border-radius: 4px;
-        margin: 2px 0;
-    }
-    
-    /* Animations pour les badges de légende */
-    .filter-badge {
-        transition: all 0.3s ease;
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .filter-badge:hover {
-        transform: scale(1.05);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-    }
-    
-    .filter-badge.active {
-        box-shadow: 0 0 0 2px #3b82f6;
-        transform: scale(1.1);
-        font-weight: bold;
-    }
-    
-    .filter-badge.active::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: linear-gradient(45deg, rgba(255,255,255,0.2), transparent);
-        pointer-events: none;
-    }
-    
-    /* Animation de comptage */
-    .article-count {
-        display: inline-block;
-        background: #3b82f6;
-        color: white;
-        font-size: 10px;
-        padding: 2px 6px;
-        border-radius: 10px;
-        margin-left: 4px;
-        font-weight: bold;
-        min-width: 20px;
-        text-align: center;
-    }
-    
-    /* Animations pour les notifications */
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(-20px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-    
-    @keyframes fadeOut {
-        from { opacity: 1; transform: translateY(0); }
-        to { opacity: 0; transform: translateY(-20px); }
-    }
-    
-    .animate-fade-in {
-        animation: fadeIn 0.3s ease-in-out;
-    }
-    
-    .animate-fade-out {
-        animation: fadeOut 0.3s ease-in-out;
-    }
-</style>
 {% endblock %}
 
 {% block content %}
@@ -316,8 +31,6 @@
             </div>
         </div>
     </div>
-
-
 
     <!-- Formulaire de modification -->
     <form method="post" id="modification-form">
@@ -355,9 +68,7 @@
                                    class="w-full p-3 bg-gray-100 border rounded-lg text-gray-600">
                         </div>
                     </div>
-                    
-                   
-                    
+
                     <!-- Bouton de validation pour cette section -->
                     <!-- Bouton supprimé - Section informations-commande -->
                     <i class="fas fa-check-circle check-icon text-2xl float-right"></i>
@@ -468,7 +179,6 @@
                     
                     <div class="space-y-6">
 
-                        
                         <!-- Gestion des opérations -->
                         <div class="p-4 bg-blue-50 rounded-lg border border-blue-200">
                             <h4 class="text-md font-medium text-blue-800 mb-3">
@@ -578,7 +288,6 @@
                                         IMPORTANT : Chaque opération sélectionnée DOIT avoir un commentaire rédigé par l'opérateur
                             </div>
 
-
                         </div>
                             </div>
                         </div>
@@ -661,7 +370,6 @@
                     <i class="fas fa-arrow-left mr-2"></i>
                     Retour à la confirmation
                 </a>
-                
 
             </div>
             
@@ -696,9 +404,7 @@
             Confirmer la Commande
                     </button>
                 {% endif %}
-  
-                
-               
+
             </div>
         </div>
     </form>
@@ -760,8 +466,7 @@
                    class="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base"
                    oninput="rechercherArticles(this.value)" />
         </div>
-        
-        
+
         <form id="articleForm" class="space-y-4">
                 <!-- Sélection d'article (pour nouveaux articles) -->
                 <div id="article-selection-field">
@@ -1520,10 +1225,6 @@ function sauvegarderNouvelleOperation(operation, commentaire) {
     });
 }
 
-
-
-
-
 // Types d'opérations valides selon la base de données
 const TYPES_OPERATIONS_VALIDES = ['APPEL', 'Appel Whatsapp', 'Message Whatsapp', 'Vocal Whatsapp', 'ENVOI_SMS'];
 
@@ -2269,8 +1970,6 @@ function showStockNotification(detailsStock, type = 'success') {
     
     showNotification(message, type);
 }
-
-
 
 // Fonction pour lancer la confirmation (change l'état de Affectée à En cours)
 function lancerConfirmation() {
@@ -4038,8 +3737,6 @@ function selectionnerVariante(variant, article) {
     }
 }
 
-
-
 function rechercherArticlesPourVariantes(terme) {
     try {
         if (!terme || terme.length < 2) {
@@ -4582,8 +4279,7 @@ function mettreAJourTousLesTotaux(data) {
             sousTotalGlobalElement.textContent = `${parseFloat(data.sous_total_articles).toFixed(2)} DH`;
         }
     }
-    
-    
+
     // Mettre à jour le total de la commande (corriger getElementById)
     if (data.total_commande !== undefined) {
         const totalElement = document.getElementById('total-commande');
@@ -5328,8 +5024,6 @@ function sauvegarderRemplacementArticle(ancienArticleId, nouvelArticle, nouvelle
         showNotification('❌ Erreur de connexion lors du remplacement', 'error');
         });
 }
-
-
 
 // Ajouter les événements pour la modale d'articles et les raccourcis clavier
 document.addEventListener('DOMContentLoaded', function() {
@@ -6133,8 +5827,6 @@ function getSectionName(sectionId) {
     return sectionNames[sectionId] || 'Section';
 }
 
-
-
 // Fonction pour modifier la quantité d'un article (avec boutons +/-)
 function modifierQuantite(panierId, delta) {
     const input = document.getElementById(`quantite-${panierId}`);
@@ -6280,8 +5972,6 @@ function showToast(message, type = 'info', duration = 3000) {
         }, 300);
     }, duration);
 }
-
-
 
 // Fermer la modal avec Escape (uniquement si elle est ouverte)
 document.addEventListener('keydown', function(event) {
@@ -6719,102 +6409,6 @@ function modifierArticle(panierId) {
         </div>
     </div>
 </div>
-
-<style>
-    @keyframes fade-in-down {
-        0% {
-            opacity: 0;
-            transform: translateY(-20px) scale(0.95);
-        }
-        100% {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-        }
-    }
-    .animate-fade-in-down {
-        animation: fade-in-down 0.4s ease-out;
-    }
-    
-    /* Styles pour le tableau croisé des variantes */
-    .variant-table {
-        border-collapse: collapse;
-        width: 100%;
-    }
-    
-    .variant-table th,
-    .variant-table td {
-        border: 1px solid #d1d5db;
-        padding: 0.75rem;
-        text-align: center;
-    }
-    
-    .variant-table th {
-        background-color: #f9fafb;
-        font-weight: 600;
-        color: #374151;
-    }
-    
-    .variant-table td {
-        background-color: white;
-    }
-    
-    .variant-table tr:nth-child(even) td:first-child {
-        background-color: #f9fafb;
-    }
-    
-    .variant-checkbox {
-        width: 1.2rem;
-        height: 1.2rem;
-        cursor: pointer;
-    }
-    
-    .variant-checkbox:disabled {
-        cursor: not-allowed;
-        opacity: 0.5;
-    }
-    
-    .variant-table .stock-rupture {
-        background-color: #fef2f2;
-        color: #dc2626;
-    }
-    
-    .variant-table .stock-disponible {
-        background-color: #f0fdf4;
-        color: #16a34a;
-    }
-    
-    /* Responsive design pour le tableau */
-    @media (max-width: 768px) {
-        .variant-table {
-            font-size: 0.875rem;
-        }
-        
-        .variant-table th,
-        .variant-table td {
-            padding: 0.5rem;
-        }
-        
-        .variant-checkbox {
-            width: 1rem;
-            height: 1rem;
-        }
-    }
-    
-    /* Animation pour la sélection */
-    .variant-checkbox:checked + label {
-        color: #2563eb;
-        font-weight: 600;
-    }
-    
-    /* Hover effects */
-    .variant-table tr:hover td {
-        background-color: #f8fafc;
-    }
-    
-    .variant-table tr:hover td:first-child {
-        background-color: #f1f5f9;
-    }
-</style>
 
 <!-- Modal de Stock Insuffisant Tailwind -->
 <div id="stockInsuffisantModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50 flex items-center justify-center">
