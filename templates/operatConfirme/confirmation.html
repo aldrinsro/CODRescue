@@ -651,7 +651,8 @@
     </div>
 </div>
 
-<!-- JavaScript -->
+{% block extra_js %}
+{{ block.super }}
 <script>
 // Variables globales
 window.currentCommandeId = null;
@@ -1266,6 +1267,7 @@ function hideErrorModal() {
     }
 }
 </script>
+{% endblock %}
 
 <!-- Modal de Confirmation Simple Tailwind -->
 <div id="confirmationModalSimple" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50 flex items-center justify-center">

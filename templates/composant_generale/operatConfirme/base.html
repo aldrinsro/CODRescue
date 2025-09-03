@@ -12,32 +12,11 @@
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     
+    <!-- CSS pour la sidebar (fichier séparé) -->
+    <link href="{% static 'css/operatConfirme-sidebar.css' %}" rel="stylesheet">
+    
     {% block extra_css %}
-    <style>
-        /* --- Sidebar --- */
-        #sidebar { width: 256px; }
-
-        /* Comportement sur grand écran */
-        @media (min-width: 1024px) {
-            body.sidebar-collapsed #sidebar { width: 0; }
-        }
-
-        /* Comportement sur petit écran (overlay) */
-        @media (max-width: 1023.98px) {
-            #sidebar { position: absolute; height: 100%; z-index: 100; }
-            body.sidebar-collapsed #sidebar { transform: translateX(-100%); }
-            body.sidebar-open #sidebar { transform: translateX(0); }
-            
-            #content-overlay { display: none; position: fixed; inset: 0; background-color: rgba(0, 0, 0, 0.5); z-index: 99; }
-            body.sidebar-open #content-overlay { display: block; }
-        }
-
-        /* Force les modals au premier plan absolu */
-        .modal-force-top {
-            z-index: 2147483647 !important;
-            position: fixed !important;
-        }
-    </style>
+    <!-- Styles supplémentaires spécifiques à la page peuvent être ajoutés ici -->
     {% endblock %}
 </head>
 <body class="bg-gray-100 font-sans" style="
@@ -73,62 +52,6 @@
     <!-- JavaScript des notifications (supprimé) -->
     
     {% block extra_js %}
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const body = document.body;
-        const menuToggle = document.getElementById('menu-toggle');
-        const sidebarToggle = document.getElementById('sidebar-toggle'); // Maintenant dans le sidebar.html
-        const contentOverlay = document.getElementById('content-overlay');
-        
-        function toggleSidebar() {
-            body.classList.toggle('sidebar-open');
-            body.classList.toggle('sidebar-collapsed');
-            }
-
-        function closeSidebarMobile() {
-            if (window.innerWidth <= 1023) {
-                body.classList.add('sidebar-collapsed');
-                body.classList.remove('sidebar-open');
-            }
-        }
-
-        // Définir l'état initial en fonction de la taille de l'écran
-        if (window.innerWidth <= 1023) {
-            body.classList.add('sidebar-collapsed');
-        } else {
-            body.classList.add('sidebar-open');
-        }
-
-        if (menuToggle) menuToggle.addEventListener('click', toggleSidebar);
-        if (sidebarToggle) sidebarToggle.addEventListener('click', closeSidebarMobile);
-        if (contentOverlay) contentOverlay.addEventListener('click', closeSidebarMobile);
-
-        // Logique pour les dropdowns
-        document.querySelectorAll('.toggle-dropdown').forEach(dropdownToggle => {
-            dropdownToggle.addEventListener('click', () => {
-                const targetId = dropdownToggle.dataset.target;
-                const targetMenu = document.querySelector(targetId);
-                const chevronIcon = dropdownToggle.querySelector('.fa-chevron-down');
-
-                if (targetMenu && chevronIcon) {
-                    targetMenu.classList.toggle('hidden');
-                    chevronIcon.classList.toggle('rotate-180');
-                }
-            });
-        });
-
-        // Adapter au redimensionnement
-        window.addEventListener('resize', () => {
-            if (window.innerWidth > 1023) {
-                body.classList.add('sidebar-open');
-                body.classList.remove('sidebar-collapsed');
-            } else {
-                body.classList.add('sidebar-collapsed');
-                body.classList.remove('sidebar-open');
-            }
-        });
-    });
-    </script>
     {% endblock %}
 
     <!-- Modal de recherche globale au niveau racine -->
@@ -179,5 +102,12 @@
     <!-- Overlay pour fermer les résultats -->
     <div id="searchOverlay" class="fixed inset-0 bg-black bg-opacity-25 hidden" style="z-index: 999998 !important; position: fixed !important;"></div>
 
+    <!-- JavaScript pour le bouton hamburger (fichier séparé) -->
+    <script src="{% static 'js/operatConfirme/hamburger-menu.js' %}"></script>
+    
+    <!-- JavaScript pour les dropdowns de la sidebar (fichier séparé) -->
+    <script src="{% static 'js/operatConfirme/sidebar-dropdowns.js' %}"></script>
+
 </body>
 </html>
+
