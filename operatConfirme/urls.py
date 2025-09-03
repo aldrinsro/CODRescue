@@ -42,5 +42,7 @@ urlpatterns = [
     path('recherche-globale/api/', search_views.global_search_api, name='global_search_api'),
     path('recherche-globale/suggestions/', search_views.search_suggestions_api, name='search_suggestions_api'),
     
+
+    
     # Notifications supprimées
 ] 

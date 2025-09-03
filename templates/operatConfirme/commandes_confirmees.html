@@ -380,6 +380,7 @@
 {% endblock %}
 
 {% block extra_js %}
+{{ block.super }}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Vérifier si l'utilisateur n'a pas les autorisations

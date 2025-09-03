@@ -24,6 +24,8 @@ from django.template.loader import render_to_string
 
 # Create your views here.
 
+
+
 @login_required
 def dashboard(request):
     """Page d'accueil de l'interface opérateur de confirmation"""

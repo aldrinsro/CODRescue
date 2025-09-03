@@ -199,10 +199,15 @@ window.ConfirmSearch = {
 };
 
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('🔍 [GlobalSearch] Initialisation de la recherche globale');
+    console.log('🔍 [GlobalSearch] URL actuelle:', window.location.pathname);
+    console.log('🔍 [GlobalSearch] Menu-toggle présent avant init recherche:', !!document.getElementById('menu-toggle'));
     initializeHeaderSearch();
+    console.log('🔍 [GlobalSearch] Menu-toggle présent après init recherche:', !!document.getElementById('menu-toggle'));
 });
 
 function initializeHeaderSearch() {
+    console.log('🔍 [GlobalSearch] initializeHeaderSearch appelée');
     const searchInput = document.getElementById('headerGlobalSearch');
     const searchResults = document.getElementById('headerSearchResults');
     const searchOverlay = document.getElementById('searchOverlay');
