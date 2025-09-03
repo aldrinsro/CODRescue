@@ -119,11 +119,13 @@
                             {% if article.has_promo_active %}
                                 <div class="w-full bg-yellow-100 text-yellow-700 p-2 rounded-lg mb-2 text-sm">
                                     <i class="fas fa-exclamation-triangle mr-1"></i>
-                                    Les changements de phase sont désactivés car cet article est actuellement en promotion.
+                                    Cet article est actuellement en promotion. Cliquer sur "Par défaut" annulera la promotion.
                                 </div>
-                                <button type="button" disabled class="inline-flex items-center bg-gray-300 text-gray-500 px-3 py-1.5 rounded-lg text-sm font-medium cursor-not-allowed opacity-60">
-                                    <i class="fas fa-check-circle mr-1"></i>Par défaut
-                                </button>
+                            {% endif %}
+                            <button type="submit" name="phase" value="EN_COURS" class="inline-flex items-center bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-all">
+                                <i class="fas fa-check-circle mr-1"></i>Par défaut
+                            </button>
+                            {% if article.has_promo_active %}
                                 <button type="button" disabled class="inline-flex items-center bg-gray-300 text-gray-500 px-3 py-1.5 rounded-lg text-sm font-medium cursor-not-allowed opacity-60">
                                     <i class="fas fa-tag mr-1"></i>Liquidation
                                 </button>
@@ -131,10 +133,7 @@
                                     <i class="fas fa-flask mr-1"></i>Test
                                 </button>
                             {% else %}
-                                <button type="submit" name="phase" value="EN_COURS" class="inline-flex items-center bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-all">
-                                    <i class="fas fa-check-circle mr-1"></i>Par défaut
-                                </button>
-                                <button type="button" onclick="openLiquidationModal()" class="inline-flex items-center bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-all">
+                                <button type="submit" name="phase" value="LIQUIDATION_DB" class="inline-flex items-center bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-all">
                                     <i class="fas fa-tag mr-1"></i>Liquidation
                                 </button>
                                 <button type="submit" name="phase" value="EN_TEST" class="inline-flex items-center bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-all">
@@ -290,37 +289,6 @@
     {% endif %}
 </div>
 
-<!-- Modale de liquidation -->
-<div id="liquidationModal" class="fixed inset-0 z-50 items-center justify-center bg-black bg-opacity-60 hidden">
-    <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full transform transition-all duration-300 scale-95 opacity-0" id="liquidationModalContent">
-        <div class="text-center">
-            <div class="mb-4">
-                <i class="fas fa-tag text-6xl text-orange-400"></i>
-            </div>
-            <h2 class="text-2xl font-bold text-gray-800 mb-2">Appliquer une liquidation</h2>
-            <p class="text-gray-600 mb-6">
-                Veuillez saisir le pourcentage de réduction pour la liquidation.
-            </p>
-            <form method="POST" action="{% url 'Superpreparation:appliquer_liquidation' article.id %}" class="space-y-4">
-                {% csrf_token %}
-                <div>
-                    <label for="pourcentage" class="block text-sm font-medium text-gray-700 mb-2">Pourcentage de réduction</label>
-                    <input type="number" name="pourcentage" id="pourcentage" min="1" max="90" step="0.1" required
-                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
-                    <p class="text-sm text-gray-500 mt-1">Entre 1% et 90%</p>
-                </div>
-                <div class="flex justify-center gap-4 mt-6">
-                    <button type="submit" class="px-6 py-2 bg-orange-500 text-white rounded-lg font-semibold hover:bg-orange-600 transition-colors shadow-lg">
-                        Appliquer
-                    </button>
-                    <button type="button" onclick="closeLiquidationModal()" class="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg font-semibold hover:bg-gray-300 transition-colors shadow-lg">
-                        Annuler
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 
 {% endblock %}
 
@@ -371,38 +339,5 @@
         }
     }
 
-    function openLiquidationModal() {
-        const modal = document.getElementById('liquidationModal');
-        const modalContent = document.getElementById('liquidationModalContent');
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
-        setTimeout(() => {
-            modalContent.classList.remove('scale-95', 'opacity-0');
-        }, 10);
-    }
-
-    function closeLiquidationModal() {
-        const modal = document.getElementById('liquidationModal');
-        const modalContent = document.getElementById('liquidationModalContent');
-        modalContent.classList.add('scale-95', 'opacity-0');
-        setTimeout(() => {
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-        }, 300);
-    }
-
-    // Fermer la modale si on clique en dehors
-    document.getElementById('liquidationModal').addEventListener('click', function(event) {
-        if (event.target === this) {
-            closeLiquidationModal();
-        }
-    });
-
-    // Fermer la modale avec la touche Echap
-    document.addEventListener('keydown', function(event) {
-        if (event.key === 'Escape') {
-            closeLiquidationModal();
-        }
-    });
 </script>
 {% endblock %}

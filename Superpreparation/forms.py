@@ -7,7 +7,8 @@ class ArticleForm(forms.ModelForm):
         fields = [
             'nom', 'reference', 'prix_unitaire', 'prix_achat', 'prix_actuel',
             'categorie', 'phase', 'description', 'image', 'image_url', 'actif',
-            'isUpsell', 'prix_upsell_1', 'prix_upsell_2', 'prix_upsell_3', 'prix_upsell_4'
+            'isUpsell', 'prix_upsell_1', 'prix_upsell_2', 'prix_upsell_3', 'prix_upsell_4',
+            'prix_uspell_final', 'Prix_liquidation'
         ]
         widgets = {
             'nom': forms.TextInput(attrs={'class': 'w-full p-3 border rounded-lg'}),
@@ -26,6 +27,8 @@ class ArticleForm(forms.ModelForm):
             'prix_upsell_2': forms.NumberInput(attrs={'class': 'w-full p-3 border rounded-lg', 'step': '0.01'}),
             'prix_upsell_3': forms.NumberInput(attrs={'class': 'w-full p-3 border rounded-lg', 'step': '0.01'}),
             'prix_upsell_4': forms.NumberInput(attrs={'class': 'w-full p-3 border rounded-lg', 'step': '0.01'}),
+            'prix_uspell_final': forms.NumberInput(attrs={'class': 'w-full p-3 border rounded-lg', 'step': '0.01'}),
+            'Prix_liquidation': forms.NumberInput(attrs={'class': 'w-full p-3 border rounded-lg', 'step': '0.01'}),
         }
 
     def __init__(self, *args, **kwargs):

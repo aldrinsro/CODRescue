@@ -271,7 +271,8 @@ class Article(models.Model):
     prix_upsell_2 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Prix upsell 2")
     prix_upsell_3 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Prix upsell 3")
     prix_upsell_4 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Prix upsell 4")
-    
+    prix_uspell_final = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Prix upsell final")
+    Prix_liquidation = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Prix liquidation")
     class Meta:
         verbose_name = "Article"
         verbose_name_plural = "Articles"
@@ -320,7 +321,7 @@ class Article(models.Model):
                 })
         
         # Désactiver automatiquement l'upsell pour les articles en liquidation ou en test
-        if self.isUpsell and self.phase in ['LIQUIDATION', 'EN_TEST']:
+        if self.isUpsell and self.phase in ['LIQUIDATION', ]:
             self.isUpsell = False
             
         # Vérifier qu'un article en promotion n'est pas marqué comme upsell
@@ -449,6 +450,8 @@ class Article(models.Model):
             return self.prix_upsell_3
         elif quantite > 4 and self.prix_upsell_4:
             return self.prix_upsell_4
+        elif quantite == 5 and self.prix_uspell_final:
+            return self.prix_uspell_final
         else:
             return self.prix_actuel if self.prix_actuel is not None else self.prix_unitaire
             
@@ -469,6 +472,8 @@ class Article(models.Model):
             return 3 if self.prix_upsell_3 else 0
         elif quantite > 4:
             return 4 if self.prix_upsell_4 else 0
+        elif quantite == 5:
+            return 5 if self.prix_uspell_final else 0
         return 0
 
     def get_variantes_disponibles(self):

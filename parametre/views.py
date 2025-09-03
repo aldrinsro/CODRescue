@@ -754,30 +754,38 @@ def modifier_ville(request, pk):
     if request.method == 'POST':
         nom_ville = request.POST.get('nom')
         frais_livraison = request.POST.get('frais_livraison')
-        frequence_livraison = request.POST.get('frequence_livraison')
+        delai_min = request.POST.get('Delai_livraison_min')
+        delai_max = request.POST.get('Delai_livraison_max')
         region_id = request.POST.get('region')
 
-        if not all([nom_ville, frais_livraison, frequence_livraison, region_id]):
+        if not all([nom_ville, frais_livraison, delai_min, delai_max, region_id]):
             messages.error(request, "Tous les champs obligatoires doivent être remplis.")
         else:
             try:
-                region = get_object_or_404(Region, pk=region_id)
-                ville.nom = nom_ville
-                ville.frais_livraison = float(frais_livraison)
-                ville.frequence_livraison = frequence_livraison
-                ville.region = region
-                ville.save()
-                messages.success(request, f"La ville '{nom_ville}' a été modifiée avec succès.")
-                return redirect('app_admin:liste_villes')
+                frais_livraison = float(frais_livraison)
+                delai_min = int(delai_min)
+                delai_max = int(delai_max)
+                
+                if delai_min > delai_max:
+                    messages.error(request, "Le délai minimum ne peut pas être supérieur au délai maximum.")
+                else:
+                    region = get_object_or_404(Region, pk=region_id)
+                    ville.nom = nom_ville
+                    ville.frais_livraison = frais_livraison
+                    ville.Delai_livraison_min = delai_min
+                    ville.Delai_livraison_max = delai_max
+                    ville.region = region
+                    ville.save()
+                    messages.success(request, f"La ville '{nom_ville}' a été modifiée avec succès.")
+                    return redirect('app_admin:liste_villes')
             except ValueError:
-                messages.error(request, "Les frais de livraison doivent être un nombre valide.")
+                messages.error(request, "Les frais de livraison et délais de livraison doivent être des nombres valides.")
             except Exception as e:
                 messages.error(request, f"Une erreur est survenue lors de la modification de la ville : {e}")
 
     context = {
         'ville': ville,
         'regions': regions,
-        'formatted_frais_livraison': f'{ville.frais_livraison:.2f}' if ville.frais_livraison is not None else ''
     }
     return render(request, 'parametre/modifier_ville.html', context)
 
@@ -788,27 +796,36 @@ def creer_ville(request):
     if request.method == 'POST':
         nom_ville = request.POST.get('nom')
         frais_livraison = request.POST.get('frais_livraison')
-        frequence_livraison = request.POST.get('frequence_livraison')
+        delai_min = request.POST.get('Delai_livraison_min')
+        delai_max = request.POST.get('Delai_livraison_max')
         region_id = request.POST.get('region')
 
-        if not all([nom_ville, frais_livraison, frequence_livraison, region_id]):
+        if not all([nom_ville, frais_livraison, delai_min, delai_max, region_id]):
             messages.error(request, "Tous les champs obligatoires doivent être remplis.")
         else:
             try:
-                region = get_object_or_404(Region, pk=region_id)
-                if Ville.objects.filter(nom__iexact=nom_ville, region=region).exists():
-                    messages.error(request, "Une ville avec ce nom existe déjà dans cette région.")
+                frais_livraison = float(frais_livraison)
+                delai_min = int(delai_min)
+                delai_max = int(delai_max)
+                
+                if delai_min > delai_max:
+                    messages.error(request, "Le délai minimum ne peut pas être supérieur au délai maximum.")
                 else:
-                    Ville.objects.create(
-                        nom=nom_ville,
-                        frais_livraison=float(frais_livraison),
-                        frequence_livraison=frequence_livraison,
-                        region=region
-                    )
-                    messages.success(request, f"La ville '{nom_ville}' a été créée avec succès.")
-                    return redirect('app_admin:liste_villes')
+                    region = get_object_or_404(Region, pk=region_id)
+                    if Ville.objects.filter(nom__iexact=nom_ville, region=region).exists():
+                        messages.error(request, "Une ville avec ce nom existe déjà dans cette région.")
+                    else:
+                        Ville.objects.create(
+                            nom=nom_ville,
+                            frais_livraison=frais_livraison,
+                            Delai_livraison_min=delai_min,
+                            Delai_livraison_max=delai_max,
+                            region=region
+                        )
+                        messages.success(request, f"La ville '{nom_ville}' a été créée avec succès.")
+                        return redirect('app_admin:liste_villes')
             except ValueError:
-                messages.error(request, "Les frais de livraison doivent être un nombre valide.")
+                messages.error(request, "Les frais de livraison et délais de livraison doivent être des nombres valides.")
             except Exception as e:
                 messages.error(request, f"Une erreur est survenue lors de la création de la ville : {e}")
 

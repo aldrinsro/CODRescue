@@ -29,30 +29,25 @@ def clean_tarif(tarif_str):
     except ValueError:
         return 0.0
 
-def clean_frequence(frequence_str):
-    """Nettoie la fréquence de livraison"""
-    if not frequence_str or frequence_str.strip() == '':
-        return 'Non défini'
+def clean_delai(delai_str):
+    """Nettoie et convertit le délai en entier"""
+    if not delai_str or delai_str.strip() == '':
+        return 0
     
-    # Mapping des fréquences communes
-    frequence_mapping = {
-        'Chaque Jour': 'Quotidien',
-        '24H': '24H',
-        '24H-48H': '24H-48H',
-        '48H': '48H',
-        '12H-24H': '12H-24H',
-        'JOUR+1': 'J+1',
-        'JOURS+1': 'J+1',
-        'JOURS +1': 'J+1',
-    }
+    # Supprime les caractères non numériques
+    cleaned = ''.join(c for c in delai_str if c.isdigit())
     
-    # Vérifie les mappings exacts
-    for key, value in frequence_mapping.items():
-        if frequence_str.strip() == key:
-            return value
-    
-    # Pour les fréquences avec des jours spécifiques, on garde tel quel
-    return frequence_str.strip()
+    try:
+        return int(cleaned) if cleaned else 0
+    except ValueError:
+        return 0
+
+def get_tarif_column_name(headers):
+    """Trouve le nom correct de la colonne tarif"""
+    for header in headers:
+        if 'Tarif' in header:
+            return header
+    return None
 
 def import_data():
     """Importe les données depuis le fichier CSV"""
@@ -62,24 +57,40 @@ def import_data():
     # Compteurs
     regions_created = 0
     villes_created = 0
+    villes_updated = 0
     errors = 0
     
     try:
         with open('CMD_REGION - CMD_REGION.csv', 'r', encoding='utf-8') as csvfile:
             reader = csv.DictReader(csvfile)
             
+            # Trouver le nom correct de la colonne tarif
+            tarif_column = get_tarif_column_name(reader.fieldnames)
+            if not tarif_column:
+                print("❌ Colonne 'Tarif' non trouvée dans le CSV!")
+                print(f"   Colonnes disponibles: {reader.fieldnames}")
+                return
+            
+            print(f"✅ Colonne tarif trouvée: '{tarif_column}'")
+            
             for row_num, row in enumerate(reader, start=2):  # Start=2 car ligne 1 = headers
                 try:
                     # Extraction des données
                     ville_nom = row['Ville'].strip()
                     region_nom = row['Region'].strip()
-                    frequence = clean_frequence(row['Delai'])
-                    tarif = clean_tarif(row['Tarif'])
+                    delai_min = clean_delai(row['Delai min'])
+                    delai_max = clean_delai(row['Delai max'])
+                    tarif = clean_tarif(row[tarif_column])
                     
                     # Skip les lignes vides
                     if not ville_nom or not region_nom:
                         print(f"⚠️  Ligne {row_num}: Ville ou région vide - ignorée")
                         continue
+                    
+                    # Validation des délais
+                    if delai_min > delai_max:
+                        print(f"⚠️  Ligne {row_num}: Délai min ({delai_min}) > Délai max ({delai_max}) - Délai max ajusté")
+                        delai_max = delai_min
                     
                     # Créer ou récupérer la région
                     region, region_created = Region.objects.get_or_create(
@@ -96,19 +107,22 @@ def import_data():
                         region=region,
                         defaults={
                             'frais_livraison': tarif,
-                            'frequence_livraison': frequence
+                            'Delai_livraison_min': delai_min,
+                            'Delai_livraison_max': delai_max
                         }
                     )
                     
                     if ville_created:
                         villes_created += 1
-                        print(f"✅ Ville créée: {ville_nom} ({region_nom}) - {tarif}DH - {frequence}")
+                        print(f"✅ Ville créée: {ville_nom} ({region_nom}) - {tarif}DH - Délai: {delai_min}-{delai_max}j")
                     else:
                         # Mettre à jour si la ville existe déjà
                         ville.frais_livraison = tarif
-                        ville.frequence_livraison = frequence
+                        ville.Delai_livraison_min = delai_min
+                        ville.Delai_livraison_max = delai_max
                         ville.save()
-                        print(f"🔄 Ville mise à jour: {ville_nom}")
+                        villes_updated += 1
+                        print(f"🔄 Ville mise à jour: {ville_nom} - {tarif}DH - Délai: {delai_min}-{delai_max}j")
                 
                 except Exception as e:
                     errors += 1
@@ -131,6 +145,7 @@ def import_data():
     print("="*60)
     print(f"✅ Régions créées: {regions_created}")
     print(f"✅ Villes créées: {villes_created}")
+    print(f"🔄 Villes mises à jour: {villes_updated}")
     print(f"❌ Erreurs: {errors}")
     print(f"📈 Total régions en base: {Region.objects.count()}")
     print(f"📈 Total villes en base: {Ville.objects.count()}")
@@ -155,23 +170,57 @@ def show_stats():
     for region in regions:
         villes = region.villes.all().order_by('nom')
         tarif_moyen = sum(v.frais_livraison for v in villes) / len(villes) if villes else 0
+        delai_moyen_min = sum(v.Delai_livraison_min for v in villes) / len(villes) if villes else 0
+        delai_moyen_max = sum(v.Delai_livraison_max for v in villes) / len(villes) if villes else 0
         
         print(f"\n🌍 {region.nom_region}")
         print(f"   📍 Nombre de villes: {villes.count()}")
         print(f"   💰 Tarif moyen: {tarif_moyen:.1f} DH")
+        print(f"   ⏱️  Délai moyen: {delai_moyen_min:.1f}-{delai_moyen_max:.1f} jours")
         
         # Affiche quelques villes exemple
         if villes.count() > 0:
             print(f"   🏙️  Villes principales:")
             for ville in villes[:5]:  # Affiche les 5 premières
-                print(f"      • {ville.nom} - {ville.frais_livraison}DH - {ville.frequence_livraison}")
+                print(f"      • {ville.nom} - {ville.frais_livraison}DH - Délai: {ville.Delai_livraison_min}-{ville.Delai_livraison_max}j")
             
             if villes.count() > 5:
                 print(f"      ... et {villes.count() - 5} autres villes")
 
+def validate_data():
+    """Valide les données existantes dans la base"""
+    print("\n" + "="*60)
+    print("🔍 VALIDATION DES DONNÉES")
+    print("="*60)
+    
+    villes = Ville.objects.all()
+    errors = 0
+    
+    for ville in villes:
+        # Vérifier que les délais sont cohérents
+        if ville.Delai_livraison_min > ville.Delai_livraison_max:
+            print(f"❌ {ville.nom} ({ville.region.nom_region}): Délai min ({ville.Delai_livraison_min}) > Délai max ({ville.Delai_livraison_max})")
+            errors += 1
+        
+        # Vérifier que les frais sont positifs
+        if ville.frais_livraison < 0:
+            print(f"❌ {ville.nom} ({ville.region.nom_region}): Frais négatifs ({ville.frais_livraison})")
+            errors += 1
+    
+    if errors == 0:
+        print("✅ Toutes les données sont valides!")
+    else:
+        print(f"⚠️  {errors} erreurs de validation détectées")
+
 if __name__ == "__main__":
-    if len(sys.argv) > 1 and sys.argv[1] == 'stats':
-        show_stats()
+    if len(sys.argv) > 1:
+        if sys.argv[1] == 'stats':
+            show_stats()
+        elif sys.argv[1] == 'validate':
+            validate_data()
+        else:
+            print("Usage: python import_regions_villes.py [stats|validate]")
     else:
         import_data()
-        show_stats() 
+        show_stats()
+        validate_data() 

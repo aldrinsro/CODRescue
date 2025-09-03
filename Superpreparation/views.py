@@ -7750,6 +7750,28 @@ def creer_article(request):
                         # Ignorer les valeurs non numériques
                         pass
             
+            # Gérer le prix upsell final
+            prix_upsell_final_str = request.POST.get('prix_uspell_final', '').strip().replace(',', '.')
+            if prix_upsell_final_str:
+                try:
+                    prix_upsell_final = float(prix_upsell_final_str)
+                    if prix_upsell_final > 0:
+                        article.prix_uspell_final = prix_upsell_final
+                except ValueError:
+                    # Ignorer les valeurs non numériques
+                    pass
+            
+            # Gérer le prix de liquidation
+            prix_liquidation_str = request.POST.get('Prix_liquidation', '').strip().replace(',', '.')
+            if prix_liquidation_str:
+                try:
+                    prix_liquidation = float(prix_liquidation_str)
+                    if prix_liquidation > 0:
+                        article.Prix_liquidation = prix_liquidation
+                except ValueError:
+                    # Ignorer les valeurs non numériques
+                    pass
+            
             article.save()
             
             # Vérifier si c'est une requête AJAX (pour la création des variantes)
@@ -7980,6 +8002,36 @@ def modifier_article(request, id):
                     except ValueError:
                         # Ignorer les valeurs non numériques
                         pass
+            
+            # Gérer le prix upsell final
+            prix_upsell_final_str = request.POST.get('prix_uspell_final', '').strip().replace(',', '.')
+            if prix_upsell_final_str:
+                try:
+                    prix_upsell_final = float(prix_upsell_final_str)
+                    if prix_upsell_final > 0:
+                        article.prix_uspell_final = prix_upsell_final
+                    else:
+                        article.prix_uspell_final = None
+                except ValueError:
+                    # Ignorer les valeurs non numériques
+                    article.prix_uspell_final = None
+            else:
+                article.prix_uspell_final = None
+            
+            # Gérer le prix de liquidation
+            prix_liquidation_str = request.POST.get('Prix_liquidation', '').strip().replace(',', '.')
+            if prix_liquidation_str:
+                try:
+                    prix_liquidation = float(prix_liquidation_str)
+                    if prix_liquidation > 0:
+                        article.Prix_liquidation = prix_liquidation
+                    else:
+                        article.Prix_liquidation = None
+                except ValueError:
+                    # Ignorer les valeurs non numériques
+                    article.Prix_liquidation = None
+            else:
+                article.Prix_liquidation = None
             
             # Mettre à jour le prix actuel pour qu'il soit égal au prix unitaire
             # sauf si l'article est en promotion active
@@ -8623,30 +8675,50 @@ def changer_phase(request, id):
     now = timezone.now()
     
     if request.method == 'POST':
-        # Vérifier si l'article est en promotion active
-        if article.has_promo_active:
-            messages.error(request, f"Impossible de changer la phase de l'article '{article.nom}' car il est actuellement en promotion.")
-        else:
-            phase = request.POST.get('phase')
-            if phase in dict(Article.PHASE_CHOICES).keys():
-                # Vérifier si l'upsell était actif avant le changement
-                upsell_was_active = article.isUpsell
-                
-                article.phase = phase
-                # L'upsell sera automatiquement désactivé par la méthode save() si nécessaire
-                article.save()
-                
-                # Message en fonction de la phase avec info sur l'upsell
-                upsell_message = " L'upsell a été automatiquement désactivé." if upsell_was_active and phase in ['LIQUIDATION', 'EN_TEST'] else ""
-                
-                if phase == 'EN_COURS':
-                    messages.success(request, f"L'article '{article.nom}' a été remis en phase par défaut (En Cours).{upsell_message}")
-                elif phase == 'LIQUIDATION':
-                    messages.warning(request, f"L'article '{article.nom}' a été mis en liquidation.{upsell_message}")
-                elif phase == 'EN_TEST':
-                    messages.info(request, f"L'article '{article.nom}' a été mis en phase de test.{upsell_message}")
-                elif phase == 'PROMO':
-                    messages.success(request, f"L'article '{article.nom}' a été mis en phase promotion.{upsell_message}")
+        phase = request.POST.get('phase')
+        
+        # Cas spécial : liquidation avec prix de la base de données
+        if phase == 'LIQUIDATION_DB':
+            return appliquer_liquidation_prix_db(request, id)
+        
+        if phase in dict(Article.PHASE_CHOICES).keys():
+            # Vérifier si l'upsell était actif avant le changement
+            upsell_was_active = article.isUpsell
+            
+            # Si on remet en phase par défaut et qu'il y a une promotion active, la désactiver
+            if phase == 'EN_COURS' and article.has_promo_active:
+                from article.models import Promotion
+                # Désactiver toutes les promotions actives pour cet article
+                promotions_actives = article.promotions.filter(
+                    active=True,
+                    date_debut__lte=now,
+                    date_fin__gte=now
+                )
+                for promotion in promotions_actives:
+                    promotion.active = False
+                    promotion.save()
+            
+            article.phase = phase
+            
+            # Réinitialiser le prix actuel au prix unitaire lors du retour en phase par défaut
+            if phase == 'EN_COURS':
+                article.prix_actuel = article.prix_unitaire
+            
+            # L'upsell sera automatiquement désactivé par la méthode save() si nécessaire
+            article.save()
+            
+            # Message en fonction de la phase avec info sur l'upsell
+            upsell_message = " L'upsell a été automatiquement désactivé." if upsell_was_active and phase in ['LIQUIDATION', 'EN_TEST'] else ""
+            
+            if phase == 'EN_COURS':
+                promotion_message = " Les promotions actives ont été désactivées." if article.promotions.filter(active=False).exists() else ""
+                messages.success(request, f"L'article '{article.nom}' a été remis en phase par défaut (En Cours) et son prix réinitialisé.{upsell_message}{promotion_message}")
+            elif phase == 'LIQUIDATION':
+                messages.warning(request, f"L'article '{article.nom}' a été mis en liquidation.{upsell_message}")
+            elif phase == 'EN_TEST':
+                messages.info(request, f"L'article '{article.nom}' a été mis en phase de test.{upsell_message}")
+            elif phase == 'PROMO':
+                messages.success(request, f"L'article '{article.nom}' a été mis en phase promotion.{upsell_message}")
                 
     # Rediriger vers la page précédente ou la page de détail
     referer = request.META.get('HTTP_REFERER')
@@ -8689,6 +8761,56 @@ def appliquer_liquidation(request, id):
         
     except (ValueError, TypeError):
         messages.error(request, "Le pourcentage de réduction n'est pas valide.")
+    
+    return redirect('Superpreparation:detail_article', id=article.id)
+
+@superviseur_preparation_required
+@require_POST
+def appliquer_liquidation_prix_db(request, id):
+    """Applique la liquidation en utilisant le Prix_liquidation de la base de données"""
+    article = get_object_or_404(Article, id=id)
+    now = timezone.now()
+    
+    # Vérifier si l'article a un prix de liquidation défini
+    if not article.Prix_liquidation or article.Prix_liquidation <= 0:
+        messages.error(request, "Aucun prix de liquidation défini pour cet article.")
+        return redirect('Superpreparation:detail_article', id=article.id)
+    
+    try:
+        # Désactiver l'upsell avant de mettre en liquidation
+        upsell_was_active = article.isUpsell
+        
+        # Si l'article est en promotion, désactiver les promotions actives
+        promotions_desactivees = False
+        if article.has_promo_active:
+            from article.models import Promotion
+            promotions_actives = article.promotions.filter(
+                active=True,
+                date_debut__lte=now,
+                date_fin__gte=now
+            )
+            for promotion in promotions_actives:
+                promotion.active = False
+                promotion.save()
+                promotions_desactivees = True
+        
+        # Mettre l'article en liquidation
+        article.phase = 'LIQUIDATION'
+        # Appliquer le prix de liquidation défini en base
+        article.prix_actuel = article.Prix_liquidation
+        # L'upsell sera automatiquement désactivé par la méthode save()
+        article.save()
+        
+        message = f"L'article a été mis en liquidation au prix de {article.Prix_liquidation} DH."
+        if upsell_was_active:
+            message += " L'upsell a été automatiquement désactivé."
+        if promotions_desactivees:
+            message += " Les promotions actives ont été annulées."
+            
+        messages.success(request, message)
+        
+    except Exception as e:
+        messages.error(request, f"Erreur lors de l'application de la liquidation : {str(e)}")
     
     return redirect('Superpreparation:detail_article', id=article.id)
 

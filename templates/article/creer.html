@@ -144,6 +144,14 @@
                         <label for="id_prix_upsell_4" class="block text-sm font-semibold mb-2" style="color: #023535;">Prix upsell 4 (DH):</label>
                         <input type="number" name="prix_upsell_4" id="id_prix_upsell_4" value="{{ form_data.prix_upsell_4|default:'' }}" step="0.01" min="0.01" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200" placeholder="Ex: 499.99">
                     </div>
+                    <div>
+                        <label for="id_prix_gros" class="block text-sm font-semibold mb-2" style="color: #023535;">Prix gros (DH):</label>
+                        <input type="number" name="prix_gros" id="id_prix_gros" value="{{ form_data.prix_gros|default:'' }}" step="0.01" min="0.01" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200" placeholder="Ex: 499.99">
+                    </div>
+                    <div>
+                        <label for="id_prix_liquidation" class="block text-sm font-semibold mb-2" style="color: #023535;">Prix Liquidation (DH):</label>
+                        <input type="number" name="prix_liquidation" id="id_prix_liquidation" value="{{ form_data.prix_liquidation|default:'' }}" step="0.01" min="0.01" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200" placeholder="Ex: 499.99">
+                    </div>
                 </div>
             </div>
 

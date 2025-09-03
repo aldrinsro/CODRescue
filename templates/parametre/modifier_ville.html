@@ -36,14 +36,21 @@
         </div>
         <div>
             <label for="frais_livraison" class="block text-sm font-medium text-gray-700">Frais de Livraison (DH)</label>
-            <input type="number" step="0.01" name="frais_livraison" id="frais_livraison" value="{{ formatted_frais_livraison }}" required
+            <input type="number" step="0.01" name="frais_livraison" id="frais_livraison" value="{{ ville.frais_livraison|default:0 }}" required
+                   class="mt-1 block w-full rounded-lg border focus:ring-2 focus:ring-offset-2 transition-all" 
+                   style="border-color: #99dddd; focus:ring-color: #023535;">
+        </div>
+
+        <div>
+            <label for="Delai_livraison_min" class="block text-sm font-medium text-gray-700">Délai de Livraison Minimum (jours)</label>
+            <input type="number" name="Delai_livraison_min" id="Delai_livraison_min" value="{{ ville.Delai_livraison_min }}" min="0" required
                    class="mt-1 block w-full rounded-lg border focus:ring-2 focus:ring-offset-2 transition-all" 
                    style="border-color: #99dddd; focus:ring-color: #023535;">
         </div>
         <div>
-            <label for="frequence_livraison" class="block text-sm font-medium text-gray-700">Fréquence de Livraison</label>
-            <input type="text" name="frequence_livraison" id="frequence_livraison" value="{{ ville.frequence_livraison }}" required
-                   class="mt-1 block w-full rounded-lg border focus:ring-2 focus:ring-offset-2 transition-all" 
+            <label for="Delai_livraison_max" class="block text-sm font-medium text-gray-700">Délai de Livraison Maximum (jours)</label>
+            <input type="number" name="Delai_livraison_max" id="Delai_livraison_max" value="{{ ville.Delai_livraison_max }}" min="0" required
+                   class="mt-1 block w-full rounded-lg border focus:ring-offset-2 transition-all" 
                    style="border-color: #99dddd; focus:ring-color: #023535;">
         </div>
         <div>
