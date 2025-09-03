@@ -3,7 +3,101 @@
 {% block title %}Lancer les Confirmations - YZ-CMD{% endblock %}
 
 {% block extra_css %}
+<style>
+    @keyframes slideInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .animate-slideInUp {
+        animation: slideInUp 0.6s ease-out forwards;
+        opacity: 0;
+    }
+    
+    .btn-operation {
+        background-color: #8B5A2B !important;
+        color: white !important;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-operation:hover {
+        background-color: #6d4b3b !important;
+        transform: scale(1.05);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
 
+    .card-shadow {
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+
+    .card-shadow:hover {
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.375rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        text-transform: capitalize;
+    }
+
+    .btn-confirm {
+        background: linear-gradient(to right, #4B352A, #6d4b3b);
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 0.5rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        border: none;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-confirm:hover {
+        background: linear-gradient(to right, #6d4b3b, #8B5A2B);
+        transform: translateY(-1px);
+        box-shadow: 0 8px 15px -3px rgba(0, 0, 0, 0.2);
+    }
+
+    .confirmation-card {
+        background: white;
+        border-radius: 0.75rem;
+        border: 1px solid #f7d9c4;
+        transition: all 0.3s ease;
+    }
+
+    .confirmation-card:hover {
+        transform: translateY(-2px);
+        border-color: #6d4b3b;
+    }
+
+    .client-info-section {
+        background: linear-gradient(to right, #f7d9c4, #ede0d3);
+        border-radius: 0.5rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .phone-highlight {
+        background: linear-gradient(135deg, #4B352A, #6d4b3b);
+        color: white;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        text-align: center;
+        margin-bottom: 0.75rem;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -198,7 +292,8 @@
                                             </button>
                                       
                                         {% elif commande.etat_actuel.enum_etat.libelle == 'En cours de confirmation' %}
-
+                                       
+                                            
                                         {% endif %}
                                     {% endif %}
                                     <a href="{% url 'operatConfirme:modifier_commande' commande.id %}" 
@@ -556,8 +651,7 @@
     </div>
 </div>
 
-{% block extra_js %}
-{{ block.super }}
+<!-- JavaScript -->
 <script>
 // Variables globales
 window.currentCommandeId = null;
@@ -1172,7 +1266,6 @@ function hideErrorModal() {
     }
 }
 </script>
-{% endblock %}
 
 <!-- Modal de Confirmation Simple Tailwind -->
 <div id="confirmationModalSimple" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50 flex items-center justify-center">
@@ -1220,6 +1313,22 @@ function hideErrorModal() {
         </div>
     </div>
 </div>
+
+<style>
+    @keyframes fade-in-down {
+        0% {
+            opacity: 0;
+            transform: translateY(-20px) scale(0.95);
+        }
+        100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+    .animate-fade-in-down {
+        animation: fade-in-down 0.4s ease-out;
+    }
+</style>
 
 <!-- Modal de Confirmation en Masse Tailwind -->
 <div id="massConfirmationModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50 flex items-center justify-center">
