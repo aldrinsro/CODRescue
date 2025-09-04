@@ -511,8 +511,6 @@ def modifier_commande(request, pk):
     }
     return render(request, 'commande/modifier.html', context)
 
-
-
 @login_required
 def gestion_etats(request):
     """Page de gestion des états de commande avec pagination flexible"""
@@ -631,10 +629,7 @@ def gestion_etats(request):
     }
     return render(request, 'commande/etats.html', context)
 
-
-
 # Vues CRUD pour la gestion des états
-
 @require_POST
 @login_required
 def ajouter_etat(request):

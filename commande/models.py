@@ -93,8 +93,7 @@ class Commande(models.Model):
             last_id_yz = Commande.objects.aggregate(max_id=models.Max('id_yz'))['max_id']
             base = self.START_ID_YZ - 1
             # Si aucune commande, commencer à 211971; sinon continuer après le max existant
-            self.id_yz = max(last_id_yz or base, base) + 1
-        
+            self.id_yz = max(last_id_yz or base, base) + 1 
         # Générer le numéro de commande selon l'origine si ce n'est pas déjà fait
         if not self.num_cmd:
             if self.origine == 'OC':
@@ -139,7 +138,6 @@ class Commande(models.Model):
     def etat_actuel(self):
         """Retourne l'état actuel de la commande"""
         return self.etats.filter(date_fin__isnull=True).first()
-    
     @property
     def historique_etats(self):
         """Retourne l'historique complet des états"""
@@ -262,25 +260,22 @@ class Operation(models.Model):
         ("Message Whatsapp", "Appel Whatsapp "),
         ("Vocal Whatsapp", "Vocal Whatsapp "),
         ('ENVOI_SMS', 'Envoi de SMS'),
-        ('MODIFICATION', 'Modification'),
-        ('PROBLEME_SIGNALÉ', 'Problème signalé'),
-        ('RENVOI_PREPARATION', 'Renvoi en préparation'),
-        # Opérations d'affectation par supervision
-        ('AFFECTATION_SUPERVISION', 'Affectation par supervision'),
-        ('REAFFECTATION_SUPERVISION', 'Réaffectation par supervision'),
-        # Opérations d'affectation par admin
-        ('AFFECTATION_ADMIN', 'Affectation par admin'),
-        ('REAFFECTATION_ADMIN', 'Réaffectation par admin'),
     ]
     Type_Commentaire_CHOICES=[
-        ("Commande Annulée", "Commande Annulée"),
-        ("Client hésitant", "Client hésitant"),
+        ("Appel 1", "Appel 1"),
+        ("Appel 2", "Appel 2"),
+        ("Appel 3", "Appel 3"),
+        ("Appel 4", "Appel 4"),
+        ("Appel 5", "Appel 5"),
+        ("Appel 6", "Appel 6"),
         ("Client intéressé", "Client intéressé"),
-        ("Client non intéressé", "Client non intéressé"),
-        ("Client non joignable", "Client non joignable"),
-        ("commande reportée", "commande reportée"),
-        ("Article non disponible", "Article non disponible"),
-        
+        ("Confirmée", "Confirmée"),
+        ("Confirmée & Echangée", "Confirmée & Echangée"),
+        ("Echangée", "Echangée"),
+        ("Abonnement","Abonnement"),
+        ("Reduction","Reduction"),
+        ("Client hésitant", "Client hésitant"),
+
     ]
     
     type_operation = models.CharField(max_length=30, choices=TYPE_OPERATION_CHOICES)
@@ -300,8 +295,6 @@ class Operation(models.Model):
 
 
 class Envoi(models.Model):
-
-
     # Relations
     commande = models.ForeignKey(Commande, on_delete=models.CASCADE, related_name='envois', null=True, blank=True)   
     region = models.ForeignKey(
@@ -311,16 +304,13 @@ class Envoi(models.Model):
         blank=True, 
         related_name='envois'
     )
-    
     # Informations principales
     date_envoi = models.DateField(default=timezone.now, verbose_name="Date d'envoi")
     date_livraison_prevue = models.DateField(verbose_name="Date de livraison prévue")
     date_livraison_effective = models.DateField(null=True, blank=True, verbose_name="Date de clôture")
-    
     # Statut et suivi
     status = models.BooleanField(default=True, verbose_name="En cours")
     numero_envoi = models.CharField(max_length=50, blank=True, verbose_name="Numéro d'envoi")
-    
     # Opérateurs et traçabilité
     operateur_creation = models.ForeignKey(
         Operateur, 
