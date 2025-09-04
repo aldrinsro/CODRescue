@@ -45,4 +45,5 @@ urlpatterns = [
     path('paniers/', views.liste_paniers, name='paniers'),
     # API
     path('api/commande/<int:commande_id>/panier/', views.api_panier_commande, name='api_panier_commande'),
+    path('rechercher-client-telephone/', views.rechercher_client_telephone, name='rechercher_client_telephone'),
 ]

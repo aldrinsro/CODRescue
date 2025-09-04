@@ -49,13 +49,31 @@
 
                 <!-- Section client existant -->
                 <div id="section-client-existant" class="mb-6">
-                    <label for="client" class="block text-sm font-medium mb-2" style="color: var(--admin-color);">Sélectionner un client</label>
-                    <select name="client" id="client" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--admin-accent-color)] focus:border-transparent transition duration-200">
-                        <option value="">Sélectionner un client</option>
-                        {% for client in clients %}
-                            <option value="{{ client.pk }}">{{ client.get_full_name }} ({{ client.telephone }})</option>
-                        {% endfor %}
-                    </select>
+                    <!-- Recherche par numéro de téléphone -->
+                    <div class="mb-4">
+                        <label for="recherche_telephone" class="block text-sm font-medium mb-2" style="color: var(--admin-color);">Rechercher par numéro de téléphone</label>
+                        <div class="flex gap-2">
+                            <input type="tel" id="recherche_telephone" placeholder="Ex: 06XXXXXXXX" 
+                                   class="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--admin-accent-color)] focus:border-transparent transition duration-200">
+                            <button type="button" id="btn_rechercher_client" class="px-4 py-3 text-white rounded-lg font-medium transition-all shadow-md" style="background-color: var(--admin-color);">
+                                <i class="fas fa-search mr-2"></i>Rechercher
+                            </button>
+                        </div>
+                        <div id="resultat_recherche" class="mt-2 hidden">
+                            <!-- Les résultats de recherche apparaîtront ici -->
+                        </div>
+                    </div>
+                    
+                    <!-- Sélection manuelle -->
+                    <div>
+                        <label for="client" class="block text-sm font-medium mb-2" style="color: var(--admin-color);">Ou sélectionner manuellement</label>
+                        <select name="client" id="client" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--admin-accent-color)] focus:border-transparent transition duration-200">
+                            <option value="">Sélectionner un client</option>
+                            {% for client in clients %}
+                                <option value="{{ client.pk }}">{{ client.get_full_name }} ({{ client.numero_tel }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
                 </div>
 
                 <!-- Section nouveau client -->
@@ -286,6 +304,96 @@ document.getElementById('add-article').addEventListener('click', function() {
     const container = document.getElementById('articles-container');
     container.appendChild(createArticleRow());
     articleCounter++;
+});
+
+// Recherche de client par téléphone
+document.getElementById('btn_rechercher_client').addEventListener('click', function() {
+    const telephone = document.getElementById('recherche_telephone').value.trim();
+    const resultatDiv = document.getElementById('resultat_recherche');
+    
+    if (!telephone) {
+        alert('Veuillez saisir un numéro de téléphone');
+        return;
+    }
+    
+    // Afficher un indicateur de chargement
+    resultatDiv.innerHTML = '<div class="text-blue-600"><i class="fas fa-spinner fa-spin mr-2"></i>Recherche en cours...</div>';
+    resultatDiv.classList.remove('hidden');
+    
+    // Faire la requête AJAX
+    fetch(`/commande/rechercher-client-telephone/?telephone=${encodeURIComponent(telephone)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.client) {
+                // Client trouvé
+                resultatDiv.innerHTML = `
+                    <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <i class="fas fa-check-circle mr-2"></i>
+                                <strong>Client trouvé :</strong> ${data.client.nom_complet} (${data.client.numero_tel})
+                            </div>
+                            <button type="button" onclick="selectionnerClientTrouve(${data.client.id})" 
+                                    class="ml-4 px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700">
+                                Sélectionner
+                            </button>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // Client non trouvé
+                resultatDiv.innerHTML = `
+                    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>
+                        Aucun client trouvé avec ce numéro de téléphone.
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Erreur lors de la recherche:', error);
+            resultatDiv.innerHTML = `
+                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>
+                    Erreur lors de la recherche. Veuillez réessayer.
+                </div>
+            `;
+        });
+});
+
+// Fonction pour sélectionner le client trouvé
+function selectionnerClientTrouve(clientId) {
+    const selectClient = document.getElementById('client');
+    selectClient.value = clientId;
+    
+    // Masquer le résultat de recherche
+    document.getElementById('resultat_recherche').classList.add('hidden');
+    
+    // Vider le champ de recherche
+    document.getElementById('recherche_telephone').value = '';
+    
+    // Optionnel : afficher un message de confirmation
+    const resultatDiv = document.getElementById('resultat_recherche');
+    resultatDiv.innerHTML = `
+        <div class="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded-lg">
+            <i class="fas fa-check mr-2"></i>
+            Client sélectionné avec succès !
+        </div>
+    `;
+    resultatDiv.classList.remove('hidden');
+    
+    // Masquer le message après 3 secondes
+    setTimeout(() => {
+        resultatDiv.classList.add('hidden');
+    }, 3000);
+}
+
+// Recherche automatique lors de la saisie (optionnel)
+document.getElementById('recherche_telephone').addEventListener('input', function() {
+    const resultatDiv = document.getElementById('resultat_recherche');
+    if (this.value.length === 0) {
+        resultatDiv.classList.add('hidden');
+    }
 });
 
 // Initialisation
