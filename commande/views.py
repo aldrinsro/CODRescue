@@ -290,9 +290,25 @@ def creer_commande(request):
                 
                 while f'article_{article_counter}' in request.POST:
                     article_id = request.POST.get(f'article_{article_counter}')
+                    variante_id = request.POST.get(f'variante_{article_counter}')
                     if article_id:
                         article = Article.objects.get(pk=article_id)
                         quantite = int(request.POST.get(f'quantite_{article_counter}', 1))
+                        
+                        # Récupérer la variante si spécifiée
+                        variante = None
+                        if variante_id:
+                            from article.models import VarianteArticle
+                            variante = VarianteArticle.objects.get(pk=variante_id)
+                            
+                            # Vérifier la disponibilité du stock de la variante
+                            if variante.qte_disponible < quantite:
+                                messages.error(request, f"Stock insuffisant pour {article.nom} - {variante.couleur.nom} {variante.pointure.pointure}. Stock disponible: {variante.qte_disponible}")
+                                return render(request, 'commande/creer.html', context)
+                            
+                            # Décrémenter le stock de la variante
+                            variante.qte_disponible -= quantite
+                            variante.save()
                         
                         # Calculer le sous-total selon la logique upsell
                         from commande.templatetags.commande_filters import calculer_sous_total_upsell
@@ -302,6 +318,7 @@ def creer_commande(request):
                         Panier.objects.create(
                             commande=commande,
                             article=article,
+                            variante=variante,
                             quantite=quantite,
                             sous_total=sous_total
                         )
@@ -319,7 +336,12 @@ def creer_commande(request):
                 commande.total_cmd = total_commande
                 commande.save()
                 
-                messages.success(request, "La commande a été créée avec succès.")
+                # Message de confirmation adapté selon le contenu
+                if total_commande > 0:
+                    messages.success(request, f"La commande a été créée avec succès avec {article_counter} article(s) pour un total de {total_commande:.2f} DH.")
+                else:
+                    messages.success(request, "La commande a été créée avec succès. Vous pouvez ajouter des articles plus tard via la modification.")
+                
                 return redirect('commande:detail', pk=commande.pk)
                 
         except Client.DoesNotExist:
@@ -332,9 +354,37 @@ def creer_commande(request):
         return redirect('commande:creer')
     
     # GET request
+    articles = Article.objects.all().order_by('nom')
+    
+    # Préparer les données JSON pour les articles
+    articles_data = []
+    for article in articles:
+        # Déterminer l'URL de l'image (priorité à l'image locale)
+        image_url = ''
+        if article.image:
+            image_url = article.image.url
+        elif article.image_url:
+            image_url = article.image_url
+            
+        articles_data.append({
+            'id': article.pk,
+            'nom': str(article.nom or ''),
+            'reference': str(article.reference or ''),
+            'prix_unitaire': float(article.prix_unitaire) if article.prix_unitaire else 0.0,
+            'qte_disponible': int(article.get_total_qte_disponible()),
+            'couleur': str(article.couleur or ''),
+            'pointure': str(article.pointure or ''),
+            'categorie': str(article.categorie) if hasattr(article, 'categorie') and article.categorie else '',
+            'phase': str(article.phase or ''),
+            'has_promo_active': bool(article.has_promo_active),
+            'isUpsell': bool(article.isUpsell),
+            'image_url': image_url
+        })
+    
     context = {
         'clients': Client.objects.all().order_by('nom', 'prenom'),
-        'articles': Article.objects.all().order_by('nom'),
+        'articles': articles,
+        'articles_json': articles_data,
         'villes': Ville.objects.select_related('region').all().order_by('nom'),
     }
     
@@ -365,6 +415,14 @@ def modifier_commande(request, pk):
                 
                 elif action == 'update_panier':
                     # === MISE À JOUR DU PANIER UNIQUEMENT ===
+                    # Restaurer les stocks des anciens articles du panier avant de les supprimer
+                    anciens_paniers = Panier.objects.filter(commande=commande)
+                    for ancien_panier in anciens_paniers:
+                        if ancien_panier.variante:
+                            # Restaurer le stock de la variante
+                            ancien_panier.variante.qte_disponible += ancien_panier.quantite
+                            ancien_panier.variante.save()
+                    
                     # Supprimer tous les anciens articles du panier
                     Panier.objects.filter(commande=commande).delete()
                 
@@ -374,12 +432,28 @@ def modifier_commande(request, pk):
                     
                     while f'article_{article_counter}' in request.POST:
                         article_id = request.POST.get(f'article_{article_counter}')
+                        variante_id = request.POST.get(f'variante_{article_counter}')
                         quantite = request.POST.get(f'quantite_{article_counter}')
                         
                         if article_id and quantite:
                             try:
                                 article = Article.objects.get(pk=article_id)
                                 quantite = int(quantite)
+                                
+                                # Récupérer la variante si spécifiée
+                                variante = None
+                                if variante_id:
+                                    from article.models import VarianteArticle
+                                    variante = VarianteArticle.objects.get(pk=variante_id)
+                                    
+                                    # Vérifier la disponibilité du stock de la variante
+                                    if variante.qte_disponible < quantite:
+                                        messages.error(request, f"Stock insuffisant pour {article.nom} - {variante.couleur.nom} {variante.pointure.pointure}. Stock disponible: {variante.qte_disponible}")
+                                        return render(request, 'commande/modifier.html', context)
+                                    
+                                    # Décrémenter le stock de la variante
+                                    variante.qte_disponible -= quantite
+                                    variante.save()
                                 
                                 # Calculer le sous-total selon la logique upsell
                                 from commande.templatetags.commande_filters import calculer_sous_total_upsell
@@ -389,6 +463,7 @@ def modifier_commande(request, pk):
                                 Panier.objects.create(
                                     commande=commande,
                                     article=article,
+                                    variante=variante,
                                     quantite=quantite,
                                     sous_total=sous_total
                                 )
@@ -1966,6 +2041,14 @@ def annuler_commande(request, pk):
             operateur=request.user.operateur if hasattr(request.user, 'operateur') else None,
             commentaire=f"Commande annulée - Motif: {motif}"
         )
+        
+        # Restaurer les stocks des articles de la commande
+        paniers = commande.paniers.all()
+        for panier in paniers:
+            if panier.variante:
+                # Restaurer le stock de la variante
+                panier.variante.qte_disponible += panier.quantite
+                panier.variante.save()
         
         # Sauvegarder le motif d'annulation dans la commande
         commande.motif_annulation = motif
