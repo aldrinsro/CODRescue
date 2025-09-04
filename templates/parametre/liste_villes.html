@@ -94,7 +94,8 @@
                     <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider border-r border-b border-gray-200">Nom</th>
                     <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider border-r border-b border-gray-200">Région</th>
                     <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider border-r border-b border-gray-200">Frais Livraison</th>
-                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider border-r border-b border-gray-200">Fréquence Livraison</th>
+                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider border-r border-b border-gray-200">Délai livraison min</th>
+                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider border-r border-b border-gray-200">Délai livraison max</th>
                     <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider border-b border-gray-200">Actions</th>
                 </tr>
             </thead>
@@ -107,7 +108,8 @@
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 border-r border-gray-200">{{ ville.nom }}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200">{{ ville.region.nom_region }}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200">{{ ville.frais_livraison|floatformat:0 }} DH</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200">{{ ville.frequence_livraison }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200">{{ ville.Delai_livraison_min|default:'--' }} jours</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200">{{ ville.Delai_livraison_max|default:'--' }} jours</td>
                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <a href="{% url 'app_admin:modifier_ville' ville.pk %}" class="text-yellow-500 hover:text-yellow-700 mx-1 transition-colors">
                             <i class="fas fa-edit"></i>

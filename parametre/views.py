@@ -369,7 +369,9 @@ def liste_regions(request):
     """Liste des régions avec statistiques"""
     regions = Region.objects.annotate(
         nb_villes=Count('villes'),
-        tarif_moyen=Avg('villes__frais_livraison')
+        tarif_moyen=Avg('villes__frais_livraison'),
+        delai_livraison_min=Avg('villes__Delai_livraison_min'),
+        delai_livraison_max=Avg('villes__Delai_livraison_max')
     ).order_by('nom_region')
     
     # Recherche
