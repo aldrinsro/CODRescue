@@ -131,9 +131,9 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASES = {
      'default': {
       'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('DB_NAME', default='yzrescue_db'),
+        'NAME': config('DB_NAME', default='yzcmd_db'),
          'USER': config('DB_USER', default='postgres'),
-         'PASSWORD': config('DB_PASSWORD', default='admin'),
+         'PASSWORD': config('DB_PASSWORD', default='postgres'),
          'HOST': config('DB_HOST', default='localhost'),
          'PORT': config('DB_PORT', default='5432'),
      }
