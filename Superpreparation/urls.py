@@ -37,14 +37,12 @@ urlpatterns = [
     path('api/commande-info/<int:commande_id>/', views.api_commande_info, name='api_commande_info'),
 
 
-
-
-
-
     path('modifier-commande/<int:commande_id>/', views.modifier_commande_prepa, name='modifier_commande'),
     path('modifier-commande-superviseur/<int:commande_id>/', views.modifier_commande_superviseur, name='modifier_commande_superviseur'),
     path('api/commande/<int:commande_id>/produits/', views.api_commande_produits, name='api_commande_produits'),
     
+
+
     # path('api/commande/<int:commande_id>/changer-etat/', views.api_changer_etat_preparation, name='api_changer_etat_preparation') # Supprimée - plus nécessaire
     path('api/articles-disponibles-prepa/', views.api_articles_disponibles_prepa, name='api_articles_disponibles_prepa'),
     path('api/commande/<int:commande_id>/panier/', views.api_panier_commande_prepa, name='api_panier_commande'),
@@ -63,12 +61,20 @@ urlpatterns = [
     path('commande/<int:commande_id>/prix-upsell/', views.api_prix_upsell_articles, name='api_prix_upsell_articles'),
     path('api/article/<int:article_id>/variantes/', views.get_article_variants, name='get_article_variants'),
     
+
+
+
     # URLs pour les modales d'impression
     path('api/ticket-commande/', views.api_ticket_commande, name='api_ticket_commande'),
     path('api/ticket-commande-multiple/', views.api_ticket_commande_multiple, name='api_ticket_commande_multiple'),
     path('api/etiquettes-articles/', views.api_etiquettes_articles, name='api_etiquettes_articles'),
     path('api/etiquettes-articles-multiple/', views.api_etiquettes_articles_multiple, name='api_etiquettes_articles_multiple'),
     path('api/finaliser-preparation/<int:commande_id>/', views.api_finaliser_preparation, name='api_finaliser_preparation'),
+
+
+
+
+
 
     # Gestion des envois
     path('envois/', views.envois_view, name='envois'),

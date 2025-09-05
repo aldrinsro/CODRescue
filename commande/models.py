@@ -54,7 +54,22 @@ class Commande(models.Model):
         ('ADMIN', 'Administrateur'),
         ('SYNC', 'Synchronisation')
     ]
-    
+    SOURCE_CHOICES = [
+        ('Appel', 'Appel'),
+        ('Whatsapp ', 'Whatsapp '),
+        ('SMS', 'SMS'),
+        ('Email', 'Email'),
+        ('Facebook', 'Facebook'),
+        ("Youcan", "Youcan"),
+        ("Shopify", "Shopify"), 
+              ]
+    PAYER_CHOICES = [
+        ('Non payé', 'Non payé'),
+        ('Payé', 'Payé'),
+        ('Remboursée', 'Remboursée'),
+    ]
+
+
     num_cmd = models.CharField(max_length=50, unique=True)
     id_yz = models.PositiveIntegerField(unique=True, null=True, blank=True)
     origine = models.CharField(max_length=10, choices=ORIGINE_CHOICES, default='SYNC')
@@ -62,7 +77,6 @@ class Commande(models.Model):
     total_cmd = models.FloatField()
     adresse = models.TextField()
     motif_annulation = models.TextField(blank=True, null=True)
-    is_upsell = models.BooleanField(default=False)
     date_creation = models.DateTimeField(default=timezone.now)
     date_modification = models.DateTimeField(auto_now=True)
     last_sync_date = models.DateTimeField(null=True, blank=True, verbose_name="Date de dernière synchronisation")
@@ -70,12 +84,13 @@ class Commande(models.Model):
     ville_init = models.CharField(max_length=100, blank=True, null=True)
     ville = models.ForeignKey(Ville, on_delete=models.CASCADE, null=True, blank=True, related_name='commandes')
     produit_init = models.TextField(blank=True, null=True)
-    compteur = models.IntegerField(default=0, verbose_name="Compteur d'utilisation")
-  
+    source = models.CharField(max_length=100, blank=True, null=True, choices=SOURCE_CHOICES)
+    compteur = models.IntegerField(default=0, verbose_name="Compteur d'utilisation")  
+    payement  = models.BooleanField(default=False, verbose_name="Payement", choices=PAYER_CHOICES)
+
     # Relation avec Envoi pour les exports journaliers
     envoi = models.ForeignKey('Envoi', on_delete=models.SET_NULL, null=True, blank=True, related_name='commandes_associees')
-  
-    
+
     class Meta:
         verbose_name = "Commande"
         verbose_name_plural = "Commandes"
@@ -94,6 +109,14 @@ class Commande(models.Model):
             base = self.START_ID_YZ - 1
             # Si aucune commande, commencer à 211971; sinon continuer après le max existant
             self.id_yz = max(last_id_yz or base, base) + 1 
+        
+        # Détecter automatiquement la source basée sur le numéro de commande
+        if self.num_cmd and not self.source:
+            if self.num_cmd.startswith('YCN'):
+                self.source = 'Youcan'
+            elif self.num_cmd.startswith('SHP'):
+                self.source = 'Shopify'
+        
         # Générer le numéro de commande selon l'origine si ce n'est pas déjà fait
         if not self.num_cmd:
             if self.origine == 'OC':
@@ -130,6 +153,29 @@ class Commande(models.Model):
                 self.num_cmd = str(self.id_yz)
         
         super().save(*args, **kwargs)
+    
+    @classmethod
+    def update_sources_from_num_cmd(cls):
+        """
+        Met à jour la source des commandes existantes basée sur leur num_cmd
+        """
+        # Mettre à jour les commandes YCN vers Youcan
+        updated_youcan = cls.objects.filter(
+            num_cmd__startswith='YCN',
+            source__isnull=True
+        ).update(source='Youcan')
+        
+        # Mettre à jour les commandes SHP vers Shopify
+        updated_shopify = cls.objects.filter(
+            num_cmd__startswith='SHP',
+            source__isnull=True
+        ).update(source='Shopify')
+        
+        return {
+            'youcan_updated': updated_youcan,
+            'shopify_updated': updated_shopify,
+            'total_updated': updated_youcan + updated_shopify
+        }
     
     def __str__(self):
         return f"Commande {self.id_yz or self.num_cmd} - {self.client}"

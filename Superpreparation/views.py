@@ -5979,8 +5979,8 @@ def api_ticket_commande(request):
                     'num_cmd': commande.num_cmd,
                     'client_nom': f"{commande.client.nom} {commande.client.prenom}" if commande.client else "Client non défini",
                     'client_telephone': commande.client.numero_tel if commande.client else "",
-                    'client_adresse': commande.adresse,
-                    'ville_client': commande.ville.nom if commande.ville else "",\
+                        'client_adresse': commande.adresse,
+                        'ville_client': commande.ville.nom if commande.ville else "",
                     'total': commande.total_cmd,
                     'date_confirmation': commande.date_creation,
                     'articles_description': articles_description,
@@ -6006,9 +6006,9 @@ def api_ticket_commande(request):
         if not all_tickets_html:
             return JsonResponse({'error': 'Aucune commande valide trouvée'}, status=404)
         
-        # Combiner tous les tickets avec un conteneur de grille
+        # Combiner tous les tickets avec un conteneur en bloc pour l'impression individuelle
         combined_html = f'''
-        <div class="ticket-commande-container" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 2mm; padding: 2mm; max-width: 180mm; width: 100%; -webkit-print-color-adjust: exact !important; color-adjust: exact !important; print-color-adjust: exact !important;">
+        <div class="ticket-commande-container" style="display: block; width: 100%; margin: 0 auto; padding: 0; -webkit-print-color-adjust: exact !important; color-adjust: exact !important; print-color-adjust: exact !important;">
             {''.join(all_tickets_html)}
         </div>
         '''
@@ -6246,7 +6246,7 @@ def api_etiquettes_articles_multiple(request):
 def api_ticket_commande_multiple(request):
     """
     API pour récupérer le contenu HTML des tickets de commande multiples
-    Supporte la sélection de commandes spécifiques ou toutes les commandes
+    Utilise la fonction api_ticket_commande existante pour éviter la duplication de code
     """
     print("🚀 === API TICKET COMMANDE MULTIPLE DÉMARRÉE ===")
     print(f"📡 Méthode HTTP: {request.method}")
@@ -6254,23 +6254,24 @@ def api_ticket_commande_multiple(request):
     print(f"📡 Paramètres GET: {dict(request.GET)}")
 
     try:
-        import traceback
      # Vérifier si c'est pour l'impression directe
         direct_print = request.GET.get('direct_print', 'false').lower() == 'true'
         print(f"🖨️ Impression directe: {direct_print}")
+        
         # Récupérer les IDs des commandes sélectionnées
         selected_ids = request.GET.get('selected_ids', '')
         print(f"📋 Paramètre selected_ids reçu: '{selected_ids}' (type: {type(selected_ids)})")
+        
         # Construire le filtre de base
         base_filter = {
             'etats__enum_etat__libelle': 'Confirmée',
             'paniers__isnull': False
         }
         print(f"🔧 Filtre de base: {base_filter}")
+        
         if selected_ids:
             print(f"🔍 Traitement de la sélection: '{selected_ids}'")
             try:
-
                 commande_ids = [int(id.strip()) for id in selected_ids.split(',') if id.strip().isdigit()]
                 print(f"🔍 IDs parsés: {commande_ids}")
                 if commande_ids:
@@ -6280,109 +6281,77 @@ def api_ticket_commande_multiple(request):
                     print("⚠️ Aucun ID valide trouvé dans selected_ids")
             except (ValueError, AttributeError) as e:
                 print(f"❌ Erreur lors du parsing des IDs: {e}")
+                import traceback
                 print(f"❌ Traceback: {traceback.format_exc()}")
         else:
             print("🔍 Aucune sélection spécifique - impression de toutes les commandes confirmées")
+        
         print(f"🔍 Filtre final appliqué: {base_filter}")
         print("🔍 Exécution de la requête de base de données...")
 
-        commandes = Commande.objects.filter(**base_filter).distinct().select_related('client', 'ville').prefetch_related(
-            'paniers__article', 
-            'paniers__variante__couleur', 
-            'paniers__variante__pointure'
-        )
-
-        print(f"🔍 Récupération des commandes confirmées avec paniers pour tickets multiples")
-
+        # Récupérer les commandes selon le filtre
+        commandes = Commande.objects.filter(**base_filter).distinct()
         print(f"📊 Nombre de commandes confirmées avec paniers: {commandes.count()}")
 
-        print("🔍 Détail des commandes trouvées:")
-        for cmd in commandes:
-            print(f"  📋 Commande: ID={cmd.id}, ID_YZ={cmd.id_yz}, Client={cmd.client.nom if cmd.client else 'N/A'}")
-
-        all_tickets_html = []
-        commandes_data = []
-
-        for commande in commandes:
-
-            print(f"✅ Traitement de la commande: {commande.id_yz}")
-
-            paniers = commande.paniers.all()
-            print(f"📦 Nombre de paniers pour {commande.id_yz}: {paniers.count()}")
-
-            total_articles = 0
-            produits_items = []
-
-            for panier in paniers:
-                article = panier.article
-                variante = panier.variante
-                total_articles += panier.quantite
-
-                print(f"  📋 Article: {article.nom}, Variante: {variante}, Quantité: {panier.quantite}")
-
-                couleur = variante.couleur.nom if (variante and getattr(variante, 'couleur', None)) else ''
-                pointure = f"P{variante.pointure.pointure}" if (variante and getattr(variante, 'pointure', None)) else ''
-                ref_var = getattr(variante, 'reference_variante', None) if variante else None
-                reference_affichee = ref_var or getattr(article, 'reference', '')
-                details = " ".join([v for v in [reference_affichee, couleur, pointure] if v])
-                produits_items.append(f"<li><strong>{article.nom}</strong> {details} ×{panier.quantite}</li>")
-
-            if produits_items:
-                articles_description = "<ul class=\"ticket-products\">" + "".join(produits_items) + "</ul>"
-            else:
-                articles_description = "Aucun article"
-
-            print(f"  📝 Description finale: '{articles_description}'")
-            print(f"  🔢 Total articles: {total_articles}")
-
-            commande_data = {
-                'id_yz': commande.id_yz,
-                'num_cmd': commande.num_cmd,
-                'client_nom': f"{commande.client.nom} {commande.client.prenom}" if commande.client else "Client non défini",
-                'client_telephone': commande.client.numero_tel if commande.client else "",
-                'ville_client': commande.ville_init or (commande.ville.nom if commande.ville else ""),
-                'adresse': commande.client.adresse if commande.client else "",
-                'total': commande.total_cmd,
-                'date_confirmation': commande.date_creation,
-                'articles_description': articles_description,
-                'total_articles': total_articles
-            }
-
-            ticket_html = render_to_string('Superpreparation/partials/_ticket_commande.html', {
-                'commande': commande_data
-            })
-
-            if direct_print:
-                import re
-                ticket_html = re.sub(r'<input[^>]*class="[^"]*ticket-checkbox[^"]*"[^>]*>', '', ticket_html)
-                ticket_html = ticket_html.replace('class="articles-count-badge"', 'class="articles-count-badge" style="display: inline-block !important;"')
-            all_tickets_html.append(ticket_html)
-            commandes_data.append(commande_data)
-        if not all_tickets_html:
+        if not commandes.exists():
             return JsonResponse({'error': 'Aucune commande confirmée trouvée'}, status=404)
-        print(f"✅ {len(all_tickets_html)} tickets générés avec succès")
-        # Combiner tous les tickets avec un conteneur de grille
 
-        combined_html = f'''
+        # Extraire les IDs YZ des commandes
+        commande_ids_yz = [str(commande.id_yz) for commande in commandes]
+        print(f"🔍 IDs YZ des commandes: {commande_ids_yz}")
 
-        <div class="ticket-commande-container" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; padding: 15px; max-width: 100%; width: 100%; -webkit-print-color-adjust: exact !important; color-adjust: exact !important; print-color-adjust: exact !important;">
-
-            {''.join(all_tickets_html)}
-
-        </div>
-
-        '''
-        return JsonResponse({
-            'success': True,
-            'html': combined_html,
-            'commandes': commandes_data
-        })
+        # Créer une nouvelle requête simulée pour api_ticket_commande
+        class MockRequest:
+            def __init__(self, ids_string, user):
+                self.GET = {'ids': ids_string}
+                self.user = user
+        
+        # Appeler la fonction api_ticket_commande existante
+        mock_request = MockRequest(','.join(commande_ids_yz), request.user)
+        print(f"🔄 Appel de api_ticket_commande avec IDs: {','.join(commande_ids_yz)}")
+        
+        response = api_ticket_commande(mock_request)
+        
+        # Vérifier si la réponse est un JsonResponse
+        if hasattr(response, 'content'):
+            import json
+            data = json.loads(response.content.decode('utf-8'))
+            
+            if data.get('success'):
+                print(f"✅ {len(commande_ids_yz)} tickets générés avec succès via api_ticket_commande")
+                
+                # Modifier le HTML si c'est pour l'impression directe
+                if direct_print:
+                    import re
+                    html_content = data['html']
+                    # Supprimer les checkboxes
+                    html_content = re.sub(r'<input[^>]*class="[^"]*ticket-checkbox[^"]*"[^>]*>', '', html_content)
+                    # Ajuster l'affichage des badges
+                    html_content = html_content.replace('class="articles-count-badge"', 'class="articles-count-badge" style="display: inline-block !important;"')
+                    data['html'] = html_content
+                
+                return JsonResponse({
+                    'success': True,
+                    'html': data['html'],
+                    'commandes': data['commandes']
+                })
+            else:
+                print(f"❌ Erreur dans api_ticket_commande: {data.get('error')}")
+                return JsonResponse({
+                    'success': False,
+                    'error': f"Erreur lors de la génération des tickets: {data.get('error')}"
+                }, status=500)
+        else:
+            # Si ce n'est pas un JsonResponse, retourner directement
+            return response
+            
     except Exception as e:
-        print(f"Erreur dans api_ticket_commande_multiple: {str(e)}")
+        print(f"❌ Erreur dans api_ticket_commande_multiple: {str(e)}")
+        import traceback
         print(traceback.format_exc())
         return JsonResponse({
             'success': False,
-            'error': f"Erreur lors de la génération des tickets multiples: {str(e)}",
+            'error': f"Erreur lors de la génération des tickets multiples: {str(e)}"
         }, status=500)
 
 @superviseur_preparation_required
@@ -6649,12 +6618,10 @@ def api_commande_info(request, commande_id):
             etat_actuel = commande.etat_actuel
         except:
             etat_actuel = None
-            
         try:
             etat_precedent = commande.etat_precedent
         except:
             etat_precedent = None
-            
         try:
             etat_confirmation = commande.etat_confirmation
         except:
@@ -6691,13 +6658,9 @@ def api_commande_info(request, commande_id):
             'error': f'Erreur lors du chargement des informations: {str(e)}'
         }, status=500)
 
-
-
 """"
 Views pour la gestion des stocks
 """
-
-
 @superviseur_preparation_required
 def liste_articles(request):
     """Liste des articles avec recherche, filtres et pagination"""

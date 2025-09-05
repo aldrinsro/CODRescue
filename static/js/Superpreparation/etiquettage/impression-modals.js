@@ -172,8 +172,10 @@ class ImpressionModals {
         fetch(`/Superpreparation/api/ticket-commande/?ids=${commandeIds.join(',')}`)
             .then(response => response.json())
             .then(data => {
-                if (data.success) {
-                    this.showTicketModal(data);
+                if (data.success && data.html) {
+                    // Lancer directement l'impression
+                    this.printTicketsDirect([data.html]);
+                    this.showNotification('Impression lancée !', 'success');
                 } else {
                     this.showNotification(`Erreur: ${data.error}`, 'error');
                 }
@@ -197,8 +199,10 @@ class ImpressionModals {
         fetch('/Superpreparation/api/ticket-commande-multiple/')
             .then(response => response.json())
             .then(data => {
-                if (data.success) {
-                    this.showTicketMultipleModal(data);
+                if (data.success && data.html) {
+                    // Lancer directement l'impression
+                    this.printTicketsDirect([data.html]);
+                    this.showNotification('Impression lancée !', 'success');
                 } else {
                     this.showNotification(`Erreur: ${data.error}`, 'error');
                 }
@@ -246,7 +250,13 @@ class ImpressionModals {
                 if (response.ok) {
                     const data = await response.json();
                     console.log('✅ Données reçues:', data);
-                    this.showEtiquettesArticlesModal(data);
+                    // Lancer directement l'impression des étiquettes
+                    if (data.success && data.html) {
+                        this.printLabels(data.html, 'Étiquettes Articles', 'articles');
+                        this.showNotification('Impression des étiquettes lancée !', 'success');
+                    } else {
+                        this.showNotification(`Erreur: ${data.error}`, 'error');
+                    }
                 } else {
                     const errorText = await response.text();
                     console.error('❌ Erreur serveur:', errorText);
@@ -270,7 +280,10 @@ class ImpressionModals {
                     <title>Tickets de Commande</title>
                     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
                     <style>
-                        @page { size: B5; margin: 5mm; }
+                        @page { 
+                            size: B5; 
+                            margin: 5mm; 
+                        }
                         body { 
                             margin: 0; 
                             padding: 0; 
@@ -285,13 +298,10 @@ class ImpressionModals {
                             print-color-adjust: exact !important;
                         }
                         .ticket-commande-container {
-                            display: grid;
-                            grid-template-columns: repeat(2, 1fr);
-                            gap: 2mm;
+                            display: block;
                             width: 100%;
-                            max-width: 180mm;
                             margin: 0 auto;
-                            padding: 2mm;
+                            padding: 0;
                         }
                         .ticket-commande {
                             width: 75mm;
@@ -301,8 +311,13 @@ class ImpressionModals {
                             font-size: 7px;
                             background: white;
                             page-break-inside: avoid;
-                            margin: 0;
+                            page-break-after: always;
+                            margin: 0 auto 0 auto;
                             overflow: hidden;
+                            display: block;
+                        }
+                        .ticket-commande:last-child {
+                            page-break-after: auto;
                         }
                         .ticket-header {
                             background-color: #000000 !important;
@@ -438,7 +453,10 @@ class ImpressionModals {
                     <title>Tickets de Commande</title>
                     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
                     <style>
-                        @page { size: B5; margin: 5mm; }
+                        @page { 
+                            size: B5; 
+                            margin: 5mm; 
+                        }
                         body { 
                             margin: 0; 
                             padding: 0; 
@@ -453,13 +471,10 @@ class ImpressionModals {
                             print-color-adjust: exact !important;
                         }
                         .ticket-commande-container {
-                            display: grid;
-                            grid-template-columns: repeat(2, 1fr);
-                            gap: 2mm;
+                            display: block;
                             width: 100%;
-                            max-width: 180mm;
                             margin: 0 auto;
-                            padding: 2mm;
+                            padding: 0;
                         }
                         .ticket-commande {
                             width: 75mm;
@@ -469,8 +484,13 @@ class ImpressionModals {
                             font-size: 7px;
                             background: white;
                             page-break-inside: avoid;
-                            margin: 0;
+                            page-break-after: always;
+                            margin: 0 auto 0 auto;
                             overflow: hidden;
+                            display: block;
+                        }
+                        .ticket-commande:last-child {
+                            page-break-after: auto;
                         }
                         .ticket-header {
                             background-color: #000000 !important;
@@ -795,13 +815,10 @@ class ImpressionModals {
                     .labels-grid,
                     .article-labels-container,
                     .commande-labels-container {
-                        display: grid;
-                        grid-template-columns: repeat(2, 1fr);
-                        gap: 2mm;
+                        display: block;
                         width: 100%;
-                        max-width: 180mm;
                         margin: 0 auto;
-                        padding: 2mm;
+                        padding: 0;
                         margin-top: 2mm;
                     }
 
@@ -819,11 +836,17 @@ class ImpressionModals {
                         align-items: center;
                         background: white;
                         page-break-inside: avoid;
+                        page-break-after: always;
                         break-inside: avoid;
-                        margin: 0;
+                        margin: 0 auto 0 auto;
                         overflow: hidden;
                         position: relative;
                         padding: 2mm;
+                    }
+                    
+                    .article-label:last-child,
+                    .commande-label:last-child {
+                        page-break-after: auto;
                     }
 
                     .article-label *,
@@ -1088,13 +1111,10 @@ function imprimerTicketsMultipleDirect() {
                             
                             /* Container pour les tickets */
                             .ticket-commande-container {
-                                display: grid !important;
-                                grid-template-columns: repeat(2, 1fr) !important;
-                                gap: 3mm !important;
+                                display: block !important;
                                 width: 100% !important;
-                                max-width: 180mm !important;
                                 margin: 0 auto !important;
-                                padding: 3mm !important;
+                                padding: 0 !important;
                             }
                             
                             /* Format compact du ticket */
@@ -1106,10 +1126,15 @@ function imprimerTicketsMultipleDirect() {
                                 font-size: 8px !important;
                                 background: white !important;
                                 page-break-inside: avoid !important;
-                                margin: 0 !important;
+                                page-break-after: always !important;
+                                margin: 0 auto 0 auto !important;
                                 overflow: hidden;
                                 display: flex !important;
                                 flex-direction: column !important;
+                            }
+                            
+                            .ticket-commande:last-child {
+                                page-break-after: auto !important;
                             }
                             
                             .ticket-commande * {
@@ -1361,13 +1386,10 @@ function imprimerCodesQRArticlesDirect() {
                             
                             /* Container pour les étiquettes */
                             .etiquettes-container {
-                                display: grid !important;
-                                grid-template-columns: repeat(2, 1fr) !important;
-                                gap: 3mm !important;
+                                display: block !important;
                                 width: 100% !important;
-                                max-width: 180mm !important;
                                 margin: 0 auto !important;
-                                padding: 3mm !important;
+                                padding: 0 !important;
                             }
                             
                             /* Format compact de l'étiquette */
@@ -1379,13 +1401,18 @@ function imprimerCodesQRArticlesDirect() {
                                 font-size: 8px !important;
                                 background: white !important;
                                 page-break-inside: avoid !important;
-                                margin: 0 !important;
+                                page-break-after: always !important;
+                                margin: 0 auto 0 auto !important;
                                 overflow: hidden;
                                 display: flex !important;
                                 flex-direction: column !important;
                                 align-items: center !important;
                                 justify-content: center !important;
                                 text-align: center !important;
+                            }
+                            
+                            .etiquette-article:last-child {
+                                page-break-after: auto !important;
                             }
                             
                             .etiquette-article * {
@@ -1558,13 +1585,10 @@ window.impressionMultipleFusionnee = function() {
                             
                             /* Container pour les tickets */
                             .ticket-commande-container {
-                                display: grid !important;
-                                grid-template-columns: repeat(2, 1fr) !important;
-                                gap: 3mm !important;
+                                display: block !important;
                                 width: 100% !important;
-                                max-width: 180mm !important;
                                 margin: 0 auto !important;
-                                padding: 3mm !important;
+                                padding: 0 !important;
                             }
                             
                             /* Format compact du ticket */
@@ -1576,10 +1600,15 @@ window.impressionMultipleFusionnee = function() {
                                 font-size: 8px !important;
                                 background: white !important;
                                 page-break-inside: avoid !important;
-                                margin: 0 !important;
+                                page-break-after: always !important;
+                                margin: 0 auto 0 auto !important;
                                 overflow: hidden;
                                 display: flex !important;
                                 flex-direction: column !important;
+                            }
+                            
+                            .ticket-commande:last-child {
+                                page-break-after: auto !important;
                             }
                             
                             .ticket-commande * {
@@ -1753,13 +1782,10 @@ window.impressionMultipleFusionnee = function() {
                                                     
                                                     /* Container pour les étiquettes */
                                                     .etiquettes-container {
-                                                        display: grid !important;
-                                                        grid-template-columns: repeat(2, 1fr) !important;
-                                                        gap: 3mm !important;
+                                                        display: block !important;
                                                         width: 100% !important;
-                                                        max-width: 180mm !important;
                                                         margin: 0 auto !important;
-                                                        padding: 3mm !important;
+                                                        padding: 0 !important;
                                                     }
                                                     
                                                     /* Format compact de l'étiquette */
@@ -1771,13 +1797,18 @@ window.impressionMultipleFusionnee = function() {
                                                         font-size: 8px !important;
                                                         background: white !important;
                                                         page-break-inside: avoid !important;
-                                                        margin: 0 !important;
+                                page-break-after: always !important;
+                                margin: 0 auto 0 auto !important;
                                                         overflow: hidden;
                                                         display: flex !important;
                                                         flex-direction: column !important;
                                                         align-items: center !important;
                                                         justify-content: center !important;
                                                         text-align: center !important;
+                                                    }
+                                                    
+                                                    .etiquette-article:last-child {
+                                                        page-break-after: auto !important;
                                                     }
                                                     
                                                     .etiquette-article * {

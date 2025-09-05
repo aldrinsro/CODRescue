@@ -1,1 +1,1 @@
-# Management package for commande app 
+# Management package
