@@ -209,7 +209,8 @@ def liste_commandes(request):
     context = {
         'page_title': 'Mes Commandes à Confirmer',
         'page_subtitle': f"Gestion des commandes qui vous sont affectées ou retournées.",
-        'page_obj': page_obj,
+        'commandes': commandes_list,  # Passer toutes les commandes pour la pagination intelligente
+        'page_obj': page_obj,  # Garder pour compatibilité si nécessaire
         'search_query': search_query,
         'operateur': operateur,
         'stats': stats,
@@ -2881,6 +2882,63 @@ def api_recherche_client_tel(request):
                 })
         return JsonResponse({'results': results})
     return JsonResponse({'results': []}, status=405)
+
+@login_required
+def rechercher_client_telephone(request):
+    """API pour rechercher un client par numéro de téléphone exact"""
+    from django.http import JsonResponse
+    from client.models import Client
+    
+    if request.method == 'GET':
+        telephone = request.GET.get('telephone', '').strip()
+        
+        if not telephone:
+            return JsonResponse({
+                'success': False,
+                'error': 'Numéro de téléphone requis'
+            }, status=400)
+        
+        try:
+            # Rechercher le client par numéro de téléphone exact
+            client = Client.objects.get(numero_tel=telephone, is_active=True)
+            
+            return JsonResponse({
+                'success': True,
+                'client': {
+                    'id': client.id,
+                    'nom_complet': client.get_full_name,
+                    'nom': client.nom,
+                    'prenom': client.prenom,
+                    'numero_tel': client.numero_tel,
+                    'email': client.email or '',
+                    'adresse': client.adresse or ''
+                }
+            })
+            
+        except Client.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Aucun client trouvé avec ce numéro de téléphone'
+            })
+            
+        except Client.MultipleObjectsReturned:
+            # Si plusieurs clients avec le même numéro (cas rare)
+            clients = Client.objects.filter(numero_tel=telephone, is_active=True)
+            return JsonResponse({
+                'success': False,
+                'error': f'Plusieurs clients trouvés avec ce numéro ({clients.count()})'
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': f'Erreur lors de la recherche: {str(e)}'
+            }, status=500)
+    
+    return JsonResponse({
+        'success': False,
+        'error': 'Méthode non autorisée'
+    }, status=405)
 
 @login_required
 def api_recherche_article_ref(request):

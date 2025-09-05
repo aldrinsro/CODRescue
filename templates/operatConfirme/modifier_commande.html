@@ -455,8 +455,8 @@
     </div>
 </div>
 
-<!-- Modale pour ajouter/modifier un article -->
-<div id="articleModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50 p-4" style="backdrop-filter: blur(8px); display: none;">
+<!-- Modal pour ajouter un article (identique à la page de création) -->
+<div id="articleModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50 p-4" style="backdrop-filter: blur(8px);">
     <div class="bg-white rounded-xl p-4 sm:p-6 w-full max-w-7xl mx-auto shadow-2xl max-h-[95vh] overflow-y-auto">
         <h3 class="text-base sm:text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
             <div class="flex items-center">
@@ -491,23 +491,23 @@
                         <div class="badge-legend grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-1 sm:gap-2 lg:gap-3 text-xs sm:text-sm">
                             <span id="filter-all" class="inline-flex items-center justify-center px-2 sm:px-4 py-1 sm:py-2 bg-gray-100 text-gray-700 rounded-full font-medium cursor-pointer filter-badge active whitespace-nowrap hover:bg-gray-200 transition-colors" 
                                   onclick="filtrerArticles('all')" title="Afficher tous les articles">
-                                🔍 TOUS
+                                🔍 TOUS <span id="count-all" class="ml-1 bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded-full text-xs">0</span>
                             </span>
                             <span id="filter-promo" class="inline-flex items-center justify-center px-2 sm:px-4 py-1 sm:py-2 bg-red-100 text-red-700 rounded-full font-medium cursor-pointer filter-badge whitespace-nowrap hover:bg-red-200 transition-colors" 
                                   onclick="filtrerArticles('promo')" title="Filtrer les articles en promotion">
-                                🔥 PROMO
+                                🔥 PROMO <span id="count-promo" class="ml-1 bg-red-200 text-red-600 px-1.5 py-0.5 rounded-full text-xs">0</span>
                             </span>
                             <span id="filter-liquidation" class="inline-flex items-center justify-center px-2 sm:px-4 py-1 sm:py-2 bg-orange-100 text-orange-700 rounded-full font-medium cursor-pointer filter-badge whitespace-nowrap hover:bg-orange-200 transition-colors" 
                                   onclick="filtrerArticles('liquidation')" title="Filtrer les articles en liquidation">
-                                🏷️ LIQUIDATION
+                                🏷️ LIQUIDATION <span id="count-liquidation" class="ml-1 bg-orange-200 text-orange-600 px-1.5 py-0.5 rounded-full text-xs">0</span>
                             </span>
                             <span id="filter-test" class="inline-flex items-center justify-center px-2 sm:px-4 py-1 sm:py-2 bg-blue-100 text-blue-700 rounded-full font-medium cursor-pointer filter-badge whitespace-nowrap hover:bg-blue-200 transition-colors" 
                                   onclick="filtrerArticles('test')" title="Filtrer les articles en test">
-                                🧪 TEST
+                                🧪 TEST <span id="count-test" class="ml-1 bg-blue-200 text-blue-600 px-1.5 py-0.5 rounded-full text-xs">0</span>
                             </span>
                             <span id="filter-upsell" class="inline-flex items-center justify-center px-2 sm:px-4 py-1 sm:py-2 bg-green-100 text-green-700 rounded-full font-medium cursor-pointer filter-badge whitespace-nowrap hover:bg-green-200 transition-colors" 
                                   onclick="filtrerArticles('upsell')" title="Filtrer les articles upsell">
-                                ⬆️ UPSELL
+                                ⬆️ UPSELL <span id="count-upsell" class="ml-1 bg-green-200 text-green-600 px-1.5 py-0.5 rounded-full text-xs">0</span>
                             </span>
                         </div>
                     </div>
@@ -520,56 +520,27 @@
 
                 <!-- Section des articles avec navigation fixe -->
                 <div class="mt-4 border border-gray-200 rounded-lg overflow-hidden">
-                    <!-- En-tête fixe du tableau -->
-                    <div class="bg-gray-50 border-b border-gray-200 overflow-x-auto">
-                        <table class="min-w-full">
-                            <thead>
-                                <tr>
-                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Article</th>
-                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Prix</th>
-                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Stock</th>
-                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Action</th>
-                                </tr>
-                            </thead>
-                        </table>
-                    </div>
-                    
                     <!-- Zone de scroll avec barre de navigation personnalisée -->
                     <div class="relative">
                         <!-- Conteneur principal avec scroll -->
-                        <div id="articlesScrollContainer" class="max-h-64 sm:max-h-96 overflow-y-auto overflow-x-auto">
-                            <table class="min-w-full">
+                        <div id="articlesScrollContainer" class="max-h-64 sm:max-h-96 overflow-y-auto" style="scrollbar-width: thin; scrollbar-color: #cbd5e0 #f7fafc;">
+                            <table class="w-full table-fixed">
+                                <thead class="bg-gray-50 sticky top-0 z-10">
+                                    <tr>
+                                        <th class="w-2/4 px-2 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Article</th>
+                                        <th class="w-1/6 px-1 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Prix</th>
+                                        <th class="w-1/6 px-1 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Stock</th>
+                                        <th class="w-1/6 px-1 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Action</th>
+                                    </tr>
+                                </thead>
                                 <tbody id="articlesTableBody" class="bg-white divide-y divide-gray-100">
                                     <!-- Lignes d'articles rendues dynamiquement -->
                                 </tbody>
                             </table>
                         </div>
                         
-                        <!-- Barre de navigation personnalisée -->
-                        <div id="customScrollbar" class="absolute right-0 top-0 bottom-0 w-2 sm:w-3 bg-gray-100 rounded-r-lg">
-                            <div id="scrollThumb" class="w-2 sm:w-3 bg-gray-400 rounded-full cursor-pointer hover:bg-gray-500 transition-colors" style="height: 50px; top: 0; position: absolute;"></div>
                         </div>
                     </div>
-                    
-                    <!-- Indicateur de navigation -->
-                    <div class="bg-gray-50 border-t border-gray-200 px-2 sm:px-4 py-2 flex items-center justify-between text-xs text-gray-500">
-                        <span id="scrollInfo">Articles disponibles</span>
-                        <div class="flex items-center space-x-1 sm:space-x-2">
-                            <button id="scrollUp" class="p-1 hover:bg-gray-200 rounded" title="Monter">
-                                <i class="fas fa-chevron-up"></i>
-                            </button>
-                            <button id="scrollDown" class="p-1 hover:bg-gray-200 rounded" title="Descendre">
-                                <i class="fas fa-chevron-down"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                </div>
-                
-                <!-- Affichage du nom d'article (pour modifications) -->
-                <div id="article-display-field" class="hidden">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Article</label>
-                    <input type="text" id="articleDisplay" readonly class="w-full p-3 bg-gray-100 border border-gray-300 rounded-lg text-gray-600">
                 </div>
                 
             <!-- Quantité (masquée car gérée dans le tableau) -->
@@ -579,88 +550,9 @@
                            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
             </div>
             
-            <!-- Informations de l'article sélectionné -->
-            <div id="article-info" class="hidden mt-4">
-                <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200 p-3 sm:p-4">
-                    <h4 class="text-base sm:text-lg font-semibold text-blue-800 mb-3 sm:mb-4 flex items-center">
-                        <i class="fas fa-info-circle mr-2"></i>Détails de l'article
-                    </h4>
-                    
-                    <!-- Informations principales organisées en cartes -->
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 mb-3 sm:mb-4">
-                        <!-- Carte Informations produit -->
-                        <div class="bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-gray-100">
-                            <h5 class="font-medium text-gray-800 mb-2 sm:mb-3 flex items-center text-sm sm:text-base">
-                                <i class="fas fa-tag mr-2 text-blue-600"></i>Informations produit
-                            </h5>
-                            <div class="space-y-2">
-                                <div class="flex justify-between text-sm sm:text-base">
-                                    <span class="text-gray-600">Référence :</span>
-                                    <span id="info-reference" class="font-medium text-gray-800"></span>
-                                </div>
-                                <div class="flex justify-between text-sm sm:text-base">
-                                    <span class="text-gray-600">Prix unitaire :</span>
-                                    <span id="info-prix" class="font-bold text-green-600"></span>
-                                </div>
-                                <div class="flex justify-between border-t pt-2 text-sm sm:text-base">
-                                    <span class="text-gray-700 font-medium">Sous-total :</span>
-                                    <span id="info-sous-total" class="font-bold text-blue-600 text-base sm:text-lg"></span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Carte Caractéristiques -->
-                        <div class="bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-gray-100">
-                            <h5 class="font-medium text-gray-800 mb-2 sm:mb-3 flex items-center text-sm sm:text-base">
-                                <i class="fas fa-palette mr-2 text-purple-600"></i>Caractéristiques du produit
-                            </h5>
-                            
-                            <!-- Conteneur pour les badges de caractéristiques -->
-                            <div id="caracteristiques-badges" class="flex flex-wrap gap-1 sm:gap-2 mb-2 sm:mb-3">
-                                <!-- Les badges seront ajoutés dynamiquement par JavaScript -->
-                            </div>
-                            
-                            <!-- Affichage classique formaté -->
-                            <div class="space-y-2 text-xs sm:text-sm">
-                                <div>
-                                    <span class="text-gray-700 font-medium">Taille : </span>
-                                    <span id="info-pointure" class="text-purple-600 font-medium"></span>
-                                </div>
-                                <div>
-                                    <span class="text-gray-700 font-medium">Couleur : </span>
-                                    <span id="info-couleur" class="text-orange-600 font-medium"></span>
-                                </div>
-                                <div>
-                                    <span class="text-gray-700 font-medium">Catégorie : </span>
-                                    <span id="info-categorie" class="text-indigo-600 font-medium"></span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Stock et description -->
-                    <div class="bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-gray-100">
-                        <div class="flex items-center justify-between mb-2">
-                            <h5 class="font-medium text-gray-800 flex items-center text-sm sm:text-base">
-                                <i class="fas fa-boxes mr-2 text-teal-600"></i>Stock disponible
-                            </h5>
-                            <span id="info-stock" class="px-2 sm:px-3 py-1 rounded-full font-medium transition-all duration-300 text-xs sm:text-sm"></span>
-                        </div>
-                        <div class="flex items-center mt-2 mb-2">
-                            <div class="w-full bg-gray-200 rounded-full h-2 sm:h-2.5">
-                                <div id="stock-progress" class="h-2 sm:h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
-                            </div>
-                            <div id="stock-percentage" class="ml-2 text-xs font-medium"></div>
-                        </div>
-                        <div class="text-xs text-gray-500 mb-2">
-                            <i class="fas fa-info-circle mr-1"></i>
-                            Le stock affiché est mis à jour en temps réel depuis la base de données
-                        </div>
-                        <div id="info-description" class="text-xs sm:text-sm text-gray-600 italic"></div>
-                    </div>
-                </div>
-            </div>
         </form>
+
+        <!-- Boutons d'action supprimés car l'ajout se fait automatiquement -->
     </div>
 </div>
 
@@ -2330,14 +2222,12 @@ function ajouterNouvelArticle() {
     // Mettre à jour le titre
     document.getElementById('articleModalTitle').textContent = 'Ajouter un article';
     
-    // Afficher le champ de sélection, cacher l'affichage
+    // Afficher le champ de sélection
     document.getElementById('article-selection-field').classList.remove('hidden');
-    document.getElementById('article-display-field').classList.add('hidden');
     
     // Réinitialiser le formulaire
     document.getElementById('articleSelect').value = '';
     document.getElementById('quantiteInput').value = '1';
-    document.getElementById('article-info').classList.add('hidden');
     
     // Charger la liste des articles
     chargerArticlesDisponibles();
@@ -2365,7 +2255,6 @@ function modifierArticle(panierId) {
     
     // Toujours afficher le champ de sélection pour permettre de changer l'article
     document.getElementById('article-selection-field').classList.remove('hidden');
-    document.getElementById('article-display-field').classList.add('hidden');
     
     // Charger la liste des articles
     chargerArticlesDisponibles();
@@ -2473,14 +2362,14 @@ function afficherInfosArticleExistant(articleCard) {
     const sousTotalElement = articleCard.querySelector('.text-lg.font-bold');
     const sousTotal = sousTotalElement ? sousTotalElement.textContent : '';
     
-    // Informations de base (récupérées du DOM)
-    const infoReference = document.getElementById('info-reference');
-    const infoPrix = document.getElementById('info-prix');
-    const infoSousTotal = document.getElementById('info-sous-total');
+    // Informations de base (récupérées du DOM) - éléments supprimés pour uniformité
+    // const infoReference = document.getElementById('info-reference');
+    // const infoPrix = document.getElementById('info-prix');
+    // const infoSousTotal = document.getElementById('info-sous-total');
     
-    if (infoReference) infoReference.textContent = reference;
-    if (infoPrix) infoPrix.textContent = prixText;
-    if (infoSousTotal) infoSousTotal.textContent = sousTotal;
+    // if (infoReference) infoReference.textContent = reference;
+    // if (infoPrix) infoPrix.textContent = prixText;
+    // if (infoSousTotal) infoSousTotal.textContent = sousTotal; // Élément supprimé
     
     // Récupérer les caractéristiques depuis les badges
     const caracteristiques = extraireCaracteristiquesDepuisBadges(articleCard);
@@ -2503,22 +2392,21 @@ function afficherInfosArticleExistant(articleCard) {
     // Mettre à jour les badges dans la modale
     mettreAJourBadgesModale(caracteristiques);
     
-    // Récupérer le stock depuis le badge vert s'il existe
-    const infoStock = document.getElementById('info-stock');
-    const infoDescription = document.getElementById('info-description');
+    // Récupérer le stock depuis le badge vert s'il existe (éléments supprimés pour uniformité)
+    // const infoStock = document.getElementById('info-stock');
+    // const infoDescription = document.getElementById('info-description');
     
-    if (caracteristiques.stock && infoStock) {
-        infoStock.textContent = caracteristiques.stock;
-    } else {
+    // if (caracteristiques.stock && infoStock) {
+    //     infoStock.textContent = caracteristiques.stock;
+    // } else {
         // Essayer de récupérer depuis l'API
         chargerInfosCompletesArticle(reference);
     }
     
-    if (infoDescription) infoDescription.textContent = caracteristiques.description || '';
+    // if (infoDescription) infoDescription.textContent = caracteristiques.description || '';
     
     console.log('📋 Caractéristiques extraites:', caracteristiques);
     
-    document.getElementById('article-info').classList.remove('hidden');
 }
 
 // Fonction pour extraire les caractéristiques depuis les badges de l'article
@@ -2701,7 +2589,7 @@ function chargerInfosCompletesArticle(reference) {
             const infoPointure = document.getElementById('info-pointure');
             const infoCouleur = document.getElementById('info-couleur');
             const infoCategorie = document.getElementById('info-categorie');
-            const infoStock = document.getElementById('info-stock');
+            // const infoStock = document.getElementById('info-stock'); // Élément supprimé
             
             // Vérifier que qte_disponible est bien défini et convertir en nombre
             const stock = typeof article.qte_disponible === 'number' ? article.qte_disponible : 
@@ -2719,10 +2607,10 @@ function chargerInfosCompletesArticle(reference) {
     }
     
     // Si l'article n'est pas dans la liste, afficher des valeurs par défaut
-    document.getElementById('info-pointure').textContent = '-';
-    document.getElementById('info-couleur').textContent = '-';
-    document.getElementById('info-categorie').textContent = '-';
-    document.getElementById('info-stock').textContent = '0 unité(s)';
+    // document.getElementById('info-pointure').textContent = '-'; // Élément supprimé
+    // document.getElementById('info-couleur').textContent = '-'; // Élément supprimé
+    // document.getElementById('info-categorie').textContent = '-'; // Élément supprimé
+    // document.getElementById('info-stock').textContent = '0 unité(s)'; // Élément supprimé
     
     console.log('⚠️ Informations complètes non trouvées pour:', reference);
 }
@@ -3957,9 +3845,9 @@ function onArticleSelectionChange() {
         // Puis rafraîchir les données de stock en temps réel
         if (article.id && !article.id.toString().startsWith('fallback-')) {
             // Indiquer que le stock est en cours de rafraîchissement
-            const infoStock = document.getElementById('info-stock');
-            const stockProgressBar = document.getElementById('stock-progress');
-            const stockPercentage = document.getElementById('stock-percentage');
+            // const infoStock = document.getElementById('info-stock'); // Élément supprimé
+            // const stockProgressBar = document.getElementById('stock-progress'); // Élément supprimé
+            // const stockPercentage = document.getElementById('stock-percentage'); // Élément supprimé
             
             if (infoStock) {
                 infoStock.innerHTML = '<i class="fas fa-sync fa-spin mr-1"></i> Actualisation...';
@@ -4000,7 +3888,6 @@ function onArticleSelectionChange() {
                 });
         }
     } else {
-        document.getElementById('article-info').classList.add('hidden');
     }
 }
 
@@ -4020,18 +3907,18 @@ function afficherInfosArticle(article) {
         
         const sousTotal = (prixActuel * quantite).toFixed(2);
     
-        // Informations de base avec vérification des éléments DOM
-        const refElement = document.getElementById('info-reference');
-        const prixElement = document.getElementById('info-prix');
-        const sousTotalElement = document.getElementById('info-sous-total');
-        const pointureElement = document.getElementById('info-pointure');
-        const couleurElement = document.getElementById('info-couleur');
-        const categorieElement = document.getElementById('info-categorie');
-        const descriptionElement = document.getElementById('info-description');
+        // Informations de base avec vérification des éléments DOM (éléments supprimés pour uniformité)
+        // const refElement = document.getElementById('info-reference');
+        // const prixElement = document.getElementById('info-prix');
+        // const sousTotalElement = document.getElementById('info-sous-total');
+        // const pointureElement = document.getElementById('info-pointure');
+        // const couleurElement = document.getElementById('info-couleur');
+        // const categorieElement = document.getElementById('info-categorie');
+        // const descriptionElement = document.getElementById('info-description');
         
-        if (refElement) refElement.textContent = article.reference || '-';
-        if (prixElement) prixElement.textContent = `${prixActuel} DH`;
-        if (sousTotalElement) sousTotalElement.textContent = `${sousTotal} DH`;
+        // if (refElement) refElement.textContent = article.reference || '-';
+        // if (prixElement) prixElement.textContent = `${prixActuel} DH`;
+        // if (sousTotalElement) sousTotalElement.textContent = `${sousTotal} DH`;
         
         // Vérifier que qte_disponible est bien défini et convertir en nombre
         let stock = 0;
@@ -4050,46 +3937,46 @@ function afficherInfosArticle(article) {
         }
     
     // Nouvelles informations détaillées
-        if (pointureElement) pointureElement.textContent = article.pointure || 'Non spécifiée';
-        if (couleurElement) couleurElement.textContent = article.couleur || 'Non spécifiée';
-        if (categorieElement) categorieElement.textContent = typeof article.categorie === 'string' ? article.categorie : 'Non spécifiée';
+        // if (pointureElement) pointureElement.textContent = article.pointure || 'Non spécifiée';
+        // if (couleurElement) couleurElement.textContent = article.couleur || 'Non spécifiée';
+        // if (categorieElement) categorieElement.textContent = typeof article.categorie === 'string' ? article.categorie : 'Non spécifiée';
         
-        // Mettre à jour l'affichage du stock avec style conditionnel
-        const stockElement = document.getElementById('info-stock');
-        const stockProgressBar = document.getElementById('stock-progress');
-        const stockPercentage = document.getElementById('stock-percentage');
+        // Mettre à jour l'affichage du stock avec style conditionnel (éléments supprimés pour uniformité)
+        // const stockElement = document.getElementById('info-stock');
+        // const stockProgressBar = document.getElementById('stock-progress');
+        // const stockPercentage = document.getElementById('stock-percentage');
         
-        if (stockElement && stockProgressBar && stockPercentage) {
-            // Définir une capacité maximale théorique pour la barre de progression (ajuster selon vos besoins)
-            const capaciteMaximale = Math.max(stock, 100); // Au moins 100 ou la valeur actuelle du stock
+        // if (stockElement && stockProgressBar && stockPercentage) { // Éléments supprimés
+            // // Définir une capacité maximale théorique pour la barre de progression (ajuster selon vos besoins)
+            // const capaciteMaximale = Math.max(stock, 100); // Au moins 100 ou la valeur actuelle du stock
+            // 
+            // // Calculer le pourcentage du stock
+            // const pourcentage = Math.min(Math.round((stock / capaciteMaximale) * 100), 100);
             
-            // Calculer le pourcentage du stock
-            const pourcentage = Math.min(Math.round((stock / capaciteMaximale) * 100), 100);
-            
-            // Mettre à jour le texte et la couleur selon le niveau de stock
-            if (stock <= 0) {
-                stockElement.textContent = 'Épuisé';
-                stockElement.className = 'px-3 py-1 bg-red-100 text-red-700 rounded-full font-medium';
-                stockProgressBar.style.width = '0%';
-                stockProgressBar.className = 'h-2.5 rounded-full bg-red-500';
-                stockPercentage.textContent = '0%';
-                stockPercentage.className = 'ml-2 text-xs font-medium text-red-700';
-            } else if (stock < 5) {
-                stockElement.textContent = `${stock} unité(s) - Faible`;
-                stockElement.className = 'px-3 py-1 bg-orange-100 text-orange-700 rounded-full font-medium';
-                stockProgressBar.style.width = `${pourcentage}%`;
-                stockProgressBar.className = 'h-2.5 rounded-full bg-orange-500';
-                stockPercentage.textContent = `${pourcentage}%`;
-                stockPercentage.className = 'ml-2 text-xs font-medium text-orange-700';
-            } else {
-                stockElement.textContent = `${stock} unité(s)`;
-                stockElement.className = 'px-3 py-1 bg-teal-100 text-teal-700 rounded-full font-medium';
-                stockProgressBar.style.width = `${pourcentage}%`;
-                stockProgressBar.className = 'h-2.5 rounded-full bg-teal-600';
-                stockPercentage.textContent = `${pourcentage}%`;
-                stockPercentage.className = 'ml-2 text-xs font-medium text-teal-700';
-            }
-        }
+            // // Mettre à jour le texte et la couleur selon le niveau de stock
+            // if (stock <= 0) {
+            //     stockElement.textContent = 'Épuisé';
+            //     stockElement.className = 'px-3 py-1 bg-red-100 text-red-700 rounded-full font-medium';
+            //     stockProgressBar.style.width = '0%';
+            //     stockProgressBar.className = 'h-2.5 rounded-full bg-red-500';
+            //     stockPercentage.textContent = '0%';
+            //     stockPercentage.className = 'ml-2 text-xs font-medium text-red-700';
+            // } else if (stock < 5) {
+            //     stockElement.textContent = `${stock} unité(s) - Faible`;
+            //     stockElement.className = 'px-3 py-1 bg-orange-100 text-orange-700 rounded-full font-medium';
+            //     stockProgressBar.style.width = `${pourcentage}%`;
+            //     stockProgressBar.className = 'h-2.5 rounded-full bg-orange-500';
+            //     stockPercentage.textContent = `${pourcentage}%`;
+            //     stockPercentage.className = 'ml-2 text-xs font-medium text-orange-700';
+            // } else {
+            //     stockElement.textContent = `${stock} unité(s)`;
+            //     stockElement.className = 'px-3 py-1 bg-teal-100 text-teal-700 rounded-full font-medium';
+            //     stockProgressBar.style.width = `${pourcentage}%`;
+            //     stockProgressBar.className = 'h-2.5 rounded-full bg-teal-600';
+            //     stockPercentage.textContent = `${pourcentage}%`;
+            //     stockPercentage.className = 'ml-2 text-xs font-medium text-teal-700';
+            // }
+        // }
     
     // Mettre à jour les badges avec les informations de l'article
         try {
@@ -4106,11 +3993,9 @@ function afficherInfosArticle(article) {
         }
     
     // Description
-        if (descriptionElement) descriptionElement.textContent = article.description || '';
+        // if (descriptionElement) descriptionElement.textContent = article.description || '';
     
-    // Afficher la section des informations
-        const articleInfoSection = document.getElementById('article-info');
-        if (articleInfoSection) articleInfoSection.classList.remove('hidden');
+    // Section des informations supprimée pour uniformité avec la page de création
     
     console.log('📋 Informations article affichées:', {
             nom: article.nom || 'Sans nom',
@@ -4137,13 +4022,12 @@ function onQuantiteChange() {
             afficherInfosArticle(article);
         }
     } else {
-        // Pour les modifications, on recalcule avec le prix actuel
-        const prixText = document.getElementById('info-prix').textContent;
-        const prix = parseFloat(prixText.replace(' DH', ''));
-        const quantite = parseInt(document.getElementById('quantiteInput').value) || 1;
-        const sousTotal = (prix * quantite).toFixed(2);
-        
-        document.getElementById('info-sous-total').textContent = `${sousTotal} DH`;
+        // Pour les modifications, on recalcule avec le prix actuel (éléments supprimés pour uniformité)
+        // const prixText = document.getElementById('info-prix').textContent; // Élément supprimé
+        // const prix = parseFloat(prixText.replace(' DH', ''));
+        // const quantite = parseInt(document.getElementById('quantiteInput').value) || 1;
+        // const sousTotal = (prix * quantite).toFixed(2);
+        // document.getElementById('info-sous-total').textContent = `${sousTotal} DH`; // Élément supprimé
     }
 }
 
@@ -6005,10 +5889,10 @@ function afficherInfosArticle(article) {
     const prixActuel = article.prix_actuel !== undefined ? article.prix_actuel : article.prix_unitaire;
     const sousTotal = (prixActuel * quantite).toFixed(2);
     
-    // Informations de base
-    document.getElementById('info-reference').textContent = article.reference || '-';
-    document.getElementById('info-prix').textContent = `${prixActuel} DH`;
-    document.getElementById('info-sous-total').textContent = `${sousTotal} DH`;
+    // Informations de base (éléments supprimés pour uniformité)
+    // document.getElementById('info-reference').textContent = article.reference || '-';
+    // document.getElementById('info-prix').textContent = `${prixActuel} DH`;
+    // document.getElementById('info-sous-total').textContent = `${sousTotal} DH`;
 }
 
 // Autres modifications similaires dans le script
@@ -6024,7 +5908,7 @@ function mettreAJourSousTotal() {
         const prixActuel = selectedArticle.prix_actuel !== undefined ? selectedArticle.prix_actuel : selectedArticle.prix_unitaire;
         const sousTotal = (prixActuel * quantite).toFixed(2);
         
-        document.getElementById('info-sous-total').textContent = `${sousTotal} DH`;
+        // document.getElementById('info-sous-total').textContent = `${sousTotal} DH`; // Élément supprimé
     }
 }
 
@@ -6186,7 +6070,7 @@ function rafraichirStockArticle(articleId) {
         try {
             if (data.success && data.article) {
                 // Mettre à jour l'affichage du stock
-                const infoStock = document.getElementById('info-stock');
+                // const infoStock = document.getElementById('info-stock'); // Élément supprimé
                 const stockProgressBar = document.getElementById('stock-progress');
                 const stockPercentage = document.getElementById('stock-percentage');
                 
@@ -6290,7 +6174,6 @@ function modifierArticle(panierId) {
     
     // Toujours afficher le champ de sélection pour permettre de changer l'article
     document.getElementById('article-selection-field').classList.remove('hidden');
-    document.getElementById('article-display-field').classList.add('hidden');
     
     // Charger la liste des articles
     chargerArticlesDisponibles();

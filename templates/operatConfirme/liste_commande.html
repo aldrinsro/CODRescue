@@ -81,18 +81,18 @@
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <!-- Barre de recherche intelligente -->
             <div class="flex-grow max-w-md">
-                <div class="relative">
+                    <div class="relative">
                     <input type="text" 
                            id="searchInput" 
-                           class="w-full pl-10 pr-4 py-2 rounded-lg border focus:ring-2 transition-all" 
-                           style="border-color: #f7d9c4; focus:ring-color: #6d4b3b; focus:border-color: #4B352A;"
+                               class="w-full pl-10 pr-4 py-2 rounded-lg border focus:ring-2 transition-all" 
+                               style="border-color: #f7d9c4; focus:ring-color: #6d4b3b; focus:border-color: #4B352A;"
                            placeholder="Rechercher par ID YZ, N° externe, client, téléphone, ville, date, total, état...">
-                    <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2" style="color: #6d4b3b;"></i>
+                        <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2" style="color: #6d4b3b;"></i>
                     <button onclick="clearSearch()" id="clearSearchBtn" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 hidden">
                         <i class="fas fa-times"></i>
                     </button>
+                    </div>
                 </div>
-            </div>
 
             <!-- Bouton Nouvelle Commande au centre -->
             <div class="flex justify-center">
@@ -104,7 +104,7 @@
             <!-- Liens vers autres pages et compteur -->
             <div class="flex items-center gap-4">
                 <div class="text-sm text-gray-600">
-                    <strong id="filteredCount">{{ stats.total|default:0 }}</strong> commande{{ stats.total|default:0|pluralize }} à traiter
+                    <strong id="filteredCount">{{ commandes.count }}</strong> commande{{ commandes.count|pluralize }} à traiter
                 </div>
                 <a href="{% url 'operatConfirme:confirmation' %}" class="text-white px-6 py-2 rounded-lg font-medium transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105" style="background: linear-gradient(to right, #4B352A, #6d4b3b);">
                     <i class="fas fa-clipboard-check mr-2"></i> Page Confirmation
@@ -114,7 +114,7 @@
     </div>
 
     <!-- Message si aucun résultat -->
-    {% if not page_obj %}
+    {% if not commandes %}
     <div class="border-l-4 p-4 mb-8 rounded-lg" style="background-color: #f7d9c4; border-color: #6d4b3b;">
         <div class="flex">
             <div class="flex-shrink-0">
@@ -134,7 +134,7 @@
     {% endif %}
 
     <!-- Tableau des commandes -->
-    {% if page_obj %}
+    {% if commandes %}
     <div class="overflow-x-auto mb-8 bg-white rounded-xl shadow-lg">
         <table class="min-w-full divide-y divide-gray-200">
                     <thead style="background-color: #4B352A;">
@@ -153,7 +153,7 @@
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
-                {% for commande in page_obj %}
+                {% for commande in commandes %}
                 {% with etat_actuel=commande.etats.all|first %}
                 <tr class="hover:bg-gray-50 transition-colors {% if etat_actuel.enum_etat.libelle == 'Retour Confirmation' %}row-retour{% endif %}">
 
@@ -251,59 +251,7 @@
         </table>
     </div>
 
-    <!-- Pagination -->
-    {% if page_obj.has_other_pages %}
-    <div class="flex justify-center mt-8">
-        <nav aria-label="Navigation des commandes">
-            <ul class="flex items-center -space-x-px">
-            {% if page_obj.has_previous %}
-                <li>
-                    <a href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}" class="px-3 py-2 leading-tight bg-white border rounded-l-lg hover:bg-gray-100 hover:text-gray-700" style="color: #4B352A; border-color: #f7d9c4;">
-                        <i class="fas fa-angle-double-left"></i>
-                    </a>
-                </li>
-                <li>
-                    <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}" class="px-3 py-2 leading-tight bg-white border hover:bg-gray-100 hover:text-gray-700" style="color: #4B352A; border-color: #f7d9c4;">
-                        <i class="fas fa-angle-left"></i>
-                    </a>
-                </li>
-            {% endif %}
-
-            {% for num in page_obj.paginator.page_range %}
-                {% if page_obj.number == num %}
-                    <li>
-                        <span class="px-3 py-2 leading-tight text-white border" style="background-color: #4B352A; border-color: #4B352A;">{{ num }}</span>
-                    </li>
-                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                    <li>
-                        <a href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}" class="px-3 py-2 leading-tight bg-white border hover:bg-gray-100 hover:text-gray-700" style="color: #4B352A; border-color: #f7d9c4;">{{ num }}</a>
-                    </li>
-                {% endif %}
-            {% endfor %}
-
-            {% if page_obj.has_next %}
-                <li>
-                    <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}" class="px-3 py-2 leading-tight bg-white border hover:bg-gray-100 hover:text-gray-700" style="color: #4B352A; border-color: #f7d9c4;">
-                        <i class="fas fa-angle-right"></i>
-                    </a>
-                </li>
-                <li>
-                    <a href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}" class="px-3 py-2 leading-tight bg-white border rounded-r-lg hover:bg-gray-100 hover:text-gray-700" style="color: #4B352A; border-color: #f7d9c4;">
-                        <i class="fas fa-angle-double-right"></i>
-                    </a>
-                </li>
-            {% endif %}
-            </ul>
-        </nav>
-    </div>
-
-    <!-- Informations de pagination -->
-    <div class="flex justify-center mt-4">
-        <div class="text-sm text-gray-600">
-            Affichage de {{ page_obj.start_index }} à {{ page_obj.end_index }} sur {{ page_obj.paginator.count }} commandes.
-        </div>
-    </div>
-    {% endif %}
+    <!-- Pagination intelligente gérée par smart-pagination.js -->
     {% endif %}
 </div>
 
@@ -329,6 +277,7 @@
 {% block extra_js %}
 {{ block.super }}
 <script src="{% static 'js/operatConfirme/smart-search.js' %}"></script>
+<script src="{% static 'js/operatConfirme/smart-pagination.js' %}"></script>
 <script>
 let currentCommandeId = null;
 

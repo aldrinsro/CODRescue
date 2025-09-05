@@ -156,10 +156,15 @@ function performSearch(query) {
         commande.element.style.display = 'none';
     });
     
-    // Afficher seulement les commandes filtrées
-    filteredCommandes.forEach(commande => {
-        commande.element.style.display = '';
-    });
+    // Intégration avec la pagination intelligente
+    if (window.smartPagination) {
+        window.smartPagination.filterItems(filteredCommandes);
+    } else {
+        // Afficher seulement les commandes filtrées (fallback)
+        filteredCommandes.forEach(commande => {
+            commande.element.style.display = '';
+        });
+    }
     
     updateFilteredCount(filteredCommandes.length);
     
@@ -182,11 +187,17 @@ function performSearch(query) {
 
 // Afficher toutes les commandes
 function showAllCommandes() {
-    allCommandes.forEach(commande => {
-        commande.element.style.display = '';
-        commande.element.style.opacity = '1';
-        commande.element.style.transform = 'translateY(0)';
-    });
+    // Intégration avec la pagination intelligente
+    if (window.smartPagination) {
+        window.smartPagination.resetPagination();
+    } else {
+        // Fallback sans pagination
+        allCommandes.forEach(commande => {
+            commande.element.style.display = '';
+            commande.element.style.opacity = '1';
+            commande.element.style.transform = 'translateY(0)';
+        });
+    }
 }
 
 // Effacer la recherche
