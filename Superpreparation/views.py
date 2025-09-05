@@ -5857,78 +5857,32 @@ def get_article_variants(request, article_id):
             'error': 'Erreur lors de la récupération des variantes'
         }, status=500)
 
-@superviseur_preparation_required
-def api_codes_barres_commandes(request):
-    """API pour récupérer le contenu HTML des codes-barres des commandes"""
+def generate_barcode_for_commande(commande_id_yz):
+    """Fonction utilitaire pour générer le code-barres d'une commande"""
     try:
-        ids = request.GET.get('ids')
-        if not ids:
-            return JsonResponse({'error': 'IDs des commandes requis'}, status=400)
+        barcode_data = str(commande_id_yz)
+        print(f"📊 Génération du code-barres: {barcode_data}")
         
-        print(f"🔍 Recherche de la commande avec id_yz: {ids}")
-        
-        # Récupérer la commande confirmée avec des articles
-        try:
-            commande = Commande.objects.filter(
-                id_yz=ids,
-                etats__enum_etat__libelle='Confirmée',
-                paniers__isnull=False
-            ).distinct().first()
-            
-            if not commande:
-                print(f"❌ Commande {ids} non trouvée ou non confirmée ou sans articles")
-                return JsonResponse({'error': f'Commande {ids} non confirmée ou sans articles'}, status=404)
-            
-            print(f"✅ Commande confirmée trouvée: {commande.id_yz}")
-        except Exception as e:
-            print(f"❌ Erreur lors de la recherche de la commande {ids}: {str(e)}")
-            return JsonResponse({'error': f'Erreur lors de la recherche de la commande {ids}'}, status=500)
-        
-        # Générer le code-barres
-        try:
-            barcode_data = f"YZ{commande.id_yz}"
-            print(f"📊 Génération du code-barres: {barcode_data}")
-            barcode_image = barcode.Code128(barcode_data, writer=ImageWriter())
-            buffer = BytesIO()
-            barcode_image.write(buffer)
-            barcode_base64 = base64.b64encode(buffer.getvalue()).decode()
-            print(f"✅ Code-barres généré avec succès")
-        except Exception as barcode_error:
+        # Créer un code-barres avec les mêmes options que Prepacommande
+        code128 = barcode.get_barcode_class("code128")
+        barcode_instance = code128(barcode_data, writer=ImageWriter())
+        buffer = BytesIO()
+        barcode_instance.write(
+            buffer,
+            options={
+                "write_text": False,
+                "module_height": 4.0,  # Hauteur augmentée pour meilleure lisibilité
+                "module_width": 0.15,  # Largeur augmentée pour impression claire
+                "quiet_zone": 2.0,     # Zone de silence autour du code-barres
+            },
+        )
+        barcode_base64 = base64.b64encode(buffer.getvalue()).decode()
+        print(f"✅ Code-barres généré avec succès (dimensions optimisées)")
+        return barcode_base64
+    except Exception as barcode_error:
             print(f"❌ Erreur lors de la génération du code-barres: {str(barcode_error)}")
-            barcode_base64 = ""
-        
-        # Préparer les données de la commande
-        commande_data = {
-            'id_yz': commande.id_yz,
-            'num_cmd': commande.num_cmd,
-            'client_nom': f"{commande.client.nom} {commande.client.prenom}" if commande.client else "Client non défini",
-            'client_telephone': commande.client.numero_tel if commande.client else "",
-            'ville_client': commande.ville_init or (commande.ville.nom if commande.ville else ""),
-            'ville_region': f"{commande.ville.nom} {commande.ville.region.nom_region}" if commande.ville and commande.ville.region else "",
-            'adresse': commande.client.adresse if commande.client else "",
-            'total': commande.total_cmd,
-            'barcode_image': barcode_base64
-        }
-        
-        # Rendre le template HTML
-        html_content = render_to_string('Superpreparation/partials/_codes_barres_commande.html', {
-            'commande': commande_data
-        })
-        
-        return JsonResponse({
-            'success': True,
-            'html': html_content,
-            'commande': commande_data
-        })
-        
-    except Exception as e:
-        import traceback
-        print(f"Erreur dans api_codes_barres_commandes: {str(e)}")
-        print(traceback.format_exc())
-        return JsonResponse({
-            'success': False,
-            'error': f'Erreur lors de la génération des codes-barres: {str(e)}'
-        }, status=500)
+    return ""
+
 
 @superviseur_preparation_required
 def api_ticket_commande(request):
@@ -5948,6 +5902,7 @@ def api_ticket_commande(request):
         
         for commande_id in id_list:
             try:
+                print(f"🔍 Traitement de la commande ID: {commande_id}")
                 commande = Commande.objects.filter(
                     id_yz=commande_id,
                     etats__enum_etat__libelle='Confirmée',
@@ -5959,50 +5914,101 @@ def api_ticket_commande(request):
                     continue
                 
                 print(f"✅ Commande confirmée trouvée: {commande.id_yz}")
+                
+                # Préparer la description des articles
+                articles_description = ""
+                total_articles = 0
+                paniers = commande.paniers.all().select_related('article', 'variante')
+                for panier in paniers:
+                    article = panier.article
+                    variante = panier.variante
+                    total_articles += panier.quantite  # Ajouter la quantité au total
+                    if articles_description:
+                        articles_description += " + "
+                    articles_description += f"{article.nom} {variante.couleur if variante else ''} , P{panier.quantite}"
+                
+                # Générer le code-barres en réutilisant la logique existante
+                barcode_base64 = generate_barcode_for_commande(commande.id_yz)
+                
+                # Récupérer toutes les variantes de la commande
+                variantes = []
+                print(f"🔍 Traitement de {len(paniers)} paniers pour la commande {commande.id_yz}")
+                for i, panier in enumerate(paniers):
+                    try:
+                        print(f"  Panier {i+1}: variante={panier.variante}, article={panier.article}")
+                        print(f"    🔗 Relation variante->article: {panier.variante.article if panier.variante else 'Pas de variante'}")
+                        print(f"    🔗 Relation panier->article: {panier.article}")
+                        
+                        # Vérifier que la variante existe et qu'elle est bien liée à un article
+                        if panier.variante and panier.variante.article:
+                            print(f"    ✅ Variante {panier.variante.id} liée à l'article {panier.variante.article.id}")
+                            
+                            # Vérifier si cette variante n'est pas déjà ajoutée
+                            variante_exists = any(v['id'] == panier.variante.id for v in variantes)
+                            if not variante_exists:
+                                variante_data = {
+                                    'id': panier.variante.id,
+                                    'article': {
+                                        'id': panier.variante.article.id,
+                                        'nom': panier.variante.article.nom or "Article sans nom",
+                                        'reference': panier.variante.article.reference or ""
+                                    },
+                                    'couleur': panier.variante.couleur.nom if panier.variante.couleur else "",
+                                    'pointure': panier.variante.pointure.pointure if panier.variante.pointure else "",
+                                    'quantite': panier.quantite or 0
+                                }
+                                variantes.append(variante_data)
+                                print(f"    ✅ Variante ajoutée: {variante_data['article']['nom']} (ID: {variante_data['id']})")
+                            else:
+                                print(f"    ⚠️ Variante déjà ajoutée: {panier.variante.id}")
+                        elif panier.variante and not panier.variante.article:
+                            print(f"    ❌ Variante {panier.variante.id} sans article associé")
+                        elif not panier.variante and panier.article:
+                            print(f"    ❌ Panier avec article {panier.article.id} mais sans variante")
+                        else:
+                            print(f"    ❌ Panier sans variante ni article")
+                    except Exception as e:
+                        print(f"    ❌ Erreur lors du traitement du panier {i+1}: {str(e)}")
+                        continue
+                
+                print(f"📋 Total variantes récupérées: {len(variantes)}")
+                
+                # Préparer les données de la commande
+                commande_data = {
+                    'id_yz': commande.id_yz,
+                    'num_cmd': commande.num_cmd,
+                    'client_nom': f"{commande.client.nom} {commande.client.prenom}" if commande.client else "Client non défini",
+                    'client_telephone': commande.client.numero_tel if commande.client else "",
+                    'client_adresse': commande.adresse,
+                    'ville_client': commande.ville.nom if commande.ville else "",\
+                    'total': commande.total_cmd,
+                    'date_confirmation': commande.date_creation,
+                    'articles_description': articles_description,
+                    'total_articles': total_articles,
+                    'barcode_image': barcode_base64,
+                    'variantes': variantes
+                }
+                
+                # Rendre le template HTML pour cette commande
+                ticket_html = render_to_string('Superpreparation/partials/_ticket_commande.html', {
+                    'commande': commande_data
+                })
+                
+                all_tickets_html.append(ticket_html)
+                commandes_data.append(commande_data)
+                
             except Exception as e:
-                print(f"❌ Erreur lors de la recherche de la commande {commande_id}: {str(e)}")
+                import traceback
+                print(f"❌ Erreur lors du traitement de la commande {commande_id}: {str(e)}")
+                print(traceback.format_exc())
                 continue
-            
-            # Préparer la description des articles
-            articles_description = ""
-            total_articles = 0
-            paniers = commande.paniers.all().select_related('article', 'variante')
-            for panier in paniers:
-                article = panier.article
-                variante = panier.variante
-                total_articles += panier.quantite  # Ajouter la quantité au total
-                if articles_description:
-                    articles_description += " + "
-                articles_description += f"{article.nom} {variante.couleur if variante else ''} , P{panier.quantite}"
-            
-            # Préparer les données de la commande
-            commande_data = {
-                'id_yz': commande.id_yz,
-                'num_cmd': commande.num_cmd,
-                'client_nom': f"{commande.client.nom} {commande.client.prenom}" if commande.client else "Client non défini",
-                'client_telephone': commande.client.numero_tel if commande.client else "",
-                'ville_client': commande.ville_init or (commande.ville.nom if commande.ville else ""),
-                'adresse': commande.client.adresse if commande.client else "",
-                'total': commande.total_cmd,
-                'date_confirmation': commande.date_creation,
-                'articles_description': articles_description,
-                'total_articles': total_articles
-            }
-            
-            # Rendre le template HTML pour cette commande
-            ticket_html = render_to_string('Superpreparation/partials/_ticket_commande.html', {
-                'commande': commande_data
-            })
-            
-            all_tickets_html.append(ticket_html)
-            commandes_data.append(commande_data)
         
         if not all_tickets_html:
             return JsonResponse({'error': 'Aucune commande valide trouvée'}, status=404)
         
         # Combiner tous les tickets avec un conteneur de grille
         combined_html = f'''
-        <div class="ticket-commande-container" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; padding: 15px; max-width: 100%; width: 100%; -webkit-print-color-adjust: exact !important; color-adjust: exact !important; print-color-adjust: exact !important;">
+        <div class="ticket-commande-container" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 2mm; padding: 2mm; max-width: 180mm; width: 100%; -webkit-print-color-adjust: exact !important; color-adjust: exact !important; print-color-adjust: exact !important;">
             {''.join(all_tickets_html)}
         </div>
         '''
@@ -6078,7 +6084,8 @@ def api_etiquettes_articles(request):
             
             # Générer le code-barres pour l'article
             barcode_data = f"ART{article.reference}_{variante.reference_variante if variante else 'NO_VAR'}"
-            barcode_image = barcode.Code128(barcode_data, writer=ImageWriter())
+            code128 = barcode.get_barcode_class("code128")
+            barcode_image = code128(barcode_data, writer=ImageWriter())
             buffer = BytesIO()
             barcode_image.write(buffer)
             barcode_base64 = base64.b64encode(buffer.getvalue()).decode()
@@ -6187,7 +6194,8 @@ def api_etiquettes_articles_multiple(request):
                     qr_base64 = ""
                     print("Warning: qrcode library not installed, QR codes will not be generated")
                 barcode_data = f"ART{article.reference}_{variante.reference_variante if variante else 'NO_VAR'}"
-                barcode_image = barcode.Code128(barcode_data, writer=ImageWriter())
+                code128 = barcode.get_barcode_class("code128")
+                barcode_image = code128(barcode_data, writer=ImageWriter())
                 buffer = BytesIO()
                 barcode_image.write(buffer)
                 barcode_base64 = base64.b64encode(buffer.getvalue()).decode()

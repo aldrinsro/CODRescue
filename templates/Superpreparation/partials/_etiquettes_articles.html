@@ -2,23 +2,91 @@
 <div class="article-labels-container">
     {% for article in articles %}
     <div class="article-label-item">
-        <div class="label-checkbox">
-            <input type="checkbox" class="form-checkbox h-4 w-4 text-green-600 rounded" data-label-id="{{ article.id }}" onchange="impressionModals.updateSelectionCount('etiquettes')">
-        </div>
+        <!-- Checkbox pour sélection multiple (masqué à l'impression) -->
+        <input type="checkbox" class="label-checkbox no-print" data-label-id="{{ article.id }}" onchange="impressionModals.updateSelectionCount('etiquettes')">
+        
+        <!-- Étiquette d'article -->
         <div class="article-label">
-            <!-- QR Code (toujours affiché) -->
-            <img src="data:image/png;base64,{{ article.qr_image }}" 
-                 alt="QR Code {{ article.reference }}" 
-                 class="label-barcode">
-            
-            <!-- Référence complète de l'article -->
-            <div class="article-reference">
-                {{ article.reference }}-{{ article.couleur }}-{{ article.pointure }}-CMD{{ article.commande_id }}
+            <!-- En-tête avec référence et badge quantité -->
+            <div class="label-header">
+                <div class="reference-section">
+                    <span class="label-number">{{ article.reference }}</span>
+                    <span class="articles-count-badge">
+                        <span class="count-number">CMD{{ article.commande_id }}</span>
+                    </span>
+                </div>
+                <div class="date-section">
+                    <div class="date-box">{{ article.date_creation|date:"d/m/Y"|default:"aujourd'hui" }}</div>
+                </div>
             </div>
             
-            <!-- Variante -->
-            <div class="article-variante">
-                {{ article.couleur }} {{ article.pointure }}
+            <!-- Ligne de séparation -->
+            <div class="separator-line"></div>
+            
+            <!-- QR Code -->
+            <div class="qr-code-section">
+                <img src="data:image/png;base64,{{ article.qr_image }}" 
+                     alt="QR Code {{ article.reference }}" 
+                     class="label-qr-code">
+                <div class="qr-text">QR CODE</div>
+            </div>
+            
+            <!-- Ligne de séparation -->
+            <div class="separator-line"></div>
+            
+            <!-- Code-barres traditionnel -->
+            <div class="barcode-section">
+                <div class="barcode-container" data-text="{{ article.reference }}-{{ article.couleur }}-{{ article.pointure }}-CMD{{ article.commande_id }}">
+                    <!-- Le code-barres sera généré par JavaScript -->
+                </div>
+                <div class="barcode-text">CODE-BARRES</div>
+            </div>
+            
+            <!-- Ligne de séparation -->
+            <div class="separator-line"></div>
+            
+            <!-- Informations de l'article -->
+            <div class="article-info">
+                <div class="info-line">
+                    <i class="fas fa-tag info-icon"></i>
+                    <span class="info-text">{{ article.reference }}</span>
+                </div>
+                {% if article.couleur %}
+                <div class="info-line">
+                    <i class="fas fa-palette info-icon"></i>
+                    <span class="info-text">{{ article.couleur }}</span>
+                </div>
+                {% endif %}
+                {% if article.pointure %}
+                <div class="info-line">
+                    <i class="fas fa-shoe-prints info-icon"></i>
+                    <span class="info-text">Taille: {{ article.pointure }}</span>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Ligne de séparation -->
+            <div class="separator-line"></div>
+            
+            <!-- Référence complète et prix -->
+            <div class="price-section">
+                <div class="price-info">
+                    <span class="price-amount">{{ article.prix|floatformat:0|default:"--" }}</span>
+                    <span class="price-currency">DH</span>
+                </div>
+                <div class="variant-box">{{ article.couleur|default:"STD" }} {{ article.pointure|default:"" }}</div>
+            </div>
+            
+            <!-- Ligne de séparation -->
+            <div class="separator-line"></div>
+            
+            <!-- Informations de contact -->
+            <div class="label-contact">
+                <div class="contact-name">YOOZAK</div>
+                <div class="contact-info">
+                    <div>www.yoozak.com</div>
+                    <div>06 34 21 56 39</div>
+                </div>
             </div>
         </div>
     </div>
@@ -26,14 +94,38 @@
 </div>
 
 <style>
-/* Styles d'affichage normal */
+/* Styles pour le conteneur de grille des étiquettes */
 .article-labels-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 15px;
-    padding: 20px;
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 15px !important;
+    padding: 15px !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    -webkit-print-color-adjust: exact !important;
+    color-adjust: exact !important;
+    print-color-adjust: exact !important;
 }
 
+/* Responsive pour les écrans plus petits */
+@media (max-width: 1200px) {
+    .article-labels-container {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .article-labels-container {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* Masquer les éléments non imprimables */
+.no-print {
+    display: none !important;
+}
+
+/* Styles pour l'étiquette individuelle */
 .article-label-item {
     position: relative;
     display: flex;
@@ -41,57 +133,244 @@
     align-items: center;
 }
 
-.label-checkbox {
-    position: absolute;
-    top: 5px;
-    left: 5px;
-    z-index: 10;
-    background: white;
-    border-radius: 4px;
-    padding: 2px;
-}
-
 .article-label {
-    width: 200px;
-    height: 120px;
-    border: 2px solid #ddd;
+    width: 100%;
+    min-width: 280px;
+    max-width: 350px;
+    border: 2px solid #000;
     font-family: Arial, sans-serif;
     font-size: 12px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    background: white;
-    margin: 0 auto;
+    background: #000000;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     border-radius: 8px;
     overflow: hidden;
-    padding: 10px;
+    margin: 0 auto;
+    position: relative;
 }
 
-/* Code-barres */
-.label-barcode {
-    max-width: 100%;
-    max-height: 60px;
-    object-fit: contain;
-    margin-bottom: 8px;
+/* Checkbox pour sélection multiple */
+.label-checkbox {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 18px;
+    height: 18px;
+    z-index: 10;
+    cursor: pointer;
 }
 
-/* Référence de l'article */
-.article-reference {
-    font-size: 10px;
-    text-align: center;
+/* En-tête avec référence et badge */
+.label-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 8px 12px;
+    background: #000000;
+    color: #ffffff;
+}
+
+.reference-section {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.label-number {
+    font-size: 12px;
     font-weight: bold;
-    color: #000;
-    word-break: break-word;
+    color: #ffffff;
+    font-family: 'Courier New', monospace;
+    margin-right: 8px;
+}
+
+.articles-count-badge {
+    display: inline-flex;
+    background: #ffffff;
+    color: #000000;
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 8px;
+    font-weight: bold;
+    align-items: center;
+    justify-content: center;
+}
+
+.count-number {
+    font-size: 8px;
+    font-weight: bold;
+    line-height: 1;
+}
+
+.date-section {
+    display: flex;
+    align-items: center;
+}
+
+.date-box {
+    background-color: #ffffff;
+    color: #000000;
+    padding: 4px 8px;
+    font-weight: bold;
+    font-size: 10px;
+    border-radius: 2px;
+}
+
+/* Lignes de séparation */
+.separator-line {
+    height: 2px;
+    background-color: #ffffff;
+    margin: 0;
+}
+
+/* Section QR Code */
+.qr-code-section {
+    padding: 8px 12px;
+    background: #000000;
+    text-align: center;
+}
+
+.label-qr-code {
+    max-width: 80px;
+    max-height: 80px;
+    object-fit: contain;
     margin-bottom: 4px;
 }
 
-/* Variante */
-.article-variante {
-    font-size: 9px;
+.qr-text {
+    font-size: 8px;
+    font-weight: bold;
+    color: #ffffff;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Section Code-barres traditionnel */
+.barcode-section {
+    padding: 8px 12px;
+    background: #000000;
     text-align: center;
-    color: #666;
+}
+
+.barcode-container {
+    margin-bottom: 4px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 50px;
+}
+
+.label-barcode {
+    max-width: 100%;
+    max-height: 50px;
+    object-fit: contain;
+}
+
+.barcode-text {
+    font-size: 8px;
+    font-weight: bold;
+    color: #ffffff;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Informations de l'article */
+.article-info {
+    padding: 8px 12px;
+    background: #000000;
+}
+
+.info-line {
+    display: flex;
+    align-items: center;
+    margin-bottom: 4px;
+    padding-bottom: 2px;
+    border-bottom: 1px dotted #ccc;
+}
+
+.info-icon {
+    margin-right: 8px;
+    font-size: 12px;
+    color: #ffffff;
+    font-weight: bold;
+    width: 14px;
+    text-align: center;
+}
+
+.info-text {
+    font-size: 11px;
+    font-weight: bold;
+    word-break: break-word;
+    color: #ffffff;
+    flex: 1;
+}
+
+/* Section prix et variante */
+.price-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: #000000;
+}
+
+.price-info {
+    display: flex;
+    align-items: baseline;
+}
+
+.price-amount {
+    font-size: 16px;
+    font-weight: bold;
+    color: #ffffff;
+}
+
+.price-currency {
+    font-size: 10px;
+    font-weight: normal;
+    color: #ffffff;
+    margin-left: 2px;
+}
+
+.variant-box {
+    background-color: #ffffff;
+    color: #000000;
+    padding: 4px 8px;
+    font-weight: bold;
+    font-size: 10px;
+    border-radius: 2px;
+}
+
+/* Informations de contact */
+.label-contact {
+    background: #000000 !important;
+    padding: 8px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 10px;
+    border-top: 1px solid #ffffff !important;
+    -webkit-print-color-adjust: exact;
+    color-adjust: exact;
+    print-color-adjust: exact;
+}
+
+.contact-name {
+    font-weight: bold;
+    color: #ffffff;
+    font-size: 14px;
+    font-family: Arial, sans-serif;
+    letter-spacing: 1px;
+}
+
+.contact-info {
+    text-align: right;
+    color: #ffffff;
+    font-weight: bold;
+    font-size: 9px;
+}
+
+.contact-info div {
+    line-height: 1.2;
 }
 
 /* Styles pour l'impression */
@@ -107,69 +386,191 @@
         background: white !important;
         -webkit-print-color-adjust: exact !important;
         color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+    
+    * {
+        -webkit-print-color-adjust: exact !important;
+        color-adjust: exact !important;
+        print-color-adjust: exact !important;
     }
     
     .no-print {
         display: none !important;
     }
     
-    /* Container pour les étiquettes d'articles */
+    /* Container pour les étiquettes */
     .article-labels-container {
         display: grid !important;
         grid-template-columns: repeat(2, 1fr) !important;
-        gap: 5mm !important;
+        gap: 3mm !important;
         width: 100% !important;
-        max-width: 160mm !important;
+        max-width: 180mm !important;
         margin: 0 auto !important;
-        padding: 5mm !important;
+        padding: 3mm !important;
     }
     
-    /* Format compact d'étiquette d'article */
+    /* Format compact d'étiquette */
     .article-label {
-        width: 60mm !important;
-        height: 40mm !important;
+        width: 85mm !important;
+        height: 85mm !important;
         border: 1px solid black !important;
         font-family: Arial, sans-serif !important;
         font-size: 8px !important;
-        display: flex !important;
-        flex-direction: column !important;
-        justify-content: center !important;
-        align-items: center !important;
-        background: white !important;
+        background: #000000 !important;
         page-break-inside: avoid !important;
         margin: 0 !important;
         overflow: hidden;
-        padding: 2mm !important;
+        display: flex !important;
+        flex-direction: column !important;
     }
     
     .article-label * {
         -webkit-print-color-adjust: exact !important;
         color-adjust: exact !important;
+        print-color-adjust: exact !important;
     }
     
-    /* Code-barres de l'article */
-    .label-barcode {
-        max-width: 100% !important;
-        max-height: 25mm !important;
-        object-fit: contain !important;
-        margin-bottom: 2mm !important;
-    }
-    
-    /* Référence de l'article */
-    .article-reference {
+    /* En-tête */
+    .label-header {
+        padding: 2mm !important;
         font-size: 8px !important;
-        text-align: center !important;
         font-weight: bold !important;
-        color: #000 !important;
-        word-break: break-word !important;
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        background: #000000 !important;
+        color: #ffffff !important;
+    }
+    
+    .label-number {
+        font-size: 8px !important;
+        font-weight: bold !important;
+        color: #ffffff !important;
+    }
+    
+    .articles-count-badge {
+        padding: 1px 4px !important;
+        font-size: 6px !important;
+        background: #ffffff !important;
+        color: #000000 !important;
+    }
+    
+    .date-box {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        padding: 2px 4px !important;
+        font-size: 8px !important;
+    }
+    
+    /* QR Code compact */
+    .qr-code-section {
+        padding: 2mm !important;
+        text-align: center !important;
+        background: #000000 !important;
+    }
+    
+    .label-qr-code {
+        max-width: 20mm !important;
+        max-height: 20mm !important;
+        object-fit: contain !important;
         margin-bottom: 1mm !important;
     }
     
-    /* Variante */
-    .article-variante {
-        font-size: 7px !important;
+    .qr-text {
+        font-size: 6px !important;
+        color: #ffffff !important;
+    }
+    
+    /* Code-barres compact */
+    .barcode-section {
+        padding: 2mm !important;
         text-align: center !important;
-        color: #666 !important;
+        background: #000000 !important;
+    }
+    
+    .barcode-container {
+        margin-bottom: 1mm !important;
+        min-height: 8mm !important;
+    }
+    
+    .label-barcode {
+        max-width: 100% !important;
+        max-height: 8mm !important;
+        object-fit: contain !important;
+    }
+    
+    .barcode-text {
+        font-size: 6px !important;
+        color: #ffffff !important;
+    }
+    
+    /* Informations de l'article compact */
+    .article-info {
+        padding: 2mm !important;
+        background: #000000 !important;
+    }
+    
+    .info-line {
+        margin-bottom: 1mm !important;
+        padding-bottom: 0.5mm !important;
+    }
+    
+    .info-icon {
+        font-size: 6px !important;
+        margin-right: 1mm !important;
+        width: 8px !important;
+        color: #ffffff !important;
+    }
+    
+    .info-text {
+        font-size: 6px !important;
+        font-weight: normal !important;
+        color: #ffffff !important;
+    }
+    
+    /* Prix et variante compact */
+    .price-section {
+        padding: 2mm !important;
+        font-size: 8px !important;
+        background: #000000 !important;
+    }
+    
+    .price-amount {
+        font-size: 12px !important;
+        color: #ffffff !important;
+    }
+    
+    .price-currency {
+        font-size: 8px !important;
+        color: #ffffff !important;
+    }
+    
+    .variant-box {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        padding: 2px 4px !important;
+        font-size: 8px !important;
+    }
+    
+    /* Contact compact */
+    .label-contact {
+        background: #000000 !important;
+        padding: 2mm !important;
+        font-size: 6px !important;
+        border-top: 1px solid #ffffff !important;
+    }
+    
+    .contact-name {
+        font-size: 8px !important;
+        font-weight: bold !important;
+        color: #ffffff !important;
+    }
+    
+    .contact-info {
+        font-size: 6px !important;
+        color: #ffffff !important;
+        font-weight: bold !important;
     }
     
     .label-checkbox {
@@ -177,3 +578,76 @@
     }
 }
 </style>
+
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+<script>
+// Attendre que le DOM soit chargé et que JsBarcode soit disponible
+document.addEventListener('DOMContentLoaded', function() {
+    // Petite pause pour s'assurer que JsBarcode est chargé
+    setTimeout(function() {
+        generateAllBarcodes();
+    }, 500);
+});
+
+// Fonction pour générer tous les codes-barres
+function generateAllBarcodes() {
+    const barcodeContainers = document.querySelectorAll('.barcode-container');
+    console.log('Génération de', barcodeContainers.length, 'codes-barres...');
+    
+    barcodeContainers.forEach((container, index) => {
+        const text = container.getAttribute('data-text');
+        console.log('Code-barres', index + 1, ':', text);
+        
+        if (text && typeof JsBarcode !== 'undefined') {
+            const canvas = document.createElement('canvas');
+            canvas.width = 250;
+            canvas.height = 80;
+            
+            try {
+                JsBarcode(canvas, text, {
+                    format: "CODE128B",
+                    width: 2,
+                    height: 50,
+                    displayValue: true,
+                    fontSize: 12,
+                    margin: 5,
+                    background: "#ffffff",
+                    lineColor: "#000000",
+                    fontOptions: "bold",
+                    textMargin: 5
+                });
+                
+                const img = document.createElement('img');
+                img.src = canvas.toDataURL();
+                img.alt = text;
+                img.className = 'label-barcode';
+                
+                // Remplacer le contenu du container
+                container.innerHTML = '';
+                container.appendChild(img);
+                console.log('Code-barres', index + 1, 'généré avec succès');
+            } catch (error) {
+                console.warn('Erreur lors de la génération du code-barres:', error);
+                container.innerHTML = '<div style="color: #999; font-size: 8px; padding: 5px; text-align: center;">Code non disponible</div>';
+            }
+        } else {
+            console.warn('Texte manquant ou JsBarcode non disponible pour le container', index + 1);
+            container.innerHTML = '<div style="color: #999; font-size: 8px; padding: 5px; text-align: center;">Code non disponible</div>';
+        }
+    });
+    
+    console.log('Génération des codes-barres terminée');
+}
+
+// Si JsBarcode n'est pas encore chargé, essayer de le recharger
+if (typeof JsBarcode === 'undefined') {
+    console.log('JsBarcode non disponible, tentative de rechargement...');
+    setTimeout(function() {
+        if (typeof JsBarcode !== 'undefined') {
+            generateAllBarcodes();
+        } else {
+            console.warn('JsBarcode toujours non disponible après le délai');
+        }
+    }, 2000);
+}
+</script>

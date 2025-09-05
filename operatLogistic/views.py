@@ -358,9 +358,7 @@ def liste_commandes(request):
     commandes_list = Commande.objects.filter(
         Q(etats__enum_etat__libelle='En cours de livraison') |
         Q(etats__enum_etat__libelle='Préparée') |
-        Q(etats__enum_etat__libelle='Expédiée') |
         Q(etats__enum_etat__libelle='En livraison'),
-        etats__operateur=operateur,
         etats__date_fin__isnull=True
     ).select_related(
         'client', 
