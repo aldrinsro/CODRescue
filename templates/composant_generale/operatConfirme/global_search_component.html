@@ -212,6 +212,23 @@ function initializeHeaderSearch() {
     const searchResults = document.getElementById('headerSearchResults');
     const searchOverlay = document.getElementById('searchOverlay');
     
+    if (!searchInput) {
+        console.error('❌ [GlobalSearch] Élément headerGlobalSearch non trouvé');
+        return;
+    }
+    
+    if (!searchResults) {
+        console.error('❌ [GlobalSearch] Élément headerSearchResults non trouvé');
+        return;
+    }
+    
+    if (!searchOverlay) {
+        console.error('❌ [GlobalSearch] Élément searchOverlay non trouvé');
+        return;
+    }
+    
+    console.log('✅ [GlobalSearch] Tous les éléments trouvés, initialisation...');
+    
     // Focus sur la barre de recherche
     searchInput.addEventListener('focus', function() {
         if (window.ConfirmSearch.currentQuery.length >= 2) {

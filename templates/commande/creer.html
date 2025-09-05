@@ -77,7 +77,7 @@
                 </div>
 
                 <!-- Section nouveau client -->
-                <div id="section-nouveau-client" class="grid grid-cols-1 md:grid-cols-2 gap-4" style="display: none;">
+                <div id="section-nouveau-client" class="grid grid-cols-2 gap-4" style="display: none;">
                     <div>
                         <label for="nouveau_prenom" class="block text-sm font-medium mb-2" style="color: var(--admin-color);">Prénom</label>
                         <input type="text" id="nouveau_prenom" name="nouveau_prenom" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--admin-accent-color)] focus:border-transparent transition duration-200">
@@ -106,12 +106,14 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label for="ville_livraison" class="block text-sm font-medium mb-2" style="color: var(--admin-color);">Ville de livraison</label>
-                        <select name="ville_livraison" id="ville_livraison" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--admin-accent-color)] focus:border-transparent transition duration-200">
+                        <select name="ville_livraison" id="ville_livraison" onchange="chargerRegionEtFrais()" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--admin-accent-color)] focus:border-transparent transition duration-200">
                             <option value="">Sélectionner une ville...</option>
                             {% for ville in villes %}
                                 <option value="{{ ville.pk }}" 
                                         data-frais="{{ ville.frais_livraison|stringformat:'.2f' }}"
-                                        data-region="{{ ville.region.nom_region|default:'' }}">
+                                        data-region="{{ ville.region.nom_region|default:'' }}"
+                                        data-delai-min="{{ ville.Delai_livraison_min|default:0 }}"
+                                        data-delai-max="{{ ville.Delai_livraison_max|default:0 }}">
                                     {{ ville.nom }}
                                 </option>
                             {% endfor %}
@@ -122,8 +124,12 @@
                         <input type="text" id="frais_livraison" name="frais_livraison" class="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed" readonly>
                     </div>
                     <div>
-                        <label for="region_livraison" class="block text-sm font-medium mb-2" style="color: var(--admin-color);">Région</label>
+                        <label for="region_livraison" class="block text-sm font-medium mb-2" style="color: var(--admin-color);">Livreur (Automatique)</label>
                         <input type="text" id="region_livraison" name="region_livraison" class="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed" readonly>
+                    </div>
+                    <div>
+                        <label for="delai_livraison" class="block text-sm font-medium mb-2" style="color: var(--admin-color);">Délai de livraison (Automatique)</label>
+                        <input type="text" id="delai_livraison" name="delai_livraison" class="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed" readonly>
                     </div>
                     <div>
                         <label for="adresse" class="block text-sm font-medium mb-2" style="color: var(--admin-color);">Adresse complète</label>
@@ -178,10 +184,10 @@
                     <i class="fas fa-info-circle mr-1"></i>
                     Vous pouvez créer la commande avec ou sans articles
                 </div>
-                <button type="submit" class="px-6 py-3 text-white rounded-lg font-medium transition-all shadow-md" style="background-color: var(--admin-color); hover:background-color: var(--admin-gradient-end);">
-                    <i class="fas fa-save mr-2"></i>
-                    Créer la commande
-                </button>
+            <button type="submit" class="px-6 py-3 text-white rounded-lg font-medium transition-all shadow-md" style="background-color: var(--admin-color); hover:background-color: var(--admin-gradient-end);">
+                <i class="fas fa-save mr-2"></i>
+                Créer la commande
+            </button>
             </div>
         </form>
     </div>
@@ -1056,50 +1062,42 @@ document.querySelectorAll('input[name="type_client"]').forEach(radio => {
             document.getElementById('nouveau_email').value = '';
         } else {
             clientExistantSection.style.display = 'none';
-            nouveauClientSection.style.display = 'block';
+            nouveauClientSection.style.display = 'grid';
             // Réinitialiser la sélection du client existant
             document.getElementById('client').selectedIndex = 0;
         }
     });
 });
 
-// Mise à jour des informations de livraison
-document.getElementById('ville_livraison').addEventListener('change', function() {
-    console.log('Changement de ville détecté');
+// Fonction pour charger automatiquement la région, les frais et les délais
+function chargerRegionEtFrais() {
+    const villeSelect = document.getElementById('ville_livraison');
+    const selectedOption = villeSelect.options[villeSelect.selectedIndex];
     
-    const selectedOption = this.options[this.selectedIndex];
-    console.log('Option sélectionnée:', selectedOption);
-    
-    if (selectedOption && selectedOption.value) {
-        console.log('Valeur de l\'option:', selectedOption.value);
-        console.log('Dataset de l\'option:', selectedOption.dataset);
+    if (selectedOption.value) {
+        const region = selectedOption.getAttribute('data-region');
+        const frais = selectedOption.getAttribute('data-frais');
+        const delaiMin = selectedOption.getAttribute('data-delai-min');
+        const delaiMax = selectedOption.getAttribute('data-delai-max');
         
-        const frais = selectedOption.dataset.frais;
-        const region = selectedOption.dataset.region;
-        
-        console.log('Frais extraits:', frais);
-        console.log('Région extraite:', region);
-        
-        const fraisInput = document.getElementById('frais_livraison');
-        const regionInput = document.getElementById('region_livraison');
-        
-        // Formater les frais avec 2 décimales et remplacer le point par une virgule
+        // Formater les frais avec 2 décimales
         const fraisFormates = parseFloat(frais || 0).toLocaleString('fr-FR', {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2
         });
         
-        fraisInput.value = fraisFormates;
-        regionInput.value = region || '';
+        document.getElementById('frais_livraison').value = fraisFormates;
+        document.getElementById('region_livraison').value = region || '';
+        document.getElementById('delai_livraison').value = `${delaiMin} - ${delaiMax} jours`;
         
-        console.log('Valeur mise à jour des frais:', fraisInput.value);
-        console.log('Valeur mise à jour de la région:', regionInput.value);
+        console.log(`🏙️ Ville changée: ${selectedOption.text}, Frais: ${fraisFormates} DH, Livreur: ${region}, Délai: ${delaiMin}-${delaiMax} jours`);
     } else {
-        console.log('Aucune ville sélectionnée');
+        // Réinitialiser les champs si aucune ville n'est sélectionnée
         document.getElementById('frais_livraison').value = '';
         document.getElementById('region_livraison').value = '';
+        document.getElementById('delai_livraison').value = '';
     }
-});
+}
 
 
 // Recherche de client par téléphone
@@ -1200,6 +1198,13 @@ window.addEventListener('load', function() {
     const checkedRadio = Array.from(typeClientRadios).find(radio => radio.checked);
     if (checkedRadio) {
         checkedRadio.dispatchEvent(new Event('change'));
+    }
+    
+    // Charger les informations de livraison si une ville est déjà sélectionnée
+    const villeSelect = document.getElementById('ville_livraison');
+    if (villeSelect && villeSelect.value) {
+        console.log('🏙️ Ville pré-sélectionnée détectée:', villeSelect.value);
+        chargerRegionEtFrais();
     }
     
     // Ajouter l'event listener pour le bouton d'ouverture du modal

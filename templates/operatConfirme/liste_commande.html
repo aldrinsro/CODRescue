@@ -8,6 +8,35 @@
 {% endblock %}
 
 {% block content %}
+<style>
+    /* Styles pour les onglets de filtrage */
+    .tab-active {
+        color: #4B352A !important;
+        border-bottom-color: #4B352A !important;
+        background-color: #f7d9c4;
+    }
+    
+    .tab-inactive {
+        color: #6B7280;
+        border-bottom-color: transparent;
+    }
+    
+    .tab-inactive:hover {
+        color: #4B352A;
+        border-bottom-color: #f7d9c4;
+    }
+    
+    .tab-badge {
+        background-color: #4B352A;
+        color: white;
+    }
+    
+    /* Animation pour les onglets */
+    .tab-active, .tab-inactive {
+        transition: all 0.3s ease;
+    }
+</style>
+
 <div class="main-content transition-all duration-300" id="mainContent">
     <!-- En-tête de la page -->
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 text-white p-6 rounded-xl shadow-lg" style="background: linear-gradient(to right, #4B352A, #6d4b3b);">
@@ -24,15 +53,6 @@
         </div>
     </div>
 
-    <!-- Messages Toast -->
-    {% if messages %}
-        {% for message in messages %}
-        <div class="toast-notification" id="toast-{{ forloop.counter }}">
-            <i class="{% if message.tags == 'success' %}fas fa-check-circle{% elif message.tags == 'error' %}fas fa-exclamation-circle{% elif message.tags == 'warning' %}fas fa-exclamation-triangle{% else %}fas fa-info-circle{% endif %}"></i>
-            {{ message }}
-        </div>
-        {% endfor %}
-    {% endif %}
 
     <!-- Onglets de filtrage -->
     <div class="mb-8 border-b border-gray-200">
@@ -51,44 +71,41 @@
             </a>
             <a href="?tab=retournees" class="px-3 py-4 border-b-2 font-medium text-sm transition-all duration-300 {% if current_tab == 'retournees' %}tab-active{% else %}tab-inactive hover:text-gray-700 hover:border-gray-300{% endif %}">
                 Retournées
-                <span class="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-500 text-white">{{ stats.retournees|default:0 }}</span>
+                <span class="ml-2 px-2 py-0.5 rounded-full text-xs font-medium tab-badge">{{ stats.retournees|default:0 }}</span>
             </a>
         </nav>
     </div>
 
-    <!-- Barre de recherche et actions -->
+    <!-- Barre de recherche intelligente et actions -->
     <div class="bg-white rounded-xl shadow-md border p-6 mb-8">
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <form method="get" class="flex-grow flex gap-4">
-                <div class="flex-grow">
-                    <div class="relative">
-                        <input type="text" name="search" value="{{ search_query|default:'' }}" 
-                               class="w-full pl-10 pr-4 py-2 rounded-lg border focus:ring-2 transition-all" 
-                               style="border-color: #f7d9c4; focus:ring-color: #6d4b3b; focus:border-color: #4B352A;"
-                               placeholder="Rechercher par N° commande, client, ville...">
-                        <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2" style="color: #6d4b3b;"></i>
-                    </div>
+            <!-- Barre de recherche intelligente -->
+            <div class="flex-grow max-w-md">
+                <div class="relative">
+                    <input type="text" 
+                           id="searchInput" 
+                           class="w-full pl-10 pr-4 py-2 rounded-lg border focus:ring-2 transition-all" 
+                           style="border-color: #f7d9c4; focus:ring-color: #6d4b3b; focus:border-color: #4B352A;"
+                           placeholder="Rechercher par ID YZ, N° externe, client, téléphone, ville, date, total, état...">
+                    <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2" style="color: #6d4b3b;"></i>
+                    <button onclick="clearSearch()" id="clearSearchBtn" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 hidden">
+                        <i class="fas fa-times"></i>
+                    </button>
                 </div>
-                <button type="submit" class="px-6 py-2 rounded-lg text-white font-medium transition-all shadow-md hover:shadow-lg transform hover:scale-105" 
-                        style="background-color: #4B352A;">
-                    Rechercher
-                </button>
-                {% if search_query %}
-                <a href="{% url 'operatConfirme:liste_commandes' %}" class="px-6 py-2 rounded-lg bg-gray-500 text-white font-medium transition-all shadow-md hover:shadow-lg transform hover:scale-105">
-                    Réinitialiser
-                </a>
-                {% endif %}
-            </form>
+            </div>
 
             <!-- Bouton Nouvelle Commande au centre -->
             <div class="flex justify-center">
-                <a href="{% url 'operatConfirme:creer_commande' %}" class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-medium transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105">
+                <a href="{% url 'operatConfirme:creer_commande' %}" class="text-white px-6 py-2 rounded-lg font-medium transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105" style="background: linear-gradient(to right, #f7d9c4, #ede0d3); color: #4B352A;">
                     <i class="fas fa-plus mr-2"></i>Nouvelle Commande
                 </a>
             </div>
 
-            <!-- Liens vers autres pages -->
-            <div class="flex gap-2">
+            <!-- Liens vers autres pages et compteur -->
+            <div class="flex items-center gap-4">
+                <div class="text-sm text-gray-600">
+                    <strong id="filteredCount">{{ stats.total|default:0 }}</strong> commande{{ stats.total|default:0|pluralize }} à traiter
+                </div>
                 <a href="{% url 'operatConfirme:confirmation' %}" class="text-white px-6 py-2 rounded-lg font-medium transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105" style="background: linear-gradient(to right, #4B352A, #6d4b3b);">
                     <i class="fas fa-clipboard-check mr-2"></i> Page Confirmation
                 </a>
@@ -311,6 +328,7 @@
 
 {% block extra_js %}
 {{ block.super }}
+<script src="{% static 'js/operatConfirme/smart-search.js' %}"></script>
 <script>
 let currentCommandeId = null;
 
@@ -459,19 +477,5 @@ window.addEventListener('click', function(event) {
     }
 });
 
-// Gestion des toasts
-document.addEventListener('DOMContentLoaded', function() {
-    const toasts = document.querySelectorAll('.toast-notification');
-    
-    toasts.forEach(function(toast, index) {
-        // Auto-masquage après 4 secondes
-        setTimeout(function() {
-            toast.style.animation = 'slideOutRight 0.3s ease-out forwards';
-            setTimeout(function() {
-                toast.remove();
-            }, 300);
-        }, 4000 + (index * 500)); // Décalage si plusieurs toasts
-    });
-});
 </script>
 {% endblock %}

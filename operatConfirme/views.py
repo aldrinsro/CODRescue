@@ -2502,13 +2502,13 @@ def creer_commande(request):
 
                 ville = get_object_or_404(Ville, pk=ville_id)
 
-                # Créer la commande avec le total fourni
+                # Créer la commande (total sera calculé après ajout des articles)
                 try:
                     commande = Commande.objects.create(
                         client=client,
                         ville=ville,
                         adresse=adresse,
-                        total_cmd=float(total_cmd),  # Convertir en float
+                        total_cmd=0,  # Sera calculé après ajout des articles
                         is_upsell=is_upsell,
                         origine='OC'  # Définir l'origine comme Opérateur Confirmation
                     )
@@ -2517,40 +2517,49 @@ def creer_commande(request):
                     messages.error(request, f"Impossible de créer la commande: {str(e)}")
                     return redirect('operatConfirme:creer_commande')
 
-                # Traiter le panier et calculer le total
-                article_ids = request.POST.getlist('article_id')
-                quantites = request.POST.getlist('quantite')
-                
-                logging.info(f"Articles dans la commande: {article_ids}, Quantités: {quantites}")
-                
-                if not article_ids:
-                    messages.warning(request, "La commande a été créée mais est vide. Aucun article n'a été ajouté.")
-                
+                # Traiter le panier et calculer le total (même logique que l'interface admin)
                 total_calcule = 0
-                for i, article_id in enumerate(article_ids):
-                    try:
-                        quantite = int(quantites[i])
-                        if quantite > 0 and article_id:
-                            article = get_object_or_404(Article, pk=article_id)
-                            # Utiliser prix_actuel si disponible, sinon prix_unitaire
-                            prix_a_utiliser = article.prix_actuel if article.prix_actuel is not None else article.prix_unitaire
-                            
-                            # Log pour comprendre le calcul du prix
-                            logging.info(f"Article {article.id}: prix_unitaire={article.prix_unitaire}, prix_actuel={article.prix_actuel}, prix_utilisé={prix_a_utiliser}")
-                            
-                            sous_total = prix_a_utiliser * quantite
-                            total_calcule += float(sous_total)
-                            
-                            Panier.objects.create(
-                                commande=commande,
-                                article=article,
-                                quantite=quantite,
-                                sous_total=float(sous_total)
-                            )
-                    except (ValueError, IndexError, Article.DoesNotExist) as e:
-                        logging.error(f"Erreur lors de l'ajout d'un article: {str(e)}")
-                        messages.error(request, f"Erreur lors de l'ajout d'un article : {e}")
-                        raise e # Annule la transaction
+                article_counter = 0
+                
+                while f'article_{article_counter}' in request.POST:
+                    article_id = request.POST.get(f'article_{article_counter}')
+                    variante_id = request.POST.get(f'variante_{article_counter}')
+                    quantite = request.POST.get(f'quantite_{article_counter}')
+                    
+                    if article_id and quantite:
+                        try:
+                            quantite = int(quantite)
+                            if quantite > 0:
+                                article = Article.objects.get(pk=article_id)
+                                
+                                # Utiliser prix_actuel si disponible, sinon prix_unitaire
+                                prix_a_utiliser = article.prix_actuel if article.prix_actuel is not None else article.prix_unitaire
+                                
+                                # Log pour comprendre le calcul du prix
+                                logging.info(f"Article {article.id}: prix_unitaire={article.prix_unitaire}, prix_actuel={article.prix_actuel}, prix_utilisé={prix_a_utiliser}")
+                                
+                                sous_total = prix_a_utiliser * quantite
+                                total_calcule += float(sous_total)
+                                
+                                Panier.objects.create(
+                                    commande=commande,
+                                    article=article,
+                                    quantite=quantite,
+                                    sous_total=float(sous_total)
+                                )
+                                
+                                # Incrémenter le compteur si c'est un article upsell
+                                if article.isUpsell and quantite > 1:
+                                    commande.compteur += 1
+                                    
+                        except (ValueError, Article.DoesNotExist) as e:
+                            logging.error(f"Erreur lors de l'ajout d'un article: {str(e)}")
+                            messages.error(request, f"Erreur lors de l'ajout d'un article : {e}")
+                            raise e # Annule la transaction
+                    
+                    article_counter += 1
+                
+                logging.info(f"Articles traités: {article_counter}, Total calculé: {total_calcule}")
 
                 # Mettre à jour le total final de la commande avec le montant recalculé
                 commande.total_cmd = float(total_calcule)
@@ -2576,8 +2585,12 @@ def creer_commande(request):
                     except EnumEtatCmd.DoesNotExist:
                         pass # Si aucun état n'existe, créer sans état initial
                 
-                # Composer le message de succès final
-                message_final = f"Commande YZ-{commande.id_yz} créée avec succès."
+                # Composer le message de succès final adapté au contenu
+                if article_counter > 0:
+                    message_final = f"Commande YZ-{commande.id_yz} créée avec succès avec {article_counter} article(s) pour un total de {commande.total_cmd:.2f} DH."
+                else:
+                    message_final = f"Commande YZ-{commande.id_yz} créée avec succès. Vous pouvez ajouter des articles plus tard via la modification."
+                
                 if type_client != 'existant':
                     message_final = f"Nouveau client '{client.get_full_name}' créé. " + message_final
 
@@ -2593,12 +2606,38 @@ def creer_commande(request):
     # GET request - afficher le formulaire
     clients = Client.objects.all().order_by('prenom', 'nom')
     articles = Article.objects.all().order_by('nom')
-    villes = Ville.objects.select_related('region').order_by('region__nom_region', 'nom')
+    villes = Ville.objects.select_related('region').order_by('nom')
+
+    # Préparer les données JSON pour les articles (comme dans l'interface admin)
+    articles_data = []
+    for article in articles:
+        # Déterminer l'URL de l'image (priorité à l'image locale)
+        image_url = ''
+        if article.image:
+            image_url = article.image.url
+        elif article.image_url:
+            image_url = article.image_url
+            
+        articles_data.append({
+            'id': article.pk,
+            'nom': str(article.nom or ''),
+            'reference': str(article.reference or ''),
+            'prix_unitaire': float(article.prix_unitaire) if article.prix_unitaire else 0.0,
+            'qte_disponible': int(article.get_total_qte_disponible()),
+            'couleur': str(article.couleur or ''),
+            'pointure': str(article.pointure or ''),
+            'categorie': str(article.categorie) if hasattr(article, 'categorie') and article.categorie else '',
+            'phase': str(article.phase or ''),
+            'has_promo_active': bool(article.has_promo_active),
+            'isUpsell': bool(article.isUpsell),
+            'image_url': image_url
+        })
 
     context = {
         'operateur': operateur,
         'clients': clients,
         'articles': articles,
+        'articles_json': articles_data,
         'villes': villes,
     }
 

@@ -1,4 +1,5 @@
 {% extends 'composant_generale/operatConfirme/base.html' %}
+{% load static %}
 
 {% block title %}Lancer les Confirmations - YZ-CMD{% endblock %}
 
@@ -100,6 +101,10 @@
 </style>
 {% endblock %}
 
+{% block extra_js %}
+<script src="{% static 'js/operatConfirme/smart-search.js' %}"></script>
+{% endblock %}
+
 {% block content %}
 {% csrf_token %}
 <div class="main-content transition-all duration-300" id="mainContent">
@@ -117,6 +122,10 @@
                 <div class="text-2xl font-bold" style="color: #f7d9c4;">{{ commandes_a_confirmer.count }}</div>
                 <div class="text-sm opacity-80">Commandes à lancer</div>
             </div>
+            <a href="{% url 'operatConfirme:creer_commande' %}" class="text-white px-6 py-3 rounded-lg font-medium transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105" style="background: linear-gradient(to right, #f7d9c4, #ede0d3); color: #4B352A;">
+                <i class="fas fa-plus mr-2"></i>
+                Nouvelle commande
+            </a>
         </div>
     </div>
 
@@ -152,8 +161,10 @@
         </div>
     </div>
 
-    <!-- Boutons de basculement d'affichage -->
-    <div class="flex justify-between items-center mb-6">
+    <!-- Barre de recherche et boutons de basculement d'affichage -->
+    <div class="bg-white rounded-xl shadow-md border p-6 mb-6">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <!-- Boutons de vue -->
         <div class="flex items-center space-x-4">
             <button onclick="switchToTable()" id="btn-table" class="btn-confirm">
                 <i class="fas fa-table mr-2"></i>
@@ -164,11 +175,28 @@
                 Vue Grille
             </button>
         </div>
+            
+            <!-- Barre de recherche intelligente -->
+            <div class="flex-grow max-w-md">
+                <div class="relative">
+                    <input type="text" 
+                           id="searchInput" 
+                           class="w-full pl-10 pr-4 py-2 rounded-lg border focus:ring-2 transition-all" 
+                           style="border-color: #f7d9c4; focus:ring-color: #6d4b3b; focus:border-color: #4B352A;"
+                           placeholder="Rechercher par ID YZ, N° externe, client, téléphone, ville, date, total, état...">
+                    <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2" style="color: #6d4b3b;"></i>
+                    <button onclick="clearSearch()" id="clearSearchBtn" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 hidden">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Compteur -->
         <div class="flex items-center space-x-4">
             <div class="text-sm text-gray-600">
-                <strong>{{ commandes_a_confirmer.count }}</strong> commande{{ commandes_a_confirmer.count|pluralize }} à lancer
+                    <strong id="filteredCount">{{ commandes_a_confirmer.count }}</strong> commande{{ commandes_a_confirmer.count|pluralize }} à lancer
             </div>
-
+            </div>
         </div>
     </div>
 
@@ -657,24 +685,7 @@
 window.currentCommandeId = null;
 window.currentOperationCommandeId = null;
 
-// Basculement entre vues
-function switchToTable() {
-    document.getElementById('table-view').classList.remove('hidden');
-    document.getElementById('grid-view').classList.add('hidden');
-    
-    // Mise à jour des boutons
-    document.getElementById('btn-table').className = 'btn-confirm';
-    document.getElementById('btn-grid').className = 'flex items-center px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors';
-}
-
-function switchToGrid() {
-    document.getElementById('table-view').classList.add('hidden');
-    document.getElementById('grid-view').classList.remove('hidden');
-    
-    // Mise à jour des boutons
-    document.getElementById('btn-grid').className = 'btn-confirm';
-    document.getElementById('btn-table').className = 'flex items-center px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors';
-}
+// Basculement entre vues (fonctions remplacées par les versions avec recherche)
 
 // Gestion de la sélection
 document.addEventListener('DOMContentLoaded', function() {
@@ -1265,6 +1276,8 @@ function hideErrorModal() {
         modal.classList.remove('flex');
     }
 }
+
+// Recherche intelligente chargée depuis smart-search.js
 </script>
 
 <!-- Modal de Confirmation Simple Tailwind -->
