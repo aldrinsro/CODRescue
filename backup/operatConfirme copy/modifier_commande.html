@@ -5,7 +5,244 @@
 {% block title %}Modifier Commande {{ commande.id_yz }} - YZ-CMD{% endblock %}
 
 {% block extra_css %}
+<style>
+    @keyframes slideInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .animate-slideInUp {
+        animation: slideInUp 0.6s ease-out forwards;
+        opacity: 0;
+    }
 
+    .verification-item {
+        transition: all 0.3s ease;
+    }
+    
+    .verification-item.verified {
+        background-color: #dcfce7 !important;
+        border-color: #16a34a !important;
+    }
+    
+    .check-icon {
+        display: none;
+        color: #16a34a;
+    }
+    
+    .verification-item.verified .check-icon {
+        display: inline;
+    }
+    
+    .btn-verification {
+        background: linear-gradient(to right, #16a34a, #15803d);
+        color: white;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-verification:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    
+    .btn-operation {
+        background-color: #8B5A2B !important;
+        color: white !important;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-operation:hover {
+        background-color: #6d4b3b !important;
+        transform: scale(1.05);
+    }
+    
+    .btn-confirm {
+        background: linear-gradient(to right, #4B352A, #6d4b3b);
+        color: white;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-confirm:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+
+    /* Styles pour la modale d'articles - amélioration de l'affichage */
+    #articleModal {
+        z-index: 9999;
+    }
+    
+    /* Styles pour la barre de navigation personnalisée */
+    #articlesScrollContainer {
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none; /* IE/Edge */
+    }
+    
+    #articlesScrollContainer::-webkit-scrollbar {
+        display: none; /* Chrome/Safari/Opera */
+    }
+    
+    #customScrollbar {
+        opacity: 0.3;
+        transition: opacity 0.3s ease;
+        pointer-events: auto;
+    }
+    
+    #articlesScrollContainer:hover ~ #customScrollbar,
+    #customScrollbar:hover {
+        opacity: 1;
+    }
+    
+    #scrollThumb {
+        transition: all 0.2s ease;
+        position: absolute;
+        cursor: grab;
+    }
+    
+    #scrollThumb:active {
+        cursor: grabbing;
+    }
+    
+    #scrollThumb:hover {
+        background-color: #6b7280;
+        transform: scaleX(1.2);
+    }
+    
+    /* Animation pour les boutons de navigation */
+    #scrollUp, #scrollDown {
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    
+    #scrollUp:hover, #scrollDown:hover {
+        background-color: #e5e7eb;
+        transform: scale(1.1);
+    }
+    
+    /* Amélioration de la visibilité */
+    #customScrollbar {
+        background-color: #f3f4f6;
+        border-left: 1px solid #e5e7eb;
+    }
+    
+    #articleModal .bg-white.rounded-xl {
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+    
+    /* Animation pour la modale */
+    #articleModal.flex {
+        animation: fadeIn 0.3s ease-out;
+    }
+    
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: scale(0.95);
+        }
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
+    
+    /* Amélioration de l'affichage des badges */
+    .article-card .gap-2 span {
+        white-space: nowrap;
+    }
+    
+    /* Style pour les informations d'article dans la modale */
+    #article-info {
+        transition: all 0.3s ease;
+    }
+    
+    /* Amélioration du responsiveness */
+    @media (max-width: 768px) {
+        #articleModal .max-w-2xl {
+            margin: 1rem;
+            max-width: calc(100% - 2rem);
+        }
+        
+        #article-info .grid-cols-2 {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    /* Styles pour la liste déroulante d'articles avec badges */
+    #articleSelect option {
+        padding: 8px 12px;
+        border-radius: 4px;
+        margin: 2px 0;
+    }
+    
+    /* Animations pour les badges de légende */
+    .filter-badge {
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .filter-badge:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    
+    .filter-badge.active {
+        box-shadow: 0 0 0 2px #3b82f6;
+        transform: scale(1.1);
+        font-weight: bold;
+    }
+    
+    .filter-badge.active::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(45deg, rgba(255,255,255,0.2), transparent);
+        pointer-events: none;
+    }
+    
+    /* Animation de comptage */
+    .article-count {
+        display: inline-block;
+        background: #3b82f6;
+        color: white;
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 10px;
+        margin-left: 4px;
+        font-weight: bold;
+        min-width: 20px;
+        text-align: center;
+    }
+    
+    /* Animations pour les notifications */
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    @keyframes fadeOut {
+        from { opacity: 1; transform: translateY(0); }
+        to { opacity: 0; transform: translateY(-20px); }
+    }
+    
+    .animate-fade-in {
+        animation: fadeIn 0.3s ease-in-out;
+    }
+    
+    .animate-fade-out {
+        animation: fadeOut 0.3s ease-in-out;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -31,6 +268,8 @@
             </div>
         </div>
     </div>
+
+
 
     <!-- Formulaire de modification -->
     <form method="post" id="modification-form">
@@ -68,7 +307,9 @@
                                    class="w-full p-3 bg-gray-100 border rounded-lg text-gray-600">
                         </div>
                     </div>
-
+                    
+                   
+                    
                     <!-- Bouton de validation pour cette section -->
                     <!-- Bouton supprimé - Section informations-commande -->
                     <i class="fas fa-check-circle check-icon text-2xl float-right"></i>
@@ -135,8 +376,6 @@
                                     <option value="{{ ville.id }}" 
                                             data-region="{{ ville.region.nom_region }}" 
                                             data-frais="{{ ville.frais_livraison|default:0 }}"
-                                            data-delai-min="{{ ville.Delai_livraison_min|default:0 }}"
-                                            data-delai-max="{{ ville.Delai_livraison_max|default:0 }}"
                                             {% if commande.ville.id == ville.id %}selected{% endif %}>
                                         {{ ville.nom }}
                                     </option>
@@ -144,7 +383,7 @@
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Livreur (Automatique)</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Région (Automatique)</label>
                             <input type="text" id="region-display" value="{{ commande.ville.region.nom_region }}" readonly
                                    class="w-full p-3 bg-gray-100 border rounded-lg text-gray-600">
                         </div>
@@ -153,11 +392,6 @@
                             <input type="text" id="frais-display" value="{{ commande.ville.frais_livraison|default:0 }} DH" readonly
                                    class="w-full p-3 bg-gray-100 border rounded-lg text-gray-600">
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">delai de livraison (Automatique)</label>
-                        <input type="text" id="delai-display" value="{{ commande.ville.Delai_livraison_min|default:0 }} - {{ commande.ville.Delai_livraison_max|default:0 }} jours" readonly
-                               class="w-full p-3 bg-gray-100 border rounded-lg text-gray-600">
-                </div>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Adresse de livraison</label>
@@ -186,6 +420,7 @@
                     
                     <div class="space-y-6">
 
+                        
                         <!-- Gestion des opérations -->
                         <div class="p-4 bg-blue-50 rounded-lg border border-blue-200">
                             <h4 class="text-md font-medium text-blue-800 mb-3">
@@ -295,6 +530,7 @@
                                         IMPORTANT : Chaque opération sélectionnée DOIT avoir un commentaire rédigé par l'opérateur
                             </div>
 
+
                         </div>
                             </div>
                         </div>
@@ -377,6 +613,7 @@
                     <i class="fas fa-arrow-left mr-2"></i>
                     Retour à la confirmation
                 </a>
+                
 
             </div>
             
@@ -395,8 +632,7 @@
                     Annuler la Commande
                 </button>
                 <button type="button" onclick="confirmerCommande()" 
-                class="btn-confirm px-6 py-3 rounded-lg font-medium text-white transition-all" 
-                style="background: linear-gradient(135deg, #4B352A, #6d4b3b); hover:shadow-lg;">
+                class="btn-confirm px-6 py-3 rounded-lg font-medium">
             <i class="fas fa-check-circle mr-2"></i>
             Confirmer la Commande
                     </button>
@@ -407,13 +643,14 @@
                     Annuler la Commande
                 </button>
                 <button type="button" onclick="confirmerCommande()" 
-                class="btn-confirm px-6 py-3 rounded-lg font-medium text-white transition-all" 
-                style="background: linear-gradient(135deg, #4B352A, #6d4b3b); hover:shadow-lg;">
+                class="btn-confirm px-6 py-3 rounded-lg font-medium">
             <i class="fas fa-check-circle mr-2"></i>
             Confirmer la Commande
                     </button>
                 {% endif %}
-
+  
+                
+               
             </div>
         </div>
     </form>
@@ -456,15 +693,15 @@
 </div>
 
 <!-- Modale pour ajouter/modifier un article -->
-<div id="articleModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50 p-4" style="backdrop-filter: blur(8px); display: none;">
-    <div class="bg-white rounded-xl p-4 sm:p-6 w-full max-w-7xl mx-auto shadow-2xl max-h-[95vh] overflow-y-auto">
-        <h3 class="text-base sm:text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
+<div id="articleModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50" style="backdrop-filter: blur(8px); display: none;">
+    <div class="bg-white rounded-xl p-6 w-full max-w-6xl mx-4 shadow-2xl">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
             <div class="flex items-center">
-            <i class="fas fa-box text-blue-500 mr-2 sm:mr-3"></i>
+            <i class="fas fa-box text-blue-500 mr-3"></i>
             <span id="articleModalTitle">Ajouter un article</span>
             </div>
             <span id="FermerModalAjouterArticle" class="text-gray-500 hover:text-gray-700 cursor-pointer transition-colors" onclick="fermerModalAjouterArticle()">
-                <i class="fas fa-times text-lg sm:text-xl"></i>
+                <i class="fas fa-times text-xl"></i>
             </span>
         </h3>
 
@@ -472,40 +709,41 @@
            <div class="mt-3 mb-3">
             <p class="text-sm text-gray-500 mb-2">Rechercher un article</p>
             <input id="recherche-article-input" type="text" placeholder="Nom, référence, couleur, pointure..." 
-                   class="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base"
+                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                    oninput="rechercherArticles(this.value)" />
         </div>
-
+        
+        
         <form id="articleForm" class="space-y-4">
                 <!-- Sélection d'article (pour nouveaux articles) -->
                 <div id="article-selection-field">
                     <!-- Légende des badges -->
-                    <div class="mb-3 p-2 sm:p-3 bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg border border-gray-200 shadow-sm">
-                        <div class="flex items-center justify-between mb-2 sm:mb-3">
-                            <div class="text-xs sm:text-sm font-semibold text-gray-700 flex items-center">
-                                <i class="fas fa-info-circle mr-1 sm:mr-2 text-blue-500"></i>
+                    <div class="mb-3 p-3 bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg border border-gray-200 shadow-sm">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="text-sm font-semibold text-gray-700 flex items-center">
+                                <i class="fas fa-info-circle mr-2 text-blue-500"></i>
                              types d'articles :
                         </div>
                          
                         </div>
-                        <div class="badge-legend grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-1 sm:gap-2 lg:gap-3 text-xs sm:text-sm">
-                            <span id="filter-all" class="inline-flex items-center justify-center px-2 sm:px-4 py-1 sm:py-2 bg-gray-100 text-gray-700 rounded-full font-medium cursor-pointer filter-badge active whitespace-nowrap hover:bg-gray-200 transition-colors" 
+                        <div class="badge-legend flex justify-between gap-3 text-sm">
+                            <span id="filter-all" class="flex-1 inline-flex items-center justify-center px-4 py-2 bg-gray-100 text-gray-700 rounded-full font-medium cursor-pointer filter-badge active whitespace-nowrap hover:bg-gray-200 transition-colors" 
                                   onclick="filtrerArticles('all')" title="Afficher tous les articles">
                                 🔍 TOUS
                             </span>
-                            <span id="filter-promo" class="inline-flex items-center justify-center px-2 sm:px-4 py-1 sm:py-2 bg-red-100 text-red-700 rounded-full font-medium cursor-pointer filter-badge whitespace-nowrap hover:bg-red-200 transition-colors" 
+                            <span id="filter-promo" class="flex-1 inline-flex items-center justify-center px-4 py-2 bg-red-100 text-red-700 rounded-full font-medium cursor-pointer filter-badge whitespace-nowrap hover:bg-red-200 transition-colors" 
                                   onclick="filtrerArticles('promo')" title="Filtrer les articles en promotion">
                                 🔥 PROMO
                             </span>
-                            <span id="filter-liquidation" class="inline-flex items-center justify-center px-2 sm:px-4 py-1 sm:py-2 bg-orange-100 text-orange-700 rounded-full font-medium cursor-pointer filter-badge whitespace-nowrap hover:bg-orange-200 transition-colors" 
+                            <span id="filter-liquidation" class="flex-1 inline-flex items-center justify-center px-4 py-2 bg-orange-100 text-orange-700 rounded-full font-medium cursor-pointer filter-badge whitespace-nowrap hover:bg-orange-200 transition-colors" 
                                   onclick="filtrerArticles('liquidation')" title="Filtrer les articles en liquidation">
                                 🏷️ LIQUIDATION
                             </span>
-                            <span id="filter-test" class="inline-flex items-center justify-center px-2 sm:px-4 py-1 sm:py-2 bg-blue-100 text-blue-700 rounded-full font-medium cursor-pointer filter-badge whitespace-nowrap hover:bg-blue-200 transition-colors" 
+                            <span id="filter-test" class="flex-1 inline-flex items-center justify-center px-4 py-2 bg-blue-100 text-blue-700 rounded-full font-medium cursor-pointer filter-badge whitespace-nowrap hover:bg-blue-200 transition-colors" 
                                   onclick="filtrerArticles('test')" title="Filtrer les articles en test">
                                 🧪 TEST
                             </span>
-                            <span id="filter-upsell" class="inline-flex items-center justify-center px-2 sm:px-4 py-1 sm:py-2 bg-green-100 text-green-700 rounded-full font-medium cursor-pointer filter-badge whitespace-nowrap hover:bg-green-200 transition-colors" 
+                            <span id="filter-upsell" class="flex-1 inline-flex items-center justify-center px-4 py-2 bg-green-100 text-green-700 rounded-full font-medium cursor-pointer filter-badge whitespace-nowrap hover:bg-green-200 transition-colors" 
                                   onclick="filtrerArticles('upsell')" title="Filtrer les articles upsell">
                                 ⬆️ UPSELL
                             </span>
@@ -521,14 +759,14 @@
                 <!-- Section des articles avec navigation fixe -->
                 <div class="mt-4 border border-gray-200 rounded-lg overflow-hidden">
                     <!-- En-tête fixe du tableau -->
-                    <div class="bg-gray-50 border-b border-gray-200 overflow-x-auto">
+                    <div class="bg-gray-50 border-b border-gray-200">
                         <table class="min-w-full">
                             <thead>
                                 <tr>
-                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Article</th>
-                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Prix</th>
-                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Stock</th>
-                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Action</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Article</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Prix</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Stock</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Action</th>
                                 </tr>
                             </thead>
                         </table>
@@ -537,7 +775,7 @@
                     <!-- Zone de scroll avec barre de navigation personnalisée -->
                     <div class="relative">
                         <!-- Conteneur principal avec scroll -->
-                        <div id="articlesScrollContainer" class="max-h-64 sm:max-h-96 overflow-y-auto overflow-x-auto">
+                        <div id="articlesScrollContainer" class="max-h-96 overflow-y-auto">
                             <table class="min-w-full">
                                 <tbody id="articlesTableBody" class="bg-white divide-y divide-gray-100">
                                     <!-- Lignes d'articles rendues dynamiquement -->
@@ -546,15 +784,15 @@
                         </div>
                         
                         <!-- Barre de navigation personnalisée -->
-                        <div id="customScrollbar" class="absolute right-0 top-0 bottom-0 w-2 sm:w-3 bg-gray-100 rounded-r-lg">
-                            <div id="scrollThumb" class="w-2 sm:w-3 bg-gray-400 rounded-full cursor-pointer hover:bg-gray-500 transition-colors" style="height: 50px; top: 0; position: absolute;"></div>
+                        <div id="customScrollbar" class="absolute right-0 top-0 bottom-0 w-3 bg-gray-100 rounded-r-lg">
+                            <div id="scrollThumb" class="w-3 bg-gray-400 rounded-full cursor-pointer hover:bg-gray-500 transition-colors" style="height: 50px; top: 0; position: absolute;"></div>
                         </div>
                     </div>
                     
                     <!-- Indicateur de navigation -->
-                    <div class="bg-gray-50 border-t border-gray-200 px-2 sm:px-4 py-2 flex items-center justify-between text-xs text-gray-500">
+                    <div class="bg-gray-50 border-t border-gray-200 px-4 py-2 flex items-center justify-between text-xs text-gray-500">
                         <span id="scrollInfo">Articles disponibles</span>
-                        <div class="flex items-center space-x-1 sm:space-x-2">
+                        <div class="flex items-center space-x-2">
                             <button id="scrollUp" class="p-1 hover:bg-gray-200 rounded" title="Monter">
                                 <i class="fas fa-chevron-up"></i>
                             </button>
@@ -581,47 +819,47 @@
             
             <!-- Informations de l'article sélectionné -->
             <div id="article-info" class="hidden mt-4">
-                <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200 p-3 sm:p-4">
-                    <h4 class="text-base sm:text-lg font-semibold text-blue-800 mb-3 sm:mb-4 flex items-center">
+                <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200 p-4">
+                    <h4 class="text-lg font-semibold text-blue-800 mb-4 flex items-center">
                         <i class="fas fa-info-circle mr-2"></i>Détails de l'article
                     </h4>
                     
                     <!-- Informations principales organisées en cartes -->
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 mb-3 sm:mb-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <!-- Carte Informations produit -->
-                        <div class="bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-gray-100">
-                            <h5 class="font-medium text-gray-800 mb-2 sm:mb-3 flex items-center text-sm sm:text-base">
+                        <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+                            <h5 class="font-medium text-gray-800 mb-3 flex items-center">
                                 <i class="fas fa-tag mr-2 text-blue-600"></i>Informations produit
                             </h5>
                             <div class="space-y-2">
-                                <div class="flex justify-between text-sm sm:text-base">
+                                <div class="flex justify-between">
                                     <span class="text-gray-600">Référence :</span>
                                     <span id="info-reference" class="font-medium text-gray-800"></span>
                                 </div>
-                                <div class="flex justify-between text-sm sm:text-base">
+                                <div class="flex justify-between">
                                     <span class="text-gray-600">Prix unitaire :</span>
                                     <span id="info-prix" class="font-bold text-green-600"></span>
                                 </div>
-                                <div class="flex justify-between border-t pt-2 text-sm sm:text-base">
+                                <div class="flex justify-between border-t pt-2">
                                     <span class="text-gray-700 font-medium">Sous-total :</span>
-                                    <span id="info-sous-total" class="font-bold text-blue-600 text-base sm:text-lg"></span>
+                                    <span id="info-sous-total" class="font-bold text-blue-600 text-lg"></span>
                                 </div>
                             </div>
                         </div>
                         
                         <!-- Carte Caractéristiques -->
-                        <div class="bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-gray-100">
-                            <h5 class="font-medium text-gray-800 mb-2 sm:mb-3 flex items-center text-sm sm:text-base">
+                        <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+                            <h5 class="font-medium text-gray-800 mb-3 flex items-center">
                                 <i class="fas fa-palette mr-2 text-purple-600"></i>Caractéristiques du produit
                             </h5>
                             
                             <!-- Conteneur pour les badges de caractéristiques -->
-                            <div id="caracteristiques-badges" class="flex flex-wrap gap-1 sm:gap-2 mb-2 sm:mb-3">
+                            <div id="caracteristiques-badges" class="flex flex-wrap gap-2 mb-3">
                                 <!-- Les badges seront ajoutés dynamiquement par JavaScript -->
                             </div>
                             
                             <!-- Affichage classique formaté -->
-                            <div class="space-y-2 text-xs sm:text-sm">
+                            <div class="space-y-2 text-sm">
                                 <div>
                                     <span class="text-gray-700 font-medium">Taille : </span>
                                     <span id="info-pointure" class="text-purple-600 font-medium"></span>
@@ -639,16 +877,16 @@
                     </div>
                     
                     <!-- Stock et description -->
-                    <div class="bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-gray-100">
+                    <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
                         <div class="flex items-center justify-between mb-2">
-                            <h5 class="font-medium text-gray-800 flex items-center text-sm sm:text-base">
+                            <h5 class="font-medium text-gray-800 flex items-center">
                                 <i class="fas fa-boxes mr-2 text-teal-600"></i>Stock disponible
                             </h5>
-                            <span id="info-stock" class="px-2 sm:px-3 py-1 rounded-full font-medium transition-all duration-300 text-xs sm:text-sm"></span>
+                            <span id="info-stock" class="px-3 py-1 rounded-full font-medium transition-all duration-300"></span>
                         </div>
                         <div class="flex items-center mt-2 mb-2">
-                            <div class="w-full bg-gray-200 rounded-full h-2 sm:h-2.5">
-                                <div id="stock-progress" class="h-2 sm:h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+                            <div class="w-full bg-gray-200 rounded-full h-2.5">
+                                <div id="stock-progress" class="h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
                             </div>
                             <div id="stock-percentage" class="ml-2 text-xs font-medium"></div>
                         </div>
@@ -656,7 +894,7 @@
                             <i class="fas fa-info-circle mr-1"></i>
                             Le stock affiché est mis à jour en temps réel depuis la base de données
                         </div>
-                        <div id="info-description" class="text-xs sm:text-sm text-gray-600 italic"></div>
+                        <div id="info-description" class="text-sm text-gray-600 italic"></div>
                     </div>
                 </div>
             </div>
@@ -666,7 +904,7 @@
 
 <!-- JavaScript -->
 <script>
-// Fonction pour charger automatiquement la région, les frais et les délais
+// Fonction pour charger automatiquement la région et les frais
 function chargerRegionEtFrais() {
     const villeSelect = document.getElementById('ville-select');
     const selectedOption = villeSelect.options[villeSelect.selectedIndex];
@@ -674,22 +912,17 @@ function chargerRegionEtFrais() {
     if (selectedOption.value) {
         const region = selectedOption.getAttribute('data-region');
         const frais = selectedOption.getAttribute('data-frais');
-        const delaiMin = selectedOption.getAttribute('data-delai-min');
-        const delaiMax = selectedOption.getAttribute('data-delai-max');
         
         document.getElementById('region-display').value = region;
         document.getElementById('frais-display').value = frais + ' DH';
-        document.getElementById('delai-display').value = delaiMin + ' - ' + delaiMax + ' jours';
         
         // Recalculer le total avec les nouveaux frais de livraison
         mettreAJourTotalCommande();
         
-        console.log(`🏙️ Ville changée: ${selectedOption.text}, Frais: ${frais} DH, Région: ${region}, Délai: ${delaiMin}-${delaiMax} jours`);
+        console.log(`🏙️ Ville changée: ${selectedOption.text}, Frais: ${frais} DH, Région: ${region}`);
     } else {
-        // Réinitialiser les champs si aucune ville n'est sélectionnée
         document.getElementById('region-display').value = '';
-        document.getElementById('frais-display').value = '';
-        document.getElementById('delai-display').value = '';
+        document.getElementById('frais-display').value = '0 DH';
         
         // Recalculer le total sans frais de livraison
         mettreAJourTotalCommande();
@@ -1238,6 +1471,10 @@ function sauvegarderNouvelleOperation(operation, commentaire) {
         showNotification('❌ Erreur de connexion lors de la création', 'error');
     });
 }
+
+
+
+
 
 // Types d'opérations valides selon la base de données
 const TYPES_OPERATIONS_VALIDES = ['APPEL', 'Appel Whatsapp', 'Message Whatsapp', 'Vocal Whatsapp', 'ENVOI_SMS'];
@@ -1984,6 +2221,8 @@ function showStockNotification(detailsStock, type = 'success') {
     
     showNotification(message, type);
 }
+
+
 
 // Fonction pour lancer la confirmation (change l'état de Affectée à En cours)
 function lancerConfirmation() {
@@ -2931,7 +3170,7 @@ function chargerArticlesDisponibles() {
                     </td>
 
                     <td class="px-4 py-3 text-center">
-                        <button type="button" class="px-3 py-2 text-white rounded-lg transition-all" style="background: linear-gradient(135deg, #4B352A, #6d4b3b); hover:shadow-lg;" onclick="ajouterDepuisLigne(this)">
+                        <button type="button" class="px-3 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-lg" onclick="ajouterDepuisLigne(this)">
                             <i class="fas fa-plus mr-1"></i>Ajouter
                         </button>
                     </td>
@@ -3078,7 +3317,7 @@ function utiliserArticlesFallback() {
                 <td class="px-4 py-3 text-center"><span class="px-2 py-0.5 bg-teal-100 text-teal-700 rounded-full text-xs">${article.qte_disponible} unités</span></td>
 
                 <td class="px-4 py-3 text-center">
-                    <button type="button" class="px-3 py-2 text-white rounded-lg transition-all" style="background: linear-gradient(135deg, #4B352A, #6d4b3b); hover:shadow-lg;" onclick="ajouterDepuisLigne(this)">
+                    <button type="button" class="px-3 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-lg" onclick="ajouterDepuisLigne(this)">
                         <i class="fas fa-plus mr-1"></i>Ajouter
                     </button>
                 </td>`;
@@ -3751,6 +3990,8 @@ function selectionnerVariante(variant, article) {
     }
 }
 
+
+
 function rechercherArticlesPourVariantes(terme) {
     try {
         if (!terme || terme.length < 2) {
@@ -3780,7 +4021,7 @@ function rechercherArticlesPourVariantes(terme) {
                                 </div>
                                 <div class="text-right">
                                     <div class="text-lg font-semibold text-green-600">${article.prix_actuel} DH</div>
-                                    <button class="mt-2 px-3 py-1 text-white rounded text-sm transition-all" style="background: linear-gradient(135deg, #2563eb, #3b82f6); hover:shadow-lg;">
+                                    <button class="mt-2 px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm">
                                         Voir variantes
                                     </button>
                                 </div>
@@ -4276,7 +4517,7 @@ function rafraichirSectionArticles() {
             container.innerHTML = `<div class="text-center p-4 bg-red-100 text-red-700 rounded-lg">
                 <div class="font-bold mb-2">Erreur de connexion</div>
                 <div class="text-sm">${error.message || 'Impossible de contacter le serveur'}</div>
-                <button onclick="rafraichirSectionArticles()" class="mt-3 px-4 py-2 text-white rounded-lg transition-all" style="background: linear-gradient(135deg, #dc2626, #ef4444); hover:shadow-lg;">
+                <button onclick="rafraichirSectionArticles()" class="mt-3 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg">
                     <i class="fas fa-sync-alt mr-1"></i>Réessayer
                 </button>
             </div>`;
@@ -4293,7 +4534,8 @@ function mettreAJourTousLesTotaux(data) {
             sousTotalGlobalElement.textContent = `${parseFloat(data.sous_total_articles).toFixed(2)} DH`;
         }
     }
-
+    
+    
     // Mettre à jour le total de la commande (corriger getElementById)
     if (data.total_commande !== undefined) {
         const totalElement = document.getElementById('total-commande');
@@ -5039,6 +5281,8 @@ function sauvegarderRemplacementArticle(ancienArticleId, nouvelArticle, nouvelle
         });
 }
 
+
+
 // Ajouter les événements pour la modale d'articles et les raccourcis clavier
 document.addEventListener('DOMContentLoaded', function() {
     // Événement pour la sélection d'article
@@ -5315,7 +5559,8 @@ function appliquerFiltreSelect(typeFiltre) {
                                     <div class="text-xs text-gray-500">Réf: ${article.reference || '-'}</div>
                                     <div class="mt-1">${badgeHtml}</div>
                                     <div class="mt-1 flex flex-wrap gap-2 text-xs">
-               
+                                        ${article.pointure ? `<span class=\"px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full\"><i class=\"fas fa-ruler-vertical mr-1\"></i>${article.pointure}</span>` : ''}
+                                        ${article.couleur ? `<span class=\"px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full\"><i class=\"fas fa-palette mr-1\"></i>${article.couleur}</span>` : ''}
                                         ${typeof article.categorie === 'string' ? `<span class=\"px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full\"><i class=\"fas fa-tag mr-1\"></i>${article.categorie}</span>` : ''}
                                     </div>
                                 </div>
@@ -5327,7 +5572,7 @@ function appliquerFiltreSelect(typeFiltre) {
                         </td>
 
                         <td class="px-4 py-3 text-center">
-                            <button type="button" class="px-3 py-2 text-white rounded-lg transition-all" style="background: linear-gradient(135deg, #4B352A, #6d4b3b); hover:shadow-lg;" onclick="ajouterDepuisLigne(this)"><i class="fas fa-plus mr-1"></i>Ajouter</button>
+                            <button type="button" class="px-3 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-lg" onclick="ajouterDepuisLigne(this)"><i class="fas fa-plus mr-1"></i>Ajouter</button>
                         </td>`;
                     tableBody.appendChild(tr);
                 }
@@ -5841,6 +6086,8 @@ function getSectionName(sectionId) {
     return sectionNames[sectionId] || 'Section';
 }
 
+
+
 // Fonction pour modifier la quantité d'un article (avec boutons +/-)
 function modifierQuantite(panierId, delta) {
     const input = document.getElementById(`quantite-${panierId}`);
@@ -5987,6 +6234,8 @@ function showToast(message, type = 'info', duration = 3000) {
     }, duration);
 }
 
+
+
 // Fermer la modal avec Escape (uniquement si elle est ouverte)
 document.addEventListener('keydown', function(event) {
     if (event.key === 'Escape') {
@@ -6093,10 +6342,10 @@ function ajouterArticleAuPanier() {
                 </div>
             </div>
             <div class="flex space-x-2 ml-4">
-                <button type="button" onclick="modifierArticle(${articleCard.dataset.articleId})" class="px-3 py-2 text-white text-sm rounded-lg transition-all flex items-center" style="background: linear-gradient(135deg, #2563eb, #3b82f6); hover:shadow-lg;" title="Modifier">
+                <button type="button" onclick="modifierArticle(${articleCard.dataset.articleId})" class="px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded-lg transition-colors flex items-center" title="Modifier">
                     <i class="fas fa-edit mr-1"></i>Modifier
                 </button>
-                <button type="button" onclick="supprimerArticle(this)" class="px-3 py-2 text-white text-sm rounded-lg transition-all flex items-center" style="background: linear-gradient(135deg, #dc2626, #ef4444); hover:shadow-lg;" title="Supprimer">
+                <button type="button" onclick="supprimerArticle(this)" class="px-3 py-2 bg-red-500 hover:bg-red-600 text-white text-sm rounded-lg transition-colors flex items-center" title="Supprimer">
                     <i class="fas fa-trash mr-1"></i>Supprimer
                 </button>
             </div>
@@ -6424,6 +6673,102 @@ function modifierArticle(panierId) {
     </div>
 </div>
 
+<style>
+    @keyframes fade-in-down {
+        0% {
+            opacity: 0;
+            transform: translateY(-20px) scale(0.95);
+        }
+        100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+    .animate-fade-in-down {
+        animation: fade-in-down 0.4s ease-out;
+    }
+    
+    /* Styles pour le tableau croisé des variantes */
+    .variant-table {
+        border-collapse: collapse;
+        width: 100%;
+    }
+    
+    .variant-table th,
+    .variant-table td {
+        border: 1px solid #d1d5db;
+        padding: 0.75rem;
+        text-align: center;
+    }
+    
+    .variant-table th {
+        background-color: #f9fafb;
+        font-weight: 600;
+        color: #374151;
+    }
+    
+    .variant-table td {
+        background-color: white;
+    }
+    
+    .variant-table tr:nth-child(even) td:first-child {
+        background-color: #f9fafb;
+    }
+    
+    .variant-checkbox {
+        width: 1.2rem;
+        height: 1.2rem;
+        cursor: pointer;
+    }
+    
+    .variant-checkbox:disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+    }
+    
+    .variant-table .stock-rupture {
+        background-color: #fef2f2;
+        color: #dc2626;
+    }
+    
+    .variant-table .stock-disponible {
+        background-color: #f0fdf4;
+        color: #16a34a;
+    }
+    
+    /* Responsive design pour le tableau */
+    @media (max-width: 768px) {
+        .variant-table {
+            font-size: 0.875rem;
+        }
+        
+        .variant-table th,
+        .variant-table td {
+            padding: 0.5rem;
+        }
+        
+        .variant-checkbox {
+            width: 1rem;
+            height: 1rem;
+        }
+    }
+    
+    /* Animation pour la sélection */
+    .variant-checkbox:checked + label {
+        color: #2563eb;
+        font-weight: 600;
+    }
+    
+    /* Hover effects */
+    .variant-table tr:hover td {
+        background-color: #f8fafc;
+    }
+    
+    .variant-table tr:hover td:first-child {
+        background-color: #f1f5f9;
+    }
+</style>
+
 <!-- Modal de Stock Insuffisant Tailwind -->
 <div id="stockInsuffisantModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50 flex items-center justify-center">
     <div class="relative p-8 bg-white w-full max-w-2xl m-auto flex-col flex rounded-xl shadow-2xl animate-fade-in-down" style="border: 2px solid #f87171;">
@@ -6649,51 +6994,51 @@ function modifierArticle(panierId) {
 </div>
 
 <!-- Modal de sélection des variantes -->
-<div id="variantModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50 p-4" style="backdrop-filter: blur(8px); display: none;">
-    <div class="bg-white rounded-xl p-4 sm:p-6 w-full max-w-7xl mx-auto shadow-2xl max-h-[95vh] overflow-y-auto">
-        <h3 class="text-base sm:text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
+<div id="variantModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50" style="backdrop-filter: blur(8px); display: none;">
+    <div class="bg-white rounded-xl p-6 w-full max-w-6xl mx-4 shadow-2xl">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
             <div class="flex items-center">
-                <i class="fas fa-table text-blue-500 mr-2 sm:mr-3"></i>
-                <span class="text-sm sm:text-base">Sélectionner des variantes - Tableau croisé</span>
+                <i class="fas fa-table text-blue-500 mr-3"></i>
+                <span>Sélectionner des variantes - Tableau croisé</span>
             </div>
             <span class="text-gray-500 hover:text-gray-700 cursor-pointer transition-colors" onclick="fermerModalVariantes()">
-                <i class="fas fa-times text-lg sm:text-xl"></i>
+                <i class="fas fa-times text-xl"></i>
             </span>
         </h3>
 
         <!-- Informations de l'article sélectionné -->
-        <div id="articleInfo" class="mb-4 p-3 sm:p-4 bg-gray-50 rounded-lg">
-            <h4 id="articleNom" class="font-medium text-gray-900 text-sm sm:text-base"></h4>
-            <p id="articleReference" class="text-xs sm:text-sm text-gray-600"></p>
+        <div id="articleInfo" class="mb-4 p-4 bg-gray-50 rounded-lg">
+            <h4 id="articleNom" class="font-medium text-gray-900"></h4>
+            <p id="articleReference" class="text-sm text-gray-600"></p>
         </div>
 
         <!-- Tableau croisé des variantes -->
-        <div id="variantsTableContainer" class="mb-4 overflow-x-auto">
-            <div class="text-center py-6 sm:py-8 text-gray-500">
-                <i class="fas fa-table text-3xl sm:text-4xl mb-3 sm:mb-4 text-gray-300"></i>
-                <p class="text-base sm:text-lg">Sélectionnez un article pour voir ses variantes</p>
+        <div id="variantsTableContainer" class="mb-4">
+            <div class="text-center py-8 text-gray-500">
+                <i class="fas fa-table text-4xl mb-4 text-gray-300"></i>
+                <p class="text-lg">Sélectionnez un article pour voir ses variantes</p>
             </div>
         </div>
 
         <!-- Informations des variantes sélectionnées -->
-        <div id="selectedVariantsInfo" class="mb-4 p-3 sm:p-4 bg-blue-50 border border-blue-200 rounded-lg hidden">
-            <h5 class="font-medium text-blue-900 mb-2 text-sm sm:text-base">Variantes sélectionnées:</h5>
-            <div id="selectedVariantsDetails" class="text-xs sm:text-sm text-blue-800"></div>
+        <div id="selectedVariantsInfo" class="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg hidden">
+            <h5 class="font-medium text-blue-900 mb-2">Variantes sélectionnées:</h5>
+            <div id="selectedVariantsDetails" class="text-sm text-blue-800"></div>
         </div>
 
-        <div class="flex flex-col sm:flex-row justify-between items-center mt-6 gap-3">
+        <div class="flex justify-between items-center mt-6">
             <button type="button" id="clearSelectionBtn" onclick="effacerSelectionVariantes()" 
-                    class="w-full sm:w-auto px-3 sm:px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors hidden text-sm sm:text-base">
-                <i class="fas fa-times mr-1 sm:mr-2"></i>Effacer la sélection
+                    class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors hidden">
+                <i class="fas fa-times mr-2"></i>Effacer la sélection
             </button>
             
-            <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
+            <div class="flex space-x-3">
                 <button type="button" id="addSelectedVariantsBtn" onclick="ajouterVariantesSelectionnees()" 
-                        class="w-full sm:w-auto px-3 sm:px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors hidden text-sm sm:text-base">
-                    <i class="fas fa-plus mr-1 sm:mr-2"></i>Ajouter les variantes sélectionnées
+                        class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors hidden">
+                    <i class="fas fa-plus mr-2"></i>Ajouter les variantes sélectionnées
                 </button>
                 <button type="button" onclick="fermerModalVariantes()" 
-                        class="w-full sm:w-auto px-3 sm:px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg transition-colors text-sm sm:text-base">
+                        class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg transition-colors">
                     Annuler
                 </button>
             </div>
