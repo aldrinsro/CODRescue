@@ -1,0 +1,52 @@
+{% load static %}
+
+<!-- Bouton Étiquettes Professionnelles - Composant réutilisable -->
+{% if commande_id %}
+    <!-- Bouton pour une commande spécifique -->
+    <a href="{% url 'commande:etiquettes_generator' %}?commande_id={{ commande_id }}" 
+       class="{% if size == 'small' %}p-2{% else %}px-4 py-2{% endif %} bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 shadow-sm hover:shadow-md inline-flex items-center gap-2"
+       title="Étiquettes Professionnelles - Commande {{ commande_id }}">
+        <i class="fas fa-tags {% if size == 'small' %}text-sm{% endif %}"></i>
+        {% if size != 'small' %}
+            <span class="font-medium">Étiquettes Pro</span>
+        {% endif %}
+    </a>
+{% else %}
+    <!-- Bouton global -->
+    <a href="{% url 'commande:etiquettes_generator' %}" 
+       class="{% if size == 'small' %}p-2{% else %}px-4 py-2{% endif %} bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 shadow-sm hover:shadow-md inline-flex items-center gap-2"
+       title="Générateur d'Étiquettes Professionnelles">
+        <i class="fas fa-tags {% if size == 'small' %}text-sm{% endif %}"></i>
+        {% if size != 'small' %}
+            <span class="font-medium">Étiquettes Pro</span>
+        {% endif %}
+    </a>
+{% endif %}
+
+<!-- Styles CSS pour le bouton -->
+<style>
+    .etiquettes-pro-btn {
+        background: linear-gradient(135deg, #4f46e5, #7c3aed);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .etiquettes-pro-btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+        transition: left 0.5s;
+    }
+    
+    .etiquettes-pro-btn:hover::before {
+        left: 100%;
+    }
+    
+    .etiquettes-pro-btn:hover {
+        box-shadow: 0 8px 25px rgba(79, 70, 229, 0.3);
+    }
+</style>

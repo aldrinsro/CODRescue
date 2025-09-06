@@ -431,3 +431,66 @@ class EtatArticleRenvoye(models.Model):
     def __str__(self):
         return f"{self.article} ({self.etat}) dans {self.commande}"
 
+
+class EtiquetteTemplate(models.Model):
+    """Template pour les étiquettes d'articles professionnelles"""
+    name = models.CharField(max_length=100, verbose_name="Nom du template")
+    width = models.FloatField(default=180, verbose_name="Largeur (mm)")
+    height = models.FloatField(default=260, verbose_name="Hauteur (mm)")
+    margin_top = models.FloatField(default=10, verbose_name="Marge haute (mm)")
+    margin_bottom = models.FloatField(default=10, verbose_name="Marge basse (mm)")
+    margin_left = models.FloatField(default=10, verbose_name="Marge gauche (mm)")
+    margin_right = models.FloatField(default=10, verbose_name="Marge droite (mm)")
+    
+    # Styles
+    font_family = models.CharField(max_length=50, default="Helvetica", verbose_name="Police")
+    font_size_title = models.IntegerField(default=16, verbose_name="Taille police titre")
+    font_size_text = models.IntegerField(default=12, verbose_name="Taille police texte")
+    font_size_barcode = models.IntegerField(default=14, verbose_name="Taille police code-barres")
+    
+    # Couleurs
+    color_header = models.CharField(max_length=7, default="#2c3e50", verbose_name="Couleur en-tête")
+    color_footer = models.CharField(max_length=7, default="#2c3e50", verbose_name="Couleur pied")
+    color_text = models.CharField(max_length=7, default="#333333", verbose_name="Couleur texte")
+    
+    # Code-barres
+    barcode_width = models.FloatField(default=4, verbose_name="Largeur barres (mm)")
+    barcode_height = models.FloatField(default=80, verbose_name="Hauteur barres (mm)")
+    barcode_format = models.CharField(max_length=20, default="CODE128B", verbose_name="Format code-barres")
+    
+    # QR Code
+    qr_size = models.IntegerField(default=300, verbose_name="Taille QR code (px)")
+    
+    # Options
+    show_header = models.BooleanField(default=True, verbose_name="Afficher en-tête")
+    show_footer = models.BooleanField(default=True, verbose_name="Afficher pied")
+    show_barcode = models.BooleanField(default=True, verbose_name="Afficher code-barres")
+    show_qr = models.BooleanField(default=False, verbose_name="Afficher QR code")
+    
+    # Métadonnées
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True, verbose_name="Actif")
+    
+    class Meta:
+        verbose_name = "Template d'étiquette"
+        verbose_name_plural = "Templates d'étiquettes"
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.name} ({self.width}x{self.height}mm)"
+    
+    def get_dimensions(self):
+        """Retourne les dimensions en points (pour ReportLab)"""
+        from reportlab.lib.units import mm
+        return (self.width * mm, self.height * mm)
+    
+    def get_margins(self):
+        """Retourne les marges en points"""
+        from reportlab.lib.units import mm
+        return {
+            'top': self.margin_top * mm,
+            'bottom': self.margin_bottom * mm,
+            'left': self.margin_left * mm,
+            'right': self.margin_right * mm
+        }
