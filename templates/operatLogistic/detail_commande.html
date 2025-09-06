@@ -271,16 +271,10 @@
 
             <!-- Email -->
             <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                <label class="block text-sm font-semibold mb-2 text-gray-600">Email :</label>
+                <label class="block text-sm font-semibold mb-2 text-gray-600">Source :</label>
                 <p class="text-lg font-medium text-gray-800">
-                    <i class="fas fa-envelope mr-2" style="color: var(--logistic-primary);"></i>
-                    {% if commande.client.email %}
-                        <a href="mailto:{{ commande.client.email }}" class="text-blue-600 hover:text-blue-800 underline">
-                            {{ commande.client.email }}
-                        </a>
-                    {% else %}
-                        <span class="text-gray-500">Non renseigné</span>
-                    {% endif %}
+                    <i class="fas fa-database mr-2" style="color: var(--logistic-primary);"></i>
+                            {{ commande.source }}    
                 </p>
             </div>
 
@@ -630,25 +624,6 @@
                         </div>
                     </div>
                 </div>
-                
-                <!-- Actions SAV -->
-                <div class="bg-white p-4 rounded-lg border border-red-200">
-                    <h4 class="font-semibold text-gray-800 mb-3 flex items-center">
-                        <i class="fas fa-cogs mr-2 text-green-600"></i>
-                        Actions Disponibles
-                    </h4>
-                    <div class="space-y-3">
-                        <button onclick="ouvrirModalSavDefectueux()" 
-                                class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center">
-                            <i class="fas fa-box-open mr-2"></i>
-                            Créer Commande SAV avec Articles Neufs
-                        </button>
-                        <p class="text-xs text-gray-600 text-center">
-                            <i class="fas fa-star mr-1"></i>
-                            Nouveaux articles en parfait état pour améliorer l'expérience client
-                        </p>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
@@ -759,29 +734,6 @@
                                 </div>
                             </div>
 
-                            <!-- Options d'annulation (cachées par défaut) -->
-                            <div id="annulationOptionsDiv" class="mb-4 hidden">
-                                <label class="text-sm font-medium text-gray-700 block mb-2">Type d'annulation</label>
-                                <div class="space-y-2">
-                                    <div class="flex items-center">
-                                        <input type="radio" id="bonneAnnulation" name="type_annulation" value="bonne" 
-                                               class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300">
-                                        <label for="bonneAnnulation" class="ml-2 block text-sm text-gray-700">
-                                            Produit en bonne état (réincrémenter le stock)
-                                        </label>
-                                    </div>
-                                    <div class="flex items-center">
-                                        <input type="radio" id="mauvaiseAnnulation" name="type_annulation" value="mauvaise" 
-                                               class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300">
-                                        <label for="mauvaiseAnnulation" class="ml-2 block text-sm text-gray-700">
-                                            Produit en mauvaise état
-                                        </label>
-                                    </div>
-                                </div>
-                                <p class="mt-1 text-sm text-gray-500">
-                                Un Produit en bonne état  réincrementera automatiquement le stock des articles.
-                                </p>
-                            </div>
 
                             <label for="commentaire" class="text-sm font-medium text-gray-700">Commentaire (obligatoire)</label>
                             <textarea name="commentaire" id="commentaire" rows="4" class="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" required></textarea>
@@ -1463,11 +1415,9 @@ function openSavModal(etat) {
     
     // Afficher/masquer les sections selon l'état
     const dateReportDiv = document.getElementById('dateReportDiv');
-    const annulationOptionsDiv = document.getElementById('annulationOptionsDiv');
     
     // Masquer tous les champs spéciaux d'abord
     dateReportDiv.classList.add('hidden');
-    annulationOptionsDiv.classList.add('hidden');
     
     // Afficher les champs appropriés selon l'état
     if (etat === 'Reportée') {
@@ -1477,14 +1427,12 @@ function openSavModal(etat) {
         document.getElementById('date_report').min = today;
         document.getElementById('date_report').required = true;
         document.getElementById('date_report').value = '';
-    } else if (etat === 'Retournée') {
-        annulationOptionsDiv.classList.remove('hidden');
-        // Réinitialiser la sélection
-        document.querySelectorAll('input[name="type_annulation"]').forEach(radio => radio.checked = false);
     }
     
     // Réinitialiser le formulaire
     document.getElementById('commentaire').value = '';
+    
+    // Ouvrir le modal
     document.getElementById('savModal').classList.remove('hidden');
 }
 
@@ -1933,13 +1881,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
-        if (etat === 'Retournée') {
-            const typeAnnulation = document.querySelector('input[name="type_annulation"]:checked');
-            if (!typeAnnulation) {
-                    showNotification('⚠️ Veuillez sélectionner le type d\'annulation', 'warning');
-                return;
-            }
-        }
         
             // Désactiver le bouton pour éviter les doubles soumissions
             const submitBtn = this;
@@ -2269,82 +2210,6 @@ function dismissAllMessages() {
         const messageId = message.getAttribute('data-message-id');
         dismissMessage(messageId);
     });
-}
-
-// Fonction pour ouvrir la modale SAV pour articles défectueux
-function ouvrirModalSavDefectueux() {
-    document.getElementById('savDefectueuxModal').classList.remove('hidden');
-    
-    // Initialiser les événements pour les checkboxes (toutes cochées par défaut)
-    document.querySelectorAll('.article-defectueux-checkbox').forEach(checkbox => {
-        checkbox.checked = true; // Tous les articles sont cochés par défaut
-        checkbox.addEventListener('change', function() {
-            const quantiteInput = document.querySelector(`.quantite-defectueux-input[data-id="${this.dataset.id}"]`);
-            quantiteInput.disabled = !this.checked;
-            updateArticlesDefectueuxSav();
-        });
-    });
-    
-    // Initialiser les événements pour les inputs de quantité
-    document.querySelectorAll('.quantite-defectueux-input').forEach(input => {
-        input.disabled = false; // Tous les inputs sont activés par défaut
-        input.addEventListener('change', updateArticlesDefectueuxSav);
-    });
-    
-    // Mettre à jour le résumé initial
-    updateArticlesDefectueuxSav();
-}
-
-// Fonction pour fermer la modale SAV pour articles défectueux
-function fermerModalSavDefectueux() {
-    document.getElementById('savDefectueuxModal').classList.add('hidden');
-    // Réinitialiser le formulaire
-    document.getElementById('savDefectueuxForm').reset();
-    document.getElementById('articlesDefectueuxSav').value = '[]';
-    // Remettre tous les articles cochés et les quantités par défaut
-    document.querySelectorAll('.article-defectueux-checkbox').forEach(checkbox => {
-        checkbox.checked = true;
-    });
-    document.querySelectorAll('.quantite-defectueux-input').forEach(input => {
-        input.disabled = false;
-        input.value = input.getAttribute('max');
-    });
-    updateArticlesDefectueuxSav();
-}
-
-// Fonction pour mettre à jour les articles défectueux sélectionnés
-function updateArticlesDefectueuxSav() {
-    const articles = [];
-    let total = 0;
-    let nbArticles = 0;
-    
-    document.querySelectorAll('.article-defectueux-checkbox:checked').forEach(checkbox => {
-        const quantiteInput = document.querySelector(`.quantite-defectueux-input[data-id="${checkbox.dataset.id}"]`);
-        const quantite = parseInt(quantiteInput.value);
-        const prix = parseFloat(checkbox.dataset.prix);
-        
-        articles.push({
-            article_id: parseInt(checkbox.dataset.id),
-            quantite: quantite,
-            nom: checkbox.dataset.nom,
-            prix: prix
-        });
-        
-        total += quantite * prix;
-        nbArticles += quantite;
-    });
-    
-    document.getElementById('articlesDefectueuxSav').value = JSON.stringify(articles);
-    
-    // Mettre à jour le résumé
-    const resumeDiv = document.getElementById('resumeSavCommande');
-    if (articles.length > 0) {
-        document.getElementById('nbArticlesSav').textContent = nbArticles;
-        document.getElementById('totalSavCommande').textContent = total.toFixed(2) + ' DH';
-        resumeDiv.classList.remove('hidden');
-    } else {
-        resumeDiv.classList.add('hidden');
-    }
 }
 
 // Gestionnaire pour le formulaire SAV

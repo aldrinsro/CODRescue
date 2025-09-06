@@ -86,9 +86,11 @@ class Commande(models.Model):
     produit_init = models.TextField(blank=True, null=True)
     source = models.CharField(max_length=100, blank=True, null=True, choices=SOURCE_CHOICES)
     compteur = models.IntegerField(default=0, verbose_name="Compteur d'utilisation")  
-    payement  = models.BooleanField(default=False, verbose_name="Payement", choices=PAYER_CHOICES)
+    payement  = models.CharField(default='Non payé', verbose_name="Payement", choices=PAYER_CHOICES)
+    frais_livraison = models.BooleanField(default=False, verbose_name="Frais de livraison")
 
-    # Relation avec Envoi pour les exports journaliers
+
+    # Relation avec Envoi pour les exports journaliers  
     envoi = models.ForeignKey('Envoi', on_delete=models.SET_NULL, null=True, blank=True, related_name='commandes_associees')
 
     class Meta:
