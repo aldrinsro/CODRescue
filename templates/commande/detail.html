@@ -191,6 +191,14 @@
                     </p>
                 {% endif %}
             </div>
+                <!-- Date de commande -->
+                <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <label class="block text-sm font-semibold mb-2 text-gray-600">Source :</label>
+                    <p class="text-lg font-medium text-gray-800">
+                        <i class="fas fa-tag mr-2" style="color: var(--admin-color);"></i>
+                        {{ commande.source }}
+                    </p>
+                </div>
         </div>
 
         <!-- Adresse de livraison -->
@@ -392,6 +400,12 @@
         <div class="flex flex-wrap gap-4">
             <a href="{% url 'commande:modifier' commande.pk %}" class="inline-flex items-center px-6 py-3 text-white rounded-lg font-medium shadow-md transition-colors duration-300" style="background-color: var(--admin-color); hover:background-color: var(--admin-gradient-end);">
                 <i class="fas fa-edit mr-2"></i> Modifier la commande
+            </a>
+            
+            <!-- Bouton Étiquettes Professionnelles -->
+            <a href="{% url 'commande:etiquettes_generator' %}?commande_id={{ commande.id }}" 
+               class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-blue-700 transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105">
+                <i class="fas fa-tags mr-2"></i> Étiquettes Professionnelles
             </a>
             
             <a href="{% url 'commande:confirmees' %}" class="inline-flex items-center px-6 py-3 bg-gray-500 text-white rounded-lg font-medium hover:bg-gray-600 transition-colors shadow-md">

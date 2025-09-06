@@ -49,17 +49,35 @@
 
                 <!-- Section client existant -->
                 <div id="section-client-existant" class="mb-6">
-                    <label for="client" class="block text-sm font-medium mb-2" style="color: var(--admin-color);">Sélectionner un client</label>
-                    <select name="client" id="client" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--admin-accent-color)] focus:border-transparent transition duration-200">
-                        <option value="">Sélectionner un client</option>
-                        {% for client in clients %}
-                            <option value="{{ client.pk }}">{{ client.get_full_name }} ({{ client.telephone }})</option>
-                        {% endfor %}
-                    </select>
+                    <!-- Recherche par numéro de téléphone -->
+                    <div class="mb-4">
+                        <label for="recherche_telephone" class="block text-sm font-medium mb-2" style="color: var(--admin-color);">Rechercher par numéro de téléphone</label>
+                        <div class="flex gap-2">
+                            <input type="tel" id="recherche_telephone" placeholder="Ex: 06XXXXXXXX" 
+                                   class="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--admin-accent-color)] focus:border-transparent transition duration-200">
+                            <button type="button" id="btn_rechercher_client" class="px-4 py-3 text-white rounded-lg font-medium transition-all shadow-md" style="background-color: var(--admin-color);">
+                                <i class="fas fa-search mr-2"></i>Rechercher
+                            </button>
+                        </div>
+                        <div id="resultat_recherche" class="mt-2 hidden">
+                            <!-- Les résultats de recherche apparaîtront ici -->
+                        </div>
+                    </div>
+                    
+                    <!-- Sélection manuelle -->
+                        <div>
+                        <label for="client" class="block text-sm font-medium mb-2" style="color: var(--admin-color);">Ou sélectionner manuellement</label>
+                            <select name="client" id="client" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--admin-accent-color)] focus:border-transparent transition duration-200">
+                                <option value="">Sélectionner un client</option>
+                                {% for client in clients %}
+                                <option value="{{ client.pk }}">{{ client.get_full_name }} ({{ client.numero_tel }})</option>
+                                {% endfor %}
+                            </select>
+                    </div>
                 </div>
 
                 <!-- Section nouveau client -->
-                <div id="section-nouveau-client" class="grid grid-cols-1 md:grid-cols-2 gap-4" style="display: none;">
+                <div id="section-nouveau-client" class="grid grid-cols-2 gap-4" style="display: none;">
                     <div>
                         <label for="nouveau_prenom" class="block text-sm font-medium mb-2" style="color: var(--admin-color);">Prénom</label>
                         <input type="text" id="nouveau_prenom" name="nouveau_prenom" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--admin-accent-color)] focus:border-transparent transition duration-200">
@@ -88,12 +106,14 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label for="ville_livraison" class="block text-sm font-medium mb-2" style="color: var(--admin-color);">Ville de livraison</label>
-                        <select name="ville_livraison" id="ville_livraison" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--admin-accent-color)] focus:border-transparent transition duration-200">
+                        <select name="ville_livraison" id="ville_livraison" onchange="chargerRegionEtFrais()" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--admin-accent-color)] focus:border-transparent transition duration-200">
                             <option value="">Sélectionner une ville...</option>
                             {% for ville in villes %}
                                 <option value="{{ ville.pk }}" 
                                         data-frais="{{ ville.frais_livraison|stringformat:'.2f' }}"
-                                        data-region="{{ ville.region.nom_region|default:'' }}">
+                                        data-region="{{ ville.region.nom_region|default:'' }}"
+                                        data-delai-min="{{ ville.Delai_livraison_min|default:0 }}"
+                                        data-delai-max="{{ ville.Delai_livraison_max|default:0 }}">
                                     {{ ville.nom }}
                                 </option>
                             {% endfor %}
@@ -104,8 +124,12 @@
                         <input type="text" id="frais_livraison" name="frais_livraison" class="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed" readonly>
                     </div>
                     <div>
-                        <label for="region_livraison" class="block text-sm font-medium mb-2" style="color: var(--admin-color);">Région</label>
+                        <label for="region_livraison" class="block text-sm font-medium mb-2" style="color: var(--admin-color);">Livreur (Automatique)</label>
                         <input type="text" id="region_livraison" name="region_livraison" class="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed" readonly>
+                    </div>
+                    <div>
+                        <label for="delai_livraison" class="block text-sm font-medium mb-2" style="color: var(--admin-color);">Délai de livraison (Automatique)</label>
+                        <input type="text" id="delai_livraison" name="delai_livraison" class="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed" readonly>
                     </div>
                     <div>
                         <label for="adresse" class="block text-sm font-medium mb-2" style="color: var(--admin-color);">Adresse complète</label>
@@ -119,11 +143,27 @@
                 <h3 class="text-xl font-semibold mb-4 flex items-center" style="color: var(--admin-color);">
                     <i class="fas fa-shopping-cart mr-2"></i>
                     Articles
+                    <span class="ml-2 text-sm font-normal text-gray-500">(Optionnel)</span>
                 </h3>
-                <div id="articles-container">
-                    <!-- Les articles seront ajoutés ici dynamiquement -->
+                
+                <!-- Message informatif -->
+                <div class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div class="flex items-start">
+                        <i class="fas fa-info-circle text-blue-500 mt-0.5 mr-2"></i>
+                        <div class="text-sm text-blue-700">
+                            <p class="font-medium">Les articles sont optionnels</p>
+                            <p>Vous pouvez créer une commande sans articles et les ajouter plus tard via la modification.</p>
+                        </div>
+                    </div>
                 </div>
-                <button type="button" id="add-article" class="mt-4 px-4 py-2 text-white rounded-lg font-medium transition-all shadow-md" style="background-color: var(--admin-color);">
+                
+                <!-- Container pour les articles ajoutés -->
+                <div id="articles-container" class="space-y-4 mb-6">
+                    <!-- Les articles seront ajoutés ici par JavaScript -->
+                </div>
+                
+                <!-- Bouton pour ouvrir le modal directement -->
+                <button type="button" id="btn-ouvrir-modal" class="mt-4 inline-flex items-center px-4 py-2 text-white rounded-lg font-medium transition-all shadow-md" style="background-color: var(--admin-color);">
                     <i class="fas fa-plus mr-2"></i>
                     Ajouter un article
                 </button>
@@ -139,15 +179,873 @@
             </div>
 
             <!-- Bouton de soumission -->
+            <div class="flex items-center justify-between">
+                <div class="text-sm text-gray-600">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Vous pouvez créer la commande avec ou sans articles
+                </div>
             <button type="submit" class="px-6 py-3 text-white rounded-lg font-medium transition-all shadow-md" style="background-color: var(--admin-color); hover:background-color: var(--admin-gradient-end);">
                 <i class="fas fa-save mr-2"></i>
                 Créer la commande
             </button>
+            </div>
         </form>
     </div>
 </div>
 
+<!-- Modal pour ajouter un article (identique aux opérateurs de confirmation) -->
+<div id="articleModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50 p-4" style="backdrop-filter: blur(8px); display: none;">
+    <div class="bg-white rounded-xl p-4 sm:p-6 w-full max-w-7xl mx-auto shadow-2xl max-h-[95vh] overflow-y-auto">
+        <h3 class="text-base sm:text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
+            <div class="flex items-center">
+            <i class="fas fa-box text-blue-500 mr-2 sm:mr-3"></i>
+            <span id="articleModalTitle">Ajouter un article</span>
+            </div>
+            <span id="FermerModalAjouterArticle" class="text-gray-500 hover:text-gray-700 cursor-pointer transition-colors" onclick="fermerModalAjouterArticle()">
+                <i class="fas fa-times text-lg sm:text-xl"></i>
+            </span>
+        </h3>
+
+           <!-- Barre de recherche -->
+           <div class="mt-3 mb-3">
+            <p class="text-sm text-gray-500 mb-2">Rechercher un article</p>
+            <input id="recherche-article-input" type="text" placeholder="Nom, référence, couleur, pointure..." 
+                   class="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base"
+                   oninput="rechercherArticles(this.value)" />
+        </div>
+
+        <form id="articleForm" class="space-y-4">
+                <!-- Sélection d'article (pour nouveaux articles) -->
+                <div id="article-selection-field">
+                    <!-- Légende des badges -->
+                    <div class="mb-3 p-2 sm:p-3 bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg border border-gray-200 shadow-sm">
+                        <div class="flex items-center justify-between mb-2 sm:mb-3">
+                            <div class="text-xs sm:text-sm font-semibold text-gray-700 flex items-center">
+                                <i class="fas fa-info-circle mr-1 sm:mr-2 text-blue-500"></i>
+                             types d'articles :
+                        </div>
+                         
+                        </div>
+                        <div class="badge-legend grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-1 sm:gap-2 lg:gap-3 text-xs sm:text-sm">
+                            <span id="filter-all" class="inline-flex items-center justify-center px-2 sm:px-4 py-1 sm:py-2 bg-gray-100 text-gray-700 rounded-full font-medium cursor-pointer filter-badge active whitespace-nowrap hover:bg-gray-200 transition-colors" 
+                                  onclick="filtrerArticles('all')" title="Afficher tous les articles">
+                                🔍 TOUS <span id="count-all" class="ml-1 bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded-full text-xs">0</span>
+                            </span>
+                            <span id="filter-promo" class="inline-flex items-center justify-center px-2 sm:px-4 py-1 sm:py-2 bg-red-100 text-red-700 rounded-full font-medium cursor-pointer filter-badge whitespace-nowrap hover:bg-red-200 transition-colors" 
+                                  onclick="filtrerArticles('promo')" title="Filtrer les articles en promotion">
+                                🔥 PROMO <span id="count-promo" class="ml-1 bg-red-200 text-red-600 px-1.5 py-0.5 rounded-full text-xs">0</span>
+                            </span>
+                            <span id="filter-liquidation" class="inline-flex items-center justify-center px-2 sm:px-4 py-1 sm:py-2 bg-orange-100 text-orange-700 rounded-full font-medium cursor-pointer filter-badge whitespace-nowrap hover:bg-orange-200 transition-colors" 
+                                  onclick="filtrerArticles('liquidation')" title="Filtrer les articles en liquidation">
+                                🏷️ LIQUIDATION <span id="count-liquidation" class="ml-1 bg-orange-200 text-orange-600 px-1.5 py-0.5 rounded-full text-xs">0</span>
+                            </span>
+                            <span id="filter-test" class="inline-flex items-center justify-center px-2 sm:px-4 py-1 sm:py-2 bg-blue-100 text-blue-700 rounded-full font-medium cursor-pointer filter-badge whitespace-nowrap hover:bg-blue-200 transition-colors" 
+                                  onclick="filtrerArticles('test')" title="Filtrer les articles en test">
+                                🧪 TEST <span id="count-test" class="ml-1 bg-blue-200 text-blue-600 px-1.5 py-0.5 rounded-full text-xs">0</span>
+                            </span>
+                            <span id="filter-upsell" class="inline-flex items-center justify-center px-2 sm:px-4 py-1 sm:py-2 bg-green-100 text-green-700 rounded-full font-medium cursor-pointer filter-badge whitespace-nowrap hover:bg-green-200 transition-colors" 
+                                  onclick="filtrerArticles('upsell')" title="Filtrer les articles upsell">
+                                ⬆️ UPSELL <span id="count-upsell" class="ml-1 bg-green-200 text-green-600 px-1.5 py-0.5 rounded-full text-xs">0</span>
+                            </span>
+                        </div>
+                    </div>
+                    
+                <!-- Select d'origine conservé (masqué) pour compatibilité -->
+                <select id="articleSelect" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hidden">
+                        <option value="">-- Sélectionner un article --</option>
+                        <!-- Les articles seront chargés dynamiquement -->
+                    </select>
+
+                <!-- Section des articles avec navigation fixe -->
+                <div class="mt-4 border border-gray-200 rounded-lg overflow-hidden">
+                    <!-- Zone de scroll avec barre de navigation personnalisée -->
+                    <div class="relative">
+                        <!-- Conteneur principal avec scroll -->
+                        <div id="articlesScrollContainer" class="max-h-64 sm:max-h-96 overflow-y-auto" style="scrollbar-width: thin; scrollbar-color: #cbd5e0 #f7fafc;">
+                            <table class="w-full table-fixed">
+                                <thead class="bg-gray-50 sticky top-0 z-10">
+                                    <tr>
+                                        <th class="w-2/4 px-2 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Article</th>
+                                        <th class="w-1/6 px-1 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Prix</th>
+                                        <th class="w-1/6 px-1 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Stock</th>
+                                        <th class="w-1/6 px-1 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="articlesTableBody" class="bg-white divide-y divide-gray-100">
+                                    <!-- Lignes d'articles rendues dynamiquement -->
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                    </div>
+                </div>
+                </div>
+                
+            <!-- Quantité (masquée car gérée dans le tableau) -->
+            <div class="hidden">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Quantité </label>
+                    <input type="number" id="quantiteInput" min="1" step="1" value="1" 
+                           class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            </div>
+        </form>
+
+        <!-- Boutons d'action supprimés car l'ajout se fait automatiquement -->
+            </div>
+</div>
+
+<!-- Modal de sélection des variantes (réutilisé depuis operatConfirme) -->
+<div id="variantModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50 p-4" style="backdrop-filter: blur(8px); display: none;">
+    <div class="bg-white rounded-xl p-4 sm:p-6 w-full max-w-7xl mx-auto shadow-2xl max-h-[95vh] overflow-y-auto">
+        <h3 class="text-base sm:text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
+            <div class="flex items-center">
+                <i class="fas fa-table text-blue-500 mr-2 sm:mr-3"></i>
+                <span class="text-sm sm:text-base">Sélectionner des variantes - Tableau croisé</span>
+            </div>
+            <span class="text-gray-500 hover:text-gray-700 cursor-pointer transition-colors" onclick="fermerModalVariantes()">
+                <i class="fas fa-times text-lg sm:text-xl"></i>
+            </span>
+        </h3>
+
+        <!-- Informations de l'article sélectionné -->
+        <div id="articleInfo" class="mb-4 p-3 sm:p-4 bg-gray-50 rounded-lg">
+            <h4 id="articleNom" class="font-medium text-gray-900 text-sm sm:text-base"></h4>
+            <p id="articleReference" class="text-xs sm:text-sm text-gray-600"></p>
+        </div>
+
+        <!-- Tableau croisé des variantes -->
+        <div id="variantsTableContainer" class="mb-4 overflow-x-auto">
+            <div class="text-center py-6 sm:py-8 text-gray-500">
+                <i class="fas fa-table text-3xl sm:text-4xl mb-3 sm:mb-4 text-gray-300"></i>
+                <p class="text-base sm:text-lg">Sélectionnez un article pour voir ses variantes</p>
+            </div>
+        </div>
+
+        <!-- Informations des variantes sélectionnées -->
+        <div id="selectedVariantsInfo" class="mb-4 p-3 sm:p-4 bg-blue-50 border border-blue-200 rounded-lg hidden">
+            <h5 class="font-medium text-blue-900 mb-2 text-sm sm:text-base">Variantes sélectionnées:</h5>
+            <div id="selectedVariantsDetails" class="text-xs sm:text-sm text-blue-800"></div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row justify-between items-center mt-6 gap-3">
+            <button type="button" id="clearSelectionBtn" onclick="effacerSelectionVariantes()" 
+                    class="w-full sm:w-auto px-3 sm:px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors hidden text-sm sm:text-base">
+                <i class="fas fa-times mr-1 sm:mr-2"></i>Effacer la sélection
+                </button>
+            
+            <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
+                <button type="button" id="addSelectedVariantsBtn" onclick="ajouterVariantesSelectionnees()" 
+                        class="w-full sm:w-auto px-3 sm:px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors hidden text-sm sm:text-base">
+                    <i class="fas fa-plus mr-1 sm:mr-2"></i>Ajouter les variantes sélectionnées
+                </button>
+                <button type="button" onclick="fermerModalVariantes()" 
+                        class="w-full sm:w-auto px-3 sm:px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg transition-colors text-sm sm:text-base">
+                    Annuler
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Script JSON pour les articles disponibles -->
+{{ articles_json|json_script:"articles-data" }}
+
 <script>
+// Variables globales pour la gestion des articles
+let articleCounter = 0;
+let articlesDisponibles = [];
+let ligneSelectionnee = null;
+
+// Fonction pour ouvrir le modal d'ajout d'articles  
+function ouvrirModalAjouterArticle() {
+    console.log('🎯 Ouverture du modal ajout article');
+    
+    // Charger les articles disponibles
+    chargerArticlesDisponibles();
+    
+    // Afficher le modal
+    const modal = document.getElementById('articleModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+}
+
+// Fonction pour fermer le modal d'ajout d'articles
+function fermerModalAjouterArticle() {
+    const modal = document.getElementById('articleModal');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+    
+    // Réinitialiser la sélection
+    ligneSelectionnee = null;
+    const btnAjouter = document.getElementById('btn-ajouter-article');
+    if (btnAjouter) {
+        btnAjouter.disabled = true;
+    }
+}
+
+// Fonction pour charger les articles disponibles
+function chargerArticlesDisponibles() {
+    // Récupérer les articles depuis le script JSON
+    const articlesData = document.getElementById('articles-data');
+    if (articlesData) {
+        try {
+            articlesDisponibles = JSON.parse(articlesData.textContent);
+            console.log('✅ Articles chargés:', articlesDisponibles.length);
+        } catch (e) {
+            console.error('❌ Erreur lors du parsing des articles:', e);
+            articlesDisponibles = [];
+        }
+    }
+    
+    // Remplir le tableau
+    remplirTableauArticles();
+    
+    // Mettre à jour les compteurs
+    mettreAJourCompteurs();
+}
+
+// Fonction pour remplir le tableau des articles
+function remplirTableauArticles() {
+    const tbody = document.getElementById('articlesTableBody');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+    
+    articlesDisponibles.forEach(article => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-gray-50 transition-colors cursor-pointer';
+        tr.dataset.article = JSON.stringify(article);
+        
+        // Générer les badges basés sur les vraies propriétés de la base de données
+        let badges = '';
+        if (article.has_promo_active) badges += '<span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 mr-1">🔥 PROMO</span>';
+        if (article.phase === 'LIQUIDATION') badges += '<span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 mr-1">🏷️ LIQUIDATION</span>';
+        if (article.phase === 'EN_TEST') badges += '<span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mr-1">🧪 TEST</span>';
+        if (article.isUpsell) badges += '<span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 mr-1">⬆️ UPSELL</span>';
+        
+        tr.innerHTML = `
+            <td class="px-2 py-2 text-xs sm:text-sm">
+                <div class="flex items-start space-x-2">
+                    <!-- Image de l'article -->
+                    <div class="flex-shrink-0">
+                        <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-lg overflow-hidden bg-gray-100 border border-gray-200 shadow-sm">
+                            ${article.image_url ? 
+                                `<img src="${article.image_url}" alt="Image de ${article.nom}" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" onload="this.nextElementSibling.style.display='none';">` : 
+                                ''
+                            }
+                            <div class="w-full h-full flex items-center justify-center text-gray-400 ${article.image_url ? 'hidden' : ''}">
+                                <i class="fas fa-image text-sm"></i>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Informations de l'article -->
+                    <div class="flex-1 min-w-0">
+                        <div class="font-medium text-gray-900 text-xs sm:text-sm truncate">${article.nom}</div>
+                        <div class="text-gray-500 text-xs truncate">${article.reference}</div>
+                <div class="mt-1">${badges}</div>
+                        <div class="text-xs text-gray-500 mt-1 truncate">
+                    ${article.couleur ? `Couleur: ${article.couleur}` : ''} 
+                    ${article.pointure ? ` | Taille: ${article.pointure}` : ''}
+                        </div>
+                    </div>
+                </div>
+            </td>
+            <td class="px-1 py-2 text-center">
+                <span class="font-bold text-green-600 text-xs sm:text-sm">${article.prix_unitaire} DH</span>
+            </td>
+            <td class="px-1 py-2 text-center">
+                <span class="px-1 py-0.5 rounded-full text-xs font-medium ${article.qte_disponible <= 0 ? 'bg-red-100 text-red-700' : (article.qte_disponible < 5 ? 'bg-orange-100 text-orange-700' : 'bg-teal-100 text-teal-700')}">
+                    ${article.qte_disponible <= 0 ? 'Épuisé' : article.qte_disponible + ' unités'}
+                </span>
+            </td>
+            <td class="px-1 py-2 text-center">
+                <button type="button" class="px-2 py-1 bg-gray-800 hover:bg-gray-900 text-white rounded text-xs" onclick="ajouterDepuisLigne(this)">
+                    <i class="fas fa-plus mr-1"></i>Ajouter
+                    </button>
+            </td>`;
+        
+        // L'event listener est déjà géré par l'attribut onclick du bouton
+        
+        tbody.appendChild(tr);
+    });
+}
+
+// Fonction pour sélectionner une ligne d'article
+function selectionnerLigne(ligne) {
+    // Désélectionner toutes les autres lignes
+    document.querySelectorAll('#articlesTableBody tr').forEach(tr => {
+        tr.classList.remove('bg-blue-100');
+    });
+    
+    // Sélectionner la ligne actuelle
+    ligne.classList.add('bg-blue-100');
+    ligneSelectionnee = ligne;
+    
+    // Activer le bouton d'ajout
+    const btnAjouter = document.getElementById('btn-ajouter-article');
+    if (btnAjouter) {
+        btnAjouter.disabled = false;
+    }
+}
+
+// Fonction pour ajouter un article depuis une ligne (modifiée pour ouvrir directement le modal des variantes)
+function ajouterDepuisLigne(button) {
+    const row = button.closest('tr');
+    const article = JSON.parse(row.dataset.article);
+    const quantite = 1; // Quantité par défaut
+    
+    console.log('➕ Ouverture modal variantes pour article:', {
+        article: article.nom,
+        quantite: quantite,
+        prix: article.prix_unitaire
+    });
+    
+    // Ouvrir directement le modal de sélection des variantes
+    ouvrirModalVariantes(article, quantite);
+}
+
+// Fonction pour supprimer un article du panier
+function supprimerArticleDuPanier(button) {
+    const articleCard = button.closest('.bg-white');
+    articleCard.remove();
+    calculerTotal();
+}
+
+// Fonction pour calculer le total
+function calculerTotal() {
+    const articles = document.querySelectorAll('#articles-container .bg-white');
+    let total = 0;
+    
+    articles.forEach(articleCard => {
+        const sousTotalElement = articleCard.querySelector('.text-lg.font-bold');
+        if (sousTotalElement) {
+            const sousTotalText = sousTotalElement.textContent.replace(' DH', '');
+            total += parseFloat(sousTotalText) || 0;
+        }
+    });
+    
+    document.getElementById('total_cmd').value = total.toFixed(2);
+}
+
+// Fonction pour rechercher des articles
+function rechercherArticles(terme) {
+    if (!terme) terme = '';
+    const value = terme.toString().toLowerCase();
+    const rows = document.querySelectorAll('#articlesTableBody tr');
+    
+    rows.forEach(row => {
+        try {
+            const article = JSON.parse(row.dataset.article || '{}');
+            const searchFields = [
+                article.nom || '',
+                article.reference || '',
+                article.couleur || '',
+                article.pointure || ''
+            ];
+            
+            const cible = searchFields
+                .filter(field => field && typeof field === 'string')
+                .join(' ')
+                .toLowerCase();
+            
+            const shouldShow = !value || (cible && cible.indexOf && cible.indexOf(value) !== -1);
+            row.style.display = shouldShow ? '' : 'none';
+        } catch (e) {
+            row.style.display = '';
+        }
+    });
+}
+
+// Fonction pour mettre à jour les compteurs des badges
+function mettreAJourCompteurs() {
+    if (!articlesDisponibles || articlesDisponibles.length === 0) return;
+    
+    // Compter les articles par type basé sur les vraies propriétés de la base de données
+    const counts = {
+        all: articlesDisponibles.length,
+        promo: articlesDisponibles.filter(article => article.has_promo_active).length,
+        liquidation: articlesDisponibles.filter(article => article.phase === 'LIQUIDATION').length,
+        test: articlesDisponibles.filter(article => article.phase === 'EN_TEST').length,
+        upsell: articlesDisponibles.filter(article => article.isUpsell).length
+    };
+    
+    // Mettre à jour les compteurs dans l'interface
+    Object.keys(counts).forEach(type => {
+        const countElement = document.getElementById(`count-${type}`);
+        if (countElement) {
+            countElement.textContent = counts[type];
+        }
+    });
+    
+    console.log('📊 Compteurs mis à jour (basés sur la BDD):', counts);
+    console.log('📊 Exemple d\'article:', articlesDisponibles[0]);
+}
+
+// Fonction pour filtrer les articles par type
+function filtrerArticles(type) {
+    document.querySelectorAll('.filter-badge').forEach(badge => badge.classList.remove('active'));
+    document.getElementById(`filter-${type}`).classList.add('active');
+    
+    const rows = document.querySelectorAll('#articlesTableBody tr');
+    rows.forEach(row => {
+        try {
+            const article = JSON.parse(row.dataset.article || '{}');
+            let afficher = true;
+            
+            switch(type) {
+                case 'promo':
+                    afficher = article.has_promo_active;
+                    break;
+                case 'liquidation':
+                    afficher = article.phase === 'LIQUIDATION';
+                    break;
+                case 'test':
+                    afficher = article.phase === 'EN_TEST';
+                    break;
+                case 'upsell':
+                    afficher = article.isUpsell;
+                    break;
+                case 'all':
+                default:
+                    afficher = true;
+                    break;
+            }
+            
+            row.style.display = afficher ? '' : 'none';
+        } catch (_) {}
+    });
+    
+    // Afficher une notification avec le nombre d'articles filtrés
+    const countElement = document.getElementById(`count-${type}`);
+    const count = countElement ? countElement.textContent : '0';
+    showNotification(`🔍 ${count} article(s) ${type === 'all' ? 'au total' : type.toUpperCase()}`, 'info', 2000);
+}
+
+// ================== SYSTÈME DE GESTION DES VARIANTES (réutilisé depuis operatConfirme) ==================
+
+// Variables globales pour le modal des variantes
+let articleSelectionne = null;
+let quantiteInitiale = 1;
+let variantesSelectionnees = new Map(); // Map pour stocker les variantes sélectionnées
+
+// Fonction pour ouvrir le modal de sélection des variantes
+function ouvrirModalVariantes(articleData, quantite = 1) {
+    console.log('🎯 Ouverture modal variantes:', { articleData, quantite });
+    
+    articleSelectionne = articleData;
+    quantiteInitiale = quantite;
+    
+    // Réinitialiser la sélection des variantes
+    variantesSelectionnees.clear();
+    
+    // Afficher le modal
+    const modal = document.getElementById('variantModal');
+    const articleNom = document.getElementById('articleNom');
+    const articleReference = document.getElementById('articleReference');
+    
+    if (!modal || !articleNom || !articleReference) {
+        console.error('❌ Éléments du modal non trouvés');
+        return;
+    }
+    
+    // Mettre à jour les informations de l'article
+    articleNom.textContent = articleData.nom || 'Article sans nom';
+    articleReference.textContent = `Réf: ${articleData.reference || 'N/A'} - Prix: ${articleData.prix_unitaire} DH`;
+    
+    // Afficher le modal
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+    
+    // Charger les variantes
+    chargerVariantesArticle(articleData.id);
+}
+
+// Fonction pour charger les variantes d'un article via AJAX
+function chargerVariantesArticle(articleId) {
+    console.log('📡 Chargement des variantes pour l\'article:', articleId);
+    
+    // Masquer les informations des variantes sélectionnées
+    const selectedVariantsInfo = document.getElementById('selectedVariantsInfo');
+    const clearSelectionBtn = document.getElementById('clearSelectionBtn');
+    const addSelectedVariantsBtn = document.getElementById('addSelectedVariantsBtn');
+    
+    if (selectedVariantsInfo) selectedVariantsInfo.classList.add('hidden');
+    if (clearSelectionBtn) clearSelectionBtn.classList.add('hidden');
+    if (addSelectedVariantsBtn) addSelectedVariantsBtn.classList.add('hidden');
+    
+    // Afficher le loading
+    const variantsTableContainer = document.getElementById('variantsTableContainer');
+    if (variantsTableContainer) {
+        variantsTableContainer.innerHTML = `
+            <div class="text-center py-6 sm:py-8 text-gray-500">
+                <i class="fas fa-spinner fa-spin text-3xl sm:text-4xl mb-3 sm:mb-4 text-gray-300"></i>
+                <p class="text-base sm:text-lg">Chargement des variantes...</p>
+            </div>
+        `;
+    }
+    
+    // Récupérer le token CSRF
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (!csrfToken) {
+        console.error('❌ Token CSRF manquant');
+        afficherErreurVariantes('Token CSRF manquant');
+        return;
+    }
+    
+    // URL pour récupérer les variantes (utilise l'API de operatConfirme)
+    const url = `/operateur-confirme/get-article-variants/${articleId}/`;
+    
+    // Appel AJAX
+    fetch(url, {
+        method: 'GET',
+        headers: {
+            'X-CSRFToken': csrfToken.value,
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+        credentials: 'same-origin',
+    })
+    .then(response => {
+        console.log('📡 Statut de la réponse variantes:', response.status);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        return response.json();
+    })
+    .then(data => {
+        console.log('📊 Variantes reçues:', data);
+        
+        if (data.success && data.variants) {
+            afficherVariantes(data.variants);
+        } else {
+            throw new Error(data.error || 'Erreur inconnue');
+        }
+    })
+    .catch(error => {
+        console.error('❌ Erreur lors du chargement des variantes:', error);
+        afficherErreurVariantes(error.message);
+    });
+}
+
+// Autres fonctions nécessaires pour le modal de variantes
+function afficherVariantes(variantes) {
+    console.log('📋 Affichage de', variantes.length, 'variantes');
+    
+    const variantsTableContainer = document.getElementById('variantsTableContainer');
+    if (!variantsTableContainer) {
+        console.error('❌ Conteneur des variantes non trouvé');
+        return;
+    }
+    
+    if (variantes.length === 0) {
+        variantsTableContainer.innerHTML = `
+            <div class="text-center py-6 sm:py-8 text-gray-500">
+                <i class="fas fa-info-circle text-3xl sm:text-4xl mb-3 sm:mb-4 text-blue-500"></i>
+                <p class="text-base sm:text-lg">Aucune variante disponible pour cet article</p>
+            </div>
+        `;
+        return;
+    }
+    
+    // Créer un tableau croisé des variantes
+    const couleurs = [...new Set(variantes.map(v => v.couleur).filter(Boolean))];
+    const pointures = [...new Set(variantes.map(v => v.pointure).filter(Boolean))];
+    
+    let tableHTML = `
+        <table class="min-w-full border border-gray-200 rounded-lg overflow-hidden">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border-b border-gray-200">Couleur/Pointure</th>
+    `;
+    
+    // En-têtes des pointures
+    pointures.forEach(pointure => {
+        tableHTML += `<th class="px-4 py-3 text-center text-sm font-semibold text-gray-700 border-b border-gray-200">${pointure}</th>`;
+    });
+    
+    tableHTML += '</tr></thead><tbody>';
+    
+    // Lignes des couleurs
+    couleurs.forEach(couleur => {
+        tableHTML += `<tr class="border-b border-gray-100">
+            <td class="px-4 py-3 text-sm font-medium text-gray-900 bg-gray-50">${couleur}</td>`;
+        
+        pointures.forEach(pointure => {
+            const variante = variantes.find(v => v.couleur === couleur && v.pointure === pointure);
+            if (variante) {
+                const stockInfo = getStockInfo(variante.stock);
+                tableHTML += `
+                    <td class="px-4 py-3 text-center border-l border-gray-100">
+                        <div class="space-y-2">
+                            <div class="text-lg font-bold text-green-600">${variante.prix_actuel?.toFixed(2) || '0.00'} DH</div>
+                            <div class="px-2 py-1 rounded-full text-xs font-semibold ${stockInfo.class}">
+                                ${stockInfo.text}
+                            </div>
+                            <label class="flex items-center justify-center cursor-pointer ${variante.stock <= 0 ? 'opacity-50 cursor-not-allowed' : ''}">
+                                <input type="checkbox" 
+                                       class="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 ${variante.stock <= 0 ? 'disabled' : ''}"
+                                       data-variante='${JSON.stringify(variante).replace(/'/g, "\\'")}'
+                                       onchange="gererSelectionVariante(this, '${variante.id}')"
+                                       ${variante.stock <= 0 ? 'disabled' : ''}>
+                                
+                            </label>
+                        </div>
+                    </td>`;
+            } else {
+                tableHTML += '<td class="px-4 py-3 text-center border-l border-gray-100 text-gray-400">-</td>';
+            }
+        });
+        
+        tableHTML += '</tr>';
+    });
+    
+    tableHTML += '</tbody></table>';
+    
+    variantsTableContainer.innerHTML = tableHTML;
+}
+
+function getStockInfo(stock) {
+    if (stock <= 0) {
+        return {
+            class: 'bg-red-100 text-red-800',
+            text: 'Rupture'
+        };
+    } else if (stock < 5) {
+        return {
+            class: 'bg-orange-100 text-orange-800',
+            text: `${stock} restant${stock > 1 ? 's' : ''}`
+        };
+    } else {
+        return {
+            class: 'bg-green-100 text-green-800',
+            text: `${stock} disponible${stock > 1 ? 's' : ''}`
+        };
+    }
+}
+
+function gererSelectionVariante(checkbox, varianteId) {
+    const varianteData = JSON.parse(checkbox.dataset.variante);
+    
+    if (checkbox.checked) {
+        variantesSelectionnees.set(varianteId, varianteData);
+        console.log('✅ Variante sélectionnée:', varianteData);
+    } else {
+        variantesSelectionnees.delete(varianteId);
+        console.log('❌ Variante désélectionnée:', varianteData);
+    }
+    
+    mettreAJourAffichageVariantesSelectionnees();
+}
+
+function mettreAJourAffichageVariantesSelectionnees() {
+    const selectedVariantsInfo = document.getElementById('selectedVariantsInfo');
+    const selectedVariantsDetails = document.getElementById('selectedVariantsDetails');
+    const clearSelectionBtn = document.getElementById('clearSelectionBtn');
+    const addSelectedVariantsBtn = document.getElementById('addSelectedVariantsBtn');
+    
+    if (variantesSelectionnees.size === 0) {
+        selectedVariantsInfo.classList.add('hidden');
+        clearSelectionBtn.classList.add('hidden');
+        addSelectedVariantsBtn.classList.add('hidden');
+        return;
+    }
+    
+    selectedVariantsInfo.classList.remove('hidden');
+    clearSelectionBtn.classList.remove('hidden');
+    addSelectedVariantsBtn.classList.remove('hidden');
+    
+    let detailsHTML = '';
+    variantesSelectionnees.forEach((variante, id) => {
+        detailsHTML += `
+            <div class="mb-2 p-2 bg-blue-100 rounded border border-blue-200">
+                <div class="font-medium">Prix: ${variante.prix_actuel?.toFixed(2) || '0.00'} DH | Stock: ${variante.stock || 0} en stock</div>
+                <div class="text-xs">Couleur: ${variante.couleur || 'N/A'} | Pointure: ${variante.pointure || 'N/A'}</div>
+            </div>
+        `;
+    });
+    
+    selectedVariantsDetails.innerHTML = detailsHTML;
+    addSelectedVariantsBtn.innerHTML = `<i class="fas fa-plus mr-1 sm:mr-2"></i>Ajouter ${variantesSelectionnees.size} variante(s)`;
+}
+
+function fermerModalVariantes() {
+    const modal = document.getElementById('variantModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.style.display = 'none';
+    }
+    
+    articleSelectionne = null;
+    quantiteInitiale = 1;
+    variantesSelectionnees.clear();
+}
+
+function afficherErreurVariantes(message) {
+    const variantsTableContainer = document.getElementById('variantsTableContainer');
+    if (variantsTableContainer) {
+        variantsTableContainer.innerHTML = `
+            <div class="text-center py-6 sm:py-8 text-red-500">
+                <i class="fas fa-exclamation-triangle text-3xl sm:text-4xl mb-3 sm:mb-4 text-red-500"></i>
+                <p class="text-base sm:text-lg">${message || 'Erreur lors du chargement des variantes'}</p>
+            </div>
+        `;
+    }
+}
+
+function effacerSelectionVariantes() {
+    const checkboxes = document.querySelectorAll('#variantsTableContainer input[type="checkbox"]');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    
+    variantesSelectionnees.clear();
+    mettreAJourAffichageVariantesSelectionnees();
+    showNotification('✅ Sélection des variantes effacée', 'success');
+}
+
+function ajouterVariantesSelectionnees() {
+    console.log('📦 Ajout des variantes sélectionnées au panier:', variantesSelectionnees.size);
+    
+    if (variantesSelectionnees.size === 0) {
+        showNotification('⚠️ Aucune variante sélectionnée', 'warning');
+        return;
+    }
+    
+    let ajoutees = 0;
+    
+    variantesSelectionnees.forEach((variante, id) => {
+        try {
+            ajouterVarianteAuPanierAdmin(articleSelectionne, variante, 1);
+            ajoutees++;
+        } catch (error) {
+            console.error('❌ Erreur lors de l\'ajout de la variante:', error);
+        }
+    });
+    
+    fermerModalVariantes();
+    showNotification(`✅ ${ajoutees} variante(s) ajoutée(s) au panier`, 'success');
+}
+
+function ajouterVarianteAuPanierAdmin(articleData, variante, quantiteInitiale = 1) {
+    const articleCard = document.createElement('div');
+    articleCard.className = 'bg-white border border-gray-200 rounded-lg p-4 shadow-sm';
+    articleCard.innerHTML = `
+        <div class="flex items-center justify-between">
+            <div class="flex items-start space-x-3 flex-1">
+                <!-- Image de l'article -->
+                <div class="flex-shrink-0">
+                    <div class="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 border border-gray-200 shadow-sm">
+                        ${articleData.image_url ? 
+                            `<img src="${articleData.image_url}" alt="Image de ${articleData.nom}" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" onload="this.nextElementSibling.style.display='none';">` : 
+                            ''
+                        }
+                        <div class="w-full h-full flex items-center justify-center text-gray-400 ${articleData.image_url ? 'hidden' : ''}">
+                            <i class="fas fa-image text-sm"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Informations de l'article -->
+                <div class="flex-1">
+                    <h4 class="font-semibold text-gray-900">${articleData.nom}</h4>
+                    <p class="text-sm text-gray-600">Référence: ${articleData.reference}</p>
+                    <div class="text-sm text-gray-700 mt-1">
+                        <span class="inline-block mr-2">🎨 ${variante.couleur}</span>
+                        <span class="inline-block">👟 ${variante.pointure}</span>
+                    </div>
+                    <div class="flex items-center space-x-4 mt-2">
+                        <div class="text-center min-w-0">
+                            <div class="text-sm text-gray-500">Quantité</div>
+                            <div class="font-medium">${quantiteInitiale}</div>
+                        </div>
+                        <div class="text-center min-w-0">
+                            <div class="text-sm text-gray-500">Prix unitaire</div>
+                            <div class="font-medium text-green-600">${variante.prix_actuel?.toFixed(2) || '0.00'} DH</div>
+                        </div>
+                        <div class="text-center min-w-0">
+                            <div class="text-sm text-gray-500">Sous-total</div>
+                            <div class="text-lg font-bold" style="color: #6d4b3b;">${((variante.prix_actuel || 0) * quantiteInitiale).toFixed(2)} DH</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="flex space-x-2 ml-4">
+                <button type="button" onclick="supprimerArticleDuPanier(this)" class="px-3 py-2 text-white text-sm rounded-lg transition-all flex items-center" style="background: linear-gradient(135deg, #dc2626, #ef4444); hover:shadow-lg;">
+                    <i class="fas fa-trash mr-1"></i>Supprimer
+                </button>
+            </div>
+        </div>
+    `;
+    
+    // Ajouter les champs cachés pour le formulaire
+    const articleIdInput = document.createElement('input');
+    articleIdInput.type = 'hidden';
+    articleIdInput.name = `article_${articleCounter}`;
+    articleIdInput.value = articleData.id;
+    articleCard.appendChild(articleIdInput);
+    
+    const varianteIdInput = document.createElement('input');
+    varianteIdInput.type = 'hidden';
+    varianteIdInput.name = `variante_${articleCounter}`;
+    varianteIdInput.value = variante.id;
+    articleCard.appendChild(varianteIdInput);
+    
+    const quantiteHiddenInput = document.createElement('input');
+    quantiteHiddenInput.type = 'hidden';
+    quantiteHiddenInput.name = `quantite_${articleCounter}`;
+    quantiteHiddenInput.value = quantiteInitiale;
+    articleCard.appendChild(quantiteHiddenInput);
+    
+    document.getElementById('articles-container').appendChild(articleCard);
+    articleCounter++;
+    calculerTotal();
+}
+
+function showNotification(message, type = 'info', duration = 3000) {
+    try {
+        const notification = document.createElement('div');
+        
+        let bgColor = 'bg-blue-500';
+        if (type === 'success') bgColor = 'bg-green-500';
+        else if (type === 'error') bgColor = 'bg-red-500';
+        else if (type === 'warning') bgColor = 'bg-yellow-500';
+        
+        notification.className = `fixed top-4 right-4 px-4 py-2 rounded-lg text-white text-sm z-50 transition-all duration-300 ${bgColor} max-w-sm`;
+        notification.textContent = message;
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            try {
+                if (notification && notification.parentNode) {
+                    notification.style.opacity = '0';
+                    setTimeout(() => {
+                        try {
+                            if (notification && notification.parentNode) {
+                                document.body.removeChild(notification);
+                            }
+                        } catch (error) {
+                            console.warn('⚠️ Erreur lors de la suppression de la notification:', error);
+                        }
+                    }, 300);
+                }
+            } catch (error) {
+                console.warn('⚠️ Erreur lors de la modification de l\'opacité de la notification:', error);
+            }
+        }, duration);
+    } catch (error) {
+        console.error('❌ Erreur lors de la création de la notification:', error);
+        alert(message);
+    }
+}
+
 // Gestion de l'affichage des sections selon le type de client
 document.querySelectorAll('input[name="type_client"]').forEach(radio => {
     radio.addEventListener('change', function() {
@@ -164,140 +1062,166 @@ document.querySelectorAll('input[name="type_client"]').forEach(radio => {
             document.getElementById('nouveau_email').value = '';
         } else {
             clientExistantSection.style.display = 'none';
-            nouveauClientSection.style.display = 'block';
+            nouveauClientSection.style.display = 'grid';
             // Réinitialiser la sélection du client existant
             document.getElementById('client').selectedIndex = 0;
         }
     });
 });
 
-// Mise à jour des informations de livraison
-document.getElementById('ville_livraison').addEventListener('change', function() {
-    console.log('Changement de ville détecté');
+// Fonction pour charger automatiquement la région, les frais et les délais
+function chargerRegionEtFrais() {
+    const villeSelect = document.getElementById('ville_livraison');
+    const selectedOption = villeSelect.options[villeSelect.selectedIndex];
     
-    const selectedOption = this.options[this.selectedIndex];
-    console.log('Option sélectionnée:', selectedOption);
-    
-    if (selectedOption && selectedOption.value) {
-        console.log('Valeur de l\'option:', selectedOption.value);
-        console.log('Dataset de l\'option:', selectedOption.dataset);
+    if (selectedOption.value) {
+        const region = selectedOption.getAttribute('data-region');
+        const frais = selectedOption.getAttribute('data-frais');
+        const delaiMin = selectedOption.getAttribute('data-delai-min');
+        const delaiMax = selectedOption.getAttribute('data-delai-max');
         
-        const frais = selectedOption.dataset.frais;
-        const region = selectedOption.dataset.region;
-        
-        console.log('Frais extraits:', frais);
-        console.log('Région extraite:', region);
-        
-        const fraisInput = document.getElementById('frais_livraison');
-        const regionInput = document.getElementById('region_livraison');
-        
-        // Formater les frais avec 2 décimales et remplacer le point par une virgule
+        // Formater les frais avec 2 décimales
         const fraisFormates = parseFloat(frais || 0).toLocaleString('fr-FR', {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2
         });
         
-        fraisInput.value = fraisFormates;
-        regionInput.value = region || '';
+        document.getElementById('frais_livraison').value = fraisFormates;
+        document.getElementById('region_livraison').value = region || '';
+        document.getElementById('delai_livraison').value = `${delaiMin} - ${delaiMax} jours`;
         
-        console.log('Valeur mise à jour des frais:', fraisInput.value);
-        console.log('Valeur mise à jour de la région:', regionInput.value);
+        console.log(`🏙️ Ville changée: ${selectedOption.text}, Frais: ${fraisFormates} DH, Livreur: ${region}, Délai: ${delaiMin}-${delaiMax} jours`);
     } else {
-        console.log('Aucune ville sélectionnée');
+        // Réinitialiser les champs si aucune ville n'est sélectionnée
         document.getElementById('frais_livraison').value = '';
         document.getElementById('region_livraison').value = '';
+        document.getElementById('delai_livraison').value = '';
+    }
+}
+
+
+// Recherche de client par téléphone
+document.getElementById('btn_rechercher_client').addEventListener('click', function() {
+    const telephone = document.getElementById('recherche_telephone').value.trim();
+    const resultatDiv = document.getElementById('resultat_recherche');
+    
+    if (!telephone) {
+        alert('Veuillez saisir un numéro de téléphone');
+        return;
+    }
+    
+    // Afficher un indicateur de chargement
+    resultatDiv.innerHTML = '<div class="text-blue-600"><i class="fas fa-spinner fa-spin mr-2"></i>Recherche en cours...</div>';
+    resultatDiv.classList.remove('hidden');
+    
+    // Faire la requête AJAX
+    fetch(`/commande/rechercher-client-telephone/?telephone=${encodeURIComponent(telephone)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.client) {
+                // Client trouvé
+                resultatDiv.innerHTML = `
+                    <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg">
+                        <div class="flex items-center justify-between">
+        <div>
+                                <i class="fas fa-check-circle mr-2"></i>
+                                <strong>Client trouvé :</strong> ${data.client.nom_complet} (${data.client.numero_tel})
+                            </div>
+                            <button type="button" onclick="selectionnerClientTrouve(${data.client.id})" 
+                                    class="ml-4 px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700">
+                                Sélectionner
+                            </button>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // Client non trouvé
+                resultatDiv.innerHTML = `
+                    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>
+                        Aucun client trouvé avec ce numéro de téléphone.
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Erreur lors de la recherche:', error);
+            resultatDiv.innerHTML = `
+                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>
+                    Erreur lors de la recherche. Veuillez réessayer.
+                </div>
+            `;
+        });
+});
+
+// Fonction pour sélectionner le client trouvé
+function selectionnerClientTrouve(clientId) {
+    const selectClient = document.getElementById('client');
+    selectClient.value = clientId;
+    
+    // Masquer le résultat de recherche
+    document.getElementById('resultat_recherche').classList.add('hidden');
+    
+    // Vider le champ de recherche
+    document.getElementById('recherche_telephone').value = '';
+    
+    // Optionnel : afficher un message de confirmation
+    const resultatDiv = document.getElementById('resultat_recherche');
+    resultatDiv.innerHTML = `
+        <div class="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded-lg">
+            <i class="fas fa-check mr-2"></i>
+            Client sélectionné avec succès !
+        </div>
+    `;
+    resultatDiv.classList.remove('hidden');
+    
+    // Masquer le message après 3 secondes
+    setTimeout(() => {
+        resultatDiv.classList.add('hidden');
+    }, 3000);
+}
+
+// Recherche automatique lors de la saisie (optionnel)
+document.getElementById('recherche_telephone').addEventListener('input', function() {
+    const resultatDiv = document.getElementById('resultat_recherche');
+    if (this.value.length === 0) {
+        resultatDiv.classList.add('hidden');
     }
 });
 
-// Gestion des articles
-let articleCounter = 0;
-
-function createArticleRow() {
-    const container = document.createElement('div');
-    container.className = 'grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 p-4 bg-gray-50 rounded-lg';
-    container.innerHTML = `
-        <div>
-            <label class="block text-sm font-medium mb-2" style="color: var(--admin-color);">Article</label>
-            <select name="article_${articleCounter}" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--admin-accent-color)] focus:border-transparent transition duration-200 article-select" required>
-                <option value="">Sélectionner un article</option>
-                {% for article in articles %}
-                <option value="{{ article.pk }}" 
-                        data-prix="{{ article.prix_unitaire }}"
-                        data-stock="{{ article.qte_disponible }}">
-                    {{ article.nom }} ({{ article.reference }})
-                </option>
-                {% endfor %}
-            </select>
-        </div>
-        <div>
-            <label class="block text-sm font-medium mb-2" style="color: var(--admin-color);">Quantité</label>
-            <input type="number" name="quantite_${articleCounter}" min="1" value="1" 
-                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--admin-accent-color)] focus:border-transparent transition duration-200 quantite-input">
-        </div>
-        <div>
-            <label class="block text-sm font-medium mb-2" style="color: var(--admin-color);">Prix unitaire (DH)</label>
-            <input type="text" class="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed prix-unitaire" readonly>
-        </div>
-  
-    `;
-
-    // Ajouter un bouton de suppression
-    const deleteButton = document.createElement('button');
-    deleteButton.type = 'button';
-    deleteButton.className = 'mt-2 text-red-600 hover:text-red-800';
-    deleteButton.innerHTML = '<i class="fas fa-trash mr-1"></i> Supprimer';
-    deleteButton.onclick = function() {
-        container.remove();
-        calculerTotal();
-    };
-    container.appendChild(deleteButton);
-
-    // Ajouter les événements
-    container.querySelector('.article-select').addEventListener('change', function() {
-        const option = this.options[this.selectedIndex];
-        const prixUnitaire = option.dataset.prix || 0;
-        container.querySelector('.prix-unitaire').value = prixUnitaire;
-        calculerSousTotal(container);
-    });
-
-    container.querySelector('.quantite-input').addEventListener('input', function() {
-        calculerSousTotal(container);
-    });
-
-    return container;
-}
-
-function calculerSousTotal(container) {
-    const quantite = parseInt(container.querySelector('.quantite-input').value) || 0;
-    const prixUnitaire = parseFloat(container.querySelector('.prix-unitaire').value) || 0;
-    const sousTotal = quantite * prixUnitaire;
-    container.querySelector('.sous-total').value = sousTotal.toFixed(2);
-    calculerTotal();
-}
-
-function calculerTotal() {
-    const sousTotal = Array.from(document.querySelectorAll('.sous-total'))
-        .map(input => parseFloat(input.value) || 0)
-        .reduce((a, b) => a + b, 0);
-    document.getElementById('total_cmd').value = sousTotal.toFixed(2);
-}
-
-document.getElementById('add-article').addEventListener('click', function() {
-    const container = document.getElementById('articles-container');
-    container.appendChild(createArticleRow());
-    articleCounter++;
-});
 
 // Initialisation
 window.addEventListener('load', function() {
-    // Créer une première ligne d'article
-    document.getElementById('add-article').click();
-    
     // Initialiser l'affichage du type de client
     const typeClientRadios = document.querySelectorAll('input[name="type_client"]');
     const checkedRadio = Array.from(typeClientRadios).find(radio => radio.checked);
     if (checkedRadio) {
         checkedRadio.dispatchEvent(new Event('change'));
+    }
+    
+    // Charger les informations de livraison si une ville est déjà sélectionnée
+    const villeSelect = document.getElementById('ville_livraison');
+    if (villeSelect && villeSelect.value) {
+        console.log('🏙️ Ville pré-sélectionnée détectée:', villeSelect.value);
+        chargerRegionEtFrais();
+    }
+    
+    // Ajouter l'event listener pour le bouton d'ouverture du modal
+    const btnOuvrirModal = document.getElementById('btn-ouvrir-modal');
+    if (btnOuvrirModal) {
+        btnOuvrirModal.addEventListener('click', ouvrirModalAjouterArticle);
+        console.log('Event listener ajouté pour bouton ouvrir modal');
+    }
+    
+    // Gestionnaire d'événements pour le modal des variantes
+    const modalVariantes = document.getElementById('variantModal');
+    if (modalVariantes) {
+        modalVariantes.addEventListener('click', function(e) {
+            if (e.target === modalVariantes) {
+                fermerModalVariantes();
+            }
+        });
     }
 });
 </script>

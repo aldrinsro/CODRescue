@@ -11,12 +11,16 @@
             <div class="flex items-center space-x-4">
                 <div class="flex-shrink-0">
                     <div class="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 border-2 border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                        {% if panier.article.image_url %}
+                        {% if panier.article.image %}
+                            <img src="/media/{{ panier.article.image }}" alt="Image de {{ panier.article.nom }}" 
+                                 class="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
+                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        {% elif panier.article.image_url %}
                             <img src="{{ panier.article.image_url }}" alt="Image de {{ panier.article.nom }}" 
                                  class="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
                                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                         {% endif %}
-                        <div class="w-full h-full flex items-center justify-center text-gray-400 {% if panier.article.image_url %}hidden{% endif %}">
+                        <div class="w-full h-full flex items-center justify-center text-gray-400 {% if panier.article.image or panier.article.image_url %}hidden{% endif %}">
                             <i class="fas fa-image text-xl"></i>
                         </div>
                     </div>

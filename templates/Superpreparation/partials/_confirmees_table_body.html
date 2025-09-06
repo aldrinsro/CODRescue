@@ -19,21 +19,34 @@
     </td>
 
     <!-- ID YZ -->
-    <td class="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900 border-r" style="border-color: #F5DEB3;">
-        <span class="font-bold" style="color: #2e1b22;">{{ commande.id_yz }}</span>
+    <td class="px-4 py-4 text-sm font-medium text-gray-900 border-r" style="border-color: #F5DEB3;">
+        <div class="id-info">
+            <div class="id-yz font-bold" style="color: #2e1b22;">ID YZ: {{ commande.id_yz }}</div>
+            <div class="id-db text-xs text-gray-500">ID DB: {{ commande.id }}</div>
+        </div>
     </td>
 
     <!-- N° Externe -->
-    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-600 border-r" style="border-color: #F5DEB3;">
-        {{ commande.num_cmd|default:"-" }}
+    <td class="px-4 py-4 text-sm text-gray-600 border-r" style="border-color: #F5DEB3;">
+        <div class="num-cmd-info">
+            <div class="num-cmd font-medium">{{ commande.num_cmd|default:"Non renseigné" }}</div>
+            {% if commande.num_cmd %}
+                <div class="num-cmd-type text-xs text-gray-500">Numéro externe</div>
+            {% endif %}
+        </div>
     </td>
 
     <!-- Client -->
-    <td class="px-4 py-4 whitespace-nowrap text-sm border-r" style="border-color: #F5DEB3;">
+    <td class="px-4 py-4 text-sm border-r" style="border-color: #F5DEB3;">
         {% if commande.client %}
-            <div>
-                <div class="font-semibold text-gray-900">{{ commande.client.nom }} {{ commande.client.prenom }}</div>
-                <div class="text-sm text-gray-500">{{ commande.client.numero_tel }}</div>
+            <div class="client-info">
+                <div class="client-name">{{ commande.client.nom }} {{ commande.client.prenom }}</div>
+                {% if commande.client.email %}
+                    <div class="client-email">{{ commande.client.email }}</div>
+                {% endif %}
+                {% if commande.client.adresse %}
+                    <div class="client-address">{{ commande.client.adresse }}</div>
+                {% endif %}
             </div>
         {% else %}
             <span class="text-gray-400 italic">Client non défini</span>
@@ -50,12 +63,15 @@
     </td>
 
     <!-- Ville & Région -->
-    <td class="px-4 py-4 whitespace-nowrap text-sm border-r" style="border-color: #F5DEB3;">
+    <td class="px-4 py-4 text-sm border-r" style="border-color: #F5DEB3;">
         {% if commande.ville %}
-            <div>
-                <div class="font-medium text-gray-900">{{ commande.ville.nom }}</div>
+            <div class="ville-info">
+                <div class="ville-name">{{ commande.ville.nom }}</div>
                 {% if commande.ville.region %}
-                    <div class="text-xs text-gray-500">{{ commande.ville.region.nom }}</div>
+                    <div class="region-name">Région: {{ commande.ville.region.nom }}</div>
+                {% endif %}
+                {% if commande.ville.frais_livraison %}
+                    <div class="frais-livraison">Frais: {{ commande.ville.frais_livraison }} DH</div>
                 {% endif %}
             </div>
         {% else %}
@@ -64,16 +80,21 @@
     </td>
 
     <!-- Total -->
-    <td class="px-4 py-4 whitespace-nowrap text-sm font-bold border-r" style="border-color: #F5DEB3;">
-        <span class="text-green-600">{{ commande.total_cmd|floatformat:2 }} DH</span>
+    <td class="px-4 py-4 text-sm font-bold border-r" style="border-color: #F5DEB3;">
+        <div class="total-info">
+            <div class="text-green-600 font-bold">{{ commande.total_cmd|floatformat:2 }} DH</div>
+        </div>
     </td>
 
     <!-- Date Confirmation -->
-    <td class="px-4 py-4 whitespace-nowrap text-sm border-r" style="border-color: #F5DEB3;">
+    <td class="px-4 py-4 text-sm border-r" style="border-color: #F5DEB3;">
         {% if commande.etat_confirmation %}
-            <div class="text-center">
-                <div class="font-medium text-gray-900">{{ commande.etat_confirmation.date_debut|date:"d/m/Y" }}</div>
-                <div class="text-xs text-gray-500">{{ commande.etat_confirmation.date_debut|date:"H:i" }}</div>
+            <div class="date-confirmation-info">
+                <div class="date font-medium text-gray-900">{{ commande.etat_confirmation.date_debut|date:"d/m/Y" }}</div>
+                <div class="time text-sm text-gray-500">{{ commande.etat_confirmation.date_debut|date:"H:i" }}</div>
+                {% if commande.etat_confirmation.commentaire %}
+                    <div class="commentaire-complet text-xs text-gray-400">{{ commande.etat_confirmation.commentaire }}</div>
+                {% endif %}
             </div>
         {% else %}
             <span class="text-gray-400 italic">Non confirmée</span>
@@ -81,25 +102,31 @@
     </td>
 
     <!-- Opérateur Confirmation -->
-    <td class="px-4 py-4 whitespace-nowrap text-sm border-r" style="border-color: #F5DEB3;">
+    <td class="px-4 py-4 text-sm border-r" style="border-color: #F5DEB3;">
         {% if commande.etat_confirmation and commande.etat_confirmation.operateur %}
             <div class="flex items-center space-x-2">
-                <div class="w-8 h-8 rounded-full flex items-center justify-center" style="background-color: #2e1b22;">
-                    <i class="fas fa-user text-white text-sm"></i>
+                <div class="w-6 h-6 rounded-full flex items-center justify-center" style="background-color: #2e1b22;">
+                    <i class="fas fa-user text-white text-xs"></i>
                 </div>
-                <div>
-                    <div class="font-medium text-gray-900">{{ commande.etat_confirmation.operateur.nom }}</div>
-                    <div class="text-xs text-gray-500">{{ commande.etat_confirmation.operateur.type_operateur }}</div>
+                <div class="operateur-info">
+                    <div class="operateur-name">{{ commande.etat_confirmation.operateur.nom }} {{ commande.etat_confirmation.operateur.prenom }}</div>
+                    <div class="operateur-type">{{ commande.etat_confirmation.operateur.type_operateur }}</div>
+                    {% if commande.etat_confirmation.operateur.mail %}
+                        <div class="operateur-email">{{ commande.etat_confirmation.operateur.mail }}</div>
+                    {% endif %}
                 </div>
             </div>
         {% elif commande.etat_actuel and commande.etat_actuel.operateur %}
             <div class="flex items-center space-x-2">
-                <div class="w-8 h-8 rounded-full flex items-center justify-center" style="background-color: #2e1b22;">
-                    <i class="fas fa-user text-white text-sm"></i>
+                <div class="w-6 h-6 rounded-full flex items-center justify-center" style="background-color: #2e1b22;">
+                    <i class="fas fa-user text-white text-xs"></i>
                 </div>
-                <div>
-                    <div class="font-medium text-gray-900">{{ commande.etat_actuel.operateur.nom }}</div>
-                    <div class="text-xs text-gray-500">{{ commande.etat_actuel.operateur.type_operateur }}</div>
+                <div class="operateur-info">
+                    <div class="operateur-name">{{ commande.etat_actuel.operateur.nom }} {{ commande.etat_actuel.operateur.prenom }}</div>
+                    <div class="operateur-type">{{ commande.etat_actuel.operateur.type_operateur }}</div>
+                    {% if commande.etat_actuel.operateur.mail %}
+                        <div class="operateur-email">{{ commande.etat_actuel.operateur.mail }}</div>
+                    {% endif %}
                 </div>
             </div>
         {% else %}
@@ -108,7 +135,7 @@
     </td>
 
     <!-- État Préparation -->
-    <td class="px-4 py-4 whitespace-nowrap text-sm border-r" style="border-color: #F5DEB3;">
+    <td class="px-4 py-4 text-sm border-r" style="border-color: #F5DEB3;">
         <div class="flex flex-col space-y-1">
             <!-- État actuel avec icône d'information -->
             <div class="flex items-center">
@@ -149,6 +176,21 @@
                 {% endwith %}
             </div>
             
+            <!-- Informations supplémentaires sur l'état -->
+            {% with commande.etat_actuel as etat_actuel %}
+                {% if etat_actuel.date_debut %}
+                    <div class="etat-date">
+                        <i class="fas fa-clock"></i>
+                        Début: {{ etat_actuel.date_debut|date:"d/m/Y H:i" }}
+                    </div>
+                {% endif %}
+                {% if etat_actuel.commentaire %}
+                    <div class="etat-comment">
+                        <i class="fas fa-comment"></i>
+                        <span class="commentaire-complet">{{ etat_actuel.commentaire }}</span>
+                    </div>
+                {% endif %}
+            {% endwith %}
 
         </div>
     </td>
@@ -170,6 +212,13 @@
                 <i class="fas fa-print text-sm"></i>
             </button>
             
+            <!-- Bouton Étiquettes Professionnelles -->
+            <a href="{% url 'commande:etiquettes_generator' %}?commande_id={{ commande.id }}" 
+               class="p-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 shadow-sm hover:shadow-md"
+               title="Étiquettes Professionnelles">
+                <i class="fas fa-tags text-sm"></i>
+            </a>
+            
             <!-- Bouton Impression Multiple Tickets - COMMENTÉ car remplacé par le bouton fusionné -->
             <!--
             <button onclick="imprimerTicketsMultipleDirect()" 
@@ -188,18 +237,18 @@
             </button>
             -->
             
-            <!-- Bouton Affecter (si pas encore affectée) -->
-            {% if not commande.etat_actuel or not commande.etat_actuel.operateur %}
+            <!-- Bouton Affecter (prioritaire - toujours visible) -->
             <button onclick="showAffectationModal({{ commande.id }}, '{{ commande.id_yz }}')" 
                     class="p-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 shadow-sm hover:shadow-md"
-                    title="Affecter">
+                    title="{% if not commande.etat_actuel or not commande.etat_actuel.operateur %}Affecter{% else %}Réaffecter{% endif %}">
                 <i class="fas fa-users text-sm"></i>
             </button>
-            {% else %}
-            <!-- Bouton Modifier affectation -->
+            
+            <!-- Bouton Modifier (seulement si déjà affectée) -->
+            {% if commande.etat_actuel and commande.etat_actuel.operateur %}
             <button onclick="showAffectationModal({{ commande.id }}, '{{ commande.id_yz }}')" 
                     class="p-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 shadow-sm hover:shadow-md"
-                    title="Modifier">
+                    title="Modifier affectation">
                 <i class="fas fa-edit text-sm"></i>
             </button>
             {% endif %}

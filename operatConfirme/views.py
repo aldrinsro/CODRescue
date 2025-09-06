@@ -209,7 +209,8 @@ def liste_commandes(request):
     context = {
         'page_title': 'Mes Commandes à Confirmer',
         'page_subtitle': f"Gestion des commandes qui vous sont affectées ou retournées.",
-        'page_obj': page_obj,
+        'commandes': commandes_list,  # Passer toutes les commandes pour la pagination intelligente
+        'page_obj': page_obj,  # Garder pour compatibilité si nécessaire
         'search_query': search_query,
         'operateur': operateur,
         'stats': stats,
@@ -301,23 +302,33 @@ def confirmer_commande_ajax(request, commande_id):
             
             for panier in commande.paniers.all():
                 article = panier.article
+                variante = panier.variante
                 quantite_commandee = panier.quantite
                 
-                print(f"📦 DEBUG: Article {article.nom} (ID:{article.id})")
-                print(f"   - Stock actuel: {article.qte_disponible}")
+                # Déterminer le stock à vérifier (variante ou article principal)
+                if variante:
+                    stock_disponible = variante.qte_disponible
+                    nom_article = f"{article.nom} - {variante.couleur}/{variante.pointure}"
+                    print(f"📦 DEBUG: Variante {nom_article} (ID:{variante.id})")
+                else:
+                    stock_disponible = article.qte_disponible
+                    nom_article = article.nom
+                    print(f"📦 DEBUG: Article {nom_article} (ID:{article.id})")
+                
+                print(f"   - Stock actuel: {stock_disponible}")
                 print(f"   - Quantité commandée: {quantite_commandee}")
                 
                 # Vérifier si le stock est suffisant
-                if article.qte_disponible < quantite_commandee:
+                if stock_disponible < quantite_commandee:
                     stock_insuffisant.append({
-                        'article': article.nom,
-                        'stock_actuel': article.qte_disponible,
+                        'article': nom_article,
+                        'stock_actuel': stock_disponible,
                         'quantite_demandee': quantite_commandee
                     })
-                    print(f"❌ DEBUG: Stock insuffisant pour {article.nom}")
+                    print(f"❌ DEBUG: Stock insuffisant pour {nom_article}")
                 else:
                     # Décrémenter le stock via mouvements sur variantes (pas d'écriture sur Article.qte_disponible)
-                    ancien_stock = article.qte_disponible
+                    ancien_stock = stock_disponible
                     from Superpreparation.utils import creer_mouvement_stock as creer_mouvement_stock_prepa
                     creer_mouvement_stock_prepa(
                         article=article,
@@ -326,18 +337,23 @@ def confirmer_commande_ajax(request, commande_id):
                         operateur=operateur,
                         commande=commande,
                         commentaire=f"Décrément lors de la confirmation commande {commande.id_yz}",
-                        variante=None,
+                        variante=variante,  # Passer la variante si elle existe
                     )
-                    nouveau_stock = article.qte_disponible  # Propriété calculée à partir des variantes
+                    
+                    # Récupérer le nouveau stock
+                    if variante:
+                        nouveau_stock = variante.qte_disponible
+                    else:
+                        nouveau_stock = article.qte_disponible
                     
                     articles_decrémentes.append({
-                        'article': article.nom,
+                        'article': nom_article,
                         'ancien_stock': ancien_stock,
                         'nouveau_stock': nouveau_stock,
                         'quantite_decrémententée': quantite_commandee
                     })
                     
-                    print(f"✅ DEBUG: Stock mis à jour pour {article.nom}")
+                    print(f"✅ DEBUG: Stock mis à jour pour {nom_article}")
                     print(f"   - Ancien stock: {ancien_stock}")
                     print(f"   - Nouveau stock: {nouveau_stock}")
             
@@ -2261,10 +2277,47 @@ def modifier_commande(request, commande_id):
     # Récupérer toutes les villes pour la liste déroulante
     villes = Ville.objects.select_related('region').order_by('nom')
     
+    # Récupérer tous les articles pour le modal d'ajout
+    from article.models import Article
+    articles = Article.objects.filter(actif=True).order_by('nom')
+    
+    # Préparer les données JSON pour les articles (comme dans l'interface de création)
+    articles_data = []
+    for article in articles:
+        # Déterminer l'URL de l'image (priorité à l'image locale)
+        image_url = ''
+        if article.image:
+            # Construire l'URL complète pour l'image locale
+            from django.conf import settings
+            image_url = f"{settings.MEDIA_URL}{article.image.name}"
+        elif article.image_url:
+            image_url = article.image_url
+            
+        articles_data.append({
+            'id': article.pk,
+            'nom': str(article.nom or ''),
+            'reference': str(article.reference or ''),
+            'prix_actuel': float(article.prix_actuel) if article.prix_actuel else 0.0,
+            'prix_unitaire': float(article.prix_unitaire) if article.prix_unitaire else 0.0,
+            'prix_upsell_1': float(article.prix_upsell_1) if article.prix_upsell_1 else 0.0,
+            'prix_upsell_2': float(article.prix_upsell_2) if article.prix_upsell_2 else 0.0,
+            'prix_upsell_3': float(article.prix_upsell_3) if article.prix_upsell_3 else 0.0,
+            'prix_upsell_4': float(article.prix_upsell_4) if article.prix_upsell_4 else 0.0,
+            'qte_disponible': int(article.get_total_qte_disponible()),
+            'couleur': str(article.couleur or ''),
+            'pointure': str(article.pointure or ''),
+            'categorie': str(article.categorie) if hasattr(article, 'categorie') and article.categorie else '',
+            'phase': str(article.phase or ''),
+            'has_promo_active': bool(article.has_promo_active),
+            'isUpsell': bool(article.isUpsell),
+            'image_url': image_url
+        })
+    
     context = {
         'commande': commande,
         'operateur': operateur,
         'villes': villes,
+        'articles_json': articles_data,
     }
     
     return render(request, 'operatConfirme/modifier_commande.html', context)
@@ -2360,7 +2413,9 @@ def api_articles_disponibles(request):
             # Déterminer l'URL de l'image
             image_url = None
             if article.image:
-                image_url = article.image.url
+                # Construire l'URL complète pour l'image locale
+                from django.conf import settings
+                image_url = f"{settings.MEDIA_URL}{article.image.name}"
             elif article.image_url:
                 image_url = article.image_url
             
@@ -2502,13 +2557,13 @@ def creer_commande(request):
 
                 ville = get_object_or_404(Ville, pk=ville_id)
 
-                # Créer la commande avec le total fourni
+                # Créer la commande (total sera calculé après ajout des articles)
                 try:
                     commande = Commande.objects.create(
                         client=client,
                         ville=ville,
                         adresse=adresse,
-                        total_cmd=float(total_cmd),  # Convertir en float
+                        total_cmd=0,  # Sera calculé après ajout des articles
                         is_upsell=is_upsell,
                         origine='OC'  # Définir l'origine comme Opérateur Confirmation
                     )
@@ -2517,40 +2572,49 @@ def creer_commande(request):
                     messages.error(request, f"Impossible de créer la commande: {str(e)}")
                     return redirect('operatConfirme:creer_commande')
 
-                # Traiter le panier et calculer le total
-                article_ids = request.POST.getlist('article_id')
-                quantites = request.POST.getlist('quantite')
-                
-                logging.info(f"Articles dans la commande: {article_ids}, Quantités: {quantites}")
-                
-                if not article_ids:
-                    messages.warning(request, "La commande a été créée mais est vide. Aucun article n'a été ajouté.")
-                
+                # Traiter le panier et calculer le total (même logique que l'interface admin)
                 total_calcule = 0
-                for i, article_id in enumerate(article_ids):
-                    try:
-                        quantite = int(quantites[i])
-                        if quantite > 0 and article_id:
-                            article = get_object_or_404(Article, pk=article_id)
-                            # Utiliser prix_actuel si disponible, sinon prix_unitaire
-                            prix_a_utiliser = article.prix_actuel if article.prix_actuel is not None else article.prix_unitaire
-                            
-                            # Log pour comprendre le calcul du prix
-                            logging.info(f"Article {article.id}: prix_unitaire={article.prix_unitaire}, prix_actuel={article.prix_actuel}, prix_utilisé={prix_a_utiliser}")
-                            
-                            sous_total = prix_a_utiliser * quantite
-                            total_calcule += float(sous_total)
-                            
-                            Panier.objects.create(
-                                commande=commande,
-                                article=article,
-                                quantite=quantite,
-                                sous_total=float(sous_total)
-                            )
-                    except (ValueError, IndexError, Article.DoesNotExist) as e:
-                        logging.error(f"Erreur lors de l'ajout d'un article: {str(e)}")
-                        messages.error(request, f"Erreur lors de l'ajout d'un article : {e}")
-                        raise e # Annule la transaction
+                article_counter = 0
+                
+                while f'article_{article_counter}' in request.POST:
+                    article_id = request.POST.get(f'article_{article_counter}')
+                    variante_id = request.POST.get(f'variante_{article_counter}')
+                    quantite = request.POST.get(f'quantite_{article_counter}')
+                    
+                    if article_id and quantite:
+                        try:
+                            quantite = int(quantite)
+                            if quantite > 0:
+                                article = Article.objects.get(pk=article_id)
+                                
+                                # Utiliser prix_actuel si disponible, sinon prix_unitaire
+                                prix_a_utiliser = article.prix_actuel if article.prix_actuel is not None else article.prix_unitaire
+                                
+                                # Log pour comprendre le calcul du prix
+                                logging.info(f"Article {article.id}: prix_unitaire={article.prix_unitaire}, prix_actuel={article.prix_actuel}, prix_utilisé={prix_a_utiliser}")
+                                
+                                sous_total = prix_a_utiliser * quantite
+                                total_calcule += float(sous_total)
+                                
+                                Panier.objects.create(
+                                    commande=commande,
+                                    article=article,
+                                    quantite=quantite,
+                                    sous_total=float(sous_total)
+                                )
+                                
+                                # Incrémenter le compteur si c'est un article upsell
+                                if article.isUpsell and quantite > 1:
+                                    commande.compteur += 1
+                                    
+                        except (ValueError, Article.DoesNotExist) as e:
+                            logging.error(f"Erreur lors de l'ajout d'un article: {str(e)}")
+                            messages.error(request, f"Erreur lors de l'ajout d'un article : {e}")
+                            raise e # Annule la transaction
+                    
+                    article_counter += 1
+                
+                logging.info(f"Articles traités: {article_counter}, Total calculé: {total_calcule}")
 
                 # Mettre à jour le total final de la commande avec le montant recalculé
                 commande.total_cmd = float(total_calcule)
@@ -2576,8 +2640,12 @@ def creer_commande(request):
                     except EnumEtatCmd.DoesNotExist:
                         pass # Si aucun état n'existe, créer sans état initial
                 
-                # Composer le message de succès final
-                message_final = f"Commande YZ-{commande.id_yz} créée avec succès."
+                # Composer le message de succès final adapté au contenu
+                if article_counter > 0:
+                    message_final = f"Commande YZ-{commande.id_yz} créée avec succès avec {article_counter} article(s) pour un total de {commande.total_cmd:.2f} DH."
+                else:
+                    message_final = f"Commande YZ-{commande.id_yz} créée avec succès. Vous pouvez ajouter des articles plus tard via la modification."
+                
                 if type_client != 'existant':
                     message_final = f"Nouveau client '{client.get_full_name}' créé. " + message_final
 
@@ -2593,12 +2661,40 @@ def creer_commande(request):
     # GET request - afficher le formulaire
     clients = Client.objects.all().order_by('prenom', 'nom')
     articles = Article.objects.all().order_by('nom')
-    villes = Ville.objects.select_related('region').order_by('region__nom_region', 'nom')
+    villes = Ville.objects.select_related('region').order_by('nom')
+
+    # Préparer les données JSON pour les articles (comme dans l'interface admin)
+    articles_data = []
+    for article in articles:
+        # Déterminer l'URL de l'image (priorité à l'image locale)
+        image_url = ''
+        if article.image:
+            # Construire l'URL complète pour l'image locale
+            from django.conf import settings
+            image_url = f"{settings.MEDIA_URL}{article.image.name}"
+        elif article.image_url:
+            image_url = article.image_url
+            
+        articles_data.append({
+            'id': article.pk,
+            'nom': str(article.nom or ''),
+            'reference': str(article.reference or ''),
+            'prix_unitaire': float(article.prix_unitaire) if article.prix_unitaire else 0.0,
+            'qte_disponible': int(article.get_total_qte_disponible()),
+            'couleur': str(article.couleur or ''),
+            'pointure': str(article.pointure or ''),
+            'categorie': str(article.categorie) if hasattr(article, 'categorie') and article.categorie else '',
+            'phase': str(article.phase or ''),
+            'has_promo_active': bool(article.has_promo_active),
+            'isUpsell': bool(article.isUpsell),
+            'image_url': image_url
+        })
 
     context = {
         'operateur': operateur,
         'clients': clients,
         'articles': articles,
+        'articles_json': articles_data,
         'villes': villes,
     }
 
@@ -2842,6 +2938,63 @@ def api_recherche_client_tel(request):
                 })
         return JsonResponse({'results': results})
     return JsonResponse({'results': []}, status=405)
+
+@login_required
+def rechercher_client_telephone(request):
+    """API pour rechercher un client par numéro de téléphone exact"""
+    from django.http import JsonResponse
+    from client.models import Client
+    
+    if request.method == 'GET':
+        telephone = request.GET.get('telephone', '').strip()
+        
+        if not telephone:
+            return JsonResponse({
+                'success': False,
+                'error': 'Numéro de téléphone requis'
+            }, status=400)
+        
+        try:
+            # Rechercher le client par numéro de téléphone exact
+            client = Client.objects.get(numero_tel=telephone, is_active=True)
+            
+            return JsonResponse({
+                'success': True,
+                'client': {
+                    'id': client.id,
+                    'nom_complet': client.get_full_name,
+                    'nom': client.nom,
+                    'prenom': client.prenom,
+                    'numero_tel': client.numero_tel,
+                    'email': client.email or '',
+                    'adresse': client.adresse or ''
+                }
+            })
+            
+        except Client.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Aucun client trouvé avec ce numéro de téléphone'
+            })
+            
+        except Client.MultipleObjectsReturned:
+            # Si plusieurs clients avec le même numéro (cas rare)
+            clients = Client.objects.filter(numero_tel=telephone, is_active=True)
+            return JsonResponse({
+                'success': False,
+                'error': f'Plusieurs clients trouvés avec ce numéro ({clients.count()})'
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': f'Erreur lors de la recherche: {str(e)}'
+            }, status=500)
+    
+    return JsonResponse({
+        'success': False,
+        'error': 'Méthode non autorisée'
+    }, status=405)
 
 @login_required
 def api_recherche_article_ref(request):

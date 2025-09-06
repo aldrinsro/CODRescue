@@ -357,10 +357,7 @@ def liste_commandes(request):
     # Essayer plusieurs états possibles pour les commandes logistiques
     commandes_list = Commande.objects.filter(
         Q(etats__enum_etat__libelle='En cours de livraison') |
-        Q(etats__enum_etat__libelle='Préparée') |
-        Q(etats__enum_etat__libelle='Expédiée') |
         Q(etats__enum_etat__libelle='En livraison'),
-        etats__operateur=operateur,
         etats__date_fin__isnull=True
     ).select_related(
         'client', 
@@ -558,7 +555,6 @@ def changer_etat_sav(request, commande_id):
         nouvel_etat = request.POST.get('nouvel_etat')
         commentaire = request.POST.get('commentaire', '').strip()
         date_report = request.POST.get('date_report')
-        type_annulation = request.POST.get('type_annulation', '').strip()
         
         if not nouvel_etat:
             return JsonResponse({'success': False, 'error': 'Nouvel état non spécifié.'})
@@ -589,7 +585,7 @@ def changer_etat_sav(request, commande_id):
             elif nouvel_etat == 'Livrée avec changement':
                 commentaire_final = f"{commentaire}"
             elif nouvel_etat == 'Retournée':
-                commentaire_final = f"{commentaire} - Type d'annulation: {type_annulation}"
+                commentaire_final = f"{commentaire}"
             
             # Créer le nouvel état
             EtatCommande.objects.create(
@@ -881,27 +877,39 @@ def ajouter_article(request, commande_id):
     try:
         commande = get_object_or_404(Commande, id=commande_id)
         article_id = request.POST.get('article_id')
+        variante_id = request.POST.get('variante_id')
         quantite = int(request.POST.get('quantite', 1))
         
         if not article_id:
             return JsonResponse({'success': False, 'error': 'ID de l\'article manquant.'})
         
-        from article.models import Article
+        if not variante_id:
+            return JsonResponse({'success': False, 'error': 'ID de la variante manquant.'})
+        
+        from article.models import Article, VarianteArticle
         from commande.models import Panier
         
         article = get_object_or_404(Article, id=article_id)
+        variante = get_object_or_404(VarianteArticle, id=variante_id, article=article)
+        
+        # Vérifier que la variante est active
+        if not variante.actif:
+            return JsonResponse({
+                'success': False, 
+                'error': f'Variante {variante} désactivée.'
+            })
         
         # Vérifier le stock si la commande est confirmée
         if commande.etat_actuel and commande.etat_actuel.enum_etat.libelle == 'Confirmée':
-            if article.qte_disponible < quantite:
-                        return JsonResponse({
+            if variante.qte_disponible < quantite:
+                return JsonResponse({
                     'success': False, 
-                    'error': f'Stock insuffisant. Disponible: {article.qte_disponible}, Demandé: {quantite}'
+                    'error': f'Stock insuffisant. Disponible: {variante.qte_disponible}, Demandé: {quantite}'
                 })
             
-            # Décrémenter le stock
-            article.qte_disponible -= quantite
-            article.save()
+            # Décrémenter le stock de la variante
+            variante.qte_disponible -= quantite
+            variante.save()
         
         # Calculer le prix selon le compteur de la commande
         prix_unitaire = article.prix_unitaire
@@ -915,10 +923,11 @@ def ajouter_article(request, commande_id):
             elif commande.compteur >= 4 and article.prix_upsell_4:
                 prix_unitaire = article.prix_upsell_4
         
-        # Créer le panier
+        # Créer le panier avec la variante
         panier = Panier.objects.create(
-                        commande=commande,
+            commande=commande,
             article=article,
+            variante=variante,
             quantite=quantite,
             sous_total=float(prix_unitaire * quantite)
         )
@@ -966,15 +975,29 @@ def modifier_quantite_article(request, commande_id):
         
         # Vérifier le stock si la commande est confirmée
         if commande.etat_actuel and commande.etat_actuel.enum_etat.libelle == 'Confirmée':
-            if difference > 0 and panier.article.qte_disponible < difference:
+            if panier.variante:
+                # Gestion avec variante
+                if not panier.variante.actif:
+                    return JsonResponse({
+                        'success': False, 
+                        'error': f'Variante {panier.variante} désactivée.'
+                    })
+                
+                if difference > 0 and panier.variante.qte_disponible < difference:
+                    return JsonResponse({
+                        'success': False, 
+                        'error': f'Stock insuffisant. Disponible: {panier.variante.qte_disponible}, Demandé: {difference}'
+                    })
+                
+                # Ajuster le stock de la variante
+                panier.variante.qte_disponible -= difference
+                panier.variante.save()
+            else:
+                # Cas sans variante (pour compatibilité avec les anciens paniers)
                 return JsonResponse({
                     'success': False, 
-                    'error': f'Stock insuffisant. Disponible: {panier.article.qte_disponible}, Demandé: {difference}'
+                    'error': f'Article {panier.article.nom} sans variante définie. Impossible de gérer le stock.'
                 })
-            
-            # Ajuster le stock
-            panier.article.qte_disponible -= difference
-            panier.article.save()
         
         # Mettre à jour le panier
         panier.quantite = nouvelle_quantite

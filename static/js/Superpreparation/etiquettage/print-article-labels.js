@@ -1,3 +1,6 @@
+// @ts-nocheck
+/* eslint-disable */
+/* jshint ignore:start */
 /**
  * Système d'impression des étiquettes d'articles
  * Gère l'impression optimisée des codes-barres et QR codes pour les articles
@@ -7,13 +10,13 @@ class ArticleLabelsPrinter {
     constructor() {
         this.currentFormat = 'qr'; // 'qr' ou 'barcode'
         this.labelSize = {
-            width: '60mm',
-            height: '40mm'
+            width: '180mm',
+            height: '260mm'
         };
         this.pageSettings = {
             margin: '10mm',
-            columns: 2,
-            rows: 5, // Réduit pour les nouvelles dimensions
+            columns: 1, // Une seule colonne
+            rows: 1, // Une seule rangée
             headerHeight: '15mm',
             footerHeight: '10mm'
         };
@@ -140,6 +143,10 @@ class ArticleLabelsPrinter {
                         width: 100%;
                         height: 100%;
                         margin-top: 5mm;
+                        grid-template-columns: repeat(${this.pageSettings.columns}, 1fr); /* Assure une seule colonne */
+                        gap: 0; /* Pas de gap si une seule étiquette par page */
+                        max-width: 190mm; /* S'adapte à la largeur du print-container */
+                        min-height: calc(277mm - ${this.pageSettings.headerHeight} - ${this.pageSettings.footerHeight});
                     }
 
                 /* Styles pour l'en-tête et pied de page */
@@ -201,21 +208,23 @@ class ArticleLabelsPrinter {
 
                 /* Étiquette individuelle */
                 .article-label {
-                    width: 70mm;
-                    height: 45mm;
-                    border: 2px solid #000;
-                    font-family: Arial, sans-serif;
-                    font-size: 8px;
+                    width: 100%; /* S'adapte à la grille */
+                    height: 100%; /* S'adapte à la grille */
+                    min-height: 260mm; /* Hauteur minimale de l'étiquette */
+                    border: 1px solid #ddd; /* Bordure plus subtile */
+                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Police plus moderne */
+                    font-size: 10px;
                     display: flex;
                     flex-direction: column;
-                    background: white;
+                    background: linear-gradient(to bottom, #ffffff, #f0f0f0); /* Fond dégradé subtil */
                     page-break-inside: avoid;
                     break-inside: avoid;
                     margin: 0;
                     overflow: hidden;
                     position: relative;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-                    border-radius: 2px;
+                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Ombre plus prononcée */
+                    border-radius: 8px; /* Bords arrondis */
+                    color: #333; /* Couleur de texte par défaut */
                 }
 
                 .article-label * {
@@ -223,126 +232,161 @@ class ArticleLabelsPrinter {
                     color-adjust: exact !important;
                 }
 
-                /* En-tête noir avec numéro et date */
+                /* En-tête stylisé avec numéro de commande et date */
                 .label-header {
-                    background-color: #000;
+                    background-color: #2c3e50; /* Couleur d'en-tête plus foncée */
                     color: white;
-                    padding: 2mm;
+                    padding: 5mm 8mm; /* Augmenter le padding */
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
                     font-weight: bold;
-                    font-size: 9px;
+                    font-size: 14px; /* Augmenter la taille de police */
                     flex-shrink: 0;
-                    min-height: 7mm;
-                    margin-bottom: 6mm;
-                    border-bottom: 1px solid #333;
+                    min-height: 15mm; /* Augmenter la hauteur minimale */
+                    margin-bottom: 10mm; /* Augmenter la marge inférieure */
+                    border-bottom: 2px solid #34495e; /* Bordure plus prononcée */
+                    border-top-left-radius: 6px; /* Bords arrondis */
+                    border-top-right-radius: 6px;
                 }
 
                 .label-number {
                     font-weight: bold;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
                 }
 
                 .label-date {
                     font-weight: bold;
+                    opacity: 0.8;
                 }
-
-
 
                 /* Corps de l'étiquette */
                 .label-body {
-                    padding: 3mm;
+                    padding: 8mm;
                     flex-grow: 1;
                     display: flex;
                     flex-direction: column;
-                    justify-content: flex-start;
-                    background: white;
+                    justify-content: space-between; /* Pour espacer les éléments */
+                    background: #ffffff;
+                    position: relative; /* Pour positionner le code */
                 }
 
                 /* Informations de l'article */
                 .article-info {
-                    margin-bottom: 0;
+                    margin-bottom: 15mm; /* Plus de marge pour le code */
                     flex-grow: 1;
                     display: flex;
                     flex-direction: column;
-                    justify-content: space-around;
+                    justify-content: flex-start;
                 }
 
                 .info-line {
                     display: flex;
                     align-items: center;
-                    margin-bottom: 1mm;
-                    padding-bottom: 1mm;
-                    border-bottom: 1px solid #000;
+                    margin-bottom: 3mm; /* Augmenter la marge */
+                    padding-bottom: 2mm; /* Augmenter le padding */
+                    border-bottom: 1px dashed #ccc; /* Bordure en pointillés */
+                    font-size: 14px; /* Augmenter la taille de police */
                 }
 
                 .info-icon {
-                    margin-right: 2mm;
-                    font-size: 12px;
-                    color: #000;
+                    margin-right: 5mm;
+                    font-size: 22px; /* Augmenter la taille de police */
+                    color: #2c3e50; /* Couleur d'icône */
                     font-weight: bold;
                 }
 
                 .info-text {
-                    font-size: 7px;
-                    font-weight: normal;
+                    font-size: 14px; /* Augmenter la taille de police */
+                    font-weight: 600; /* Texte plus gras */
                     word-break: break-word;
-                    color: #000;
+                    color: #333;
+                    flex-grow: 1;
                 }
 
+                /* Conteneur de code-barres / QR code */
+                .code-container {
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    margin-top: 20mm;
+                    margin-bottom: 20mm;
+                    flex-shrink: 0;
+                    width: 100%;
+                    height: 120mm; /* Hauteur augmentée pour un code plus grand */
+                    background: #ffffff; /* Fond blanc pur pour un meilleur contraste */
+                    border: 2px solid #333; /* Bordure plus visible */
+                    border-radius: 8px;
+                    padding: 10mm; /* Plus de padding pour aérer */
+                }
 
+                .label-barcode,
+                .label-qrcode {
+                    max-width: 100%;
+                    max-height: 100%;
+                    object-fit: contain;
+                }
 
-                /* Pied de page noir */
+                /* Pied de page stylisé */
                 .label-footer {
-                    background-color: #000;
+                    background-color: #2c3e50; /* Couleur de pied de page plus foncée */
                     color: white;
-                    padding: 1.5mm;
+                    padding: 4mm 8mm; /* Augmenter le padding */
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
                     font-weight: bold;
-                    font-size: 8px;
+                    font-size: 12px; /* Augmenter la taille de police */
                     flex-shrink: 0;
-                    min-height: 5mm;
-                    border-top: 1px solid #333;
+                    min-height: 10mm; /* Augmenter la hauteur minimale */
+                    border-top: 2px solid #34495e; /* Bordure plus prononcée */
+                    border-bottom-left-radius: 6px; /* Bords arrondis */
+                    border-bottom-right-radius: 6px;
                 }
 
                 .footer-status {
                     font-weight: bold;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
                 }
 
                 .footer-company {
                     font-weight: bold;
+                    opacity: 0.8;
                 }
 
                 /* Informations de contact */
                 .label-contact {
-                    background: #f8f8f8;
-                    padding: 1.5mm;
+                    background: #ecf0f1; /* Fond plus clair */
+                    padding: 4mm 8mm;
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
-                    font-size: 6px;
-                    border-top: 1px solid #000;
+                    font-size: 10px;
+                    border-top: 1px solid #bdc3c7; /* Bordure plus douce */
                     flex-shrink: 0;
-                    min-height: 4mm;
+                    min-height: 8mm;
+                    border-bottom-left-radius: 6px;
+                    border-bottom-right-radius: 6px;
+                    margin-top: auto; /* Pousser vers le bas */
                 }
 
                 .contact-name {
                     font-weight: bold;
-                    color: #000;
-                    font-size: 8px;
+                    color: #2c3e50; /* Couleur de texte plus foncée */
+                    font-size: 12px;
                 }
 
                 .contact-info {
                     text-align: right;
-                    color: #000;
-                    font-weight: bold;
-                    font-size: 7px;
+                    color: #555; /* Couleur de texte plus douce */
+                    font-weight: normal;
+                    font-size: 11px;
                 }
 
                 .contact-info div {
-                    line-height: 1.2;
+                    line-height: 1.3;
                 }
 
 
@@ -406,10 +450,10 @@ class ArticleLabelsPrinter {
             html += this.generateSingleLabel(article, format, index);
             labelCount++;
 
-            // Ajouter un saut de page tous les 10 étiquettes (2 colonnes × 5 rangées)
-            if (labelCount % 10 === 0 && index < articles.length - 1) {
+            // Ajouter un saut de page après chaque étiquette
+            if (index < articles.length - 1) { // Si ce n'est pas la dernière étiquette
                 html += '</div></div>'; // Fermer labels-grid et print-container
-                
+
                 // Ajouter l'en-tête pour la nouvelle page
                 if (showHeader) {
                     html += `
@@ -445,16 +489,15 @@ class ArticleLabelsPrinter {
         <script>
             // Auto-impression
             window.onload = function() {
-                            // Pas de codes-barres pour les étiquettes d'articles
-                
                 // Attendre un peu pour que les images se chargent
                 setTimeout(function() {
                     window.print();
                 }, 1000);
             };
             
-            // Fonction pour générer tous les codes-barres
-            function generateAllBarcodes() {
+            // Fonction pour générer tous les codes-barres et QR codes
+            function generateAllCodes() {
+                // Générer les codes-barres
                 const barcodeContainers = document.querySelectorAll('.barcode-container');
                 console.log('Generation de', barcodeContainers.length, 'codes-barres...');
                 
@@ -464,16 +507,17 @@ class ArticleLabelsPrinter {
                     
                     if (text && typeof JsBarcode !== 'undefined') {
                         const canvas = document.createElement('canvas');
-                        canvas.width = 200;
-                        canvas.height = 60;
+                        canvas.width = 400; /* Largeur doublée */
+                        canvas.height = 120; /* Hauteur doublée */
                         
                         try {
                             JsBarcode(canvas, text, {
                                 format: "CODE128B",
-                                width: 2,
-                                height: 40,
-                                displayValue: false,
-                                margin: 5,
+                                width: 4, /* Largeur des barres doublée */
+                                height: 80, /* Hauteur des barres doublée */
+                                displayValue: true, /* Afficher le texte sous le code */
+                                fontSize: 16, /* Taille de police pour le texte */
+                                margin: 10, /* Marge augmentée */
                                 background: "#ffffff",
                                 lineColor: "#000000"
                             });
@@ -496,9 +540,28 @@ class ArticleLabelsPrinter {
                         container.innerHTML = '<div style="color: #999; font-size: 8px; padding: 2mm;">Code non disponible</div>';
                     }
                 });
-                
                 console.log('Generation des codes-barres terminee');
+
+                // Générer les QR codes
+                const qrcodeContainers = document.querySelectorAll('.qrcode-container');
+                console.log('Generation de', qrcodeContainers.length, 'QR codes...');
+
+                qrcodeContainers.forEach(container => {
+                    const text = container.getAttribute('data-text');
+                    if (text) {
+                        const qrCodeImg = document.createElement('img');
+                        qrCodeImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(text);
+                        qrCodeImg.alt = text;
+                        qrCodeImg.className = 'label-qrcode';
+                        container.innerHTML = '';
+                        container.appendChild(qrCodeImg);
+                    }
+                });
+                console.log('Generation des QR codes terminee');
             }
+            
+            // Appeler la fonction de génération de codes après un délai pour s'assurer que le DOM est prêt
+            setTimeout(generateAllCodes, 500); // Exécuter après que les images se soient potentiellement chargées
         </script>
         </body>
         </html>
@@ -522,68 +585,57 @@ class ArticleLabelsPrinter {
         const variante = article.variante || '';
         const date = new Date().toLocaleDateString('fr-FR');
         
-        // Pas de codes-barres pour les étiquettes d'articles
+        let codeHtml = '';
+        if (format === 'barcode') {
+            codeHtml = '<div class="barcode-container" data-text="' + reference + '"></div>';
+        } else {
+            codeHtml = '<div class="qrcode-container" data-text="' + reference + '"></div>';
+        }
 
-        return `
-        <div class="article-label avoid-break">
-            <!-- En-tête noir avec numéro et date -->
-            <div class="label-header">
-                <span class="label-number">N° ${commandeId}</span>
-                <span class="label-date">${date}</span>
-            </div>
-            
-            <!-- Contenu principal -->
-            <div class="label-body">
-                <!-- Informations de l'article -->
-                <div class="article-info">
-                    <div class="info-line">
-                        <span class="info-icon">📦</span>
-                        <span class="info-text">Réf: ${reference}</span>
-                    </div>
-                    ${variante ? `
-                    <div class="info-line">
-                        <span class="info-icon">🎨</span>
-                        <span class="info-text">Var: ${variante}</span>
-                    </div>
-                    ` : ''}
-                    <div class="info-line">
-                        <span class="info-icon">🏷️</span>
-                        <span class="info-text">Type: Article</span>
-                    </div>
-                    <div class="info-line">
-                        <span class="info-icon">🆔</span>
-                        <span class="info-text">Commande: ${commandeId}</span>
-                    </div>
-                    ${clientName ? `
-                    <div class="info-line">
-                        <span class="info-icon">👤</span>
-                        <span class="info-text">Client: ${clientName}</span>
-                    </div>
-                    ` : ''}
-                    <div class="info-line">
-                        <span class="info-icon">📋</span>
-                        <span class="info-text">Article ${index + 1}</span>
-                    </div>
-                </div>
-                
+        const varianteHtml = variante ? '<div class="info-line"><span class="info-icon">🎨</span><span class="info-text">Var: ' + variante + '</span></div>' : '';
+        const clientHtml = clientName ? '<div class="info-line"><span class="info-icon">👤</span><span class="info-text">Client: ' + clientName + '</span></div>' : '';
 
-            </div>
-            
-            <!-- Pied de page noir -->
-            <div class="label-footer">
-                <span class="footer-status">Article</span>
-                <span class="footer-company">Yoozak</span>
-            </div>
-            
-            <!-- Informations de contact -->
-            <div class="label-contact">
-                <span class="contact-name">Yoozak</span>
-                <span class="contact-info">
-                    <div>06 34 21 56 39</div>
-                </span>
-            </div>
-        </div>
-        `;
+        return '<div class="article-label avoid-break">' +
+            '<div class="label-header">' +
+                '<span class="label-number">N° d' + commandeId + '</span>' +
+                '<span class="label-date">' + date + '</span>' +
+            '</div>' +
+            '<div class="label-body">' +
+                '<div class="article-info">' +
+                    '<div class="info-line">' +
+                        '<span class="info-icon">📦</span>' +
+                        '<span class="info-text">Réf: ' + reference + '</span>' +
+                    '</div>' +
+                    varianteHtml +
+                    '<div class="info-line">' +
+                        '<span class="info-icon">🏷️</span>' +
+                        '<span class="info-text">Type: Article</span>' +
+                    '</div>' +
+                    '<div class="info-line">' +
+                        '<span class="info-icon">🆔</span>' +
+                        '<span class="info-text">Commande: ' + commandeId + '</span>' +
+                    '</div>' +
+                    clientHtml +
+                    '<div class="info-line">' +
+                        '<span class="info-icon">📋</span>' +
+                        '<span class="info-text">Article ' + (index + 1) + '</span>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="code-container">' +
+                    codeHtml +
+                '</div>' +
+            '</div>' +
+            '<div class="label-footer">' +
+                '<span class="footer-status">Article</span>' +
+                '<span class="footer-company">Yoozak</span>' +
+            '</div>' +
+            '<div class="label-contact">' +
+                '<span class="contact-name">Yoozak</span>' +
+                '<span class="contact-info">' +
+                    '<div>06 34 21 56 39</div>' +
+                '</span>' +
+            '</div>' +
+        '</div>';
     }
 
     /**
@@ -610,7 +662,7 @@ class ArticleLabelsPrinter {
                 }
             }
             
-            let abbreviation = `${category}${gender}${model}`;
+            let abbreviation = category + gender + model;
             if (size) {
                 abbreviation += size;
             }
@@ -630,16 +682,17 @@ class ArticleLabelsPrinter {
     generateCode128DataURL(text) {
         try {
             const canvas = document.createElement('canvas');
-            canvas.width = 200;
-            canvas.height = 60;
+            canvas.width = 400; /* Largeur doublée */
+            canvas.height = 120; /* Hauteur doublée */
             
             if (typeof JsBarcode !== 'undefined') {
                 JsBarcode(canvas, text, {
                     format: "CODE128B",
-                    width: 2,
-                    height: 40,
-                    displayValue: false,
-                    margin: 5,
+                    width: 4, /* Largeur des barres doublée */
+                    height: 80, /* Hauteur des barres doublée */
+                    displayValue: true, /* Afficher le texte sous le code */
+                    fontSize: 16, /* Taille de police pour le texte */
+                    margin: 10, /* Marge augmentée */
                     background: "#ffffff",
                     lineColor: "#000000"
                 });
@@ -664,7 +717,7 @@ class ArticleLabelsPrinter {
             return;
         }
 
-        console.log(`🖨️ Impression de ${articles.length} étiquette(s) d'articles`);
+        console.log('🖨️ Impression de ' + articles.length + ' étiquette(s) d\'articles');
 
         const html = this.generatePrintHTML(articles, options);
         
@@ -751,40 +804,40 @@ class ArticleLabelsPrinter {
      * @param {string} clientName - Nom du client
      */
     printCommandeLabels(commandeId, clientName) {
-        console.log(`🖨️ Impression des étiquettes pour la commande ${commandeId}`);
+        console.log('🖨️ Impression des étiquettes pour la commande ' + commandeId);
         
         // Afficher une notification de chargement
         if (window.showNotification) {
-            window.showNotification('info', `Chargement des articles pour la commande ${commandeId}...`);
+            window.showNotification('info', 'Chargement des articles pour la commande ' + commandeId + '...');
         }
         
         // Récupérer les articles de la commande
         this.fetchCommandeArticles(commandeId)
             .then(articles => {
                 if (articles && articles.length > 0) {
-                    console.log(`✅ ${articles.length} article(s) récupéré(s) pour la commande ${commandeId}`);
+                    console.log('✅ ' + articles.length + ' article(s) récupéré(s) pour la commande ' + commandeId);
                     
                     // Déterminer la source des données pour le message
                     let dataSource = '';
                     if (articles[0]._source) {
-                        dataSource = ` (${articles[0]._source})`;
+                        dataSource = ' (' + articles[0]._source + ')';
                     } else if (window.testArticles && window.testArticles[commandeId] === articles) {
                         dataSource = ' (données de test)';
                     }
                     
                     this.printArticleLabels(articles, {
-                        title: `Étiquettes Articles - Commande ${commandeId}`,
-                        subtitle: `Client: ${clientName}${dataSource}`,
+                        title: 'Étiquettes Articles - Commande ' + commandeId,
+                        subtitle: 'Client: ' + clientName + dataSource,
                         format: this.currentFormat
                     });
                     
                     if (window.showNotification) {
-                        window.showNotification('success', `Impression lancée pour ${articles.length} article(s)`);
+                        window.showNotification('success', 'Impression lancée pour ' + articles.length + ' article(s)');
                     }
                 } else {
-                    console.warn(`⚠️ Aucun article trouvé pour la commande ${commandeId}`);
+                    console.warn('⚠️ Aucun article trouvé pour la commande ' + commandeId);
                     if (window.showNotification) {
-                        window.showNotification('warning', `Aucun article trouvé pour la commande ${commandeId}`);
+                        window.showNotification('warning', 'Aucun article trouvé pour la commande ' + commandeId);
                     }
                 }
             })
@@ -804,17 +857,17 @@ class ArticleLabelsPrinter {
                     }));
                     
                     this.printArticleLabels(articles, {
-                        title: `Étiquettes Articles - Commande ${commandeId}`,
-                        subtitle: `Client: ${clientName} (données du modal)`,
+                        title: 'Étiquettes Articles - Commande ' + commandeId,
+                        subtitle: 'Client: ' + clientName + ' (données du modal)',
                         format: this.currentFormat
                     });
                     
                     if (window.showNotification) {
-                        window.showNotification('success', `Impression lancée avec les données du modal`);
+                        window.showNotification('success', 'Impression lancée avec les données du modal');
                     }
                 } else {
                     if (window.showNotification) {
-                        window.showNotification('error', `Erreur lors de la récupération des articles. Veuillez d'abord ouvrir la commande.`);
+                        window.showNotification('error', 'Erreur lors de la récupération des articles. Veuillez d\'abord ouvrir la commande.');
                     } else {
                         alert('Erreur lors de la récupération des articles. Veuillez d\'abord ouvrir la commande pour charger les données.');
                     }
@@ -838,8 +891,8 @@ class ArticleLabelsPrinter {
                     nom: article.nom || article.reference || ''
                 }));
                 
-                localStorage.setItem(`commande_${commandeId}_articles`, JSON.stringify(simplifiedArticles));
-                console.log(`✅ ${articles.length} article(s) stocké(s) dans le localStorage pour la commande ${commandeId}`);
+                localStorage.setItem('commande_' + commandeId + '_articles', JSON.stringify(simplifiedArticles));
+                console.log('✅ ' + articles.length + ' article(s) stocké(s) dans le localStorage pour la commande ' + commandeId);
             }
         } catch (error) {
             console.warn('Erreur lors du stockage dans localStorage:', error);
@@ -858,14 +911,14 @@ class ArticleLabelsPrinter {
             if (modalContent) {
                 const articleElements = modalContent.querySelectorAll('.article-item');
                 if (articleElements.length > 0) {
-                    console.log(`🔍 ${articleElements.length} articles trouvés dans le modal`);
+                    console.log('🔍 ' + articleElements.length + ' articles trouvés dans le modal');
                     
                     const articles = [];
                     articleElements.forEach((element, index) => {
                         // Extraire les données des éléments du DOM
                         const reference = element.querySelector('.article-reference')?.textContent || 
                                           element.querySelector('[data-reference]')?.dataset.reference || 
-                                          `Article ${index + 1}`;
+                                          'Article ' + (index + 1);
                         
                         const variante = element.querySelector('.article-variante')?.textContent || 
                                          element.querySelector('[data-variante]')?.dataset.variante || '';
@@ -884,7 +937,7 @@ class ArticleLabelsPrinter {
             }
             
             // Chercher dans le tableau des articles si visible
-            const tableRows = document.querySelectorAll(`tr[data-commande-id="${commandeId}"], .commande-row[data-id="${commandeId}"]`);
+            const tableRows = document.querySelectorAll('tr[data-commande-id="' + commandeId + '"], .commande-row[data-id="' + commandeId + '"]');
             if (tableRows.length > 0) {
                 const articles = [];
                 tableRows.forEach(row => {
@@ -896,10 +949,10 @@ class ArticleLabelsPrinter {
                             if (item) {
                                 const parts = item.split(' - ');
                                 articles.push({
-                                    reference: parts[0] || `Article ${index + 1}`,
+                                    reference: parts[0] || 'Article ' + (index + 1),
                                     commande_id: commandeId,
                                     variante: parts[1] || '',
-                                    nom: parts[0] || `Article ${index + 1}`,
+                                    nom: parts[0] || 'Article ' + (index + 1),
                                     _source: 'table'
                                 });
                             }
@@ -930,28 +983,28 @@ class ArticleLabelsPrinter {
         try {
             // Essayer plusieurs endpoints possibles avec différentes méthodes
             const endpoints = [
-                `/api/commande/${commandeId}/articles/`,
-                `/api/commandes/${commandeId}/articles/`,
-                `/superpreparation/api/commande/${commandeId}/articles/`,
-                `/commande/${commandeId}/articles/json/`,
-                `/api/etiquettes/commande/${commandeId}/articles/`,
-                `/commande/articles/${commandeId}/`,
-                `/commande/${commandeId}/details/`,
-                `/api/commandes/details/${commandeId}/`,
-                `/superpreparation/commande/${commandeId}/articles/`
+                '/api/commande/' + commandeId + '/articles/',
+                '/api/commandes/' + commandeId + '/articles/',
+                '/superpreparation/api/commande/' + commandeId + '/articles/',
+                '/commande/' + commandeId + '/articles/json/',
+                '/api/etiquettes/commande/' + commandeId + '/articles/',
+                '/commande/articles/' + commandeId + '/',
+                '/commande/' + commandeId + '/details/',
+                '/api/commandes/details/' + commandeId + '/',
+                '/superpreparation/commande/' + commandeId + '/articles/'
             ];
 
             // Vérifier si des données sont déjà disponibles dans le DOM
             const articlesFromDOM = this.getArticlesFromDOM(commandeId);
             if (articlesFromDOM && articlesFromDOM.length > 0) {
-                console.log(`✅ ${articlesFromDOM.length} article(s) trouvé(s) dans le DOM pour la commande ${commandeId}`);
+                console.log('✅ ' + articlesFromDOM.length + ' article(s) trouvé(s) dans le DOM pour la commande ' + commandeId);
                 return articlesFromDOM;
             }
 
             // Essayer les endpoints avec différentes méthodes
             for (const endpoint of endpoints) {
                 try {
-                    console.log(`🔍 Tentative avec l'endpoint: ${endpoint}`);
+                    console.log('🔍 Tentative avec l\'endpoint: ' + endpoint);
                     
                     // Essayer avec différentes options de requête
                     const options = [
@@ -1024,7 +1077,7 @@ class ArticleLabelsPrinter {
                         }
                     }
                 } catch (e) {
-                    console.warn(`⚠️ Endpoint ${endpoint} non disponible:`, e.message);
+                    console.warn('⚠️ Endpoint ' + endpoint + ' non disponible:', e.message);
                 }
             }
 
@@ -1045,7 +1098,7 @@ class ArticleLabelsPrinter {
             
             // Vérifier s'il y a des données dans localStorage
             try {
-                const storedData = localStorage.getItem(`commande_${commandeId}_articles`);
+                const storedData = localStorage.getItem('commande_' + commandeId + '_articles');
                 if (storedData) {
                     const parsedData = JSON.parse(storedData);
                     if (Array.isArray(parsedData) && parsedData.length > 0) {
@@ -1063,7 +1116,7 @@ class ArticleLabelsPrinter {
             }
 
             // Fallback: données de test uniquement si absolument nécessaire
-            console.warn(`⚠️ Aucune donnée disponible - utilisation de données de test pour la commande ${commandeId}`);
+            console.warn('⚠️ Aucune donnée disponible - utilisation de données de test pour la commande ' + commandeId);
             
             // Créer des données de test avec un marqueur de source
             // Utiliser l'ID de commande pour générer des données différentes pour chaque commande
@@ -1071,20 +1124,20 @@ class ArticleLabelsPrinter {
             
             // Générer 2 articles différents pour chaque commande
             testArticles.push({
-                reference: `BOT-FEM-YZ${commandeId}-Standard-37`,
+                reference: 'BOT-FEM-YZ' + commandeId + '-Standard-37',
                 commande_id: commandeId,
                 variante: 'Standard',
                 qr_url: '',
-                nom: `Article 1 - Commande ${commandeId}`,
+                nom: 'Article 1 - Commande ' + commandeId,
                 _source: 'test'
             });
             
             testArticles.push({
-                reference: `MULE-FEM-YZ${commandeId}-Beige-36`,
+                reference: 'MULE-FEM-YZ' + commandeId + '-Beige-36',
                 commande_id: commandeId,
                 variante: 'Beige',
                 qr_url: '',
-                nom: `Article 2 - Commande ${commandeId}`,
+                nom: 'Article 2 - Commande ' + commandeId,
                 _source: 'test'
             });
             
@@ -1106,7 +1159,7 @@ class ArticleLabelsPrinter {
      */
     setFormat(format) {
         this.currentFormat = format;
-        console.log(`🔄 Format d'impression changé vers: ${format}`);
+        console.log('🔄 Format d\'impression changé vers: ' + format);
         
         // Émettre un événement pour notifier les autres composants
         document.dispatchEvent(new CustomEvent('formatChanged', {
@@ -1125,7 +1178,7 @@ class ArticleLabelsPrinter {
             return;
         }
 
-        console.log(`👁️ Aperçu de ${articles.length} étiquette(s)`);
+        console.log('👁️ Aperçu de ' + articles.length + ' étiquette(s)');
 
         const html = this.generatePrintHTML(articles, {
             ...options,
@@ -1369,3 +1422,5 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Exporter pour utilisation externe
 window.ArticleLabelsPrinter = ArticleLabelsPrinter;
+
+/* jshint ignore:end */

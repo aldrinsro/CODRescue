@@ -583,10 +583,7 @@ class EtiquettesArticlesModal {
                         
                         <!-- Container du code centré et très lisible -->
                         <div class="bg-white p-6 rounded border border-gray-200 inline-block mx-auto">
-                            <img src="${this.getBarcodeUrl(referenceCode, article.barcode_url)}" 
-                                 alt="${this.formatType === 'qr' ? 'QR code' : 'Code-barres'} ${referenceCode}" 
-                                 data-original-url="${article.barcode_url}"
-                                 style="${this.formatType === 'qr' ? 'height: 120px; width: 120px;' : 'height: 80px; width: 200px;'} object-fit: contain;">
+                          
                         </div>
                     </div>
 

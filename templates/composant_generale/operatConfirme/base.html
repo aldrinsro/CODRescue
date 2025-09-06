@@ -17,6 +17,22 @@
     
     {% block extra_css %}
     <!-- Styles supplémentaires spécifiques à la page peuvent être ajoutés ici -->
+    <style>
+        @keyframes slideInDown {
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        .animate-slideInDown {
+            animation: slideInDown 0.5s ease-out;
+        }
+    </style>
     {% endblock %}
 </head>
 <body class="bg-gray-100 font-sans" style="
@@ -38,6 +54,24 @@
             
             <!-- Page Content -->
             <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6">
+                <!-- Messages Django -->
+                {% if messages %}
+                    <div class="mb-6 space-y-4">
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} p-4 rounded-lg shadow-lg border-l-4 flex items-center justify-between animate-slideInDown" 
+                                 style="{% if message.tags == 'success' %}background-color: #d1fae5; border-color: #10b981; color: #065f46;{% elif message.tags == 'error' %}background-color: #fee2e2; border-color: #ef4444; color: #991b1b;{% elif message.tags == 'warning' %}background-color: #fef3c7; border-color: #f59e0b; color: #92400e;{% else %}background-color: #dbeafe; border-color: #3b82f6; color: #1e40af;{% endif %}">
+                                <div class="flex items-center">
+                                    <i class="fas {% if message.tags == 'success' %}fa-check-circle{% elif message.tags == 'error' %}fa-exclamation-circle{% elif message.tags == 'warning' %}fa-exclamation-triangle{% else %}fa-info-circle{% endif %} mr-3 text-lg"></i>
+                                    <span class="font-medium">{{ message }}</span>
+                                </div>
+                                <button onclick="this.parentElement.remove()" class="ml-4 text-gray-500 hover:text-gray-700 transition-colors">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                
                 {% block content %}
                 {% endblock %}
             </main>
