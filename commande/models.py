@@ -54,7 +54,22 @@ class Commande(models.Model):
         ('ADMIN', 'Administrateur'),
         ('SYNC', 'Synchronisation')
     ]
-    
+    SOURCE_CHOICES = [
+        ('Appel', 'Appel'),
+        ('Whatsapp ', 'Whatsapp '),
+        ('SMS', 'SMS'),
+        ('Email', 'Email'),
+        ('Facebook', 'Facebook'),
+        ("Youcan", "Youcan"),
+        ("Shopify", "Shopify"), 
+              ]
+    PAYER_CHOICES = [
+        ('Non payé', 'Non payé'),
+        ('Payé', 'Payé'),
+        ('Remboursée', 'Remboursée'),
+    ]
+
+
     num_cmd = models.CharField(max_length=50, unique=True)
     id_yz = models.PositiveIntegerField(unique=True, null=True, blank=True)
     origine = models.CharField(max_length=10, choices=ORIGINE_CHOICES, default='SYNC')
@@ -62,7 +77,6 @@ class Commande(models.Model):
     total_cmd = models.FloatField()
     adresse = models.TextField()
     motif_annulation = models.TextField(blank=True, null=True)
-    is_upsell = models.BooleanField(default=False)
     date_creation = models.DateTimeField(default=timezone.now)
     date_modification = models.DateTimeField(auto_now=True)
     last_sync_date = models.DateTimeField(null=True, blank=True, verbose_name="Date de dernière synchronisation")
@@ -70,12 +84,15 @@ class Commande(models.Model):
     ville_init = models.CharField(max_length=100, blank=True, null=True)
     ville = models.ForeignKey(Ville, on_delete=models.CASCADE, null=True, blank=True, related_name='commandes')
     produit_init = models.TextField(blank=True, null=True)
-    compteur = models.IntegerField(default=0, verbose_name="Compteur d'utilisation")
-  
-    # Relation avec Envoi pour les exports journaliers
+    source = models.CharField(max_length=100, blank=True, null=True, choices=SOURCE_CHOICES)
+    compteur = models.IntegerField(default=0, verbose_name="Compteur d'utilisation")  
+    payement  = models.CharField(default='Non payé', verbose_name="Payement", choices=PAYER_CHOICES)
+    frais_livraison = models.BooleanField(default=False, verbose_name="Frais de livraison")
+
+
+    # Relation avec Envoi pour les exports journaliers  
     envoi = models.ForeignKey('Envoi', on_delete=models.SET_NULL, null=True, blank=True, related_name='commandes_associees')
-  
-    
+
     class Meta:
         verbose_name = "Commande"
         verbose_name_plural = "Commandes"
@@ -93,7 +110,14 @@ class Commande(models.Model):
             last_id_yz = Commande.objects.aggregate(max_id=models.Max('id_yz'))['max_id']
             base = self.START_ID_YZ - 1
             # Si aucune commande, commencer à 211971; sinon continuer après le max existant
-            self.id_yz = max(last_id_yz or base, base) + 1
+            self.id_yz = max(last_id_yz or base, base) + 1 
+        
+        # Détecter automatiquement la source basée sur le numéro de commande
+        if self.num_cmd and not self.source:
+            if self.num_cmd.startswith('YCN'):
+                self.source = 'Youcan'
+            elif self.num_cmd.startswith('SHP'):
+                self.source = 'Shopify'
         
         # Générer le numéro de commande selon l'origine si ce n'est pas déjà fait
         if not self.num_cmd:
@@ -132,6 +156,29 @@ class Commande(models.Model):
         
         super().save(*args, **kwargs)
     
+    @classmethod
+    def update_sources_from_num_cmd(cls):
+        """
+        Met à jour la source des commandes existantes basée sur leur num_cmd
+        """
+        # Mettre à jour les commandes YCN vers Youcan
+        updated_youcan = cls.objects.filter(
+            num_cmd__startswith='YCN',
+            source__isnull=True
+        ).update(source='Youcan')
+        
+        # Mettre à jour les commandes SHP vers Shopify
+        updated_shopify = cls.objects.filter(
+            num_cmd__startswith='SHP',
+            source__isnull=True
+        ).update(source='Shopify')
+        
+        return {
+            'youcan_updated': updated_youcan,
+            'shopify_updated': updated_shopify,
+            'total_updated': updated_youcan + updated_shopify
+        }
+    
     def __str__(self):
         return f"Commande {self.id_yz or self.num_cmd} - {self.client}"
     
@@ -139,7 +186,6 @@ class Commande(models.Model):
     def etat_actuel(self):
         """Retourne l'état actuel de la commande"""
         return self.etats.filter(date_fin__isnull=True).first()
-    
     @property
     def historique_etats(self):
         """Retourne l'historique complet des états"""
@@ -262,25 +308,22 @@ class Operation(models.Model):
         ("Message Whatsapp", "Appel Whatsapp "),
         ("Vocal Whatsapp", "Vocal Whatsapp "),
         ('ENVOI_SMS', 'Envoi de SMS'),
-        ('MODIFICATION', 'Modification'),
-        ('PROBLEME_SIGNALÉ', 'Problème signalé'),
-        ('RENVOI_PREPARATION', 'Renvoi en préparation'),
-        # Opérations d'affectation par supervision
-        ('AFFECTATION_SUPERVISION', 'Affectation par supervision'),
-        ('REAFFECTATION_SUPERVISION', 'Réaffectation par supervision'),
-        # Opérations d'affectation par admin
-        ('AFFECTATION_ADMIN', 'Affectation par admin'),
-        ('REAFFECTATION_ADMIN', 'Réaffectation par admin'),
     ]
     Type_Commentaire_CHOICES=[
-        ("Commande Annulée", "Commande Annulée"),
-        ("Client hésitant", "Client hésitant"),
+        ("Appel 1", "Appel 1"),
+        ("Appel 2", "Appel 2"),
+        ("Appel 3", "Appel 3"),
+        ("Appel 4", "Appel 4"),
+        ("Appel 5", "Appel 5"),
+        ("Appel 6", "Appel 6"),
         ("Client intéressé", "Client intéressé"),
-        ("Client non intéressé", "Client non intéressé"),
-        ("Client non joignable", "Client non joignable"),
-        ("commande reportée", "commande reportée"),
-        ("Article non disponible", "Article non disponible"),
-        
+        ("Confirmée", "Confirmée"),
+        ("Confirmée & Echangée", "Confirmée & Echangée"),
+        ("Echangée", "Echangée"),
+        ("Abonnement","Abonnement"),
+        ("Reduction","Reduction"),
+        ("Client hésitant", "Client hésitant"),
+
     ]
     
     type_operation = models.CharField(max_length=30, choices=TYPE_OPERATION_CHOICES)
@@ -300,8 +343,6 @@ class Operation(models.Model):
 
 
 class Envoi(models.Model):
-
-
     # Relations
     commande = models.ForeignKey(Commande, on_delete=models.CASCADE, related_name='envois', null=True, blank=True)   
     region = models.ForeignKey(
@@ -311,16 +352,13 @@ class Envoi(models.Model):
         blank=True, 
         related_name='envois'
     )
-    
     # Informations principales
     date_envoi = models.DateField(default=timezone.now, verbose_name="Date d'envoi")
     date_livraison_prevue = models.DateField(verbose_name="Date de livraison prévue")
     date_livraison_effective = models.DateField(null=True, blank=True, verbose_name="Date de clôture")
-    
     # Statut et suivi
     status = models.BooleanField(default=True, verbose_name="En cours")
     numero_envoi = models.CharField(max_length=50, blank=True, verbose_name="Numéro d'envoi")
-    
     # Opérateurs et traçabilité
     operateur_creation = models.ForeignKey(
         Operateur, 

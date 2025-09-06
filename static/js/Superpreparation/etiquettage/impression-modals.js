@@ -46,9 +46,17 @@ class ImpressionModals {
      * @param {string} clientNom - Nom du client
      */
     showImpressionModal(commandeId, commandeIdYz, clientNom) {
+        console.log('🔍 showImpressionModal appelée avec:', { commandeId, commandeIdYz, clientNom });
+        
         this.currentCommandeId = commandeId;
         this.currentCommandeIdYz = commandeIdYz;
         this.currentClientNom = clientNom;
+        
+        console.log('📝 Variables mises à jour:', {
+            currentCommandeId: this.currentCommandeId,
+            currentCommandeIdYz: this.currentCommandeIdYz,
+            currentClientNom: this.currentClientNom
+        });
         
         // Mettre à jour les informations dans la modale
         this.updateImpressionModalInfo();
@@ -90,37 +98,6 @@ class ImpressionModals {
         }
     }
 
-    /**
-     * Afficher les codes-barres des commandes dans une modale
-     */
-    async imprimerCodesBarresCommandes() {
-        this.hideImpressionChoiceModal();
-        if (this.currentCommandeIdYz) {
-            try {
-                // Afficher un indicateur de chargement
-                this.showNotification('Chargement des codes-barres...', 'info');
-                
-                console.log(`🔍 Chargement des codes-barres pour la commande: ${this.currentCommandeIdYz}`);
-                
-                // Charger le contenu via AJAX
-                const response = await fetch(`/Superpreparation/api/codes-barres-commandes/?ids=${this.currentCommandeIdYz}`);
-                console.log(`📡 Réponse du serveur: ${response.status} ${response.statusText}`);
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    console.log('✅ Données reçues:', data);
-                    this.showCodesBarresModal(data);
-                } else {
-                    const errorText = await response.text();
-                    console.error('❌ Erreur serveur:', errorText);
-                    throw new Error(`Erreur serveur: ${response.status} - ${errorText}`);
-                }
-            } catch (error) {
-                console.error('Erreur:', error);
-                this.showNotification(`Erreur lors du chargement des codes-barres: ${error.message}`, 'error');
-            }
-        }
-    }
 
     /**
      * Afficher les étiquettes des articles dans une modale
@@ -134,27 +111,51 @@ class ImpressionModals {
     }
 
     /**
-     * Imprimer le ticket de commande
+     * Imprimer le ticket de commande directement
      */
     imprimerTicketCommande() {
         this.hideImpressionChoiceModal();
+        
+        // Vérifier que l'ID de la commande est défini
+        if (!this.currentCommandeIdYz) {
+            console.error('❌ currentCommandeIdYz n\'est pas défini:', this.currentCommandeIdYz);
+            this.showNotification('Erreur: Aucune commande sélectionnée', 'error');
+            return;
+        }
+        
+        console.log('🔍 Impression directe du ticket pour la commande:', this.currentCommandeIdYz);
         
         // Afficher une notification de chargement
         this.showNotification('Chargement du ticket de commande...', 'info');
         
         // Récupérer les données du ticket
-        fetch(`/Superpreparation/api/ticket-commande/?ids=${this.currentCommandeIdYz}`)
-            .then(response => response.json())
+        const url = `/Superpreparation/api/ticket-commande/?ids=${this.currentCommandeIdYz}`;
+        console.log('🌐 URL de la requête:', url);
+        
+        fetch(url)
+            .then(response => {
+                console.log('📡 Réponse reçue:', response.status, response.statusText);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                return response.json();
+            })
             .then(data => {
-                if (data.success) {
-                    this.showTicketModal(data);
+                console.log('📦 Données reçues:', data);
+                
+                if (data.success && data.html) {
+                    // Lancer directement l'impression
+                    this.printTicketsDirect([data.html]);
+                    this.showNotification('Impression lancée !', 'success');
                 } else {
-                    this.showNotification(`Erreur: ${data.error}`, 'error');
+                    const errorMsg = data.error || 'Aucune donnée de commande disponible';
+                    console.error('❌ Erreur dans les données:', errorMsg);
+                    this.showNotification(`Erreur: ${errorMsg}`, 'error');
                 }
             })
             .catch(error => {
-                console.error('Erreur lors du chargement du ticket:', error);
-                this.showNotification('Erreur lors du chargement du ticket', 'error');
+                console.error('❌ Erreur lors du chargement du ticket:', error);
+                this.showNotification(`Erreur lors du chargement du ticket: ${error.message}`, 'error');
             });
     }
 
@@ -171,8 +172,10 @@ class ImpressionModals {
         fetch(`/Superpreparation/api/ticket-commande/?ids=${commandeIds.join(',')}`)
             .then(response => response.json())
             .then(data => {
-                if (data.success) {
-                    this.showTicketModal(data);
+                if (data.success && data.html) {
+                    // Lancer directement l'impression
+                    this.printTicketsDirect([data.html]);
+                    this.showNotification('Impression lancée !', 'success');
                 } else {
                     this.showNotification(`Erreur: ${data.error}`, 'error');
                 }
@@ -196,8 +199,10 @@ class ImpressionModals {
         fetch('/Superpreparation/api/ticket-commande-multiple/')
             .then(response => response.json())
             .then(data => {
-                if (data.success) {
-                    this.showTicketMultipleModal(data);
+                if (data.success && data.html) {
+                    // Lancer directement l'impression
+                    this.printTicketsDirect([data.html]);
+                    this.showNotification('Impression lancée !', 'success');
                 } else {
                     this.showNotification(`Erreur: ${data.error}`, 'error');
                 }
@@ -245,7 +250,13 @@ class ImpressionModals {
                 if (response.ok) {
                     const data = await response.json();
                     console.log('✅ Données reçues:', data);
-                    this.showEtiquettesArticlesModal(data);
+                    // Lancer directement l'impression des étiquettes
+                    if (data.success && data.html) {
+                        this.printLabels(data.html, 'Étiquettes Articles', 'articles');
+                        this.showNotification('Impression des étiquettes lancée !', 'success');
+                    } else {
+                        this.showNotification(`Erreur: ${data.error}`, 'error');
+                    }
                 } else {
                     const errorText = await response.text();
                     console.error('❌ Erreur serveur:', errorText);
@@ -259,529 +270,20 @@ class ImpressionModals {
     }
 
     /**
-     * Afficher la modale des codes-barres des commandes
-     * Réimplémentée pour éviter l'erreur et permettre l'impression de codes-barres
+     * Imprimer les tickets directement (sans modale)
      */
-    showCodesBarresModal(data) {
-        // Créer ou récupérer la modale
-        let modal = document.getElementById('codesBarresModal');
-        if (!modal) {
-            modal = this.createCodesBarresModal();
-        }
-        // Mettre à jour le contenu
-        const content = modal.querySelector('#codesBarresContent');
-        if (content) {
-            content.innerHTML = (data && data.html) ? data.html : 'Aucun contenu disponible';
-        }
-        // Afficher la modale
-        modal.classList.remove('hidden');
-    }
-
-    /**
-     * Afficher la modale des étiquettes des articles
-     */
-    showEtiquettesArticlesModal(data) {
-        // Créer ou récupérer la modale
-        let modal = document.getElementById('etiquettesArticlesModal');
-        if (!modal) {
-            modal = this.createEtiquettesArticlesModal();
-        }
-        
-        // Mettre à jour le contenu
-        const content = modal.querySelector('#etiquettesArticlesContent');
-        if (content) {
-            content.innerHTML = data.html || 'Aucun contenu disponible';
-        }
-        
-        // Afficher la modale
-        modal.classList.remove('hidden');
-        
-        // Initialiser les fonctionnalités d'impression
-        this.initializeEtiquettesFeatures();
-    }
-
-    /**
-     * Afficher la modale du ticket de commande
-     */
-    showTicketModal(data) {
-        // Créer ou récupérer la modale
-        let modal = document.getElementById('ticketModal');
-        if (!modal) {
-            modal = this.createTicketModal();
-        }
-        
-        // Mettre à jour le contenu
-        const content = modal.querySelector('#ticketContent');
-        if (content) {
-            content.innerHTML = data.html || 'Aucun contenu disponible';
-        }
-        
-        // Afficher la modale
-        modal.classList.remove('hidden');
-    }
-
-    /**
-     * Afficher la modale du ticket de commande multiple
-     */
-    showTicketMultipleModal(data) {
-        // Créer ou récupérer la modale
-        let modal = document.getElementById('ticketMultipleModal');
-        if (!modal) {
-            modal = this.createTicketMultipleModal();
-        }
-        
-        // Mettre à jour le contenu
-        const content = modal.querySelector('#ticketMultipleContent');
-        if (content) {
-            content.innerHTML = data.html || 'Aucun contenu disponible';
-            
-            // Forcer l'affichage en grille
-            const ticketContainer = content.querySelector('.ticket-commande-container');
-            if (ticketContainer) {
-                ticketContainer.style.display = 'grid';
-                ticketContainer.style.gridTemplateColumns = 'repeat(3, 1fr)';
-                ticketContainer.style.gap = '15px';
-                ticketContainer.style.padding = '15px';
-                ticketContainer.style.maxWidth = '100%';
-                ticketContainer.style.width = '100%';
-                
-                // Forcer aussi les styles des tickets individuels
-                const tickets = ticketContainer.querySelectorAll('.ticket-commande');
-                tickets.forEach(ticket => {
-                    ticket.style.width = '100%';
-                    ticket.style.minWidth = '280px';
-                    ticket.style.maxWidth = '350px';
-                    ticket.style.margin = '0 auto';
-                });
-            }
-        }
-        
-        // Afficher la modale
-        modal.classList.remove('hidden');
-    }
-
-    /**
-     * Créer la modale des codes-barres des commandes
-     */
-    createCodesBarresModal() {
-        const modal = document.createElement('div');
-        modal.id = 'codesBarresModal';
-        modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center';
-        
-        modal.innerHTML = `
-            <div class="relative p-6 bg-white w-full max-w-6xl m-auto flex-col flex rounded-xl shadow-2xl animate-fade-in-down">
-                <!-- En-tête du modal -->
-                <div class="flex justify-between items-center pb-4 border-b border-gray-200 mb-6">
-                    <div class="flex items-center">
-                        <div class="w-12 h-12 rounded-full flex items-center justify-center mr-4" style="background-color: var(--preparation-light);">
-                            <i class="fas fa-barcode text-white text-xl"></i>
-                        </div>
-                        <h3 class="text-2xl font-bold" style="color: var(--preparation-light);">Codes-barres des Commandes</h3>
-                    </div>
-                    <button onclick="impressionModals.hideCodesBarresModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                    </button>
-                </div>
-                
-                <!-- Contenu du modal -->
-                <div id="codesBarresContent" class="flex-1 overflow-y-auto">
-                    <!-- Le contenu sera chargé ici -->
-                </div>
-                
-                <!-- Boutons d'action -->
-                <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200">
-                    <button onclick="window.print()" 
-                            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all duration-200">
-                        Imprimer
-                    </button>
-                    <button onclick="impressionModals.hideCodesBarresModal()" 
-                            class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-all duration-200">
-                        Fermer
-                    </button>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        return modal;
-    }
-
-    /**
-     * Créer la modale des étiquettes des articles
-     */
-    createEtiquettesArticlesModal() {
-        const modal = document.createElement('div');
-        modal.id = 'etiquettesArticlesModal';
-        modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center';
-        
-        modal.innerHTML = `
-            <div class="relative p-6 bg-white w-full max-w-6xl m-auto flex-col flex rounded-xl shadow-2xl animate-fade-in-down">
-                <!-- En-tête du modal -->
-                <div class="flex justify-between items-center pb-4 border-b border-gray-200 mb-6">
-                    <div class="flex items-center">
-                        <div class="w-12 h-12 rounded-full flex items-center justify-center mr-4" style="background-color: var(--preparation-light);">
-                            <i class="fas fa-tags text-white text-xl"></i>
-                        </div>
-                        <h3 class="text-2xl font-bold" style="color: var(--preparation-light);">Étiquettes des Articles</h3>
-                    </div>
-                    <button onclick="impressionModals.hideEtiquettesArticlesModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                    </button>
-                </div>
-                
-                <!-- Contrôles de sélection -->
-                <div class="flex justify-between items-center mb-4 p-3 bg-gray-50 rounded-lg">
-                    <div class="flex items-center space-x-4">
-                        <label class="flex items-center space-x-2">
-                            <input type="checkbox" id="selectAllEtiquettes" class="form-checkbox h-4 w-4 text-green-600 rounded" onchange="impressionModals.toggleSelectAllEtiquettes()">
-                            <span class="text-sm font-medium text-gray-700">Sélectionner tout</span>
-                        </label>
-                        <span id="etiquettesSelectionCount" class="text-sm text-gray-500">0 sélectionné(s)</span>
-                    </div>
-                    <div class="flex items-center space-x-2">
-                        <button onclick="impressionModals.printSelectedEtiquettes()" 
-                                class="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-all duration-200 flex items-center space-x-1">
-                            <i class="fas fa-print text-xs"></i>
-                            <span>Imprimer sélection</span>
-                        </button>
-                        <button onclick="impressionModals.printAllEtiquettes()" 
-                                class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-all duration-200 flex items-center space-x-1">
-                            <i class="fas fa-print text-xs"></i>
-                            <span>Imprimer tout</span>
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- Contenu du modal -->
-                <div id="etiquettesArticlesContent" class="flex-1 overflow-y-auto">
-                    <!-- Le contenu sera chargé ici -->
-                </div>
-                
-                <!-- Boutons d'action -->
-                <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200">
-                    <button onclick="impressionModals.hideEtiquettesArticlesModal()" 
-                            class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-all duration-200">
-                        Fermer
-                    </button>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        return modal;
-    }
-
-    /**
-     * Créer la modale du ticket de commande
-     */
-    createTicketModal() {
-        const modal = document.createElement('div');
-        modal.id = 'ticketModal';
-        modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center';
-        
-        modal.innerHTML = `
-            <div class="relative p-6 bg-white w-full max-w-4xl m-auto flex-col flex rounded-xl shadow-2xl animate-fade-in-down">
-                <!-- En-tête du modal -->
-                <div class="flex justify-between items-center pb-4 border-b border-gray-200 mb-6">
-                    <div class="flex items-center">
-                        <div class="w-12 h-12 rounded-full flex items-center justify-center mr-4" style="background-color: var(--preparation-light);">
-                            <i class="fas fa-receipt text-white text-xl"></i>
-                        </div>
-                        <h3 class="text-2xl font-bold" style="color: var(--preparation-light);">Ticket de Commande</h3>
-                    </div>
-                    <button onclick="impressionModals.hideTicketModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                    </button>
-                </div>
-                
-                <!-- Contrôles de sélection -->
-                <div class="flex justify-between items-center mb-4 p-3 bg-gray-50 rounded-lg">
-                    <div class="flex items-center space-x-4">
-                        <label class="flex items-center space-x-2">
-                            <input type="checkbox" id="selectAllTickets" class="form-checkbox h-4 w-4 text-purple-600 rounded" onchange="impressionModals.toggleSelectAllTickets()">
-                            <span class="text-sm font-medium text-gray-700">Sélectionner tout</span>
-                        </label>
-                        <span id="ticketsSelectionCount" class="text-sm text-gray-500">0 sélectionné(s)</span>
-                    </div>
-                    <div class="flex items-center space-x-2">
-                        <button onclick="impressionModals.printSelectedTickets()" 
-                                class="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-lg transition-all duration-200 flex items-center space-x-1">
-                            <i class="fas fa-print text-xs"></i>
-                            <span>Imprimer sélection</span>
-                        </button>
-                        <button onclick="impressionModals.printAllTickets()" 
-                                class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-all duration-200 flex items-center space-x-1">
-                            <i class="fas fa-print text-xs"></i>
-                            <span>Imprimer tout</span>
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- Contenu du modal -->
-                <div id="ticketContent" class="flex-1 overflow-y-auto">
-                    <!-- Le contenu sera chargé ici -->
-                </div>
-                
-                <!-- Boutons d'action -->
-                <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200">
-                    <button onclick="impressionModals.hideTicketModal()" 
-                            class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-all duration-200">
-                        Fermer
-                    </button>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        return modal;
-    }
-
-    /**
-     * Créer la modale du ticket de commande multiple
-     */
-    createTicketMultipleModal() {
-        const modal = document.createElement('div');
-        modal.id = 'ticketMultipleModal';
-        modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center';
-        
-        modal.innerHTML = `
-            <div class="relative p-6 bg-white w-full max-w-7xl m-auto flex-col flex rounded-xl shadow-2xl animate-fade-in-down">
-                <!-- En-tête du modal -->
-                <div class="flex justify-between items-center pb-4 border-b border-gray-200 mb-6">
-                    <div class="flex items-center">
-                        <div class="w-12 h-12 rounded-full flex items-center justify-center mr-4" style="background-color: var(--preparation-light);">
-                            <i class="fas fa-receipt text-white text-xl"></i>
-                        </div>
-                        <h3 class="text-2xl font-bold" style="color: var(--preparation-light);">Tickets de Commande Multiple</h3>
-                    </div>
-                    <button onclick="impressionModals.hideTicketMultipleModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                    </button>
-                </div>
-                
-                <!-- Contrôles de sélection -->
-                <div class="flex justify-between items-center mb-4 p-3 bg-gray-50 rounded-lg">
-                    <div class="flex items-center space-x-4">
-                        <label class="flex items-center space-x-2">
-                            <input type="checkbox" id="selectAllTicketsMultiple" class="form-checkbox h-4 w-4 text-orange-600 rounded" onchange="impressionModals.toggleSelectAllTicketsMultiple()">
-                            <span class="text-sm font-medium text-gray-700">Sélectionner tout</span>
-                        </label>
-                        <span id="ticketsMultipleSelectionCount" class="text-sm text-gray-500">0 sélectionné(s)</span>
-                    </div>
-                    <div class="flex items-center space-x-2">
-                        <button onclick="impressionModals.printSelectedTicketsMultiple()" 
-                                class="px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white text-sm rounded-lg transition-all duration-200 flex items-center space-x-1">
-                            <i class="fas fa-print text-xs"></i>
-                            <span>Imprimer sélection</span>
-                        </button>
-                        <button onclick="impressionModals.printAllTicketsMultiple()" 
-                                class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-all duration-200 flex items-center space-x-1">
-                            <i class="fas fa-print text-xs"></i>
-                            <span>Imprimer tout</span>
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- Contenu du modal -->
-                <div id="ticketMultipleContent" class="flex-1 overflow-y-auto">
-                    <!-- Le contenu sera chargé ici -->
-                </div>
-                
-                <!-- Boutons d'action -->
-                <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200">
-                    <button onclick="impressionModals.hideTicketMultipleModal()" 
-                            class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-all duration-200">
-                        Fermer
-                    </button>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        return modal;
-    }
-
-    /**
-     * Fermer la modale des codes-barres
-     */
-    hideCodesBarresModal() {
-        const modal = document.getElementById('codesBarresModal');
-        if (modal) {
-            modal.classList.add('hidden');
-        }
-    }
-
-    /**
-     * Fermer la modale des étiquettes des articles
-     */
-    hideEtiquettesArticlesModal() {
-        const modal = document.getElementById('etiquettesArticlesModal');
-        if (modal) {
-            modal.classList.add('hidden');
-        }
-    }
-
-    /**
-     * Fermer la modale du ticket de commande
-     */
-    hideTicketModal() {
-        const modal = document.getElementById('ticketModal');
-        if (modal) {
-            modal.classList.add('hidden');
-        }
-    }
-
-    /**
-     * Fermer la modale du ticket de commande multiple
-     */
-    hideTicketMultipleModal() {
-        const modal = document.getElementById('ticketMultipleModal');
-        if (modal) {
-            modal.classList.add('hidden');
-        }
-    }
-
-    /**
-     * Basculer la sélection de tous les tickets multiples
-     */
-    toggleSelectAllTicketsMultiple() {
-        const selectAllCheckbox = document.getElementById('selectAllTicketsMultiple');
-        const ticketCheckboxes = document.querySelectorAll('#ticketMultipleContent .ticket-checkbox');
-        
-        ticketCheckboxes.forEach(checkbox => {
-            checkbox.checked = selectAllCheckbox.checked;
-        });
-        
-        this.updateTicketMultipleSelectionCount();
-    }
-
-    /**
-     * Mettre à jour le compteur de sélection des tickets multiples
-     */
-    updateTicketMultipleSelectionCount() {
-        const selectedTickets = document.querySelectorAll('#ticketMultipleContent .ticket-checkbox:checked');
-        const countElement = document.getElementById('ticketsMultipleSelectionCount');
-        
-        if (countElement) {
-            countElement.textContent = `${selectedTickets.length} sélectionné(s)`;
-        }
-    }
-
-    /**
-     * Imprimer les tickets multiples sélectionnés
-     */
-    printSelectedTicketsMultiple() {
-        const selectedTickets = document.querySelectorAll('#ticketMultipleContent .ticket-checkbox:checked');
-        if (selectedTickets.length === 0) {
-            this.showNotification('Veuillez sélectionner au moins un ticket', 'warning');
-            return;
-        }
-        
-        const ticketsToPrint = [];
-        selectedTickets.forEach(checkbox => {
-            const ticketElement = checkbox.closest('.ticket-commande');
-            if (ticketElement) {
-                ticketsToPrint.push(ticketElement.outerHTML);
-            }
-        });
-        
-        this.printTickets(ticketsToPrint);
-    }
-
-    /**
-     * Imprimer tous les tickets multiples
-     */
-    printAllTicketsMultiple() {
-        const allTickets = document.querySelectorAll('#ticketMultipleContent .ticket-commande');
-        const ticketsToPrint = [];
-        
-        allTickets.forEach(ticketElement => {
-            ticketsToPrint.push(ticketElement.outerHTML);
-        });
-        
-        this.printTickets(ticketsToPrint);
-    }
-
-    /**
-     * Basculer la sélection de tous les tickets
-     */
-    toggleSelectAllTickets() {
-        const selectAllCheckbox = document.getElementById('selectAllTickets');
-        const ticketCheckboxes = document.querySelectorAll('.ticket-checkbox');
-        
-        ticketCheckboxes.forEach(checkbox => {
-            checkbox.checked = selectAllCheckbox.checked;
-        });
-        
-        this.updateTicketSelectionCount();
-    }
-
-    /**
-     * Mettre à jour le compteur de sélection des tickets
-     */
-    updateTicketSelectionCount() {
-        const selectedTickets = document.querySelectorAll('.ticket-checkbox:checked');
-        const countElement = document.getElementById('ticketsSelectionCount');
-        
-        if (countElement) {
-            countElement.textContent = `${selectedTickets.length} sélectionné(s)`;
-        }
-    }
-
-    /**
-     * Imprimer les tickets sélectionnés
-     */
-    printSelectedTickets() {
-        const selectedTickets = document.querySelectorAll('.ticket-checkbox:checked');
-        if (selectedTickets.length === 0) {
-            this.showNotification('Veuillez sélectionner au moins un ticket', 'warning');
-            return;
-        }
-        
-        const ticketsToPrint = [];
-        selectedTickets.forEach(checkbox => {
-            const ticketElement = checkbox.closest('.ticket-commande');
-            if (ticketElement) {
-                ticketsToPrint.push(ticketElement.outerHTML);
-            }
-        });
-        
-        this.printTickets(ticketsToPrint);
-    }
-
-    /**
-     * Imprimer tous les tickets
-     */
-    printAllTickets() {
-        const allTickets = document.querySelectorAll('.ticket-commande');
-        const ticketsToPrint = [];
-        
-        allTickets.forEach(ticketElement => {
-            ticketsToPrint.push(ticketElement.outerHTML);
-        });
-        
-        this.printTickets(ticketsToPrint);
-    }
-
-    /**
-     * Imprimer les tickets (fonction générique)
-     */
-    printTickets(ticketsHtml) {
+    printTicketsDirect(ticketsHtml) {
         const printWindow = window.open('', '_blank');
         printWindow.document.write(`
             <html>
                 <head>
                     <title>Tickets de Commande</title>
+                    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
                     <style>
-                        @page { size: A4; margin: 10mm; }
+                        @page { 
+                            size: B5; 
+                            margin: 5mm; 
+                        }
                         body { 
                             margin: 0; 
                             padding: 0; 
@@ -796,33 +298,37 @@ class ImpressionModals {
                             print-color-adjust: exact !important;
                         }
                         .ticket-commande-container {
-                            display: grid;
-                            grid-template-columns: repeat(2, 1fr);
-                            gap: 5mm;
+                            display: block;
                             width: 100%;
-                            max-width: 160mm;
                             margin: 0 auto;
-                            padding: 5mm;
+                            padding: 0;
                         }
                         .ticket-commande {
                             width: 75mm;
-                            border: 1px solid black;
+                            height: 74mm;
+                            border: 0.5px solid black;
                             font-family: Arial, sans-serif;
-                            font-size: 8px;
+                            font-size: 7px;
                             background: white;
                             page-break-inside: avoid;
-                            margin: 0;
+                            page-break-after: always;
+                            margin: 0 auto 0 auto;
                             overflow: hidden;
+                            display: block;
+                        }
+                        .ticket-commande:last-child {
+                            page-break-after: auto;
                         }
                         .ticket-header {
                             background-color: #000000 !important;
                             color: #ffffff !important;
-                            padding: 2mm;
+                            padding: 1mm;
                             display: flex;
                             justify-content: space-between;
                             align-items: center;
                             font-weight: bold;
-                            font-size: 9px;
+                            font-size: 8px;
+                            height: 5mm;
                             -webkit-print-color-adjust: exact !important;
                             color-adjust: exact !important;
                             print-color-adjust: exact !important;
@@ -830,7 +336,23 @@ class ImpressionModals {
                             color: #ffffff !important;
                         }
                         .ticket-body {
-                            padding: 2mm;
+                            padding: 2.5mm;
+                        }
+                        
+                        .barcode-image {
+                            max-width: 15mm !important;
+                            max-height: 4mm !important;
+                            object-fit: contain !important;
+                            width: 15mm !important;
+                            height: 4mm !important;
+                        }
+                        
+                        .barcode-left .barcode-container {
+                            background: white !important;
+                            border: 0.3px solid #333333 !important;
+                            padding: 0.3mm !important;
+                            width: 15mm !important;
+                            height: 4mm !important;
                         }
                         .info-line {
                             display: flex;
@@ -898,6 +420,188 @@ class ImpressionModals {
                         .ticket-checkbox {
                             display: none;
                         }
+                        
+                        /* Assurer l'affichage des icônes Font Awesome lors de l'impression */
+                        .fas, .far, .fab {
+                            font-family: "Font Awesome 6 Free" !important;
+                            font-weight: 900 !important;
+                            -webkit-print-color-adjust: exact !important;
+                            color-adjust: exact !important;
+                            print-color-adjust: exact !important;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="ticket-commande-container">
+                        ${ticketsHtml.join('')}
+                    </div>
+                </body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.print();
+    }
+
+    /**
+     * Imprimer les tickets (fonction générique)
+     */
+    printTickets(ticketsHtml) {
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <html>
+                <head>
+                    <title>Tickets de Commande</title>
+                    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+                    <style>
+                        @page { 
+                            size: B5; 
+                            margin: 5mm; 
+                        }
+                        body { 
+                            margin: 0; 
+                            padding: 0; 
+                            font-family: Arial, sans-serif; 
+                            -webkit-print-color-adjust: exact !important;
+                            color-adjust: exact !important;
+                            print-color-adjust: exact !important;
+                        }
+                        * {
+                            -webkit-print-color-adjust: exact !important;
+                            color-adjust: exact !important;
+                            print-color-adjust: exact !important;
+                        }
+                        .ticket-commande-container {
+                            display: block;
+                            width: 100%;
+                            margin: 0 auto;
+                            padding: 0;
+                        }
+                        .ticket-commande {
+                            width: 75mm;
+                            height: 74mm;
+                            border: 0.5px solid black;
+                            font-family: Arial, sans-serif;
+                            font-size: 7px;
+                            background: white;
+                            page-break-inside: avoid;
+                            page-break-after: always;
+                            margin: 0 auto 0 auto;
+                            overflow: hidden;
+                            display: block;
+                        }
+                        .ticket-commande:last-child {
+                            page-break-after: auto;
+                        }
+                        .ticket-header {
+                            background-color: #000000 !important;
+                            color: #ffffff !important;
+                            padding: 1mm;
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            font-weight: bold;
+                            font-size: 8px;
+                            height: 5mm;
+                            -webkit-print-color-adjust: exact !important;
+                            color-adjust: exact !important;
+                            print-color-adjust: exact !important;
+                            background: #000000 !important;
+                            color: #ffffff !important;
+                        }
+                        .ticket-body {
+                            padding: 2.5mm;
+                        }
+                        
+                        .barcode-image {
+                            max-width: 15mm !important;
+                            max-height: 4mm !important;
+                            object-fit: contain !important;
+                            width: 15mm !important;
+                            height: 4mm !important;
+                        }
+                        
+                        .barcode-left .barcode-container {
+                            background: white !important;
+                            border: 0.3px solid #333333 !important;
+                            padding: 0.3mm !important;
+                            width: 15mm !important;
+                            height: 4mm !important;
+                        }
+                        .info-line {
+                            display: flex;
+                            align-items: center;
+                            margin-bottom: 1mm;
+                            padding-bottom: 1mm;
+                            border-bottom: 1px dashed #ccc;
+                        }
+                        .info-icon {
+                            margin-right: 2mm;
+                            font-size: 10px;
+                            width: 12px;
+                            text-align: center;
+                        }
+                        .info-text {
+                            font-size: 7px;
+                            flex: 1;
+                        }
+                        .ticket-footer {
+                            background-color: #000000 !important;
+                            color: #ffffff !important;
+                            padding: 2mm;
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            font-weight: bold;
+                            font-size: 8px;
+                            -webkit-print-color-adjust: exact !important;
+                            color-adjust: exact !important;
+                            print-color-adjust: exact !important;
+                            background: #000000 !important;
+                            color: #ffffff !important;
+                        }
+                        .ticket-contact {
+                            background: #f8f8f8 !important;
+                            padding: 2mm;
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            font-size: 6px;
+                            border-top: 1px solid #000000 !important;
+                            -webkit-print-color-adjust: exact !important;
+                            color-adjust: exact !important;
+                            print-color-adjust: exact !important;
+                            background-color: #f8f8f8 !important;
+                            color: #000000 !important;
+                        }
+                        .contact-name {
+                            font-weight: bold;
+                            font-size: 8px;
+                            color: #000000 !important;
+                            -webkit-print-color-adjust: exact !important;
+                            color-adjust: exact !important;
+                            print-color-adjust: exact !important;
+                        }
+                        .contact-info {
+                            text-align: right;
+                            font-weight: bold;
+                            font-size: 6px;
+                            color: #000000 !important;
+                            -webkit-print-color-adjust: exact !important;
+                            color-adjust: exact !important;
+                            print-color-adjust: exact !important;
+                        }
+                        .ticket-checkbox {
+                            display: none;
+                        }
+                        
+                        /* Assurer l'affichage des icônes Font Awesome lors de l'impression */
+                        .fas, .far, .fab {
+                            font-family: "Font Awesome 6 Free" !important;
+                            font-weight: 900 !important;
+                            -webkit-print-color-adjust: exact !important;
+                            color-adjust: exact !important;
+                            print-color-adjust: exact !important;
+                        }
                     </style>
                 </head>
                 <body>
@@ -921,61 +625,6 @@ class ImpressionModals {
         }
     }
 
-    /**
-     * Imprimer les codes-barres
-     */
-    printCodesBarres() {
-        const content = document.getElementById('codesBarresContent');
-        if (content) {
-            const printWindow = window.open('', '_blank');
-            printWindow.document.write(`
-                <html>
-                    <head>
-                        <title>Codes-barres des Commandes</title>
-                        <style>
-                            body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
-                            .commande-labels-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5mm; }
-                            .commande-label { width: 80mm; height: 50mm; border: 1px solid #ccc; padding: 2mm; text-align: center; }
-                            @media print { body { margin: 0; } }
-                        </style>
-                    </head>
-                    <body>
-                        ${content.innerHTML}
-                    </body>
-                </html>
-            `);
-            printWindow.document.close();
-            printWindow.print();
-        }
-    }
-
-    /**
-     * Imprimer les étiquettes des articles
-     */
-    printEtiquettesArticles() {
-        const content = document.getElementById('etiquettesArticlesContent');
-        if (content) {
-            const printWindow = window.open('', '_blank');
-            printWindow.document.write(`
-                <html>
-                    <head>
-                        <title>Étiquettes des Articles</title>
-                        <style>
-                            body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
-                            .article-labels-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5mm; }
-                            .article-label { width: 80mm; height: 50mm; border: 1px solid #ccc; padding: 2mm; text-align: center; }
-                            @media print { body { margin: 0; } }
-                        </style>
-                    </head>
-                    <body>
-                        ${content.innerHTML}
-                    </body>
-                </html>
-            `);
-            printWindow.document.close();
-            printWindow.print();
-        }
-    }
 
     /**
      * Initialiser les fonctionnalités des codes-barres - SUPPRIMÉE
@@ -1002,105 +651,6 @@ class ImpressionModals {
         }
     }
 
-    /**
-     * Basculer la sélection de tous les codes-barres
-     */
-    toggleSelectAllCodesBarres() {
-        const selectAllCheckbox = document.getElementById('selectAllCodesBarres');
-        const checkboxes = document.querySelectorAll('#codesBarresContent input[type="checkbox"]');
-        
-        checkboxes.forEach(checkbox => {
-            checkbox.checked = selectAllCheckbox.checked;
-        });
-        
-        this.updateSelectionCount('codesBarres');
-    }
-
-    /**
-     * Basculer la sélection de toutes les étiquettes
-     */
-    toggleSelectAllEtiquettes() {
-        const selectAllCheckbox = document.getElementById('selectAllEtiquettes');
-        const checkboxes = document.querySelectorAll('#etiquettesArticlesContent input[type="checkbox"]');
-        
-        checkboxes.forEach(checkbox => {
-            checkbox.checked = selectAllCheckbox.checked;
-        });
-        
-        this.updateSelectionCount('etiquettes');
-    }
-
-    /**
-     * Mettre à jour le compteur de sélection
-     */
-    updateSelectionCount(type) {
-        const containerId = type === 'codesBarres' ? 'codesBarresContent' : 'etiquettesArticlesContent';
-        const countId = type === 'codesBarres' ? 'codesBarresSelectionCount' : 'etiquettesSelectionCount';
-        
-        const checkboxes = document.querySelectorAll(`#${containerId} input[type="checkbox"]`);
-        const selectedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
-        
-        const countElement = document.getElementById(countId);
-        if (countElement) {
-            countElement.textContent = `${selectedCount} sélectionné(s)`;
-        }
-    }
-
-    /**
-     * Imprimer les codes-barres sélectionnés
-     */
-    printSelectedCodesBarres() {
-        const checkboxes = document.querySelectorAll('#codesBarresContent input[type="checkbox"]:checked');
-        if (checkboxes.length === 0) {
-            this.showNotification('Aucun code-barres sélectionné', 'warning');
-            return;
-        }
-        
-        const selectedLabels = Array.from(checkboxes).map(cb => {
-            const labelItem = cb.closest('.commande-label-item');
-            return labelItem ? labelItem.querySelector('.commande-label').outerHTML : '';
-        }).filter(html => html);
-        
-        this.printLabels(selectedLabels, 'Codes-barres des Commandes', 'commandes');
-    }
-
-    /**
-     * Imprimer tous les codes-barres
-     */
-    printAllCodesBarres() {
-        const labels = document.querySelectorAll('#codesBarresContent .commande-label');
-        const labelsHtml = Array.from(labels).map(label => label.outerHTML);
-        
-        this.printLabels(labelsHtml, 'Codes-barres des Commandes', 'commandes');
-    }
-
-    /**
-     * Imprimer les étiquettes sélectionnées
-     */
-    printSelectedEtiquettes() {
-        const checkboxes = document.querySelectorAll('#etiquettesArticlesContent input[type="checkbox"]:checked');
-        if (checkboxes.length === 0) {
-            this.showNotification('Aucune étiquette sélectionnée', 'warning');
-            return;
-        }
-        
-        const selectedLabels = Array.from(checkboxes).map(cb => {
-            const labelItem = cb.closest('.article-label-item');
-            return labelItem ? labelItem.querySelector('.article-label').outerHTML : '';
-        }).filter(html => html);
-        
-        this.printLabels(selectedLabels, 'Étiquettes des Articles');
-    }
-
-    /**
-     * Imprimer toutes les étiquettes
-     */
-    printAllEtiquettes() {
-        const labels = document.querySelectorAll('#etiquettesArticlesContent .article-label');
-        const labelsHtml = Array.from(labels).map(label => label.outerHTML);
-        
-        this.printLabels(labelsHtml, 'Étiquettes des Articles');
-    }
 
     /**
      * Imprimer les labels sélectionnés
@@ -1129,6 +679,7 @@ class ImpressionModals {
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>${pageTitle}</title>
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
                 <style>
                     /* Reset et styles de base */
                     * {
@@ -1148,8 +699,8 @@ class ImpressionModals {
                     /* Styles pour l'impression */
                     @media print {
                         @page {
-                            size: A4 portrait;
-                            margin: 10mm;
+                            size: B5 portrait;
+                            margin: 5mm;
                         }
 
                         body {
@@ -1175,52 +726,52 @@ class ImpressionModals {
                         }
 
                         .print-container {
-                            width: 190mm; /* 210mm - 20mm de marges */
-                            height: 277mm; /* 297mm - 20mm de marges */
+                            width: 166mm; /* 176mm - 10mm de marges */
+                            height: 240mm; /* 250mm - 10mm de marges */
                             margin: 0 auto;
                             position: relative;
-                            margin-top: 15mm;
-                            margin-bottom: 10mm;
-                            padding: 10mm;
-                            min-height: calc(277mm - 15mm - 10mm);
+                            margin-top: 10mm;
+                            margin-bottom: 5mm;
+                            padding: 5mm;
+                            min-height: calc(240mm - 10mm - 5mm);
                         }
 
                         .print-header {
                             position: fixed;
-                            top: 10mm;
-                            left: 10mm;
-                            right: 10mm;
-                            height: 15mm;
+                            top: 5mm;
+                            left: 5mm;
+                            right: 5mm;
+                            height: 10mm;
                             background: white;
                             z-index: 1000;
-                            border-bottom: 2px solid #333;
+                            border-bottom: 1px solid #333;
                         }
 
                         .print-footer {
                             position: fixed;
-                            bottom: 10mm;
-                            left: 10mm;
-                            right: 10mm;
-                            height: 10mm;
+                            bottom: 5mm;
+                            left: 5mm;
+                            right: 5mm;
+                            height: 8mm;
                             background: white;
                             z-index: 1000;
-                            border-top: 1px solid #ccc;
+                            border-top: 0.5px solid #ccc;
                         }
 
                         .labels-grid {
-                            padding: 5mm;
+                            padding: 2mm;
                             width: 100%;
                             height: 100%;
-                            margin-top: 5mm;
+                            margin-top: 2mm;
                         }
                     }
 
                     /* Styles pour l'en-tête et pied de page */
                     .print-header {
                         text-align: center;
-                        padding: 3mm;
+                        padding: 2mm;
                         background: white;
-                        height: 15mm;
+                        height: 10mm;
                         display: flex;
                         flex-direction: column;
                         justify-content: center;
@@ -1244,11 +795,11 @@ class ImpressionModals {
 
                     .print-footer {
                         text-align: center;
-                        padding: 2mm;
-                        font-size: 8px;
+                        padding: 1mm;
+                        font-size: 7px;
                         color: #666;
                         background: white;
-                        height: 10mm;
+                        height: 8mm;
                         display: flex;
                         flex-direction: column;
                         justify-content: center;
@@ -1264,35 +815,38 @@ class ImpressionModals {
                     .labels-grid,
                     .article-labels-container,
                     .commande-labels-container {
-                        display: grid;
-                        grid-template-columns: repeat(2, 1fr);
-                        gap: 5mm;
+                        display: block;
                         width: 100%;
-                        max-width: 160mm;
                         margin: 0 auto;
-                        padding: 5mm;
-                        margin-top: 5mm;
+                        padding: 0;
+                        margin-top: 2mm;
                     }
 
                     /* Étiquette individuelle */
                     .article-label,
                     .commande-label {
-                        width: 60mm;
-                        height: 40mm;
-                        border: 1px solid #000;
+                        width: 75mm;
+                        height: 74mm;
+                        border: 0.5px solid #000;
                         font-family: Arial, sans-serif;
-                        font-size: 8px;
+                        font-size: 9px;
                         display: flex;
                         flex-direction: column;
                         justify-content: center;
                         align-items: center;
                         background: white;
                         page-break-inside: avoid;
+                        page-break-after: always;
                         break-inside: avoid;
-                        margin: 0;
+                        margin: 0 auto 0 auto;
                         overflow: hidden;
                         position: relative;
                         padding: 2mm;
+                    }
+                    
+                    .article-label:last-child,
+                    .commande-label:last-child {
+                        page-break-after: auto;
                     }
 
                     .article-label *,
@@ -1304,9 +858,9 @@ class ImpressionModals {
                     /* Code-barres */
                     .label-barcode {
                         max-width: 100%;
-                        max-height: 20mm;
+                        max-height: 5mm;
                         object-fit: contain;
-                        margin-bottom: 2mm;
+                        margin-bottom: 1mm;
                     }
 
                     /* Référence */
@@ -1329,6 +883,15 @@ class ImpressionModals {
                     /* Masquer les checkboxes lors de l'impression */
                     .label-checkbox {
                         display: none !important;
+                    }
+                    
+                    /* Assurer l'affichage des icônes Font Awesome lors de l'impression */
+                    .fas, .far, .fab {
+                        font-family: "Font Awesome 6 Free" !important;
+                        font-weight: 900 !important;
+                        -webkit-print-color-adjust: exact !important;
+                        color-adjust: exact !important;
+                        print-color-adjust: exact !important;
                     }
 
                     /* Responsive pour l'écran */
@@ -1451,9 +1014,6 @@ function hideImpressionChoiceModal() {
     impressionModals.hideImpressionChoiceModal();
 }
 
-function imprimerCodesBarresCommandes() {
-    impressionModals.imprimerCodesBarresCommandes();
-}
 
 function imprimerEtiquettesArticles() {
     impressionModals.imprimerEtiquettesArticles();
@@ -1467,22 +1027,6 @@ function imprimerTicketCommandeMultiple() {
     impressionModals.imprimerTicketCommandeMultiple();
 }
 
-// Fonctions pour les modales de contenu
-function hideCodesBarresModal() {
-    impressionModals.hideCodesBarresModal();
-}
-
-function hideEtiquettesArticlesModal() {
-    impressionModals.hideEtiquettesArticlesModal();
-}
-
-function printCodesBarres() {
-    impressionModals.printCodesBarres();
-}
-
-function printEtiquettesArticles() {
-    impressionModals.printEtiquettesArticles();
-}
 
 // Fonctions pour la modale de choix de format - SUPPRIMÉES
 // function hideFormatChoiceModal() - SUPPRIMÉE
@@ -1491,72 +1035,6 @@ function loadEtiquettesWithFormat(format) {
     impressionModals.loadEtiquettesWithFormat(format);
 }
 
-// Fonctions pour la sélection et l'impression
-function toggleSelectAllCodesBarres() {
-    impressionModals.toggleSelectAllCodesBarres();
-}
-
-function toggleSelectAllEtiquettes() {
-    impressionModals.toggleSelectAllEtiquettes();
-}
-
-function updateSelectionCount(type) {
-    impressionModals.updateSelectionCount(type);
-}
-
-function printSelectedCodesBarres() {
-    impressionModals.printSelectedCodesBarres();
-}
-
-function printAllCodesBarres() {
-    impressionModals.printAllCodesBarres();
-}
-
-function printSelectedEtiquettes() {
-    impressionModals.printSelectedEtiquettes();
-}
-
-function printAllEtiquettes() {
-    impressionModals.printAllEtiquettes();
-}
-
-// Fonctions pour les tickets
-function toggleSelectAllTickets() {
-    impressionModals.toggleSelectAllTickets();
-}
-
-function updateTicketSelectionCount() {
-    impressionModals.updateTicketSelectionCount();
-}
-
-function printSelectedTickets() {
-    impressionModals.printSelectedTickets();
-}
-
-function printAllTickets() {
-    impressionModals.printAllTickets();
-}
-
-// Fonctions pour les tickets multiples
-function toggleSelectAllTicketsMultiple() {
-    impressionModals.toggleSelectAllTicketsMultiple();
-}
-
-function updateTicketMultipleSelectionCount() {
-    impressionModals.updateTicketMultipleSelectionCount();
-}
-
-function printSelectedTicketsMultiple() {
-    impressionModals.printSelectedTicketsMultiple();
-}
-
-function printAllTicketsMultiple() {
-    impressionModals.printAllTicketsMultiple();
-}
-
-function hideTicketMultipleModal() {
-    impressionModals.hideTicketMultipleModal();
-}
 
 /**
  * Impression directe des tickets multiples (sans modale)
@@ -1633,28 +1111,30 @@ function imprimerTicketsMultipleDirect() {
                             
                             /* Container pour les tickets */
                             .ticket-commande-container {
-                                display: grid !important;
-                                grid-template-columns: repeat(2, 1fr) !important;
-                                gap: 3mm !important;
+                                display: block !important;
                                 width: 100% !important;
-                                max-width: 180mm !important;
                                 margin: 0 auto !important;
-                                padding: 3mm !important;
+                                padding: 0 !important;
                             }
                             
                             /* Format compact du ticket */
                             .ticket-commande {
                                 width: 85mm !important;
-                                height: 60mm !important;
+                                height: 85mm !important;
                                 border: 1px solid black !important;
                                 font-family: Arial, sans-serif !important;
                                 font-size: 8px !important;
                                 background: white !important;
                                 page-break-inside: avoid !important;
-                                margin: 0 !important;
+                                page-break-after: always !important;
+                                margin: 0 auto 0 auto !important;
                                 overflow: hidden;
                                 display: flex !important;
                                 flex-direction: column !important;
+                            }
+                            
+                            .ticket-commande:last-child {
+                                page-break-after: auto !important;
                             }
                             
                             .ticket-commande * {
@@ -1906,31 +1386,33 @@ function imprimerCodesQRArticlesDirect() {
                             
                             /* Container pour les étiquettes */
                             .etiquettes-container {
-                                display: grid !important;
-                                grid-template-columns: repeat(2, 1fr) !important;
-                                gap: 3mm !important;
+                                display: block !important;
                                 width: 100% !important;
-                                max-width: 180mm !important;
                                 margin: 0 auto !important;
-                                padding: 3mm !important;
+                                padding: 0 !important;
                             }
                             
                             /* Format compact de l'étiquette */
                             .etiquette-article {
                                 width: 85mm !important;
-                                height: 60mm !important;
+                                height: 85mm !important;
                                 border: 1px solid black !important;
                                 font-family: Arial, sans-serif !important;
                                 font-size: 8px !important;
                                 background: white !important;
                                 page-break-inside: avoid !important;
-                                margin: 0 !important;
+                                page-break-after: always !important;
+                                margin: 0 auto 0 auto !important;
                                 overflow: hidden;
                                 display: flex !important;
                                 flex-direction: column !important;
                                 align-items: center !important;
                                 justify-content: center !important;
                                 text-align: center !important;
+                            }
+                            
+                            .etiquette-article:last-child {
+                                page-break-after: auto !important;
                             }
                             
                             .etiquette-article * {
@@ -2103,28 +1585,30 @@ window.impressionMultipleFusionnee = function() {
                             
                             /* Container pour les tickets */
                             .ticket-commande-container {
-                                display: grid !important;
-                                grid-template-columns: repeat(2, 1fr) !important;
-                                gap: 3mm !important;
+                                display: block !important;
                                 width: 100% !important;
-                                max-width: 180mm !important;
                                 margin: 0 auto !important;
-                                padding: 3mm !important;
+                                padding: 0 !important;
                             }
                             
                             /* Format compact du ticket */
                             .ticket-commande {
                                 width: 85mm !important;
-                                height: 60mm !important;
+                                height: 85mm !important;
                                 border: 1px solid black !important;
                                 font-family: Arial, sans-serif !important;
                                 font-size: 8px !important;
                                 background: white !important;
                                 page-break-inside: avoid !important;
-                                margin: 0 !important;
+                                page-break-after: always !important;
+                                margin: 0 auto 0 auto !important;
                                 overflow: hidden;
                                 display: flex !important;
                                 flex-direction: column !important;
+                            }
+                            
+                            .ticket-commande:last-child {
+                                page-break-after: auto !important;
                             }
                             
                             .ticket-commande * {
@@ -2298,13 +1782,10 @@ window.impressionMultipleFusionnee = function() {
                                                     
                                                     /* Container pour les étiquettes */
                                                     .etiquettes-container {
-                                                        display: grid !important;
-                                                        grid-template-columns: repeat(2, 1fr) !important;
-                                                        gap: 3mm !important;
+                                                        display: block !important;
                                                         width: 100% !important;
-                                                        max-width: 180mm !important;
                                                         margin: 0 auto !important;
-                                                        padding: 3mm !important;
+                                                        padding: 0 !important;
                                                     }
                                                     
                                                     /* Format compact de l'étiquette */
@@ -2316,13 +1797,18 @@ window.impressionMultipleFusionnee = function() {
                                                         font-size: 8px !important;
                                                         background: white !important;
                                                         page-break-inside: avoid !important;
-                                                        margin: 0 !important;
+                                page-break-after: always !important;
+                                margin: 0 auto 0 auto !important;
                                                         overflow: hidden;
                                                         display: flex !important;
                                                         flex-direction: column !important;
                                                         align-items: center !important;
                                                         justify-content: center !important;
                                                         text-align: center !important;
+                                                    }
+                                                    
+                                                    .etiquette-article:last-child {
+                                                        page-break-after: auto !important;
                                                     }
                                                     
                                                     .etiquette-article * {

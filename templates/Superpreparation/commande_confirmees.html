@@ -1493,7 +1493,7 @@
     <div id="paginationInfoContainer">
         {% include 'Superpreparation/partials/_confirmees_pagination_info.html' %}
     </div>
-                                {% endif %}
+{% endif %}
 </div>
 
 <!-- Modal d'affectation aux opérateurs de préparation -->
@@ -1993,9 +1993,9 @@
 </script>
 
 <!-- Script de recherche intelligente -->
-<script src="{% static 'js/Suivi_des_Commandes/suivi-commandes-smart-search.js' %}"></script>
+<script src="{% static 'js/Superpreparation/Suivi_des_Commandes/suivi-commandes-smart-search.js' %}"></script>
 <!-- Script des modales d'impression -->
-<script src="{% static 'js/etiquettage/impression-modals.js' %}"></script>
+<script src="{% static 'js/Superpreparation/etiquettage/impression-modals.js' %}"></script>
 <script>
     // Initialiser la recherche intelligente pour cette page
     document.addEventListener('DOMContentLoaded', function() {
@@ -2694,6 +2694,6 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>
 
 <!-- Inclure la modale de choix d'impression -->
-{% include 'Superpreparation/partials/_modal_impression_choice.html' %}
+{% include 'Superpreparation/partials/Etiquette/_modal_impression_choice.html' %}
 
 {% endblock %} 

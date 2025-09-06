@@ -85,15 +85,8 @@ def changer_etat_livraison(request, commande_id):
                 details_supplementaires = f"\nLivraison effectuée le : {timezone.now().strftime('%d/%m/%Y à %H:%M')}"
 
             elif nouvel_etat == 'Annulée (SAV)':
-                type_annulation = request.POST.get('type_annulation')
-                if not type_annulation:
-                    messages.error(request, "Le type d'annulation est obligatoire.")
-                    return redirect('operatLogistic:detail_commande', commande_id=commande_id)
-                
                 # Annuler l'envoi
                 envoi.annuler(operateur, commentaire)
-                
-                details_supplementaires = f"\nType d'annulation : {type_annulation}"
                 
 
 

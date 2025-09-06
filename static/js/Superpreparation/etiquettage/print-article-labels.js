@@ -528,7 +528,7 @@ class ArticleLabelsPrinter {
         <div class="article-label avoid-break">
             <!-- En-tête noir avec numéro et date -->
             <div class="label-header">
-                <span class="label-number">N° ${commandeId}</span>
+                <span class="label-number">N° d${commandeId}</span>
                 <span class="label-date">${date}</span>
             </div>
             
