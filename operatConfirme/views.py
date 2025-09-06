@@ -302,23 +302,33 @@ def confirmer_commande_ajax(request, commande_id):
             
             for panier in commande.paniers.all():
                 article = panier.article
+                variante = panier.variante
                 quantite_commandee = panier.quantite
                 
-                print(f"📦 DEBUG: Article {article.nom} (ID:{article.id})")
-                print(f"   - Stock actuel: {article.qte_disponible}")
+                # Déterminer le stock à vérifier (variante ou article principal)
+                if variante:
+                    stock_disponible = variante.qte_disponible
+                    nom_article = f"{article.nom} - {variante.couleur}/{variante.pointure}"
+                    print(f"📦 DEBUG: Variante {nom_article} (ID:{variante.id})")
+                else:
+                    stock_disponible = article.qte_disponible
+                    nom_article = article.nom
+                    print(f"📦 DEBUG: Article {nom_article} (ID:{article.id})")
+                
+                print(f"   - Stock actuel: {stock_disponible}")
                 print(f"   - Quantité commandée: {quantite_commandee}")
                 
                 # Vérifier si le stock est suffisant
-                if article.qte_disponible < quantite_commandee:
+                if stock_disponible < quantite_commandee:
                     stock_insuffisant.append({
-                        'article': article.nom,
-                        'stock_actuel': article.qte_disponible,
+                        'article': nom_article,
+                        'stock_actuel': stock_disponible,
                         'quantite_demandee': quantite_commandee
                     })
-                    print(f"❌ DEBUG: Stock insuffisant pour {article.nom}")
+                    print(f"❌ DEBUG: Stock insuffisant pour {nom_article}")
                 else:
                     # Décrémenter le stock via mouvements sur variantes (pas d'écriture sur Article.qte_disponible)
-                    ancien_stock = article.qte_disponible
+                    ancien_stock = stock_disponible
                     from Superpreparation.utils import creer_mouvement_stock as creer_mouvement_stock_prepa
                     creer_mouvement_stock_prepa(
                         article=article,
@@ -327,18 +337,23 @@ def confirmer_commande_ajax(request, commande_id):
                         operateur=operateur,
                         commande=commande,
                         commentaire=f"Décrément lors de la confirmation commande {commande.id_yz}",
-                        variante=None,
+                        variante=variante,  # Passer la variante si elle existe
                     )
-                    nouveau_stock = article.qte_disponible  # Propriété calculée à partir des variantes
+                    
+                    # Récupérer le nouveau stock
+                    if variante:
+                        nouveau_stock = variante.qte_disponible
+                    else:
+                        nouveau_stock = article.qte_disponible
                     
                     articles_decrémentes.append({
-                        'article': article.nom,
+                        'article': nom_article,
                         'ancien_stock': ancien_stock,
                         'nouveau_stock': nouveau_stock,
                         'quantite_decrémententée': quantite_commandee
                     })
                     
-                    print(f"✅ DEBUG: Stock mis à jour pour {article.nom}")
+                    print(f"✅ DEBUG: Stock mis à jour pour {nom_article}")
                     print(f"   - Ancien stock: {ancien_stock}")
                     print(f"   - Nouveau stock: {nouveau_stock}")
             
@@ -2262,10 +2277,47 @@ def modifier_commande(request, commande_id):
     # Récupérer toutes les villes pour la liste déroulante
     villes = Ville.objects.select_related('region').order_by('nom')
     
+    # Récupérer tous les articles pour le modal d'ajout
+    from article.models import Article
+    articles = Article.objects.filter(actif=True).order_by('nom')
+    
+    # Préparer les données JSON pour les articles (comme dans l'interface de création)
+    articles_data = []
+    for article in articles:
+        # Déterminer l'URL de l'image (priorité à l'image locale)
+        image_url = ''
+        if article.image:
+            # Construire l'URL complète pour l'image locale
+            from django.conf import settings
+            image_url = f"{settings.MEDIA_URL}{article.image.name}"
+        elif article.image_url:
+            image_url = article.image_url
+            
+        articles_data.append({
+            'id': article.pk,
+            'nom': str(article.nom or ''),
+            'reference': str(article.reference or ''),
+            'prix_actuel': float(article.prix_actuel) if article.prix_actuel else 0.0,
+            'prix_unitaire': float(article.prix_unitaire) if article.prix_unitaire else 0.0,
+            'prix_upsell_1': float(article.prix_upsell_1) if article.prix_upsell_1 else 0.0,
+            'prix_upsell_2': float(article.prix_upsell_2) if article.prix_upsell_2 else 0.0,
+            'prix_upsell_3': float(article.prix_upsell_3) if article.prix_upsell_3 else 0.0,
+            'prix_upsell_4': float(article.prix_upsell_4) if article.prix_upsell_4 else 0.0,
+            'qte_disponible': int(article.get_total_qte_disponible()),
+            'couleur': str(article.couleur or ''),
+            'pointure': str(article.pointure or ''),
+            'categorie': str(article.categorie) if hasattr(article, 'categorie') and article.categorie else '',
+            'phase': str(article.phase or ''),
+            'has_promo_active': bool(article.has_promo_active),
+            'isUpsell': bool(article.isUpsell),
+            'image_url': image_url
+        })
+    
     context = {
         'commande': commande,
         'operateur': operateur,
         'villes': villes,
+        'articles_json': articles_data,
     }
     
     return render(request, 'operatConfirme/modifier_commande.html', context)
@@ -2361,7 +2413,9 @@ def api_articles_disponibles(request):
             # Déterminer l'URL de l'image
             image_url = None
             if article.image:
-                image_url = article.image.url
+                # Construire l'URL complète pour l'image locale
+                from django.conf import settings
+                image_url = f"{settings.MEDIA_URL}{article.image.name}"
             elif article.image_url:
                 image_url = article.image_url
             
@@ -2615,7 +2669,9 @@ def creer_commande(request):
         # Déterminer l'URL de l'image (priorité à l'image locale)
         image_url = ''
         if article.image:
-            image_url = article.image.url
+            # Construire l'URL complète pour l'image locale
+            from django.conf import settings
+            image_url = f"{settings.MEDIA_URL}{article.image.name}"
         elif article.image_url:
             image_url = article.image_url
             
