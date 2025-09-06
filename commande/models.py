@@ -217,11 +217,14 @@ class Commande(models.Model):
             
             nouveau_total += nouveau_sous_total
         
-        # Ajouter les frais de livraison au total
-        frais_livraison = self.ville.frais_livraison if self.ville else 0
-        nouveau_total_avec_frais = float(nouveau_total) + float(frais_livraison)
+        # Ajouter les frais de livraison au total SEULEMENT si frais_livraison = True
+        if self.frais_livraison:
+            frais_livraison = self.ville.frais_livraison if self.ville else 0
+            nouveau_total_avec_frais = float(nouveau_total) + float(frais_livraison)
+        else:
+            nouveau_total_avec_frais = float(nouveau_total)
         
-        # Mettre à jour le total de la commande si nécessaire
+        # Mettre à jour le total de la commande
         if self.total_cmd != nouveau_total_avec_frais:
             self.total_cmd = nouveau_total_avec_frais
             self.save(update_fields=['total_cmd'])
@@ -241,6 +244,31 @@ class Commande(models.Model):
     def total_avec_frais(self):
         """Retourne le total articles + frais de livraison"""
         return float(self.sous_total_articles) + float(self.frais_livraison)
+    
+    def recalculer_total_avec_frais(self):
+        """
+        Recalcule le total de la commande en incluant les frais de livraison
+        SEULEMENT si frais_livraison = True
+        """
+        # Calculer le sous-total des articles
+        sous_total_articles = sum(panier.sous_total for panier in self.paniers.all())
+        
+        if self.frais_livraison:
+            # Récupérer les frais de livraison de la ville
+            frais_ville = self.ville.frais_livraison if self.ville else 0
+            
+            # Calculer le nouveau total avec frais
+            nouveau_total = float(sous_total_articles) + float(frais_ville)
+            
+            # Mettre à jour le total si nécessaire
+            if self.total_cmd != nouveau_total:
+                self.total_cmd = nouveau_total
+                # Éviter la récursion en utilisant update_fields
+                Commande.objects.filter(id=self.id).update(total_cmd=nouveau_total)
+                print(f"✅ Frais de livraison ajoutés: {sous_total_articles} + {frais_ville} = {nouveau_total}")
+        else:
+            # Si frais_livraison = False, ne rien faire (garder le total actuel)
+            print(f"ℹ️  Frais de livraison désactivés - Total inchangé: {self.total_cmd}")
 
 
 class Panier(models.Model):

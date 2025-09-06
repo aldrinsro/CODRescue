@@ -787,7 +787,7 @@ def commandes_retournees(request):
         .prefetch_related('paniers__article', 'etats')
         .distinct()
     )
-    
+
     # Commandes TRAITÉES (avec date_fin) - déjà traitées
     commandes_traitees_qs = (
         Commande.objects

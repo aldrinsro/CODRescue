@@ -367,10 +367,10 @@
 
              <!-- Date de création -->
              <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                 <label class="block text-sm font-semibold mb-2 text-gray-600">Date de création :</label>
+                 <label class="block text-sm font-semibold mb-2 text-gray-600">statut de paiement :</label>
                  <p class="text-lg font-medium text-gray-800">
-                     <i class="fas fa-clock mr-2" style="color: var(--logistic-primary);"></i>
-                     {{ commande.date_creation|date:"d/m/Y H:i" }}
+                     <i class="fas fa-money-bill-wave mr-2" style="color: var(--logistic-primary);"></i>
+                     {{ commande.payement }}
                  </p>
              </div>
 

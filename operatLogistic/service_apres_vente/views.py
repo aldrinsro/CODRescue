@@ -1,13 +1,15 @@
-from django.shortcuts import redirect, render
+from django.shortcuts import redirect, render, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.utils import timezone
-from commande.models import Commande, EtatCommande, EnumEtatCmd, Envoi
+from django.http import JsonResponse
+from commande.models import Commande, EtatCommande, EnumEtatCmd, Envoi, Operation
 from django.db import transaction
 from datetime import datetime
 import json
 from article.models import Article
+from parametre.models import Operateur
 
 @login_required
 @require_POST
@@ -145,9 +147,7 @@ def commandes_reportees(request):
         # Calculer le nombre d'articles dans la commande
         commande.nombre_articles = commande.paniers.count()
         
-        # Trouver l'envoi associé
-        commande.envoi = commande.envois.filter(status='en_attente').first()
-        
+     
         # Analyser les articles pour identifier ceux livrés partiellement (si applicable)
         commande.articles_livres_partiellement = []
         commande.articles_renvoyes = []
@@ -436,7 +436,6 @@ def commandes_livrees_avec_changement(request):
     
     return _render_sav_list_custom(request, commandes, 'commandes_livrees_avec_changement.html')
 
-
 @login_required
 def commandes_retournees(request):
     """Affiche les commandes retournées par l'opérateur logistique."""
@@ -478,14 +477,124 @@ def commandes_retournees(request):
 
 @login_required
 def commandes_livrees(request):
-    """Affiche les commandes livrées avec succès."""
-    commandes = Commande.objects.filter(
+    """Affiche les commandes livrées avec succès avec onglets pour les payées et non payées."""
+    # Récupérer le paramètre d'onglet
+    current_tab = request.GET.get('tab', 'toutes')
+    
+    # Base query pour les commandes livrées
+    base_query = Commande.objects.filter(
         etats__enum_etat__libelle='Livrée',
         etats__date_fin__isnull=True
     ).select_related('client', 'ville', 'ville__region').prefetch_related(
         'etats__enum_etat', 'etats__operateur',
         'envois', 'paniers__article'
     ).order_by('-etats__date_debut').distinct()
+    
+    # Gestion du filtre de temps
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    preset = request.GET.get('preset')
+    
+    # Appliquer le filtre de temps si des paramètres sont fournis
+    if start_date and end_date:
+        try:
+            from datetime import datetime
+            start_datetime = datetime.strptime(start_date, '%Y-%m-%d')
+            end_datetime = datetime.strptime(end_date, '%Y-%m-%d')
+            # Ajouter 23:59:59 à la date de fin pour inclure toute la journée
+            end_datetime = end_datetime.replace(hour=23, minute=59, second=59)
+            
+            # Filtrer par date de début des états "Livrée"
+            base_query = base_query.filter(
+                etats__enum_etat__libelle='Livrée',
+                etats__date_debut__date__range=[start_datetime.date(), end_datetime.date()]
+            )
+            print(f"🔍 Filtre de temps appliqué: {start_date} à {end_date}")
+        except ValueError:
+            print("❌ Erreur de format de date dans les paramètres de filtre")
+    elif preset:
+        # Appliquer des presets prédéfinis
+        from datetime import datetime, timedelta
+        today = datetime.now().date()
+        
+        if preset == 'today':
+            base_query = base_query.filter(
+                etats__enum_etat__libelle='Livrée',
+                etats__date_debut__date=today
+            )
+        elif preset == 'yesterday':
+            yesterday = today - timedelta(days=1)
+            base_query = base_query.filter(
+                etats__enum_etat__libelle='Livrée',
+                etats__date_debut__date=yesterday
+            )
+        elif preset == 'this_week':
+            # Lundi de cette semaine
+            monday = today - timedelta(days=today.weekday())
+            base_query = base_query.filter(
+                etats__enum_etat__libelle='Livrée',
+                etats__date_debut__date__gte=monday
+            )
+        elif preset == 'last_week':
+            # Lundi de la semaine dernière
+            last_monday = today - timedelta(days=today.weekday() + 7)
+            last_sunday = last_monday + timedelta(days=6)
+            base_query = base_query.filter(
+                etats__enum_etat__libelle='Livrée',
+                etats__date_debut__date__range=[last_monday, last_sunday]
+            )
+        elif preset == 'this_month':
+            # Premier jour du mois
+            first_day = today.replace(day=1)
+            base_query = base_query.filter(
+                etats__enum_etat__libelle='Livrée',
+                etats__date_debut__date__gte=first_day
+            )
+        elif preset == 'last_month':
+            # Premier jour du mois dernier
+            if today.month == 1:
+                first_day_last_month = today.replace(year=today.year-1, month=12, day=1)
+            else:
+                first_day_last_month = today.replace(month=today.month-1, day=1)
+            # Dernier jour du mois dernier
+            if today.month == 1:
+                last_day_last_month = today.replace(year=today.year-1, month=12, day=31)
+            else:
+                last_day_last_month = (today.replace(month=today.month, day=1) - timedelta(days=1))
+            base_query = base_query.filter(
+                etats__enum_etat__libelle='Livrée',
+                etats__date_debut__date__range=[first_day_last_month, last_day_last_month]
+            )
+        elif preset == 'this_year':
+            # Premier jour de l'année
+            first_day_year = today.replace(month=1, day=1)
+            base_query = base_query.filter(
+                etats__enum_etat__libelle='Livrée',
+                etats__date_debut__date__gte=first_day_year
+            )
+        elif preset == 'last_year':
+            # Premier et dernier jour de l'année dernière
+            first_day_last_year = today.replace(year=today.year-1, month=1, day=1)
+            last_day_last_year = today.replace(year=today.year-1, month=12, day=31)
+            base_query = base_query.filter(
+                etats__enum_etat__libelle='Livrée',
+                etats__date_debut__date__range=[first_day_last_year, last_day_last_year]
+            )
+        
+        print(f"🔍 Preset appliqué: {preset}")
+    
+    # Filtrer selon l'onglet sélectionné
+    if current_tab == 'payees':
+        commandes = base_query.filter(payement='Payé')
+    elif current_tab == 'non_payees':
+        commandes = base_query.exclude(payement='Payé')
+    else:  # 'toutes'
+        commandes = base_query
+    
+    # Compter les commandes pour chaque onglet (avec le filtre de temps appliqué)
+    total_commandes = base_query.count()
+    commandes_payees = base_query.filter(payement='Payé').count()
+    commandes_non_payees = base_query.exclude(payement='Payé').count()
     
     # Enrichir les données pour chaque commande
     for commande in commandes:
@@ -512,4 +621,66 @@ def commandes_livrees(request):
         ]
         commande.articles_renvoyes = []
     
-    return _render_sav_list_custom(request, commandes, 'commandes_livrees.html') 
+    # Créer le contexte avec les variables supplémentaires
+    context = {
+        'commandes': commandes,
+        'current_tab': current_tab,
+        'total_commandes': total_commandes,
+        'commandes_payees': commandes_payees,
+        'commandes_non_payees': commandes_non_payees,
+        # Paramètres de filtre pour le template
+        'filter_start_date': start_date,
+        'filter_end_date': end_date,
+        'filter_preset': preset,
+    }
+    return render(request, 'operatLogistic/sav/commandes_livrees.html', context)
+
+
+@login_required
+@require_POST
+def marquer_commande_payee(request, commande_id):
+    """Marquer une commande comme payée."""
+    try:
+        operateur = Operateur.objects.get(user=request.user, type_operateur='LOGISTIQUE')
+    except Operateur.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Profil d\'opérateur logistique non trouvé.'})
+    
+    try:
+        commande = get_object_or_404(Commande, id=commande_id)
+        
+        # Vérifier que la commande est dans un état qui permet le paiement
+        etats_paiement_autorises = ['Livrée', 'Livrée Partiellement', 'Livrée avec changement']
+        if not commande.etat_actuel or commande.etat_actuel.enum_etat.libelle not in etats_paiement_autorises:
+            return JsonResponse({
+                'success': False, 
+                'error': f'Cette commande ne peut pas être marquée comme payée. État actuel: {commande.etat_actuel.enum_etat.libelle if commande.etat_actuel else "Aucun"}'
+            })
+        
+        # Statut fixe : toujours "Payé"
+        nouveau_statut = 'Payé'
+        
+        with transaction.atomic():
+            # Mettre à jour le statut de paiement
+            ancien_statut = commande.payement
+            commande.payement = nouveau_statut
+            commande.save()
+            
+            # Créer une opération pour tracer l'action
+            Operation.objects.create(
+                commande=commande,
+                type_operation='CHANGEMENT_STATUT_PAIEMENT',
+                conclusion=f"Statut de paiement changé de '{ancien_statut}' vers '{nouveau_statut}'",
+                operateur=operateur
+            )
+            
+            messages.success(request, f"Statut de paiement de la commande {commande.id_yz} mis à jour vers '{nouveau_statut}' avec succès.")
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Statut de paiement mis à jour vers {nouveau_statut} avec succès',
+                'nouveau_statut': nouveau_statut,
+                'ancien_statut': ancien_statut
+            })
+            
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})

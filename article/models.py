@@ -272,6 +272,10 @@ class Article(models.Model):
     prix_upsell_3 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Prix upsell 3")
     prix_upsell_4 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Prix upsell 4")
     Prix_liquidation = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Prix liquidation")
+    prix_remise_1 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Prix remise 1")
+    prix_remise_2 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Prix remise 2")
+    prix_remise_3 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Prix remise 3")
+    prix_remise_4 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Prix remise 4")
     class Meta:
         verbose_name = "Article"
         verbose_name_plural = "Articles"

@@ -368,6 +368,99 @@ def liste_commandes(request):
         'etats__operateur'
     ).distinct().order_by('-etats__date_debut')
     
+    # Gestion du filtre de temps
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    preset = request.GET.get('preset')
+    
+    # Appliquer le filtre de temps si des paramètres sont fournis
+    if start_date and end_date:
+        try:
+            from datetime import datetime
+            start_datetime = datetime.strptime(start_date, '%Y-%m-%d')
+            end_datetime = datetime.strptime(end_date, '%Y-%m-%d')
+            # Ajouter 23:59:59 à la date de fin pour inclure toute la journée
+            end_datetime = end_datetime.replace(hour=23, minute=59, second=59)
+            
+            # Filtrer par date de début des états "En livraison"
+            commandes_list = commandes_list.filter(
+                etats__enum_etat__libelle__in=['En cours de livraison', 'En livraison'],
+                etats__date_debut__date__range=[start_datetime.date(), end_datetime.date()]
+            )
+            print(f"🔍 Filtre de temps appliqué: {start_date} à {end_date}")
+        except ValueError:
+            print("❌ Erreur de format de date dans les paramètres de filtre")
+    elif preset:
+        # Appliquer des presets prédéfinis
+        from datetime import datetime, timedelta
+        today = datetime.now().date()
+        
+        if preset == 'today':
+            commandes_list = commandes_list.filter(
+                etats__enum_etat__libelle__in=['En cours de livraison', 'En livraison'],
+                etats__date_debut__date=today
+            )
+        elif preset == 'yesterday':
+            yesterday = today - timedelta(days=1)
+            commandes_list = commandes_list.filter(
+                etats__enum_etat__libelle__in=['En cours de livraison', 'En livraison'],
+                etats__date_debut__date=yesterday
+            )
+        elif preset == 'this_week':
+            # Lundi de cette semaine
+            monday = today - timedelta(days=today.weekday())
+            commandes_list = commandes_list.filter(
+                etats__enum_etat__libelle__in=['En cours de livraison', 'En livraison'],
+                etats__date_debut__date__gte=monday
+            )
+        elif preset == 'last_week':
+            # Lundi de la semaine dernière
+            last_monday = today - timedelta(days=today.weekday() + 7)
+            last_sunday = last_monday + timedelta(days=6)
+            commandes_list = commandes_list.filter(
+                etats__enum_etat__libelle__in=['En cours de livraison', 'En livraison'],
+                etats__date_debut__date__range=[last_monday, last_sunday]
+            )
+        elif preset == 'this_month':
+            # Premier jour du mois
+            first_day = today.replace(day=1)
+            commandes_list = commandes_list.filter(
+                etats__enum_etat__libelle__in=['En cours de livraison', 'En livraison'],
+                etats__date_debut__date__gte=first_day
+            )
+        elif preset == 'last_month':
+            # Premier jour du mois dernier
+            if today.month == 1:
+                first_day_last_month = today.replace(year=today.year-1, month=12, day=1)
+            else:
+                first_day_last_month = today.replace(month=today.month-1, day=1)
+            # Dernier jour du mois dernier
+            if today.month == 1:
+                last_day_last_month = today.replace(year=today.year-1, month=12, day=31)
+            else:
+                last_day_last_month = (today.replace(month=today.month, day=1) - timedelta(days=1))
+            commandes_list = commandes_list.filter(
+                etats__enum_etat__libelle__in=['En cours de livraison', 'En livraison'],
+                etats__date_debut__date__range=[first_day_last_month, last_day_last_month]
+            )
+        elif preset == 'this_year':
+            # Premier jour de l'année
+            first_day_year = today.replace(month=1, day=1)
+            commandes_list = commandes_list.filter(
+                etats__enum_etat__libelle__in=['En cours de livraison', 'En livraison'],
+                etats__date_debut__date__gte=first_day_year
+            )
+        elif preset == 'last_year':
+            # Premier et dernier jour de l'année dernière
+            first_day_last_year = today.replace(year=today.year-1, month=1, day=1)
+            last_day_last_year = today.replace(year=today.year-1, month=12, day=31)
+            commandes_list = commandes_list.filter(
+                etats__enum_etat__libelle__in=['En cours de livraison', 'En livraison'],
+                etats__date_debut__date__range=[first_day_last_year, last_day_last_year]
+            )
+        
+        print(f"🔍 Preset appliqué: {preset}")
+    
     # Debug: afficher les commandes trouvées
     print(f"🔍 Debug: {commandes_list.count()} commandes trouvées pour l'opérateur {operateur.nom}")
     for cmd in commandes_list[:3]:  # Afficher les 3 premières pour debug
@@ -383,6 +476,36 @@ def liste_commandes(request):
             Q(client__numero_tel__icontains=search_query)
         )
     
+    # Calculer les statistiques par période
+    from datetime import datetime, timedelta
+    today = datetime.now().date()
+    
+    # Commandes d'aujourd'hui
+    affectees_aujourd_hui = Commande.objects.filter(
+        Q(etats__enum_etat__libelle='En cours de livraison') |
+        Q(etats__enum_etat__libelle='En livraison'),
+        etats__date_fin__isnull=True,
+        etats__date_debut__date=today
+    ).distinct().count()
+    
+    # Commandes de cette semaine
+    monday = today - timedelta(days=today.weekday())
+    affectees_semaine = Commande.objects.filter(
+        Q(etats__enum_etat__libelle='En cours de livraison') |
+        Q(etats__enum_etat__libelle='En livraison'),
+        etats__date_fin__isnull=True,
+        etats__date_debut__date__gte=monday
+    ).distinct().count()
+    
+    # Commandes de ce mois
+    first_day = today.replace(day=1)
+    affectees_mois = Commande.objects.filter(
+        Q(etats__enum_etat__libelle='En cours de livraison') |
+        Q(etats__enum_etat__libelle='En livraison'),
+        etats__date_fin__isnull=True,
+        etats__date_debut__date__gte=first_day
+    ).distinct().count()
+    
     # Calculer le total des montants
     total_montant = sum(cmd.total_cmd or 0 for cmd in commandes_list)
     
@@ -397,6 +520,13 @@ def liste_commandes(request):
         'total_montant'   : total_montant,
         'page_title'      : 'Commandes en Livraison',
         'page_subtitle'   : f'Gestion des livraisons affectées à {operateur.prenom} {operateur.nom}',
+        'affectees_aujourd_hui': affectees_aujourd_hui,
+        'affectees_semaine': affectees_semaine,
+        'affectees_mois': affectees_mois,
+        # Paramètres de filtre pour le template
+        'filter_start_date': start_date,
+        'filter_end_date': end_date,
+        'filter_preset': preset,
     }
     return render(request, 'operatLogistic/liste_commande.html', context)
 

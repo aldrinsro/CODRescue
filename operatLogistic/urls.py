@@ -51,6 +51,7 @@ urlpatterns = [
     path('sav/avec-changement/', sav_views.commandes_livrees_avec_changement, name='commandes_livrees_avec_changement'),
     path('sav/retournees/', sav_views.commandes_retournees, name='commandes_retournees'),
     path('sav/livrees/', sav_views.commandes_livrees, name='commandes_livrees'),
+    path('sav/commande/<int:commande_id>/marquer-payee/', sav_views.marquer_commande_payee, name='marquer_commande_payee'),
     
     # URLs pour la recherche globale
     path('recherche-globale/', search_views.global_search_view, name='global_search'),
