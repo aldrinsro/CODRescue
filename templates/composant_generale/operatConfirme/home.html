@@ -60,98 +60,217 @@
     </div>
 </div>
 
-<!-- Actions rapides avec animations -->
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-    <div class="bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:shadow-xl border border-gray-100 animate-slideInLeft">
+<!-- Section avec onglets -->
+<div class="mb-8">
+    <!-- En-tête avec onglets -->
         <div class="flex items-center justify-between mb-6">
-            <h3 class="text-xl font-bold text-gray-800 flex items-center">
-                <i class="fas fa-clock text-blue-500 mr-3 animate-spin-slow"></i>
-                Commandes prioritaires
-            </h3>
-            <div class="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-1 rounded-full text-sm font-semibold">
-                {{ commandes_en_attente|default:0 }} urgentes
+        <div class="flex space-x-1 bg-gray-100 p-1 rounded-lg">
+            <button id="tab-actions" class="tab-button active px-4 py-2 rounded-md text-sm font-semibold transition-all duration-300 bg-white text-gray-900 shadow-sm">
+                <i class="fas fa-bolt mr-2"></i>Actions rapides
+            </button>
+            <button id="tab-activity" class="tab-button px-4 py-2 rounded-md text-sm font-semibold transition-all duration-300 text-gray-600 hover:text-gray-900">
+                <i class="fas fa-chart-line mr-2"></i>Activité récente
+            </button>
+        </div>
+        <div class="text-sm text-gray-500">
+            <i class="fas fa-clock mr-1"></i>
+            <span id="tab-description">Accès direct aux fonctions principales</span>
+        </div>
+    </div>
+    
+    <!-- Contenu des onglets -->
+    <div id="tab-content">
+        <!-- Onglet Actions rapides -->
+        <div id="content-actions" class="tab-content active">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Créer une commande -->
+                <div class="group bg-white rounded-lg shadow-md border border-gray-100 hover:shadow-lg hover:border-green-300 transition-all duration-300">
+                    <div class="p-4">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="p-2 rounded-lg bg-gradient-to-br from-green-100 to-green-200 group-hover:from-green-500 group-hover:to-green-600 transition-all duration-300">
+                                <i class="fas fa-plus-circle text-xl text-green-600 group-hover:text-white"></i>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-xs text-gray-500 font-medium">NOUVEAU</div>
+                                <div class="text-xs text-green-600 font-semibold">RAPIDE</div>
+                            </div>
+                        </div>
+                        <h3 class="text-base font-bold text-gray-900 mb-1">Créer une commande</h3>
+                        <p class="text-xs text-gray-600 mb-3">Ajoutez une nouvelle commande</p>
+                        <a href="{% url 'operatConfirme:creer_commande' %}" class="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-3 py-2 rounded-md transition-all duration-300 transform hover:scale-105 shadow-sm hover:shadow-md font-semibold text-xs flex items-center justify-center">
+                            <i class="fas fa-shopping-cart mr-1"></i>
+                            Créer
+                        </a>
             </div>
         </div>
-        <div class="text-center py-12">
-            <div class="mb-6">
-                <i class="fas fa-clock text-6xl text-gray-300 animate-bounce"></i>
+
+                <!-- Confirmer commandes -->
+                <div class="group bg-white rounded-lg shadow-md border border-gray-100 hover:shadow-lg hover:border-blue-300 transition-all duration-300">
+                    <div class="p-4">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="p-2 rounded-lg bg-gradient-to-br from-blue-100 to-blue-200 group-hover:from-blue-500 group-hover:to-blue-600 transition-all duration-300">
+                                <i class="fas fa-clipboard-check text-xl text-blue-600 group-hover:text-white"></i>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-xs text-gray-500 font-medium">PRIORITÉ</div>
+                                <div class="text-xs text-orange-600 font-semibold">{{ commandes_en_attente|default:0 }}</div>
+                            </div>
             </div>
-            <h4 class="text-lg font-semibold text-gray-600 mb-2">{{ commandes_en_attente|default:0 }} commande{{ commandes_en_attente|default:0|pluralize }} en attente</h4>
-            <p class="text-gray-500 text-sm mb-4">{% if commandes_en_attente %}Commandes prêtes pour confirmation{% else %}Aucune commande en attente{% endif %}</p>
-            <a href="{% url 'operatConfirme:confirmation' %}" class="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-6 py-3 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl">
-                <i class="fas fa-clipboard-check mr-2"></i>
-                Page Confirmation
+                        <h3 class="text-base font-bold text-gray-900 mb-1">Confirmer commandes</h3>
+                        <p class="text-xs text-gray-600 mb-3">Traitez les commandes en attente</p>
+                        <a href="{% url 'operatConfirme:confirmation' %}" class="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-3 py-2 rounded-md transition-all duration-300 transform hover:scale-105 shadow-sm hover:shadow-md font-semibold text-xs flex items-center justify-center">
+                            <i class="fas fa-check-circle mr-1"></i>
+                            Confirmer
             </a>
         </div>
     </div>
     
-    <div class="bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:shadow-xl border border-gray-100 animate-slideInRight">
-        <div class="flex items-center justify-between mb-6">
-            <h3 class="text-xl font-bold text-gray-800 flex items-center">
-                <i class="fas fa-history mr-3" style="color: #023535;"></i>
-                Activité récente
-            </h3>
-            <button class="transition-colors duration-200 text-sm font-semibold" style="color: #023535; hover:color: #034a4a;">
-                Tout voir
-            </button>
-        </div>
-        <div class="text-center py-12">
-            <div class="mb-6">
-                <i class="fas fa-history text-6xl text-gray-300 animate-pulse"></i>
+                <!-- Voir mes commandes -->
+                <div class="group bg-white rounded-lg shadow-md border border-gray-100 hover:shadow-lg hover:border-purple-300 transition-all duration-300">
+                    <div class="p-4">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="p-2 rounded-lg bg-gradient-to-br from-purple-100 to-purple-200 group-hover:from-purple-500 group-hover:to-purple-600 transition-all duration-300">
+                                <i class="fas fa-list-alt text-xl text-purple-600 group-hover:text-white"></i>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-xs text-gray-500 font-medium">HISTORIQUE</div>
+                                <div class="text-xs text-green-600 font-semibold">{{ commandes_confirmees|default:0 }}</div>
+                            </div>
+                        </div>
+                        <h3 class="text-base font-bold text-gray-900 mb-1">Mes commandes</h3>
+                        <p class="text-xs text-gray-600 mb-3">Consultez l'historique</p>
+                        <a href="{% url 'operatConfirme:commandes_confirmees' %}" class="w-full bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white px-3 py-2 rounded-md transition-all duration-300 transform hover:scale-105 shadow-sm hover:shadow-md font-semibold text-xs flex items-center justify-center">
+                            <i class="fas fa-history mr-1"></i>
+                            Voir
+                        </a>
+                    </div>
+                </div>
             </div>
-            <h4 class="text-lg font-semibold text-gray-600 mb-2">{{ commandes_confirmees|default:0 }} commande{{ commandes_confirmees|default:0|pluralize }} confirmée{{ commandes_confirmees|default:0|pluralize }}</h4>
-            <p class="text-gray-500 text-sm mb-4">Vos confirmations récentes</p>
-            
-            <a href="{% url 'operatConfirme:liste_commandes' %}" class="bg-gradient-to-r text-white px-6 py-3 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl" style="background: linear-gradient(to right, #4B352A, #6d4b3b);">
-                <i class="fas fa-list mr-2"></i>
-                Voir mes commandes
-            </a>
+        </div>
+
+        <!-- Onglet Activité récente -->
+        <div id="content-activity" class="tab-content hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <!-- Commandes en attente -->
+                <div class="bg-white rounded-lg shadow-md border border-gray-100 hover:shadow-lg transition-all duration-300">
+                    <div class="p-4">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center">
+                                <div class="p-2 rounded-lg bg-gradient-to-br from-orange-100 to-orange-200">
+                                    <i class="fas fa-clock text-lg text-orange-600"></i>
+                                </div>
+                                <div class="ml-3">
+                                    <h3 class="text-base font-bold text-gray-900">Commandes prioritaires</h3>
+                                    <p class="text-xs text-gray-600">En attente de confirmation</p>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-lg font-bold text-orange-600">{{ commandes_en_attente|default:0 }}</div>
+                                <div class="text-xs text-gray-500">urgentes</div>
+                            </div>
+                        </div>
+                        <div class="bg-orange-50 rounded-md p-3 mb-3">
+                            <div class="flex items-center justify-between">
+                                <div class="text-xs text-gray-700">
+                                    {% if commandes_en_attente %}
+                                        {{ commandes_en_attente }} commande{{ commandes_en_attente|pluralize }} prête{{ commandes_en_attente|pluralize }}
+                                    {% else %}
+                                        Aucune commande en attente
+                                    {% endif %}
+                                </div>
+                                <div class="text-orange-600">
+                                    <i class="fas fa-exclamation-triangle text-sm"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <a href="{% url 'operatConfirme:confirmation' %}" class="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white px-3 py-2 rounded-md transition-all duration-300 transform hover:scale-105 shadow-sm hover:shadow-md font-semibold text-xs flex items-center justify-center">
+                            <i class="fas fa-clipboard-check mr-1"></i>
+                            Traiter
+                        </a>
+        </div>
+            </div>
+
+                <!-- Commandes confirmées -->
+                <div class="bg-white rounded-lg shadow-md border border-gray-100 hover:shadow-lg transition-all duration-300">
+                    <div class="p-4">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center">
+                                <div class="p-2 rounded-lg bg-gradient-to-br from-green-100 to-green-200">
+                                    <i class="fas fa-check-circle text-lg text-green-600"></i>
+                                </div>
+                                <div class="ml-3">
+                                    <h3 class="text-base font-bold text-gray-900">Confirmations récentes</h3>
+                                    <p class="text-xs text-gray-600">Vos dernières actions</p>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-lg font-bold text-green-600">{{ commandes_confirmees|default:0 }}</div>
+                                <div class="text-xs text-gray-500">confirmées</div>
+                            </div>
+                        </div>
+                        <div class="bg-green-50 rounded-md p-3 mb-3">
+                            <div class="flex items-center justify-between">
+                                <div class="text-xs text-gray-700">
+                                    {{ commandes_confirmees|default:0 }} commande{{ commandes_confirmees|default:0|pluralize }} confirmée{{ commandes_confirmees|default:0|pluralize }} aujourd'hui
+                                </div>
+                                <div class="text-green-600">
+                                    <i class="fas fa-chart-line text-sm"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <a href="{% url 'operatConfirme:commandes_confirmees' %}" class="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-3 py-2 rounded-md transition-all duration-300 transform hover:scale-105 shadow-sm hover:shadow-md font-semibold text-xs flex items-center justify-center">
+                            <i class="fas fa-history mr-1"></i>
+                            Voir
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
 <!-- Performance de la journée -->
-<div class="mt-8 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100">
-    <div class="flex items-center justify-between mb-6">
-        <h3 class="text-xl font-bold text-gray-800 flex items-center">
-            <i class="fas fa-chart-bar text-blue-500 mr-3"></i>
+<div class="mt-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-100">
+    <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-bold text-gray-800 flex items-center">
+            <i class="fas fa-chart-bar text-blue-500 mr-2"></i>
             Performance du jour
         </h3>
-        <div class="text-sm text-gray-500">
-            Aujourd'hui - {{ "now"|date:"d/m/Y" }}
+        <div class="text-xs text-gray-500">
+            {{ "now"|date:"d/m/Y" }}
         </div>
     </div>
     
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div class="bg-white rounded-lg p-4 text-center">
-            <div class="text-2xl font-bold text-green-600">{{ valeur_totale_confirmees|floatformat:0 }}</div>
-            <div class="text-sm text-gray-600">Valeur totale (DH)</div>
-            <div class="mt-2 bg-green-100 rounded-full h-2">
-                <div class="bg-green-500 h-2 rounded-full transition-all duration-1000" style="width: 100%"></div>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div class="bg-white rounded-md p-3 text-center">
+            <div class="text-lg font-bold text-green-600">{{ valeur_totale_confirmees|floatformat:0 }}</div>
+            <div class="text-xs text-gray-600">Valeur totale (DH)</div>
+            <div class="mt-1 bg-green-100 rounded-full h-1.5">
+                <div class="bg-green-500 h-1.5 rounded-full transition-all duration-1000" style="width: 100%"></div>
             </div>
         </div>
         
-        <div class="bg-white rounded-lg p-4 text-center">
-            <div class="text-2xl font-bold text-blue-600">{{ commandes_confirmees_aujourd_hui|default:0 }}</div>
-            <div class="text-sm text-gray-600">Aujourd'hui</div>
-            <div class="mt-2 bg-blue-100 rounded-full h-2">
-                <div class="bg-blue-500 h-2 rounded-full transition-all duration-1000" style="width: {% widthratio commandes_confirmees_aujourd_hui 10 100 %}%"></div>
+        <div class="bg-white rounded-md p-3 text-center">
+            <div class="text-lg font-bold text-blue-600">{{ commandes_confirmees_aujourd_hui|default:0 }}</div>
+            <div class="text-xs text-gray-600">Aujourd'hui</div>
+            <div class="mt-1 bg-blue-100 rounded-full h-1.5">
+                <div class="bg-blue-500 h-1.5 rounded-full transition-all duration-1000" style="width: {% widthratio commandes_confirmees_aujourd_hui 10 100 %}%"></div>
             </div>
         </div>
         
-        <div class="bg-white rounded-lg p-4 text-center">
-            <div class="text-2xl font-bold text-purple-600">{{ commandes_confirmees_semaine|default:0 }}</div>
-            <div class="text-sm text-gray-600">Cette semaine</div>
-            <div class="mt-2 bg-purple-100 rounded-full h-2">
-                <div class="bg-purple-500 h-2 rounded-full transition-all duration-1000" style="width: {% widthratio commandes_confirmees_semaine 20 100 %}%"></div>
+        <div class="bg-white rounded-md p-3 text-center">
+            <div class="text-lg font-bold text-purple-600">{{ commandes_confirmees_semaine|default:0 }}</div>
+            <div class="text-xs text-gray-600">Cette semaine</div>
+            <div class="mt-1 bg-purple-100 rounded-full h-1.5">
+                <div class="bg-purple-500 h-1.5 rounded-full transition-all duration-1000" style="width: {% widthratio commandes_confirmees_semaine 20 100 %}%"></div>
             </div>
         </div>
         
-        <div class="bg-white rounded-lg p-4 text-center">
-            <div class="text-2xl font-bold text-yellow-600">{{ commandes_en_cours|default:0 }}</div>
-            <div class="text-sm text-gray-600">En cours</div>
-            <div class="mt-2 bg-yellow-100 rounded-full h-2">
-                <div class="bg-yellow-500 h-2 rounded-full transition-all duration-1000" style="width: {% widthratio commandes_en_cours 10 100 %}%"></div>
+        <div class="bg-white rounded-md p-3 text-center">
+            <div class="text-lg font-bold text-yellow-600">{{ commandes_en_cours|default:0 }}</div>
+            <div class="text-xs text-gray-600">En cours</div>
+            <div class="mt-1 bg-yellow-100 rounded-full h-1.5">
+                <div class="bg-yellow-500 h-1.5 rounded-full transition-all duration-1000" style="width: {% widthratio commandes_en_cours 10 100 %}%"></div>
             </div>
         </div>
     </div>
@@ -159,9 +278,67 @@
 
 <!-- Style et animations CSS -->
 
-<!-- JavaScript pour les animations simples -->
+<!-- JavaScript pour les onglets et animations -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Gestion des onglets
+    const tabButtons = document.querySelectorAll('.tab-button');
+    const tabContents = document.querySelectorAll('.tab-content');
+    const tabDescription = document.getElementById('tab-description');
+    
+    // Descriptions pour chaque onglet
+    const descriptions = {
+        'tab-actions': 'Accès direct aux fonctions principales',
+        'tab-activity': 'Dernières 24 heures'
+    };
+    
+    tabButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const targetTab = this.id;
+            const targetContent = targetTab.replace('tab-', 'content-');
+            
+            // Retirer la classe active de tous les boutons
+            tabButtons.forEach(btn => {
+                btn.classList.remove('active', 'bg-white', 'text-gray-900', 'shadow-sm');
+                btn.classList.add('text-gray-600');
+            });
+            
+            // Ajouter la classe active au bouton cliqué
+            this.classList.add('active', 'bg-white', 'text-gray-900', 'shadow-sm');
+            this.classList.remove('text-gray-600');
+            
+            // Masquer tous les contenus
+            tabContents.forEach(content => {
+                content.classList.add('hidden');
+                content.classList.remove('active');
+            });
+            
+            // Afficher le contenu correspondant
+            const activeContent = document.getElementById(targetContent);
+            if (activeContent) {
+                activeContent.classList.remove('hidden');
+                activeContent.classList.add('active');
+            }
+            
+            // Mettre à jour la description
+            if (tabDescription && descriptions[targetTab]) {
+                tabDescription.textContent = descriptions[targetTab];
+            }
+        });
+    });
+    
+    // Animation des barres de progression
+    const progressBars = document.querySelectorAll('.bg-green-500, .bg-blue-500, .bg-purple-500, .bg-yellow-500');
+    
+    progressBars.forEach(bar => {
+        const width = bar.style.width;
+        bar.style.width = '0%';
+        
+        setTimeout(() => {
+            bar.style.width = width;
+        }, 500);
+    });
+    
     // Interaction hover pour les cartes statistiques
     const statCards = document.querySelectorAll('.bg-white');
     statCards.forEach(card => {

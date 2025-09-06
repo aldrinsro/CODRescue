@@ -13,12 +13,6 @@
             </h1>
             <p style="color: var(--preparation-border-accent);">Liste des commandes en cours de préparation</p>
         </div>
-        <div class="flex gap-3 mt-4 md:mt-0">
-            <button onclick="imprimerTousLesTickets()" class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors">
-                <i class="fas fa-print mr-2"></i>
-                Imprimer Tous
-            </button>
-        </div>
     </div>
 
     <div class="bg-white rounded-xl shadow-lg border p-6 mb-8" style="border-color: var(--preparation-border-accent);">
@@ -172,17 +166,6 @@ function imprimerTicketsSelectionnes() {
     window.open(url, '_blank');
 }
 
-function imprimerTousLesTickets() {
-    const commandeIds = [{% for commande in commandes %}{{ commande.pk }}{% if not forloop.last %},{% endif %}{% endfor %}];
-    
-    if (commandeIds.length === 0) {
-        alert('Aucune commande à imprimer.');
-        return;
-    }
-    
-    const url = "{% url 'Prepacommande:imprimer_tickets_preparation' %}?ids=" + commandeIds.join(',');
-    window.open(url, '_blank');
-}
 
 // Initialiser les boutons au chargement de la page
 document.addEventListener('DOMContentLoaded', function() {

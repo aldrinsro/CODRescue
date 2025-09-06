@@ -8716,6 +8716,81 @@ def creer_couleur(request):
     
     return redirect('Superpreparation:gestion_couleurs_pointures')
 
+@superviseur_preparation_required
+def diagnostiquer_compteur(request, commande_id):
+    """
+    Fonction pour diagnostiquer et corriger le compteur d'une commande
+    """
+    try:
+        commande = get_object_or_404(Commande, id=commande_id)
+        
+        # Diagnostiquer la situation actuelle
+        articles_upsell = commande.paniers.filter(article__isUpsell=True)
+        compteur_actuel = commande.compteur
+        
+        # Calculer la quantité totale d'articles upsell
+        total_quantite_upsell = (
+            articles_upsell.aggregate(total=Sum("quantite"))["total"] or 0
+        )
+        
+        print(f"🔍 DIAGNOSTIC Commande {commande.id_yz}:")
+        print(f"📊 Compteur actuel: {compteur_actuel}")
+        print(f"📦 Articles upsell trouvés: {articles_upsell.count()}")
+        print(f"🔢 Quantité totale d'articles upsell: {total_quantite_upsell}")
+        
+        if articles_upsell.exists():
+            print("📋 Articles upsell dans la commande:")
+            for panier in articles_upsell:
+                print(
+                    f"  - {panier.article.nom} (Qté: {panier.quantite}, ID: {panier.article.id}, isUpsell: {panier.article.isUpsell})"
+                )
+        
+        # Déterminer le compteur correct selon la nouvelle logique :
+        # 0-1 unités upsell → compteur = 0
+        # 2+ unités upsell → compteur = total_quantite_upsell - 1
+        if total_quantite_upsell >= 2:
+            compteur_correct = total_quantite_upsell - 1
+        else:
+            compteur_correct = 0
+        
+        print(f"✅ Compteur correct: {compteur_correct}")
+        print(
+            "📖 Logique: 0-1 unités upsell → compteur=0 | 2+ unités upsell → compteur=total_quantité-1"
+        )
+        
+        # Corriger si nécessaire
+        if compteur_actuel != compteur_correct:
+            commande.compteur = compteur_correct
+            commande.save()
+            print(f"🔧 Compteur corrigé: {compteur_actuel} → {compteur_correct}")
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Compteur corrigé: {compteur_actuel} → {compteur_correct}',
+                'compteur_actuel': compteur_correct,
+                'compteur_precedent': compteur_actuel,
+                'articles_upsell': articles_upsell.count(),
+                'quantite_totale_upsell': total_quantite_upsell
+            })
+        else:
+            print("✅ Compteur déjà correct")
+            return JsonResponse({
+                'success': True,
+                'message': 'Compteur déjà correct',
+                'compteur_actuel': compteur_actuel,
+                'compteur_precedent': compteur_actuel,
+                'articles_upsell': articles_upsell.count(),
+                'quantite_totale_upsell': total_quantite_upsell
+            })
+            
+    except Exception as e:
+        print(f"❌ Erreur lors du diagnostic: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur lors du diagnostic: {str(e)}'
+        }, status=500)
 
 @superviseur_preparation_required
 @require_POST
@@ -8742,6 +8817,81 @@ def modifier_couleur(request, couleur_id):
     
     return redirect('Superpreparation:gestion_couleurs_pointures')
 
+@superviseur_preparation_required
+def diagnostiquer_compteur(request, commande_id):
+    """
+    Fonction pour diagnostiquer et corriger le compteur d'une commande
+    """
+    try:
+        commande = get_object_or_404(Commande, id=commande_id)
+        
+        # Diagnostiquer la situation actuelle
+        articles_upsell = commande.paniers.filter(article__isUpsell=True)
+        compteur_actuel = commande.compteur
+        
+        # Calculer la quantité totale d'articles upsell
+        total_quantite_upsell = (
+            articles_upsell.aggregate(total=Sum("quantite"))["total"] or 0
+        )
+        
+        print(f"🔍 DIAGNOSTIC Commande {commande.id_yz}:")
+        print(f"📊 Compteur actuel: {compteur_actuel}")
+        print(f"📦 Articles upsell trouvés: {articles_upsell.count()}")
+        print(f"🔢 Quantité totale d'articles upsell: {total_quantite_upsell}")
+        
+        if articles_upsell.exists():
+            print("📋 Articles upsell dans la commande:")
+            for panier in articles_upsell:
+                print(
+                    f"  - {panier.article.nom} (Qté: {panier.quantite}, ID: {panier.article.id}, isUpsell: {panier.article.isUpsell})"
+                )
+        
+        # Déterminer le compteur correct selon la nouvelle logique :
+        # 0-1 unités upsell → compteur = 0
+        # 2+ unités upsell → compteur = total_quantite_upsell - 1
+        if total_quantite_upsell >= 2:
+            compteur_correct = total_quantite_upsell - 1
+        else:
+            compteur_correct = 0
+        
+        print(f"✅ Compteur correct: {compteur_correct}")
+        print(
+            "📖 Logique: 0-1 unités upsell → compteur=0 | 2+ unités upsell → compteur=total_quantité-1"
+        )
+        
+        # Corriger si nécessaire
+        if compteur_actuel != compteur_correct:
+            commande.compteur = compteur_correct
+            commande.save()
+            print(f"🔧 Compteur corrigé: {compteur_actuel} → {compteur_correct}")
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Compteur corrigé: {compteur_actuel} → {compteur_correct}',
+                'compteur_actuel': compteur_correct,
+                'compteur_precedent': compteur_actuel,
+                'articles_upsell': articles_upsell.count(),
+                'quantite_totale_upsell': total_quantite_upsell
+            })
+        else:
+            print("✅ Compteur déjà correct")
+            return JsonResponse({
+                'success': True,
+                'message': 'Compteur déjà correct',
+                'compteur_actuel': compteur_actuel,
+                'compteur_precedent': compteur_actuel,
+                'articles_upsell': articles_upsell.count(),
+                'quantite_totale_upsell': total_quantite_upsell
+            })
+            
+    except Exception as e:
+        print(f"❌ Erreur lors du diagnostic: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur lors du diagnostic: {str(e)}'
+        }, status=500)
 
 @superviseur_preparation_required
 def supprimer_couleur(request, couleur_id):
@@ -8760,6 +8910,81 @@ def supprimer_couleur(request, couleur_id):
     
     return redirect('Superpreparation:gestion_couleurs_pointures')
 
+@superviseur_preparation_required
+def diagnostiquer_compteur(request, commande_id):
+    """
+    Fonction pour diagnostiquer et corriger le compteur d'une commande
+    """
+    try:
+        commande = get_object_or_404(Commande, id=commande_id)
+        
+        # Diagnostiquer la situation actuelle
+        articles_upsell = commande.paniers.filter(article__isUpsell=True)
+        compteur_actuel = commande.compteur
+        
+        # Calculer la quantité totale d'articles upsell
+        total_quantite_upsell = (
+            articles_upsell.aggregate(total=Sum("quantite"))["total"] or 0
+        )
+        
+        print(f"🔍 DIAGNOSTIC Commande {commande.id_yz}:")
+        print(f"📊 Compteur actuel: {compteur_actuel}")
+        print(f"📦 Articles upsell trouvés: {articles_upsell.count()}")
+        print(f"🔢 Quantité totale d'articles upsell: {total_quantite_upsell}")
+        
+        if articles_upsell.exists():
+            print("📋 Articles upsell dans la commande:")
+            for panier in articles_upsell:
+                print(
+                    f"  - {panier.article.nom} (Qté: {panier.quantite}, ID: {panier.article.id}, isUpsell: {panier.article.isUpsell})"
+                )
+        
+        # Déterminer le compteur correct selon la nouvelle logique :
+        # 0-1 unités upsell → compteur = 0
+        # 2+ unités upsell → compteur = total_quantite_upsell - 1
+        if total_quantite_upsell >= 2:
+            compteur_correct = total_quantite_upsell - 1
+        else:
+            compteur_correct = 0
+        
+        print(f"✅ Compteur correct: {compteur_correct}")
+        print(
+            "📖 Logique: 0-1 unités upsell → compteur=0 | 2+ unités upsell → compteur=total_quantité-1"
+        )
+        
+        # Corriger si nécessaire
+        if compteur_actuel != compteur_correct:
+            commande.compteur = compteur_correct
+            commande.save()
+            print(f"🔧 Compteur corrigé: {compteur_actuel} → {compteur_correct}")
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Compteur corrigé: {compteur_actuel} → {compteur_correct}',
+                'compteur_actuel': compteur_correct,
+                'compteur_precedent': compteur_actuel,
+                'articles_upsell': articles_upsell.count(),
+                'quantite_totale_upsell': total_quantite_upsell
+            })
+        else:
+            print("✅ Compteur déjà correct")
+            return JsonResponse({
+                'success': True,
+                'message': 'Compteur déjà correct',
+                'compteur_actuel': compteur_actuel,
+                'compteur_precedent': compteur_actuel,
+                'articles_upsell': articles_upsell.count(),
+                'quantite_totale_upsell': total_quantite_upsell
+            })
+            
+    except Exception as e:
+        print(f"❌ Erreur lors du diagnostic: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur lors du diagnostic: {str(e)}'
+        }, status=500)
 
 
 

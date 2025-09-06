@@ -40,6 +40,10 @@
                     <i class="fas fa-shopping-cart mr-1"></i>Articles totaux
                 </div>
             </div>
+            <a href="{% url 'operatConfirme:creer_commande' %}" class="text-white px-6 py-3 rounded-lg font-medium transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105" style="background: linear-gradient(to right, #f7d9c4, #ede0d3); color: #4B352A;">
+                <i class="fas fa-plus mr-2"></i>
+                Nouvelle commande
+            </a>
         </div>
     </div>
 
@@ -106,18 +110,38 @@
         </div>
     </div>
     
-    <!-- Barre d'actions du tableau -->
+    <!-- Barre de recherche et actions du tableau -->
     {% if mes_commandes_confirmees %}
-    <div class="flex justify-between items-center mb-4 px-2">
-        <div class="flex items-center space-x-4">
-            <button onclick="switchToTable()" id="btn-table" class="flex items-center px-4 py-2 rounded-lg font-medium text-white transition-colors" style="background: linear-gradient(135deg, #4B352A, #6d4b3b);">
-                <i class="fas fa-table mr-2"></i>
-                Vue Tableau
-            </button>
-        </div>
-        <div class="flex items-center space-x-4">
-            <div class="text-sm text-gray-600">
-                <strong>{{ mes_commandes_confirmees.count }}</strong> commande{{ mes_commandes_confirmees.count|pluralize }} confirmée{{ mes_commandes_confirmees.count|pluralize }}
+    <div class="bg-white rounded-xl shadow-md border p-6 mb-6">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <!-- Boutons de vue -->
+            <div class="flex items-center space-x-4">
+                <button onclick="switchToTable()" id="btn-table" class="flex items-center px-4 py-2 rounded-lg font-medium text-white transition-colors" style="background: linear-gradient(135deg, #4B352A, #6d4b3b);">
+                    <i class="fas fa-table mr-2"></i>
+                    Vue Tableau
+                </button>
+            </div>
+            
+            <!-- Barre de recherche intelligente -->
+            <div class="flex-grow max-w-md">
+                <div class="relative">
+                    <input type="text" 
+                           id="searchInput" 
+                           class="w-full pl-10 pr-4 py-2 rounded-lg border focus:ring-2 transition-all" 
+                           style="border-color: #f7d9c4; focus:ring-color: #6d4b3b; focus:border-color: #4B352A;"
+                           placeholder="Rechercher par ID YZ, N° externe, client, téléphone, ville, date, total, état...">
+                    <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2" style="color: #6d4b3b;"></i>
+                    <button onclick="clearSearch()" id="clearSearchBtn" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 hidden">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Compteur -->
+            <div class="flex items-center space-x-4">
+                <div class="text-sm text-gray-600">
+                    <strong id="filteredCount">{{ mes_commandes_confirmees.count }}</strong> commande{{ mes_commandes_confirmees.count|pluralize }} confirmée{{ mes_commandes_confirmees.count|pluralize }}
+                </div>
             </div>
         </div>
     </div>
@@ -228,11 +252,16 @@
                     </td>
                     <td class="px-3 py-4 whitespace-nowrap">
                         {% for etat in commande.etats.all %}
-                            {% if not etat.date_fin and etat.enum_etat.libelle == 'Confirmée' %}
+                            {% if etat.enum_etat.libelle == 'Confirmée' %}
                                 <div class="text-sm" style="color: #4B352A;">{{ etat.date_debut|date:"d/m/Y" }}</div>
                                 <div class="text-xs text-gray-500">{{ etat.date_debut|date:"H:i" }}</div>
                             {% endif %}
+                        {% empty %}
+                            <div class="text-sm text-gray-500">Non confirmée</div>
                         {% endfor %}
+                        {% if not commande.etats.all %}
+                            <div class="text-sm text-gray-500">Non confirmée</div>
+                        {% endif %}
                     </td>
                     <td class="px-3 py-4 whitespace-nowrap">
                         {% with nb_operations=commande.operations.count %}
@@ -326,6 +355,8 @@
 
 {% block extra_js %}
 {{ block.super }}
+<script src="{% static 'js/operatConfirme/smart-search.js' %}"></script>
+<script src="{% static 'js/operatConfirme/smart-pagination.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Vérifier si l'utilisateur n'a pas les autorisations

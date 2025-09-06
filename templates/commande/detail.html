@@ -191,14 +191,73 @@
                     </p>
                 {% endif %}
             </div>
-                <!-- Date de commande -->
-                <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                    <label class="block text-sm font-semibold mb-2 text-gray-600">Source :</label>
-                    <p class="text-lg font-medium text-gray-800">
-                        <i class="fas fa-tag mr-2" style="color: var(--admin-color);"></i>
-                        {{ commande.source }}
-                    </p>
+            
+            <!-- Source de la commande -->
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <label class="block text-sm font-semibold mb-2 text-purple-600">Source de la commande :</label>
+                <p class="text-lg font-medium text-purple-800">
+                    <i class="fas fa-tag mr-2"></i>
+                    {{ commande.source|default:"Non spécifiée" }}
+                </p>
+                <p class="text-xs text-purple-600 mt-1">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Canal de réception de la commande
+                </p>
+            </div>
+            
+            <!-- Statut de paiement -->
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <label class="block text-sm font-semibold mb-2 text-green-600">Statut de paiement :</label>
+                <div class="flex items-center">
+                    {% if commande.payement == 'Payé' %}
+                        <div class="w-3 h-3 rounded-full mr-2 bg-green-500"></div>
+                        <p class="text-lg font-medium text-green-800">
+                            <i class="fas fa-check-circle mr-2"></i>
+                            {{ commande.payement }}
+                        </p>
+                    {% elif commande.payement == 'Remboursée' %}
+                        <div class="w-3 h-3 rounded-full mr-2 bg-orange-500"></div>
+                        <p class="text-lg font-medium text-orange-800">
+                            <i class="fas fa-undo mr-2"></i>
+                            {{ commande.payement }}
+                        </p>
+                    {% else %}
+                        <div class="w-3 h-3 rounded-full mr-2 bg-red-500"></div>
+                        <p class="text-lg font-medium text-red-800">
+                            <i class="fas fa-clock mr-2"></i>
+                            {{ commande.payement|default:"Non payé" }}
+                        </p>
+                    {% endif %}
                 </div>
+                <p class="text-xs text-green-600 mt-1">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Statut de paiement de la commande
+                </p>
+            </div>
+            
+            <!-- Frais de livraison -->
+            <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                <label class="block text-sm font-semibold mb-2 text-yellow-600">Frais de livraison :</label>
+                <div class="flex items-center">
+                    {% if commande.frais_livraison %}
+                        <div class="w-3 h-3 rounded-full mr-2 bg-green-500"></div>
+                        <p class="text-lg font-medium text-green-800">
+                            <i class="fas fa-check-circle mr-2"></i>
+                            Activés
+                        </p>
+                    {% else %}
+                        <div class="w-3 h-3 rounded-full mr-2 bg-gray-400"></div>
+                        <p class="text-lg font-medium text-gray-600">
+                            <i class="fas fa-times-circle mr-2"></i>
+                            Désactivés
+                        </p>
+                    {% endif %}
+                </div>
+                <p class="text-xs text-yellow-600 mt-1">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Frais de livraison inclus dans le total
+                </p>
+            </div>
         </div>
 
         <!-- Adresse de livraison -->
@@ -400,6 +459,12 @@
         <div class="flex flex-wrap gap-4">
             <a href="{% url 'commande:modifier' commande.pk %}" class="inline-flex items-center px-6 py-3 text-white rounded-lg font-medium shadow-md transition-colors duration-300" style="background-color: var(--admin-color); hover:background-color: var(--admin-gradient-end);">
                 <i class="fas fa-edit mr-2"></i> Modifier la commande
+            </a>
+            
+            <!-- Bouton Étiquettes Professionnelles -->
+            <a href="{% url 'commande:etiquettes_generator' %}?commande_id={{ commande.id }}" 
+               class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-blue-700 transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105">
+                <i class="fas fa-tags mr-2"></i> Étiquettes Professionnelles
             </a>
             
             <a href="{% url 'commande:confirmees' %}" class="inline-flex items-center px-6 py-3 bg-gray-500 text-white rounded-lg font-medium hover:bg-gray-600 transition-colors shadow-md">

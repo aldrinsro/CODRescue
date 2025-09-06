@@ -5,85 +5,7 @@
 {% block title %}Modifier Commande {{ commande.id_yz }} - YZ-CMD{% endblock %}
 
 {% block extra_css %}
-<style>
-/* Styles pour le tableau des variantes */
-.variant-table {
-    border-collapse: collapse;
-    background: white;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
 
-.variant-table th {
-    background: linear-gradient(to right, #4B352A, #6d4b3b);
-    color: white;
-    padding: 12px 8px;
-    text-align: center;
-    font-weight: 600;
-    font-size: 0.875rem;
-    border: none;
-}
-
-.variant-table td {
-    padding: 12px 8px;
-    text-align: center;
-    border: 1px solid #e5e7eb;
-    vertical-align: middle;
-}
-
-.variant-table tbody tr:nth-child(even) {
-    background-color: #f9fafb;
-}
-
-.variant-table tbody tr:hover {
-    background-color: #f3f4f6;
-}
-
-/* Styles pour les checkboxes */
-.variant-checkbox {
-    width: 18px;
-    height: 18px;
-    accent-color: #6d4b3b;
-    cursor: pointer;
-}
-
-.variant-checkbox:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-/* Styles pour le stock */
-.stock-disponible {
-    color: #059669;
-    font-weight: 600;
-}
-
-.stock-rupture {
-    color: #dc2626;
-    font-weight: 600;
-}
-
-/* Centrage amélioré pour les cellules */
-.variant-table td > div {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 60px;
-}
-
-.variant-table td > div > div:first-child {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-}
-
-.variant-table td > div > div:last-child {
-    margin-top: 4px;
-    text-align: center;
-    width: 100%;
-}
-</style>
 {% endblock %}
 
 {% block content %}
@@ -227,10 +149,43 @@
                                    class="w-full p-3 bg-gray-100 border rounded-lg text-gray-600">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Frais de livraison (Automatique)</label>
-                            <input type="text" id="frais-display" value="{{ commande.ville.frais_livraison|default:0 }} DH" readonly
-                                   class="w-full p-3 bg-gray-100 border rounded-lg text-gray-600">
-                    </div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Frais de livraison</label>
+                            <div class="flex items-center gap-2">
+                                <input type="text" id="frais-display" value="{{ commande.montant_frais_livraison|default:0 }} DH" readonly
+                                       class="flex-1 p-3 bg-gray-100 border rounded-lg text-gray-600">
+                                <div class="flex items-center gap-2">
+                                    {% if commande.frais_livraison %}
+                                        <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                                        <span class="text-sm font-medium text-green-600" id="frais-status-text">Activés</span>
+                                    {% else %}
+                                        <div class="w-3 h-3 rounded-full bg-gray-400"></div>
+                                        <span class="text-sm font-medium text-gray-600" id="frais-status-text">Désactivés</span>
+                                    {% endif %}
+                                </div>
+                                <button type="button" id="toggle-frais-livraison" 
+                                        class="px-3 py-1 text-xs font-medium rounded-lg transition-all duration-200
+                                               {% if commande.frais_livraison %}
+                                                   bg-red-100 text-red-700 hover:bg-red-200 border border-red-300
+                                               {% else %}
+                                                   bg-green-100 text-green-700 hover:bg-green-200 border border-green-300
+                                               {% endif %}"
+                                        onclick="toggleFraisLivraison()">
+                                    {% if commande.frais_livraison %}
+                                        <i class="fas fa-times mr-1"></i>Désactiver
+                                    {% else %}
+                                        <i class="fas fa-check mr-1"></i>Activer
+                                    {% endif %}
+                                </button>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1" id="frais-info-text">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                {% if commande.frais_livraison %}
+                                    Les frais de livraison sont inclus dans le total de la commande
+                                {% else %}
+                                    Les frais de livraison ne sont pas inclus dans le total
+                                {% endif %}
+                            </p>
+                        </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">delai de livraison (Automatique)</label>
                         <input type="text" id="delai-display" value="{{ commande.ville.Delai_livraison_min|default:0 }} - {{ commande.ville.Delai_livraison_max|default:0 }} jours" readonly
@@ -427,7 +382,18 @@
                                 <span id="sous-total-articles" class="font-medium text-gray-800">
                                     {{ commande.total_articles|floatformat:2 }} DH
                                 </span>
+                                
                             </div>
+                            {% if commande.frais_livraison %}
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600">
+                                    <i class="fas fa-shipping-fast mr-2"></i>Frais de livraison:
+                                </span>
+                                <span id="frais-display" class="font-medium text-gray-800">
+                                    {{ commande.montant_frais_livraison|floatformat:2 }} DH
+                                </span>
+                            </div>
+                            {% endif %}
                             <hr class="border-gray-300">
                         </div>
 
@@ -598,35 +564,25 @@
 
                 <!-- Section des articles avec navigation fixe -->
                 <div class="mt-4 border border-gray-200 rounded-lg overflow-hidden">
-                    <!-- En-tête fixe du tableau -->
-                    <div class="bg-gray-50 border-b border-gray-200 overflow-x-auto">
-                        <table class="min-w-full">
-                            <thead>
-                                <tr>
-                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Article</th>
-                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Prix</th>
-                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Stock</th>
-                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Action</th>
-                                </tr>
-                            </thead>
-                        </table>
-                    </div>
-                    
                     <!-- Zone de scroll avec barre de navigation personnalisée -->
                     <div class="relative">
                         <!-- Conteneur principal avec scroll -->
-                        <div id="articlesScrollContainer" class="max-h-64 sm:max-h-96 overflow-y-auto overflow-x-auto">
-                            <table class="min-w-full">
+                        <div id="articlesScrollContainer" class="max-h-64 sm:max-h-96 overflow-y-auto" style="scrollbar-width: thin; scrollbar-color: #cbd5e0 #f7fafc;">
+                            <table class="w-full table-fixed">
+                                <thead class="bg-gray-50 sticky top-0 z-10">
+                                    <tr>
+                                        <th class="w-2/4 px-2 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Article</th>
+                                        <th class="w-1/6 px-1 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Prix</th>
+                                        <th class="w-1/6 px-1 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Stock</th>
+                                        <th class="w-1/6 px-1 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Action</th>
+                                    </tr>
+                                </thead>
                                 <tbody id="articlesTableBody" class="bg-white divide-y divide-gray-100">
                                     <!-- Lignes d'articles rendues dynamiquement -->
                                 </tbody>
                             </table>
                         </div>
                         
-                        <!-- Barre de navigation personnalisée -->
-                        <div id="customScrollbar" class="absolute right-0 top-0 bottom-0 w-2 sm:w-3 bg-gray-100 rounded-r-lg">
-                            <div id="scrollThumb" class="w-2 sm:w-3 bg-gray-400 rounded-full cursor-pointer hover:bg-gray-500 transition-colors" style="height: 50px; top: 0; position: absolute;"></div>
-                        </div>
                     </div>
                     
                     <!-- Indicateur de navigation -->
@@ -759,7 +715,8 @@ function chargerRegionEtFrais() {
         document.getElementById('frais-display').value = frais + ' DH';
         document.getElementById('delai-display').value = delaiMin + ' - ' + delaiMax + ' jours';
         
-        // Recalculer le total avec les nouveaux frais de livraison
+        // Mettre à jour l'affichage des frais et recalculer le total
+        mettreAJourAffichageFraisResume();
         mettreAJourTotalCommande();
         
         console.log(`🏙️ Ville changée: ${selectedOption.text}, Frais: ${frais} DH, Région: ${region}, Délai: ${delaiMin}-${delaiMax} jours`);
@@ -769,7 +726,8 @@ function chargerRegionEtFrais() {
         document.getElementById('frais-display').value = '';
         document.getElementById('delai-display').value = '';
         
-        // Recalculer le total sans frais de livraison
+        // Mettre à jour l'affichage des frais et recalculer le total
+        mettreAJourAffichageFraisResume();
         mettreAJourTotalCommande();
     }
 }
@@ -3001,16 +2959,17 @@ function chargerArticlesDisponibles() {
                             </div>
                         </div>
                     </td>
-                    <td class="px-4 py-3 text-center font-semibold text-green-600">${prixActuel} DH</td>
-                    <td class="px-4 py-3 text-center">
-                        <span class="px-2 py-0.5 rounded-full text-xs font-medium ${stock <= 0 ? 'bg-red-100 text-red-700' : (stock < 5 ? 'bg-orange-100 text-orange-700' : 'bg-teal-100 text-teal-700')}">
+                    <td class="px-1 py-3 text-center">
+                        <div class="text-sm font-semibold text-gray-900">${prixActuel} DH</div>
+                    </td>
+                    <td class="px-1 py-3 text-center">
+                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${stock <= 0 ? 'bg-red-100 text-red-800' : (stock < 5 ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800')}">
                             ${stock <= 0 ? 'Épuisé' : stock + ' unités'}
                         </span>
                     </td>
-
-                    <td class="px-4 py-3 text-center">
-                        <button type="button" class="px-3 py-2 text-white rounded-lg transition-all" style="background: linear-gradient(135deg, #4B352A, #6d4b3b); hover:shadow-lg;" onclick="ajouterDepuisLigne(this)">
-                            <i class="fas fa-plus mr-1"></i>Ajouter
+                    <td class="px-1 py-3 text-center">
+                        <button type="button" class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium transition-colors bg-purple-100 text-purple-700 hover:bg-purple-200" onclick="ajouterDepuisLigne(this)">
+                            🎨 Variantes
                         </button>
                     </td>
                 `;
@@ -3152,12 +3111,15 @@ function utiliserArticlesFallback() {
                         </div>
                     </div>
                 </td>
-                <td class="px-4 py-3 text-center font-semibold text-green-600">${article.prix_actuel} DH</td>
-                <td class="px-4 py-3 text-center"><span class="px-2 py-0.5 bg-teal-100 text-teal-700 rounded-full text-xs">${article.qte_disponible} unités</span></td>
-
-                <td class="px-4 py-3 text-center">
-                    <button type="button" class="px-3 py-2 text-white rounded-lg transition-all" style="background: linear-gradient(135deg, #4B352A, #6d4b3b); hover:shadow-lg;" onclick="ajouterDepuisLigne(this)">
-                        <i class="fas fa-plus mr-1"></i>Ajouter
+                <td class="px-1 py-3 text-center">
+                    <div class="text-sm font-semibold text-gray-900">${article.prix_actuel} DH</div>
+                </td>
+                <td class="px-1 py-3 text-center">
+                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">${article.qte_disponible} unités</span>
+                </td>
+                <td class="px-1 py-3 text-center">
+                    <button type="button" class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium transition-colors bg-purple-100 text-purple-700 hover:bg-purple-200" onclick="ajouterDepuisLigne(this)">
+                        🎨 Variantes
                     </button>
                 </td>`;
             tableBody.appendChild(tr);
@@ -3249,7 +3211,11 @@ function ouvrirModalVariantes(article) {
     }
 }
 
-function fermerModalVariantes() {
+function fermerModalVariantes(event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
     console.log('🔍 DEBUG fermerModalVariantes - avant nettoyage, window.currentArticle:', window.currentArticle);
     
     const modal = document.getElementById('variantModal');
@@ -3413,10 +3379,10 @@ function creerTableauCroise(variants) {
     
     let tableHtml = `
         <div class="overflow-x-auto">
-            <table class="variant-table min-w-full rounded-lg overflow-hidden">
+            <table class="min-w-full border border-gray-200 rounded-lg overflow-hidden">
                 <thead>
                     <tr>
-                        <th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border-b border-gray-200 bg-gray-50">
                             ${dimension1.charAt(0).toUpperCase() + dimension1.slice(1)} / ${dimension2.charAt(0).toUpperCase() + dimension2.slice(1)}
                         </th>
     `;
@@ -3424,7 +3390,7 @@ function creerTableauCroise(variants) {
     // En-têtes de colonnes
     valeurs2.forEach(val2 => {
         tableHtml += `
-            <th>
+            <th class="px-4 py-3 text-center text-sm font-semibold text-gray-700 border-b border-gray-200 bg-gray-50">
                 ${val2 || 'N/A'}
             </th>
         `;
@@ -3435,8 +3401,8 @@ function creerTableauCroise(variants) {
     // Lignes du tableau
     valeurs1.forEach(val1 => {
         tableHtml += `
-            <tr>
-                <td class="font-medium">
+            <tr class="border-b border-gray-100">
+                <td class="px-4 py-3 text-sm font-medium text-gray-900 bg-gray-50">
                     ${val1 || 'N/A'}
                 </td>
         `;
@@ -3450,8 +3416,8 @@ function creerTableauCroise(variants) {
             });
             
             if (variant) {
-                const stockClass = variant.stock > 0 ? 'stock-disponible' : 'stock-rupture';
-                const stockText = variant.stock > 0 ? `${variant.stock} en stock` : 'Rupture';
+                const stockClass = variant.stock > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+                const stockText = variant.stock > 0 ? `${variant.stock} unité${variant.stock > 1 ? 's' : ''}` : 'Rupture';
                 const checkboxDisabled = variant.stock <= 0 ? 'disabled' : '';
                 
                 // Créer une clé unique pour cette variante
@@ -3459,25 +3425,23 @@ function creerTableauCroise(variants) {
                 variantMap[variantKey] = variant;
                 
                 tableHtml += `
-                    <td>
+                    <td class="px-4 py-3 text-center border-l border-gray-100 bg-white">
                         <div class="space-y-2">
-                            <div class="flex justify-center items-center">
-                                <input type="checkbox" name="variantSelection" value="${variantKey}" 
-                                       id="variant_${variantKey}" class="variant-checkbox" ${checkboxDisabled}
-                                       onchange="selectionnerVarianteFromTable('${variantKey}', this.checked)">
-                                <label for="variant_${variantKey}" class="ml-2 text-sm font-medium ${variant.stock > 0 ? 'cursor-pointer' : 'cursor-not-allowed'}">
-                                    ${variant.prix_unitaire} DH
-                                </label>
+                            <div class="text-lg font-bold text-green-600">${variant.prix_unitaire} DH</div>
+                            <div class="px-2 py-1 rounded-full text-xs font-semibold ${stockClass}">
+                                ${stockText}
                             </div>
-                            <div class="text-xs ${stockClass} font-medium text-center">${stockText}</div>
+                            <label class="flex items-center justify-center cursor-pointer ${variant.stock > 0 ? '' : 'opacity-50 cursor-not-allowed'}">
+                                <input type="checkbox" name="variantSelection" value="${variantKey}" 
+                                       id="variant_${variantKey}" class="variant-checkbox w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2" ${checkboxDisabled}
+                                       onchange="selectionnerVarianteFromTable('${variantKey}', this.checked)">
+                            </label>
                         </div>
                     </td>
                 `;
             } else {
                 tableHtml += `
-                    <td class="bg-gray-100">
-                        <span class="text-gray-400 text-xs">-</span>
-                    </td>
+                    <td class="px-4 py-3 text-center border-l border-gray-100 text-gray-400 bg-white">-</td>
                 `;
             }
         });
@@ -3493,13 +3457,13 @@ function creerTableauCroise(variants) {
 function creerTableauSimple(variants, dimension, valeurs, variantMap) {
     let tableHtml = `
         <div class="overflow-x-auto">
-            <table class="variant-table min-w-full rounded-lg overflow-hidden">
+            <table class="min-w-full border border-gray-200 rounded-lg overflow-hidden">
                 <thead>
                     <tr>
-                        <th>${dimension.charAt(0).toUpperCase() + dimension.slice(1)}</th>
-                        <th>Prix</th>
-                        <th>Stock</th>
-                        <th>Sélection</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border-b border-gray-200 bg-gray-50">${dimension.charAt(0).toUpperCase() + dimension.slice(1)}</th>
+                        <th class="px-4 py-3 text-center text-sm font-semibold text-gray-700 border-b border-gray-200 bg-gray-50">Prix</th>
+                        <th class="px-4 py-3 text-center text-sm font-semibold text-gray-700 border-b border-gray-200 bg-gray-50">Stock</th>
+                        <th class="px-4 py-3 text-center text-sm font-semibold text-gray-700 border-b border-gray-200 bg-gray-50">Sélection</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -3512,21 +3476,21 @@ function creerTableauSimple(variants, dimension, valeurs, variantMap) {
         });
         
         if (variant) {
-            const stockClass = variant.stock > 0 ? 'stock-disponible' : 'stock-rupture';
-            const stockText = variant.stock > 0 ? `${variant.stock} en stock` : 'Rupture';
+            const stockClass = variant.stock > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+            const stockText = variant.stock > 0 ? `${variant.stock} unité${variant.stock > 1 ? 's' : ''}` : 'Rupture';
             const checkboxDisabled = variant.stock <= 0 ? 'disabled' : '';
             
             const variantKey = `${variant.id}`;
             variantMap[variantKey] = variant;
             
             tableHtml += `
-                <tr>
-                    <td class="font-medium">${val || 'N/A'}</td>
-                    <td class="font-semibold">${variant.prix_unitaire} DH</td>
-                    <td class="${stockClass}">${stockText}</td>
-                    <td class="text-center">
+                <tr class="border-b border-gray-100">
+                    <td class="px-4 py-3 text-sm font-medium text-gray-900 bg-white">${val || 'N/A'}</td>
+                    <td class="px-4 py-3 text-center text-lg font-bold text-green-600 bg-white">${variant.prix_unitaire} DH</td>
+                    <td class="px-4 py-3 text-center ${stockClass} bg-white">${stockText}</td>
+                    <td class="px-4 py-3 text-center bg-white">
                         <input type="checkbox" name="variantSelection" value="${variantKey}" 
-                               id="variant_${variantKey}" class="variant-checkbox" ${checkboxDisabled}
+                               id="variant_${variantKey}" class="variant-checkbox w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2" ${checkboxDisabled}
                                onchange="selectionnerVarianteFromTable('${variantKey}', this.checked)">
                     </td>
                 </tr>
@@ -3543,21 +3507,21 @@ function creerListeSimple(variants) {
     
     let tableHtml = `
         <div class="overflow-x-auto">
-            <table class="variant-table min-w-full rounded-lg overflow-hidden">
+            <table class="min-w-full border border-gray-200 rounded-lg overflow-hidden">
                 <thead>
                     <tr>
-                        <th>Variante</th>
-                        <th>Prix</th>
-                        <th>Stock</th>
-                        <th>Sélection</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border-b border-gray-200 bg-gray-50">Variante</th>
+                        <th class="px-4 py-3 text-center text-sm font-semibold text-gray-700 border-b border-gray-200 bg-gray-50">Prix</th>
+                        <th class="px-4 py-3 text-center text-sm font-semibold text-gray-700 border-b border-gray-200 bg-gray-50">Stock</th>
+                        <th class="px-4 py-3 text-center text-sm font-semibold text-gray-700 border-b border-gray-200 bg-gray-50">Sélection</th>
                     </tr>
                 </thead>
                 <tbody>
     `;
     
     variants.forEach((variant, index) => {
-        const stockClass = variant.stock > 0 ? 'stock-disponible' : 'stock-rupture';
-        const stockText = variant.stock > 0 ? `${variant.stock} en stock` : 'Rupture';
+        const stockClass = variant.stock > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+        const stockText = variant.stock > 0 ? `${variant.stock} unité${variant.stock > 1 ? 's' : ''}` : 'Rupture';
         const checkboxDisabled = variant.stock <= 0 ? 'disabled' : '';
         
         const variantKey = `${variant.id}`;
@@ -3570,13 +3534,13 @@ function creerListeSimple(variants) {
         ].filter(Boolean).join(' | ');
         
         tableHtml += `
-            <tr>
-                <td class="font-medium">${variantInfo || 'Variante ' + (index + 1)}</td>
-                <td class="font-semibold">${variant.prix_unitaire} DH</td>
-                <td class="${stockClass}">${stockText}</td>
-                <td class="text-center">
+            <tr class="border-b border-gray-100">
+                <td class="px-4 py-3 text-sm font-medium text-gray-900 bg-white">${variantInfo || 'Variante ' + (index + 1)}</td>
+                <td class="px-4 py-3 text-center text-lg font-bold text-green-600 bg-white">${variant.prix_unitaire} DH</td>
+                <td class="px-4 py-3 text-center ${stockClass} bg-white">${stockText}</td>
+                <td class="px-4 py-3 text-center bg-white">
                     <input type="checkbox" name="variantSelection" value="${variantKey}" 
-                           id="variant_${variantKey}" class="variant-checkbox" ${checkboxDisabled}
+                           id="variant_${variantKey}" class="variant-checkbox w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2" ${checkboxDisabled}
                            onchange="selectionnerVarianteFromTable('${variantKey}', this.checked)">
                 </td>
             </tr>
@@ -3681,7 +3645,11 @@ function mettreAJourAffichageVariantesSelectionnees() {
     }
 }
 
-function effacerSelectionVariantes() {
+function effacerSelectionVariantes(event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
     // Décocher tous les checkboxes
     const checkboxes = document.querySelectorAll('.variant-checkbox');
     checkboxes.forEach(cb => cb.checked = false);
@@ -3701,7 +3669,11 @@ function effacerSelectionVariantes() {
     showToast('🔄 Sélection effacée', 'info');
 }
 
-function ajouterVariantesSelectionnees() {
+function ajouterVariantesSelectionnees(event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
     console.log('🔍 DEBUG ajouterVariantesSelectionnees - window.currentArticle:', window.currentArticle);
     console.log('🔍 DEBUG ajouterVariantesSelectionnees - window.selectedVariants:', window.selectedVariants);
     
@@ -4893,6 +4865,38 @@ function getPrixUpsell(article, compteur) {
     return prixUnitaire;
 }
 
+// Fonction utilitaire pour vérifier si les frais de livraison sont activés
+function sontFraisLivraisonActives() {
+    const fraisStatusText = document.getElementById('frais-status-text');
+    return fraisStatusText && fraisStatusText.textContent.trim() === 'Activés';
+}
+
+// Fonction pour mettre à jour l'affichage des frais de livraison dans le résumé
+function mettreAJourAffichageFraisResume() {
+    const fraisResumeElement = document.querySelector('#frais-display.font-medium.text-gray-800');
+    const fraisResumeContainer = fraisResumeElement ? fraisResumeElement.closest('.flex.justify-between.items-center') : null;
+    
+    if (sontFraisLivraisonActives()) {
+        // Afficher la section des frais de livraison
+        if (fraisResumeContainer) {
+            fraisResumeContainer.style.display = 'flex';
+        }
+        
+        // Mettre à jour le montant
+        const fraisElement = document.getElementById('frais-display');
+        if (fraisElement && fraisResumeElement) {
+            const fraisText = fraisElement.value.replace(' DH', '').replace(',', '.');
+            const fraisMontant = parseFloat(fraisText) || 0;
+            fraisResumeElement.textContent = `${fraisMontant.toFixed(2)} DH`;
+        }
+    } else {
+        // Masquer la section des frais de livraison
+        if (fraisResumeContainer) {
+            fraisResumeContainer.style.display = 'none';
+        }
+    }
+}
+
 function mettreAJourTotalCommande() {
     const articlesContainer = document.getElementById('articles-container');
     if (!articlesContainer) {
@@ -4922,19 +4926,24 @@ function mettreAJourTotalCommande() {
         }
     });
     
-    // Récupérer les frais de livraison
-    const fraisElement = document.getElementById('frais-display');
+    // Vérifier si les frais de livraison sont activés et récupérer le montant
     let fraisLivraison = 0;
-    if (fraisElement) {
-        const fraisText = fraisElement.value.replace(' DH', '').replace(',', '.');
-        fraisLivraison = parseFloat(fraisText) || 0;
+    if (sontFraisLivraisonActives()) {
+        const fraisElement = document.getElementById('frais-display');
+        if (fraisElement) {
+            const fraisText = fraisElement.value.replace(' DH', '').replace(',', '.');
+            fraisLivraison = parseFloat(fraisText) || 0;
+        }
     }
     
-    const totalFinal = sousTotal ;
+    const totalFinal = sousTotal + fraisLivraison;
     
     console.log(`📊 Sous-total articles: ${sousTotal.toFixed(2)} DH`);
-    console.log(`🚚 Frais de livraison: ${fraisLivraison.toFixed(2)} DH`);
+    console.log(`🚚 Frais de livraison: ${fraisLivraison.toFixed(2)} DH (${sontFraisLivraisonActives() ? 'activés' : 'désactivés'})`);
     console.log(`💰 Total final calculé: ${totalFinal.toFixed(2)} DH`);
+    
+    // Mettre à jour l'affichage des frais dans le résumé
+    mettreAJourAffichageFraisResume();
     
     const totalElement = document.getElementById('total-commande');
     if (totalElement) {
@@ -5399,13 +5408,14 @@ function appliquerFiltreSelect(typeFiltre) {
                                 </div>
                             </div>
                         </td>
-                        <td class="px-4 py-3 text-center font-semibold text-green-600">${prixActuel} DH</td>
-                        <td class="px-4 py-3 text-center">
-                            <span class="px-2 py-0.5 rounded-full text-xs font-medium ${stock <= 0 ? 'bg-red-100 text-red-700' : (stock < 5 ? 'bg-orange-100 text-orange-700' : 'bg-teal-100 text-teal-700')}">${stock <= 0 ? 'Épuisé' : stock + ' unités'}</span>
+                        <td class="px-1 py-3 text-center">
+                            <div class="text-sm font-semibold text-gray-900">${prixActuel} DH</div>
                         </td>
-
-                        <td class="px-4 py-3 text-center">
-                            <button type="button" class="px-3 py-2 text-white rounded-lg transition-all" style="background: linear-gradient(135deg, #4B352A, #6d4b3b); hover:shadow-lg;" onclick="ajouterDepuisLigne(this)"><i class="fas fa-plus mr-1"></i>Ajouter</button>
+                        <td class="px-1 py-3 text-center">
+                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${stock <= 0 ? 'bg-red-100 text-red-800' : (stock < 5 ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800')}">${stock <= 0 ? 'Épuisé' : stock + ' unités'}</span>
+                        </td>
+                        <td class="px-1 py-3 text-center">
+                            <button type="button" class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium transition-colors bg-purple-100 text-purple-700 hover:bg-purple-200" onclick="ajouterDepuisLigne(this)">🎨 Variantes</button>
                         </td>`;
                     tableBody.appendChild(tr);
                 }
@@ -6682,15 +6692,17 @@ function modifierArticle(panierId) {
                     </div>
                     
                     <!-- Frais livraison -->
+                    {% if commande.frais_livraison %}
                     <div class="flex items-start">
                         <div class="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold mr-3 mt-0.5">3</div>
                         <div class="flex-1">
                             <div class="font-medium text-gray-800">Ajout des frais de livraison</div>
                             <div class="text-sm text-gray-600 mt-1">
-                                Selon la ville sélectionnée: <strong>{% if commande.ville %}{{ commande.ville.nom }} = {{ commande.frais_livraison|floatformat:2 }} DH{% else %}Aucune ville sélectionnée{% endif %}</strong>
+                                Selon la ville sélectionnée: <strong>{% if commande.ville %}{{ commande.ville.nom }} = {{ commande.montant_frais_livraison|floatformat:2 }} DH{% else %}Aucune ville sélectionnée{% endif %}</strong>
                             </div>
                         </div>
                     </div>
+                    {% endif %}
                 </div>
             </div>
             
@@ -6700,6 +6712,7 @@ function modifierArticle(panierId) {
                     <i class="fas fa-equals mr-2"></i>Formule finale
                 </h4>
                 <div class="text-center">
+                    {% if commande.frais_livraison %}
                     <div class="text-lg font-mono bg-white rounded p-3 shadow-sm">
                         <span class="text-green-600 font-bold">Sous-total Articles</span>
                         <span class="text-gray-500 mx-2">+</span>
@@ -6709,9 +6722,21 @@ function modifierArticle(panierId) {
                     </div>
                     <div class="text-sm text-gray-600 mt-2">
                         <span id="calcul-exemple">
-                            {{ commande.sous_total_articles|floatformat:2 }} DH + {{ commande.frais_livraison|floatformat:2 }} DH = {{ commande.total_cmd|floatformat:2 }} DH
+                            {{ commande.sous_total_articles|floatformat:2 }} DH + {{ commande.montant_frais_livraison|floatformat:2 }} DH = {{ commande.total_cmd|floatformat:2 }} DH
                         </span>
                     </div>
+                    {% else %}
+                    <div class="text-lg font-mono bg-white rounded p-3 shadow-sm">
+                        <span class="text-green-600 font-bold">Sous-total Articles</span>
+                        <span class="text-gray-500 mx-2">=</span>
+                        <span class="text-purple-600 font-bold">Total Commande</span>
+                    </div>
+                    <div class="text-sm text-gray-600 mt-2">
+                        <span id="calcul-exemple">
+                            {{ commande.sous_total_articles|floatformat:2 }} DH = {{ commande.total_cmd|floatformat:2 }} DH
+                        </span>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
             
@@ -6734,7 +6759,7 @@ function modifierArticle(panierId) {
                 <i class="fas fa-table text-blue-500 mr-2 sm:mr-3"></i>
                 <span class="text-sm sm:text-base">Sélectionner des variantes - Tableau croisé</span>
             </div>
-            <span class="text-gray-500 hover:text-gray-700 cursor-pointer transition-colors" onclick="fermerModalVariantes()">
+            <span class="text-gray-500 hover:text-gray-700 cursor-pointer transition-colors" onclick="fermerModalVariantes(event)">
                 <i class="fas fa-times text-lg sm:text-xl"></i>
             </span>
         </h3>
@@ -6760,25 +6785,177 @@ function modifierArticle(panierId) {
         </div>
 
         <div class="flex flex-col sm:flex-row justify-between items-center mt-6 gap-3">
-            <button type="button" id="clearSelectionBtn" onclick="effacerSelectionVariantes()" 
+            <button type="button" id="clearSelectionBtn" onclick="effacerSelectionVariantes(event)" 
                     class="w-full sm:w-auto px-3 sm:px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors hidden text-sm sm:text-base">
                 <i class="fas fa-times mr-1 sm:mr-2"></i>Effacer la sélection
             </button>
             
             <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
-                <button type="button" id="addSelectedVariantsBtn" onclick="ajouterVariantesSelectionnees()" 
+                <button type="button" id="addSelectedVariantsBtn" onclick="ajouterVariantesSelectionnees(event)" 
                         class="w-full sm:w-auto px-3 sm:px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors hidden text-sm sm:text-base">
                     <i class="fas fa-plus mr-1 sm:mr-2"></i>Ajouter les variantes sélectionnées
                 </button>
-                <button type="button" onclick="fermerModalVariantes()" 
+                <button type="button" onclick="fermerModalVariantes(event)" 
                         class="w-full sm:w-auto px-3 sm:px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg transition-colors text-sm sm:text-base">
-                    Annuler
+                    Retour
                 </button>
             </div>
         </div>
     </div>
 </div>
 
+</script>
+
+<!-- Script JSON pour les articles disponibles -->
+{{ articles_json|json_script:"articles-data" }}
+
+<!-- Debug script temporaire pour vérifier les images -->
+<script>
+console.log('🔍 Debug: Vérification des données JSON des articles');
+const articlesScript = document.getElementById('articles-data');
+if (articlesScript) {
+    try {
+        const articlesData = JSON.parse(articlesScript.textContent);
+        console.log('📊 Articles JSON chargés:', articlesData.length);
+        console.log('📊 Premier article:', articlesData[0]);
+        if (articlesData[0] && articlesData[0].image_url) {
+            console.log('🖼️ URL de l\'image du premier article:', articlesData[0].image_url);
+            // Tester si l'image se charge
+            const img = new Image();
+            img.onload = function() {
+                console.log('✅ Image chargée avec succès:', articlesData[0].image_url);
+            };
+            img.onerror = function() {
+                console.log('❌ Erreur de chargement de l\'image:', articlesData[0].image_url);
+            };
+            img.src = articlesData[0].image_url;
+        } else {
+            console.log('❌ Pas d\'image_url pour le premier article');
+        }
+    } catch (error) {
+        console.error('❌ Erreur de parsing JSON:', error);
+    }
+} else {
+    console.error('❌ Script articles-data non trouvé');
+}
+
+// Fonction pour basculer le statut des frais de livraison
+function toggleFraisLivraison() {
+    const button = document.getElementById('toggle-frais-livraison');
+    const statusText = document.getElementById('frais-status-text');
+    const statusDot = statusText.previousElementSibling;
+    const infoText = document.getElementById('frais-info-text');
+    
+    // Désactiver le bouton pendant la requête
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Chargement...';
+    
+    // Déterminer le nouveau statut (inverser l'actuel)
+    const currentStatus = statusText.textContent.trim() === 'Activés';
+    const nouveauStatut = !currentStatus;
+    
+    // Préparer les données à envoyer
+    const formData = new FormData();
+    formData.append('action', 'toggle_frais_livraison');
+    formData.append('frais_livraison_actif', nouveauStatut.toString());
+    formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+    
+    // Envoyer la requête AJAX
+    fetch(window.location.href, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Mettre à jour l'interface
+            if (data.nouveau_statut) {
+                // Frais activés
+                statusText.textContent = 'Activés';
+                statusText.className = 'text-sm font-medium text-green-600';
+                statusDot.className = 'w-3 h-3 rounded-full bg-green-500';
+                button.innerHTML = '<i class="fas fa-times mr-1"></i>Désactiver';
+                button.className = 'px-3 py-1 text-xs font-medium rounded-lg transition-all duration-200 bg-red-100 text-red-700 hover:bg-red-200 border border-red-300';
+                infoText.innerHTML = '<i class="fas fa-info-circle mr-1"></i>Les frais de livraison sont inclus dans le total de la commande';
+            } else {
+                // Frais désactivés
+                statusText.textContent = 'Désactivés';
+                statusText.className = 'text-sm font-medium text-gray-600';
+                statusDot.className = 'w-3 h-3 rounded-full bg-gray-400';
+                button.innerHTML = '<i class="fas fa-check mr-1"></i>Activer';
+                button.className = 'px-3 py-1 text-xs font-medium rounded-lg transition-all duration-200 bg-green-100 text-green-700 hover:bg-green-200 border border-green-300';
+                infoText.innerHTML = '<i class="fas fa-info-circle mr-1"></i>Les frais de livraison ne sont pas inclus dans le total';
+            }
+            
+            // Mettre à jour l'affichage des frais dans le résumé
+            mettreAJourAffichageFraisResume();
+            
+            // Recalculer le total de la commande
+            mettreAJourTotalCommande();
+            
+            // Mettre à jour le total de la commande si affiché
+            const totalElement = document.querySelector('[data-total-commande]');
+            if (totalElement) {
+                totalElement.textContent = data.total_commande.toFixed(2) + ' DH';
+            }
+            
+            // Afficher le message de succès
+            showNotification(data.message, 'success');
+            
+        } else {
+            // Afficher l'erreur
+            showNotification(data.error || 'Erreur lors du changement du statut', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showNotification('Erreur de connexion', 'error');
+    })
+    .finally(() => {
+        // Réactiver le bouton
+        button.disabled = false;
+    });
+}
+
+// Fonction utilitaire pour afficher les notifications
+function showNotification(message, type = 'info') {
+    // Créer l'élément de notification
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg max-w-sm transition-all duration-300 transform translate-x-full`;
+    
+    if (type === 'success') {
+        notification.className += ' bg-green-100 border border-green-400 text-green-700';
+    } else if (type === 'error') {
+        notification.className += ' bg-red-100 border border-red-400 text-red-700';
+    } else {
+        notification.className += ' bg-blue-100 border border-blue-400 text-blue-700';
+    }
+    
+    notification.innerHTML = `
+        <div class="flex items-center">
+            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'} mr-2"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Animer l'apparition
+    setTimeout(() => {
+        notification.classList.remove('translate-x-full');
+    }, 100);
+    
+    // Supprimer après 3 secondes
+    setTimeout(() => {
+        notification.classList.add('translate-x-full');
+        setTimeout(() => {
+            document.body.removeChild(notification);
+        }, 300);
+    }, 3000);
+}
 </script>
 
 {% endblock %} 

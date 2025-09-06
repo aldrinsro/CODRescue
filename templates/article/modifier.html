@@ -533,6 +533,47 @@
                     </div>
                 </div>
                 
+                <!-- Section des prix de remise -->
+                <div class="mt-6 pt-4 border-t border-gray-300">
+                    <h4 class="text-lg font-semibold mb-4" style="color: #023535;">Prix de Remise</h4>
+                    <p class="text-sm text-gray-600 mb-4">Définissez jusqu'à 4 prix de remise pour cet article</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="id_prix_remise_1" class="block text-sm font-semibold mb-2" style="color: #023535;">Prix remise 1 (DH):</label>
+                            <input type="number" name="prix_remise_1" id="id_prix_remise_1" 
+                                   value="{{ article.prix_remise_1|floatformat:"-2"|default:'' }}" 
+                                   step="0.01" min="0" 
+                                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200" 
+                                   placeholder="Ex: 249.99">
+                        </div>
+                        <div>
+                            <label for="id_prix_remise_2" class="block text-sm font-semibold mb-2" style="color: #023535;">Prix remise 2 (DH):</label>
+                            <input type="number" name="prix_remise_2" id="id_prix_remise_2" 
+                                   value="{{ article.prix_remise_2|floatformat:"-2"|default:'' }}" 
+                                   step="0.01" min="0" 
+                                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200" 
+                                   placeholder="Ex: 229.99">
+                        </div>
+                        <div>
+                            <label for="id_prix_remise_3" class="block text-sm font-semibold mb-2" style="color: #023535;">Prix remise 3 (DH):</label>
+                            <input type="number" name="prix_remise_3" id="id_prix_remise_3" 
+                                   value="{{ article.prix_remise_3|floatformat:"-2"|default:'' }}" 
+                                   step="0.01" min="0" 
+                                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200" 
+                                   placeholder="Ex: 199.99">
+                        </div>
+                        <div>
+                            <label for="id_prix_remise_4" class="block text-sm font-semibold mb-2" style="color: #023535;">Prix remise 4 (DH):</label>
+                            <input type="number" name="prix_remise_4" id="id_prix_remise_4" 
+                                   value="{{ article.prix_remise_4|floatformat:"-2"|default:'' }}" 
+                                   step="0.01" min="0" 
+                                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200" 
+                                   placeholder="Ex: 179.99">
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- Nouveaux champs pour prix_uspell_final et Prix_liquidation -->
                 <div class="mt-3 pt-2  border-gray-300">
                  
@@ -543,7 +584,7 @@
                                    value="{{ article.Prix_liquidation|floatformat:"-2"|default:'' }}" 
                                    step="0.01" min="0" 
                                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200" 
-                                   placeholder="Ex: 199.99">
+                                   placeholder="Ex: 149.99">
                             <small class="text-gray-600">Prix spécial pour la liquidation</small>
                         </div>
                     </div>

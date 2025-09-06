@@ -59,6 +59,7 @@ urlpatterns = [
     path('commande/<int:commande_id>/modifier-quantite/', views.modifier_quantite_article_prepa, name='modifier_quantite_article_prepa'),
     path('commande/<int:commande_id>/supprimer-article/', views.supprimer_article_commande_prepa, name='supprimer_article_commande_prepa'),
     path('commande/<int:commande_id>/prix-upsell/', views.api_prix_upsell_articles, name='api_prix_upsell_articles'),
+    path('commande/<int:commande_id>/diagnostiquer-compteur/', views.diagnostiquer_compteur, name='diagnostiquer_compteur'),
     path('api/article/<int:article_id>/variantes/', views.get_article_variants, name='get_article_variants'),
     
 

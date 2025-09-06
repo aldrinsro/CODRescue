@@ -8,6 +8,35 @@
 {% endblock %}
 
 {% block content %}
+<style>
+    /* Styles pour les onglets de filtrage */
+    .tab-active {
+        color: #4B352A !important;
+        border-bottom-color: #4B352A !important;
+        background-color: #f7d9c4;
+    }
+    
+    .tab-inactive {
+        color: #6B7280;
+        border-bottom-color: transparent;
+    }
+    
+    .tab-inactive:hover {
+        color: #4B352A;
+        border-bottom-color: #f7d9c4;
+    }
+    
+    .tab-badge {
+        background-color: #4B352A;
+        color: white;
+    }
+    
+    /* Animation pour les onglets */
+    .tab-active, .tab-inactive {
+        transition: all 0.3s ease;
+    }
+</style>
+
 <div class="main-content transition-all duration-300" id="mainContent">
     <!-- En-tête de la page -->
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 text-white p-6 rounded-xl shadow-lg" style="background: linear-gradient(to right, #4B352A, #6d4b3b);">
@@ -24,15 +53,6 @@
         </div>
     </div>
 
-    <!-- Messages Toast -->
-    {% if messages %}
-        {% for message in messages %}
-        <div class="toast-notification" id="toast-{{ forloop.counter }}">
-            <i class="{% if message.tags == 'success' %}fas fa-check-circle{% elif message.tags == 'error' %}fas fa-exclamation-circle{% elif message.tags == 'warning' %}fas fa-exclamation-triangle{% else %}fas fa-info-circle{% endif %}"></i>
-            {{ message }}
-        </div>
-        {% endfor %}
-    {% endif %}
 
     <!-- Onglets de filtrage -->
     <div class="mb-8 border-b border-gray-200">
@@ -51,44 +71,41 @@
             </a>
             <a href="?tab=retournees" class="px-3 py-4 border-b-2 font-medium text-sm transition-all duration-300 {% if current_tab == 'retournees' %}tab-active{% else %}tab-inactive hover:text-gray-700 hover:border-gray-300{% endif %}">
                 Retournées
-                <span class="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-500 text-white">{{ stats.retournees|default:0 }}</span>
+                <span class="ml-2 px-2 py-0.5 rounded-full text-xs font-medium tab-badge">{{ stats.retournees|default:0 }}</span>
             </a>
         </nav>
     </div>
 
-    <!-- Barre de recherche et actions -->
+    <!-- Barre de recherche intelligente et actions -->
     <div class="bg-white rounded-xl shadow-md border p-6 mb-8">
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <form method="get" class="flex-grow flex gap-4">
-                <div class="flex-grow">
+            <!-- Barre de recherche intelligente -->
+            <div class="flex-grow max-w-md">
                     <div class="relative">
-                        <input type="text" name="search" value="{{ search_query|default:'' }}" 
+                    <input type="text" 
+                           id="searchInput" 
                                class="w-full pl-10 pr-4 py-2 rounded-lg border focus:ring-2 transition-all" 
                                style="border-color: #f7d9c4; focus:ring-color: #6d4b3b; focus:border-color: #4B352A;"
-                               placeholder="Rechercher par N° commande, client, ville...">
+                           placeholder="Rechercher par ID YZ, N° externe, client, téléphone, ville, date, total, état...">
                         <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2" style="color: #6d4b3b;"></i>
+                    <button onclick="clearSearch()" id="clearSearchBtn" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 hidden">
+                        <i class="fas fa-times"></i>
+                    </button>
                     </div>
                 </div>
-                <button type="submit" class="px-6 py-2 rounded-lg text-white font-medium transition-all shadow-md hover:shadow-lg transform hover:scale-105" 
-                        style="background-color: #4B352A;">
-                    Rechercher
-                </button>
-                {% if search_query %}
-                <a href="{% url 'operatConfirme:liste_commandes' %}" class="px-6 py-2 rounded-lg bg-gray-500 text-white font-medium transition-all shadow-md hover:shadow-lg transform hover:scale-105">
-                    Réinitialiser
-                </a>
-                {% endif %}
-            </form>
 
             <!-- Bouton Nouvelle Commande au centre -->
             <div class="flex justify-center">
-                <a href="{% url 'operatConfirme:creer_commande' %}" class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-medium transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105">
+                <a href="{% url 'operatConfirme:creer_commande' %}" class="text-white px-6 py-2 rounded-lg font-medium transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105" style="background: linear-gradient(to right, #f7d9c4, #ede0d3); color: #4B352A;">
                     <i class="fas fa-plus mr-2"></i>Nouvelle Commande
                 </a>
             </div>
 
-            <!-- Liens vers autres pages -->
-            <div class="flex gap-2">
+            <!-- Liens vers autres pages et compteur -->
+            <div class="flex items-center gap-4">
+                <div class="text-sm text-gray-600">
+                    <strong id="filteredCount">{{ commandes.count }}</strong> commande{{ commandes.count|pluralize }} à traiter
+                </div>
                 <a href="{% url 'operatConfirme:confirmation' %}" class="text-white px-6 py-2 rounded-lg font-medium transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105" style="background: linear-gradient(to right, #4B352A, #6d4b3b);">
                     <i class="fas fa-clipboard-check mr-2"></i> Page Confirmation
                 </a>
@@ -97,7 +114,7 @@
     </div>
 
     <!-- Message si aucun résultat -->
-    {% if not page_obj %}
+    {% if not commandes %}
     <div class="border-l-4 p-4 mb-8 rounded-lg" style="background-color: #f7d9c4; border-color: #6d4b3b;">
         <div class="flex">
             <div class="flex-shrink-0">
@@ -117,7 +134,7 @@
     {% endif %}
 
     <!-- Tableau des commandes -->
-    {% if page_obj %}
+    {% if commandes %}
     <div class="overflow-x-auto mb-8 bg-white rounded-xl shadow-lg">
         <table class="min-w-full divide-y divide-gray-200">
                     <thead style="background-color: #4B352A;">
@@ -136,7 +153,7 @@
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
-                {% for commande in page_obj %}
+                {% for commande in commandes %}
                 {% with etat_actuel=commande.etats.all|first %}
                 <tr class="hover:bg-gray-50 transition-colors {% if etat_actuel.enum_etat.libelle == 'Retour Confirmation' %}row-retour{% endif %}">
 
@@ -234,59 +251,7 @@
         </table>
     </div>
 
-    <!-- Pagination -->
-    {% if page_obj.has_other_pages %}
-    <div class="flex justify-center mt-8">
-        <nav aria-label="Navigation des commandes">
-            <ul class="flex items-center -space-x-px">
-            {% if page_obj.has_previous %}
-                <li>
-                    <a href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}" class="px-3 py-2 leading-tight bg-white border rounded-l-lg hover:bg-gray-100 hover:text-gray-700" style="color: #4B352A; border-color: #f7d9c4;">
-                        <i class="fas fa-angle-double-left"></i>
-                    </a>
-                </li>
-                <li>
-                    <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}" class="px-3 py-2 leading-tight bg-white border hover:bg-gray-100 hover:text-gray-700" style="color: #4B352A; border-color: #f7d9c4;">
-                        <i class="fas fa-angle-left"></i>
-                    </a>
-                </li>
-            {% endif %}
-
-            {% for num in page_obj.paginator.page_range %}
-                {% if page_obj.number == num %}
-                    <li>
-                        <span class="px-3 py-2 leading-tight text-white border" style="background-color: #4B352A; border-color: #4B352A;">{{ num }}</span>
-                    </li>
-                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                    <li>
-                        <a href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}" class="px-3 py-2 leading-tight bg-white border hover:bg-gray-100 hover:text-gray-700" style="color: #4B352A; border-color: #f7d9c4;">{{ num }}</a>
-                    </li>
-                {% endif %}
-            {% endfor %}
-
-            {% if page_obj.has_next %}
-                <li>
-                    <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}" class="px-3 py-2 leading-tight bg-white border hover:bg-gray-100 hover:text-gray-700" style="color: #4B352A; border-color: #f7d9c4;">
-                        <i class="fas fa-angle-right"></i>
-                    </a>
-                </li>
-                <li>
-                    <a href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}" class="px-3 py-2 leading-tight bg-white border rounded-r-lg hover:bg-gray-100 hover:text-gray-700" style="color: #4B352A; border-color: #f7d9c4;">
-                        <i class="fas fa-angle-double-right"></i>
-                    </a>
-                </li>
-            {% endif %}
-            </ul>
-        </nav>
-    </div>
-
-    <!-- Informations de pagination -->
-    <div class="flex justify-center mt-4">
-        <div class="text-sm text-gray-600">
-            Affichage de {{ page_obj.start_index }} à {{ page_obj.end_index }} sur {{ page_obj.paginator.count }} commandes.
-        </div>
-    </div>
-    {% endif %}
+    <!-- Pagination intelligente gérée par smart-pagination.js -->
     {% endif %}
 </div>
 
@@ -311,6 +276,8 @@
 
 {% block extra_js %}
 {{ block.super }}
+<script src="{% static 'js/operatConfirme/smart-search.js' %}"></script>
+<script src="{% static 'js/operatConfirme/smart-pagination.js' %}"></script>
 <script>
 let currentCommandeId = null;
 
@@ -459,19 +426,5 @@ window.addEventListener('click', function(event) {
     }
 });
 
-// Gestion des toasts
-document.addEventListener('DOMContentLoaded', function() {
-    const toasts = document.querySelectorAll('.toast-notification');
-    
-    toasts.forEach(function(toast, index) {
-        // Auto-masquage après 4 secondes
-        setTimeout(function() {
-            toast.style.animation = 'slideOutRight 0.3s ease-out forwards';
-            setTimeout(function() {
-                toast.remove();
-            }, 300);
-        }, 4000 + (index * 500)); // Décalage si plusieurs toasts
-    });
-});
 </script>
 {% endblock %}
