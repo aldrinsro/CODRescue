@@ -237,8 +237,8 @@ def generate_etiquette_pdf(request, etiquette_id):
             client_info_parts.append(f"Tél: {commande.client.numero_tel}")
         if commande.client.adresse:
             client_info_parts.append(f"Adresse: {commande.client.adresse}")
-        if commande.ville:
-            client_info_parts.append(f"Ville: {commande.ville.nom}")
+        if commande.ville_init:
+            client_info_parts.append(f"Ville: {commande.ville_init}")
     
     client_info_text = "<br/>".join(client_info_parts)
     data.append([Paragraph(client_info_text, cell_text_style), "", ""])
@@ -270,6 +270,7 @@ def generate_etiquette_pdf(request, etiquette_id):
     price_text = Paragraph(f"{price_value}<br/>YOZAK", bold_cell_text_style)
     
     contact_info_parts = []
+    # Utiliser la vraie ville de livraison de la commande
     if commande and commande.ville:
         contact_info_parts.append(f"<b>{commande.ville.nom}</b>")
     else:
@@ -639,8 +640,8 @@ def generate_etiquette_pdf_pillow(request, etiquette_id):
                 client_info_parts.append(f"Tél: {commande.client.numero_tel}")
             if commande.client.adresse:
                 client_info_parts.append(f"Adresse: {commande.client.adresse}")
-            if commande.ville:
-                client_info_parts.append(f"Ville: {commande.ville.nom}")
+            if commande.ville_init:
+                client_info_parts.append(f"Ville: {commande.ville_init}")
         
         line_height = int(7 * mm_to_px)  # 7mm entre les lignes pour 4K Ultra
         for info in client_info_parts:
@@ -696,6 +697,7 @@ def generate_etiquette_pdf_pillow(request, etiquette_id):
             draw.text((margin_x, y_pos + int(10 * mm_to_px)), "YOZAK", fill=couleur_texte, font=text_font)
         
         # Informations de contact - Dynamique basé sur le template
+        # Utiliser la vraie ville de livraison de la commande
         contact_city = "VILLE NON DÉFINIE"
         if commande and commande.ville:
             contact_city = commande.ville.nom
@@ -1423,6 +1425,7 @@ def etiquette_print_data(request, etiquette_id):
                 'id': commande.id if commande else None,
                 'num_cmd': commande.num_cmd if commande else None,
                 'total_cmd': commande.total_cmd if commande else None,
+                'ville_init': commande.ville_init if commande else None,
                 'client': {
                     'nom': commande.client.nom if commande and commande.client else None,
                     'prenom': commande.client.prenom if commande and commande.client else None,

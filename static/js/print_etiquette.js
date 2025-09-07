@@ -279,9 +279,18 @@ class EtiquettePrinter {
     }
 
     generatePrintHTML(data) {
+        console.log('🔍 [PRINT DEBUG] Début generatePrintHTML');
+        console.log('  - data:', data);
+        
         const template = data.template;
         const etiquette = data.etiquette;
         const commande = data.commande;
+        
+        console.log('🔍 [PRINT DEBUG] Variables extraites:');
+        console.log('  - template:', template);
+        console.log('  - etiquette:', etiquette);
+        console.log('  - commande:', commande);
+        console.log('  - commande.ville_init:', commande ? commande.ville_init : 'commande null');
         const totalArticles = data.total_articles || 0;
 
         return `
@@ -721,7 +730,12 @@ class EtiquettePrinter {
                 </div>
                 
                 <!-- Ligne 2: Informations client avec icônes professionnelles -->
-                ${template.print_show_client_info !== false ? `
+                ${(() => {
+                    console.log('🔍 [PRINT DEBUG] Vérification section client:');
+                    console.log('  - template.print_show_client_info:', template.print_show_client_info);
+                    console.log('  - Condition (template.print_show_client_info !== false):', template.print_show_client_info !== false);
+                    return template.print_show_client_info !== false;
+                })() ? `
                 <div class="bg-gray-50 p-3">
                     ${commande && commande.client ? `
                         <div class="dynamic-text flex items-center">
@@ -746,14 +760,6 @@ class EtiquettePrinter {
                             <span>Adresse: ${commande.client.adresse}</span>
                         </div>
                         ` : ''}
-                        ${commande.ville ? `
-                        <div class="dynamic-text flex items-center">
-                            <div class="w-4 h-4 bg-purple-100 rounded-full flex items-center justify-center mr-2">
-                                <i class="${template.icone_ville} text-purple-600 text-xs"></i>
-                            </div>
-                            <span>Ville: ${commande.ville.nom}</span>
-                        </div>
-                        ` : ''}
                     ` : etiquette.client_nom ? `
                         <div class="dynamic-text flex items-center">
                             <div class="w-4 h-4 bg-blue-100 rounded-full flex items-center justify-center mr-2">
@@ -769,6 +775,22 @@ class EtiquettePrinter {
                             <span>Informations client non disponibles</span>
                         </div>
                     `}
+                    
+                    <!-- Ville du client - affichée indépendamment de commande.client -->
+                    ${(() => {
+                        console.log('🔍 [PRINT DEBUG] Vérification ville_init:');
+                        console.log('  - commande:', commande);
+                        console.log('  - commande.ville_init:', commande ? commande.ville_init : 'commande null');
+                        console.log('  - Condition (commande && commande.ville_init):', commande && commande.ville_init);
+                        return commande && commande.ville_init ? `
+                        <div class="dynamic-text flex items-center">
+                            <div class="w-4 h-4 bg-purple-100 rounded-full flex items-center justify-center mr-2">
+                                <i class="${template.icone_ville} text-purple-600 text-xs"></i>
+                            </div>
+                            <span>Ville: ${commande.ville_init}</span>
+                        </div>
+                        ` : '';
+                    })()}
                 </div>
                 ` : ''}
                 
@@ -840,7 +862,7 @@ class EtiquettePrinter {
                     <div class="text-white p-3 text-center section-with-border contact-info-section" style="background-color: ${template.couleur_principale}; width: ${template.print_contact_width || 250}px;">
                         <div class="text-sm font-bold flex items-center justify-center">
                             <i class="${template.icone_ville} mr-1"></i>
-                            <span>FOUM ZGUID</span>
+                            <span>${commande && commande.ville ? commande.ville.nom : 'VILLE NON DÉFINIE'}</span>
                         </div>
                         <div class="text-xs flex items-center justify-center">
                             <i class="${template.icone_website} mr-1"></i>

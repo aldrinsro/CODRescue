@@ -532,14 +532,14 @@ fetch('{% url "etiquettes_pro:generate_qrcode_image" etiquette.code_data %}')
                     {% endif %}
                     
                     <!-- Ville -->
-                    {% if commande and commande.ville %}
-                    <div class="dynamic-text flex items-center">
-                        <div class="w-4 h-4 bg-purple-100 rounded-full flex items-center justify-center mr-2">
-                            <i class="{{ etiquette.template.icone_ville }} text-purple-600 text-xs"></i>
-                        </div>
-                        <span>Ville: {{ commande.ville.nom }}</span>
-                    </div>
-                    {% endif %}
+        {% if commande and commande.ville_init %}
+        <div class="dynamic-text flex items-center">
+            <div class="w-4 h-4 bg-purple-100 rounded-full flex items-center justify-center mr-2">
+                <i class="{{ etiquette.template.icone_ville }} text-purple-600 text-xs"></i>
+            </div>
+            <span>Ville: {{ commande.ville_init }}</span>
+        </div>
+        {% endif %}
                     
                     {% if not etiquette.client_nom and not etiquette.commande_id %}
                         <div class="dynamic-text flex items-center">
@@ -625,10 +625,10 @@ fetch('{% url "etiquettes_pro:generate_qrcode_image" etiquette.code_data %}')
                         </div>
                     </div>
                     <div class="w-24 text-white p-3 text-center section-with-border" style="background-color: {{ etiquette.template.couleur_principale }};">
-                        <div class="text-sm font-bold flex items-center justify-center">
-                            <i class="{{ etiquette.template.icone_ville }} mr-1"></i>
-                            <span>FOUM ZGUID</span>
-                        </div>
+        <div class="text-sm font-bold flex items-center justify-center">
+            <i class="{{ etiquette.template.icone_ville }} mr-1"></i>
+            <span>{% if commande and commande.ville %}{{ commande.ville.nom }}{% else %}VILLE NON DÉFINIE{% endif %}</span>
+        </div>
                         <div class="text-xs flex items-center justify-center">
                             <i class="{{ etiquette.template.icone_website }} mr-1"></i>
                             <span>www.yoozak.com</span>
