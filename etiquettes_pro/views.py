@@ -1312,3 +1312,176 @@ def etiquettes_commandes_confirmees(request):
     }
     
     return render(request, 'etiquettes_pro/etiquettes_commandes_confirmees.html', context)
+
+
+@login_required
+def etiquette_print_data(request, etiquette_id):
+    """Récupérer les données d'une étiquette pour l'impression avec le template configuré"""
+    try:
+        etiquette = get_object_or_404(Etiquette, id=etiquette_id)
+        template = etiquette.template
+        
+        # Récupérer les données de la commande
+        commande = None
+        if etiquette.commande_id:
+            try:
+                commande = Commande.objects.get(id=int(etiquette.commande_id))
+            except (Commande.DoesNotExist, ValueError):
+                pass
+        
+        # Calculer le total d'articles
+        total_articles = 0
+        if etiquette.cart_items:
+            total_articles = sum(item.get('quantite', 0) for item in etiquette.cart_items)
+        
+        # Préparer les données pour l'impression
+        data = {
+            'success': True,
+            'etiquette': {
+                'id': etiquette.id,
+                'reference': etiquette.reference,
+                'code_data': etiquette.code_data,
+                'nom_article': etiquette.nom_article,
+                'client_nom': etiquette.client_nom,
+                'cart_items': etiquette.cart_items or [],
+            },
+            'template': {
+                # Informations de base
+                'nom': template.nom,
+                'description': template.description,
+                'type_etiquette': template.type_etiquette,
+                'format_page': template.format_page,
+                
+                # Dimensions
+                'largeur': template.largeur,
+                'hauteur': template.hauteur,
+                
+                # Paramètres du code-barres/QR
+                'code_type': template.code_type,
+                'code_size': template.code_size,
+                'code_position': template.code_position,
+                'code_width': template.code_width,
+                'code_height': template.code_height,
+                'code_quality': template.code_quality,
+                
+                # Paramètres de bordures
+                'border_enabled': template.border_enabled,
+                'border_width': template.border_width,
+                'border_color': template.border_color,
+                'border_radius': template.border_radius,
+                
+                # Paramètres de design
+                'police_titre': template.police_titre,
+                'taille_titre': template.taille_titre,
+                'police_texte': template.police_texte,
+                'taille_texte': template.taille_texte,
+                
+                # Couleurs
+                'couleur_principale': template.couleur_principale,
+                'couleur_secondaire': template.couleur_secondaire,
+                'couleur_texte': template.couleur_texte,
+                
+                # Icônes professionnelles
+                'icone_client': template.icone_client,
+                'icone_telephone': template.icone_telephone,
+                'icone_adresse': template.icone_adresse,
+                'icone_ville': template.icone_ville,
+                'icone_article': template.icone_article,
+                'icone_prix': template.icone_prix,
+                'icone_marque': template.icone_marque,
+                'icone_website': template.icone_website,
+                'icone_panier': template.icone_panier,
+                'icone_code': template.icone_code,
+                'icone_date': template.icone_date,
+                
+                # Paramètres de personnalisation d'impression
+                'print_code_width': template.print_code_width,
+                'print_code_height': template.print_code_height,
+                'print_contact_width': template.print_contact_width,
+                'print_show_prices': template.print_show_prices,
+                'print_show_articles': template.print_show_articles,
+                'print_show_client_info': template.print_show_client_info,
+                'print_show_contact_info': template.print_show_contact_info,
+                'print_show_brand': template.print_show_brand,
+                'print_show_date': template.print_show_date,
+                'print_show_total_circle': template.print_show_total_circle,
+                'print_margin_top': template.print_margin_top,
+                'print_margin_bottom': template.print_margin_bottom,
+                'print_margin_left': template.print_margin_left,
+                'print_margin_right': template.print_margin_right,
+                'print_padding': template.print_padding,
+                'print_font_size_title': template.print_font_size_title,
+                'print_font_size_text': template.print_font_size_text,
+                'print_font_size_small': template.print_font_size_small,
+                
+                # Métadonnées
+                'actif': template.actif,
+                'date_creation': template.date_creation.isoformat() if template.date_creation else None,
+                'date_modification': template.date_modification.isoformat() if template.date_modification else None,
+            },
+            'commande': {
+                'id': commande.id if commande else None,
+                'num_cmd': commande.num_cmd if commande else None,
+                'total_cmd': commande.total_cmd if commande else None,
+                'client': {
+                    'nom': commande.client.nom if commande and commande.client else None,
+                    'prenom': commande.client.prenom if commande and commande.client else None,
+                    'numero_tel': commande.client.numero_tel if commande and commande.client else None,
+                    'adresse': commande.client.adresse if commande and commande.client else None,
+                } if commande and commande.client else None,
+                'ville': {
+                    'nom': commande.ville.nom if commande and commande.ville else None,
+                } if commande and commande.ville else None,
+            } if commande else None,
+            'total_articles': total_articles,
+        }
+        
+        return JsonResponse(data)
+        
+    except Exception as e:
+        logger.error(f"Erreur lors de la récupération des données d'impression: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur lors de la récupération des données: {str(e)}'
+        }, status=500)
+
+
+def update_template_print_settings(request, template_id):
+    """Mettre à jour les paramètres de personnalisation d'impression d'un template"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Méthode non autorisée'})
+    
+    try:
+        template = EtiquetteTemplate.objects.get(id=template_id)
+    except EtiquetteTemplate.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Template non trouvé'})
+    
+    try:
+        # Mettre à jour les paramètres de personnalisation d'impression
+        template.print_code_width = int(request.POST.get('print_code_width', 250))
+        template.print_code_height = int(request.POST.get('print_code_height', 80))
+        template.print_contact_width = int(request.POST.get('print_contact_width', 250))
+        template.print_show_prices = request.POST.get('print_show_prices') == 'on'
+        template.print_show_articles = request.POST.get('print_show_articles') == 'on'
+        template.print_show_client_info = request.POST.get('print_show_client_info') == 'on'
+        template.print_show_contact_info = request.POST.get('print_show_contact_info') == 'on'
+        template.print_show_brand = request.POST.get('print_show_brand') == 'on'
+        template.print_show_date = request.POST.get('print_show_date') == 'on'
+        template.print_show_total_circle = request.POST.get('print_show_total_circle') == 'on'
+        template.print_padding = int(request.POST.get('print_padding', 15))
+        template.print_font_size_title = int(request.POST.get('print_font_size_title', 16))
+        template.print_font_size_text = int(request.POST.get('print_font_size_text', 12))
+        template.print_font_size_small = int(request.POST.get('print_font_size_small', 10))
+        
+        template.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Paramètres d\'impression mis à jour avec succès'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur lors de la mise à jour: {str(e)}'
+        })

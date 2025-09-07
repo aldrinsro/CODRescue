@@ -413,6 +413,293 @@
         </div>
     </div>
     
+    <!-- Icônes Professionnelles -->
+    <div class="theme-card">
+        <h3 class="section-title">
+            <i class="fas fa-icons text-blue-500"></i>
+            Icônes Professionnelles
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div class="form-group">
+                <label for="icone_client" class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-user text-blue-500"></i> Icône Client
+                </label>
+                <input type="text" class="theme-input" id="icone_client" name="icone_client" 
+                       value="{% if template %}{{ template.icone_client }}{% else %}fas fa-user{% endif %}" 
+                       placeholder="fas fa-user">
+                <p class="text-xs text-gray-500 mt-1">Icône pour les informations client</p>
+            </div>
+            
+            <div class="form-group">
+                <label for="icone_telephone" class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-phone text-green-500"></i> Icône Téléphone
+                </label>
+                <input type="text" class="theme-input" id="icone_telephone" name="icone_telephone" 
+                       value="{% if template %}{{ template.icone_telephone }}{% else %}fas fa-phone{% endif %}" 
+                       placeholder="fas fa-phone">
+                <p class="text-xs text-gray-500 mt-1">Icône pour le numéro de téléphone</p>
+            </div>
+            
+            <div class="form-group">
+                <label for="icone_adresse" class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-map-marker-alt text-orange-500"></i> Icône Adresse
+                </label>
+                <input type="text" class="theme-input" id="icone_adresse" name="icone_adresse" 
+                       value="{% if template %}{{ template.icone_adresse }}{% else %}fas fa-map-marker-alt{% endif %}" 
+                       placeholder="fas fa-map-marker-alt">
+                <p class="text-xs text-gray-500 mt-1">Icône pour l'adresse</p>
+            </div>
+            
+            <div class="form-group">
+                <label for="icone_ville" class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-building text-purple-500"></i> Icône Ville
+                </label>
+                <input type="text" class="theme-input" id="icone_ville" name="icone_ville" 
+                       value="{% if template %}{{ template.icone_ville }}{% else %}fas fa-building{% endif %}" 
+                       placeholder="fas fa-building">
+                <p class="text-xs text-gray-500 mt-1">Icône pour la ville</p>
+            </div>
+            
+            <div class="form-group">
+                <label for="icone_article" class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-box text-indigo-500"></i> Icône Article
+                </label>
+                <input type="text" class="theme-input" id="icone_article" name="icone_article" 
+                       value="{% if template %}{{ template.icone_article }}{% else %}fas fa-box{% endif %}" 
+                       placeholder="fas fa-box">
+                <p class="text-xs text-gray-500 mt-1">Icône pour les articles</p>
+            </div>
+            
+            <div class="form-group">
+                <label for="icone_prix" class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-money-bill-wave text-green-500"></i> Icône Prix
+                </label>
+                <input type="text" class="theme-input" id="icone_prix" name="icone_prix" 
+                       value="{% if template %}{{ template.icone_prix }}{% else %}fas fa-money-bill-wave{% endif %}" 
+                       placeholder="fas fa-money-bill-wave">
+                <p class="text-xs text-gray-500 mt-1">Icône pour le prix</p>
+            </div>
+            
+            <div class="form-group">
+                <label for="icone_marque" class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-crown text-red-500"></i> Icône Marque
+                </label>
+                <input type="text" class="theme-input" id="icone_marque" name="icone_marque" 
+                       value="{% if template %}{{ template.icone_marque }}{% else %}fas fa-crown{% endif %}" 
+                       placeholder="fas fa-crown">
+                <p class="text-xs text-gray-500 mt-1">Icône pour la marque YOZAK</p>
+            </div>
+            
+            <div class="form-group">
+                <label for="icone_website" class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-globe text-blue-500"></i> Icône Website
+                </label>
+                <input type="text" class="theme-input" id="icone_website" name="icone_website" 
+                       value="{% if template %}{{ template.icone_website }}{% else %}fas fa-globe{% endif %}" 
+                       placeholder="fas fa-globe">
+                <p class="text-xs text-gray-500 mt-1">Icône pour le site web</p>
+            </div>
+            
+            <div class="form-group">
+                <label for="icone_panier" class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-shopping-cart text-indigo-500"></i> Icône Panier
+                </label>
+                <input type="text" class="theme-input" id="icone_panier" name="icone_panier" 
+                       value="{% if template %}{{ template.icone_panier }}{% else %}fas fa-shopping-cart{% endif %}" 
+                       placeholder="fas fa-shopping-cart">
+                <p class="text-xs text-gray-500 mt-1">Icône pour le panier d'articles</p>
+            </div>
+            
+            <div class="form-group">
+                <label for="icone_code" class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-barcode text-gray-500"></i> Icône Code
+                </label>
+                <input type="text" class="theme-input" id="icone_code" name="icone_code" 
+                       value="{% if template %}{{ template.icone_code }}{% else %}fas fa-barcode{% endif %}" 
+                       placeholder="fas fa-barcode">
+                <p class="text-xs text-gray-500 mt-1">Icône pour le code-barres/QR</p>
+            </div>
+            
+            <div class="form-group">
+                <label for="icone_date" class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-calendar-alt text-gray-500"></i> Icône Date
+                </label>
+                <input type="text" class="theme-input" id="icone_date" name="icone_date" 
+                       value="{% if template %}{{ template.icone_date }}{% else %}fas fa-calendar-alt{% endif %}" 
+                       placeholder="fas fa-calendar-alt">
+                <p class="text-xs text-gray-500 mt-1">Icône pour la date</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Section Personnalisation d'impression -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div class="flex items-center mb-4">
+            <i class="fas fa-print text-blue-600 text-xl mr-3"></i>
+            <h3 class="text-lg font-semibold text-gray-800">Personnalisation d'impression</h3>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Dimensions des codes -->
+            <div class="space-y-4">
+                <h4 class="text-md font-medium text-gray-700 border-b pb-2">
+                    <i class="fas fa-expand-arrows-alt text-gray-500 mr-2"></i>Dimensions des codes
+                </h4>
+                
+                <div class="form-group">
+                    <label for="print_code_width" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-arrows-alt-h text-gray-500"></i> Largeur code (px)
+                    </label>
+                    <input type="number" class="theme-input" id="print_code_width" name="print_code_width" 
+                           value="{% if template %}{{ template.print_code_width }}{% else %}250{% endif %}" 
+                           min="100" max="500">
+                    <p class="text-xs text-gray-500 mt-1">Largeur du code-barres/QR à l'impression</p>
+                </div>
+                
+                <div class="form-group">
+                    <label for="print_code_height" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-arrows-alt-v text-gray-500"></i> Hauteur code (px)
+                    </label>
+                    <input type="number" class="theme-input" id="print_code_height" name="print_code_height" 
+                           value="{% if template %}{{ template.print_code_height }}{% else %}80{% endif %}" 
+                           min="50" max="200">
+                    <p class="text-xs text-gray-500 mt-1">Hauteur du code-barres/QR à l'impression</p>
+                </div>
+                
+                <div class="form-group">
+                    <label for="print_contact_width" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-arrows-alt-h text-gray-500"></i> Largeur section contact (px)
+                    </label>
+                    <input type="number" class="theme-input" id="print_contact_width" name="print_contact_width" 
+                           value="{% if template %}{{ template.print_contact_width }}{% else %}250{% endif %}" 
+                           min="150" max="400">
+                    <p class="text-xs text-gray-500 mt-1">Largeur de la section contact (FOUM ZGUID, etc.)</p>
+                </div>
+            </div>
+            
+            <!-- Éléments à afficher -->
+            <div class="space-y-4">
+                <h4 class="text-md font-medium text-gray-700 border-b pb-2">
+                    <i class="fas fa-eye text-gray-500 mr-2"></i>Éléments à afficher
+                </h4>
+                
+                <div class="space-y-3">
+                    <label class="flex items-center">
+                        <input type="checkbox" class="theme-checkbox" id="print_show_prices" name="print_show_prices" 
+                               {% if not template or template.print_show_prices %}checked{% endif %}>
+                        <span class="ml-2 text-sm text-gray-700">
+                            <i class="fas fa-money-bill-wave text-green-500 mr-1"></i>Afficher les prix
+                        </span>
+                    </label>
+                    
+                    <label class="flex items-center">
+                        <input type="checkbox" class="theme-checkbox" id="print_show_articles" name="print_show_articles" 
+                               {% if not template or template.print_show_articles %}checked{% endif %}>
+                        <span class="ml-2 text-sm text-gray-700">
+                            <i class="fas fa-list text-blue-500 mr-1"></i>Afficher la liste des articles
+                        </span>
+                    </label>
+                    
+                    <label class="flex items-center">
+                        <input type="checkbox" class="theme-checkbox" id="print_show_client_info" name="print_show_client_info" 
+                               {% if not template or template.print_show_client_info %}checked{% endif %}>
+                        <span class="ml-2 text-sm text-gray-700">
+                            <i class="fas fa-user text-purple-500 mr-1"></i>Afficher les infos client
+                        </span>
+                    </label>
+                    
+                    <label class="flex items-center">
+                        <input type="checkbox" class="theme-checkbox" id="print_show_contact_info" name="print_show_contact_info" 
+                               {% if not template or template.print_show_contact_info %}checked{% endif %}>
+                        <span class="ml-2 text-sm text-gray-700">
+                            <i class="fas fa-phone text-orange-500 mr-1"></i>Afficher les infos de contact
+                        </span>
+                    </label>
+                    
+                    <label class="flex items-center">
+                        <input type="checkbox" class="theme-checkbox" id="print_show_brand" name="print_show_brand" 
+                               {% if not template or template.print_show_brand %}checked{% endif %}>
+                        <span class="ml-2 text-sm text-gray-700">
+                            <i class="fas fa-crown text-red-500 mr-1"></i>Afficher la marque YOZAK
+                        </span>
+                    </label>
+                    
+                    <label class="flex items-center">
+                        <input type="checkbox" class="theme-checkbox" id="print_show_date" name="print_show_date" 
+                               {% if not template or template.print_show_date %}checked{% endif %}>
+                        <span class="ml-2 text-sm text-gray-700">
+                            <i class="fas fa-calendar text-indigo-500 mr-1"></i>Afficher la date
+                        </span>
+                    </label>
+                    
+                    <label class="flex items-center">
+                        <input type="checkbox" class="theme-checkbox" id="print_show_total_circle" name="print_show_total_circle" 
+                               {% if not template or template.print_show_total_circle %}checked{% endif %}>
+                        <span class="ml-2 text-sm text-gray-700">
+                            <i class="fas fa-circle text-cyan-500 mr-1"></i>Afficher le cercle total articles
+                        </span>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Mise en page et polices -->
+            <div class="space-y-4">
+                <h4 class="text-md font-medium text-gray-700 border-b pb-2">
+                    <i class="fas fa-cogs text-gray-500 mr-2"></i>Mise en page & Polices
+                </h4>
+                
+                <div class="form-group">
+                    <label for="print_padding" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-expand text-gray-500"></i> Espacement interne (px)
+                    </label>
+                    <input type="number" class="theme-input" id="print_padding" name="print_padding" 
+                           value="{% if template %}{{ template.print_padding }}{% else %}15{% endif %}" 
+                           min="5" max="50">
+                </div>
+                
+                <div class="form-group">
+                    <label for="print_font_size_title" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-font text-gray-500"></i> Taille police titre (px)
+                    </label>
+                    <input type="number" class="theme-input" id="print_font_size_title" name="print_font_size_title" 
+                           value="{% if template %}{{ template.print_font_size_title }}{% else %}16{% endif %}" 
+                           min="10" max="30">
+                </div>
+                
+                <div class="form-group">
+                    <label for="print_font_size_text" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-font text-gray-500"></i> Taille police texte (px)
+                    </label>
+                    <input type="number" class="theme-input" id="print_font_size_text" name="print_font_size_text" 
+                           value="{% if template %}{{ template.print_font_size_text }}{% else %}12{% endif %}" 
+                           min="8" max="20">
+                </div>
+                
+                <div class="form-group">
+                    <label for="print_font_size_small" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-font text-gray-500"></i> Taille police petit texte (px)
+                    </label>
+                    <input type="number" class="theme-input" id="print_font_size_small" name="print_font_size_small" 
+                           value="{% if template %}{{ template.print_font_size_small }}{% else %}10{% endif %}" 
+                           min="6" max="16">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Aperçu en temps réel -->
+        <div class="mt-6 p-4 bg-gray-50 rounded-lg">
+            <h4 class="text-md font-medium text-gray-700 mb-3">
+                <i class="fas fa-eye text-blue-500 mr-2"></i>Aperçu des paramètres d'impression
+            </h4>
+            <div id="print-preview" class="text-sm text-gray-600">
+                <p><strong>Code-barres/QR:</strong> <span id="preview-code-size">250x80px</span></p>
+                <p><strong>Section contact:</strong> <span id="preview-contact-width">250px</span></p>
+                <p><strong>Polices:</strong> Titre <span id="preview-title-font">16px</span>, Texte <span id="preview-text-font">12px</span>, Petit <span id="preview-small-font">10px</span></p>
+                <p><strong>Éléments affichés:</strong> <span id="preview-elements">Prix, Articles, Client, Contact, Marque, Date, Cercle</span></p>
+            </div>
+        </div>
+    </div>
+    
     <!-- Aperçu -->
     <div class="theme-card">
         <h3 class="section-title">
@@ -422,70 +709,104 @@
         <div class="p-6">
             <div class="template-preview" id="template-preview">
                 <div class="preview-label" id="preview-label" style="max-width: 400px; margin: 0 auto;">
-                    <!-- Code-barres et date -->
+                    <!-- Code-barres et date avec icônes professionnelles -->
                     <div class="flex items-start justify-between mb-4">
                         <div class="flex items-center">
-                            <div class="w-16 h-20 bg-black flex items-center justify-center mr-3">
+                            <div class="w-16 h-20 bg-black flex items-center justify-center mr-3 relative">
                                 <div class="w-full h-full bg-white" style="background-image: repeating-linear-gradient(90deg, transparent 0px, transparent 1px, black 1px, black 2px);"></div>
+                                <!-- Icône de code-barres professionnelle -->
+                                <div class="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-barcode text-white text-xs"></i>
+                                </div>
                             </div>
-                            <div class="text-xs font-mono">212166</div>
+                            <div class="flex items-center">
+                                <i class="fas fa-hashtag text-blue-600 mr-1 text-xs"></i>
+                                <span class="text-xs font-mono font-semibold">212166</span>
+                            </div>
                         </div>
-                        <div class="bg-gray-600 text-white px-3 py-1 text-sm font-bold" id="preview-date-bar" style="background-color: {% if template %}{{ template.couleur_principale }}{% else %}#374151{% endif %};">
-                            8/30/2025
+                        <div class="bg-gray-600 text-white px-3 py-1 text-sm font-bold flex items-center" id="preview-date-bar" style="background-color: {% if template %}{{ template.couleur_principale }}{% else %}#374151{% endif %};">
+                            <i class="fas fa-calendar-alt mr-1"></i>
+                            <span>8/30/2025</span>
                         </div>
                     </div>
                     
-                    <!-- Informations client -->
+                    <!-- Informations client avec icônes professionnelles -->
                     <div class="space-y-2 mb-4" id="preview-client-info" style="color: {% if template %}{{ template.couleur_texte }}{% else %}#1F2937{% endif %};">
                         <div class="flex items-center text-sm">
-                            <i class="fas fa-user w-4 mr-2"></i>
-                            <span>HAYAT</span>
+                            <div class="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center mr-2">
+                                <i class="fas fa-user text-blue-600 text-xs"></i>
+                            </div>
+                            <span class="font-medium">HAYAT</span>
                         </div>
                         <div class="flex items-center text-sm">
-                            <i class="fas fa-phone w-4 mr-2"></i>
-                            <span>06 33 28 84 70</span>
+                            <div class="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center mr-2">
+                                <i class="fas fa-phone text-green-600 text-xs"></i>
+                            </div>
+                            <span class="font-medium">06 33 28 84 70</span>
                         </div>
                         <div class="flex items-center text-sm">
-                            <i class="fas fa-map-marker-alt w-4 mr-2"></i>
-                            <span>HAY LFARAH 1 RUE IBN ROUMI NE 5</span>
+                            <div class="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center mr-2">
+                                <i class="fas fa-map-marker-alt text-orange-600 text-xs"></i>
+                            </div>
+                            <span class="font-medium">HAY LFARAH 1 RUE IBN ROUMI NE 5</span>
                         </div>
                         <div class="flex items-center text-sm">
-                            <i class="fas fa-building w-4 mr-2"></i>
+                            <div class="w-5 h-5 bg-purple-100 rounded-full flex items-center justify-center mr-2">
+                                <i class="fas fa-building text-purple-600 text-xs"></i>
+                            </div>
+                            <span class="font-medium">SETTAT</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Séparateur -->
+                    <div class="border-t border-gray-300 my-3"></div>
+                    
+                    <!-- Description produit avec icône -->
+                    <div class="flex items-center text-sm font-semibold mb-3" id="preview-product" style="color: {% if template %}{{ template.couleur_texte }}{% else %}#1F2937{% endif %};">
+                        <div class="w-5 h-5 bg-indigo-100 rounded-full flex items-center justify-center mr-2">
+                            <i class="fas fa-box text-indigo-600 text-xs"></i>
+                        </div>
+                        <span>ESPA FEM YZ1017 NOIR P36</span>
+                    </div>
+                    
+                    <!-- Séparateur -->
+                    <div class="border-t border-gray-300 my-3"></div>
+                    
+                    <!-- Prix et ville avec icônes professionnelles -->
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center">
+                            <div class="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center mr-2">
+                                <i class="fas fa-money-bill-wave text-green-600 text-sm"></i>
+                            </div>
+                            <span class="text-lg font-bold" id="preview-price" style="color: {% if template %}{{ template.couleur_texte }}{% else %}#1F2937{% endif %};">
+                                235 DH
+                            </span>
+                        </div>
+                        <div class="bg-gray-600 text-white px-3 py-1 text-sm font-bold flex items-center" id="preview-city-bar" style="background-color: {% if template %}{{ template.couleur_secondaire }}{% else %}#374151{% endif %};">
+                            <i class="fas fa-map-marker-alt mr-1"></i>
                             <span>SETTAT</span>
                         </div>
                     </div>
                     
-                    <!-- Séparateur -->
-                    <div class="border-t border-gray-300 my-3"></div>
-                    
-                    <!-- Description produit -->
-                    <div class="text-sm font-semibold mb-3" id="preview-product" style="color: {% if template %}{{ template.couleur_texte }}{% else %}#1F2937{% endif %};">
-                        ESPA FEM YZ1017 NOIR P36
-                    </div>
-                    
-                    <!-- Séparateur -->
-                    <div class="border-t border-gray-300 my-3"></div>
-                    
-                    <!-- Prix et ville -->
-                    <div class="flex items-center justify-between mb-3">
-                        <span class="text-lg font-bold" id="preview-price" style="color: {% if template %}{{ template.couleur_texte }}{% else %}#1F2937{% endif %};">
-                            235 DH
-                        </span>
-                        <div class="bg-gray-600 text-white px-3 py-1 text-sm font-bold" id="preview-city-bar" style="background-color: {% if template %}{{ template.couleur_secondaire }}{% else %}#374151{% endif %};">
-                            SETTAT
-                        </div>
-                    </div>
-                    
-                    <!-- Pied de page -->
+                    <!-- Pied de page avec icônes professionnelles -->
                     <div class="flex items-center justify-between">
                         <div class="flex items-center">
+                            <div class="w-6 h-6 bg-red-100 rounded-full flex items-center justify-center mr-2">
+                                <i class="fas fa-crown text-red-600 text-sm"></i>
+                            </div>
                             <span class="text-lg font-bold" style="color: {% if template %}{{ template.couleur_texte }}{% else %}#1F2937{% endif %};">
                                 YOZAK
                             </span>
                         </div>
                         <div class="text-right text-xs" id="preview-footer-info" style="color: {% if template %}{{ template.couleur_texte }}{% else %}#1F2937{% endif %};">
-                            <div>www.yoozak.com</div>
-                            <div>06 34 21 56 39 / 47</div>
+                            <div class="flex items-center justify-end mb-1">
+                                <i class="fas fa-globe mr-1"></i>
+                                <span>www.yoozak.com</span>
+                            </div>
+                            <div class="flex items-center justify-end">
+                                <i class="fas fa-phone mr-1"></i>
+                                <span>06 34 21 56 39 / 47</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -635,6 +956,49 @@ document.addEventListener('DOMContentLoaded', function() {
             input.addEventListener('input', updatePreview);
         }
     });
+    
+    // Fonction pour mettre à jour l'aperçu des paramètres d'impression
+    function updatePrintPreview() {
+        const codeWidth = document.getElementById('print_code_width')?.value || 250;
+        const codeHeight = document.getElementById('print_code_height')?.value || 80;
+        const contactWidth = document.getElementById('print_contact_width')?.value || 250;
+        const titleFont = document.getElementById('print_font_size_title')?.value || 16;
+        const textFont = document.getElementById('print_font_size_text')?.value || 12;
+        const smallFont = document.getElementById('print_font_size_small')?.value || 10;
+        
+        // Mettre à jour les dimensions
+        document.getElementById('preview-code-size').textContent = `${codeWidth}x${codeHeight}px`;
+        document.getElementById('preview-contact-width').textContent = `${contactWidth}px`;
+        document.getElementById('preview-title-font').textContent = `${titleFont}px`;
+        document.getElementById('preview-text-font').textContent = `${textFont}px`;
+        document.getElementById('preview-small-font').textContent = `${smallFont}px`;
+        
+        // Mettre à jour les éléments affichés
+        const elements = [];
+        if (document.getElementById('print_show_prices')?.checked) elements.push('Prix');
+        if (document.getElementById('print_show_articles')?.checked) elements.push('Articles');
+        if (document.getElementById('print_show_client_info')?.checked) elements.push('Client');
+        if (document.getElementById('print_show_contact_info')?.checked) elements.push('Contact');
+        if (document.getElementById('print_show_brand')?.checked) elements.push('Marque');
+        if (document.getElementById('print_show_date')?.checked) elements.push('Date');
+        if (document.getElementById('print_show_total_circle')?.checked) elements.push('Cercle');
+        
+        document.getElementById('preview-elements').textContent = elements.length > 0 ? elements.join(', ') : 'Aucun élément';
+    }
+    
+    // Ajouter les événements pour l'aperçu d'impression
+    const printInputs = document.querySelectorAll('#print_code_width, #print_code_height, #print_contact_width, #print_font_size_title, #print_font_size_text, #print_font_size_small');
+    printInputs.forEach(input => {
+        input.addEventListener('input', updatePrintPreview);
+    });
+    
+    const printCheckboxes = document.querySelectorAll('input[name^="print_show_"]');
+    printCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updatePrintPreview);
+    });
+    
+    // Initialiser l'aperçu d'impression
+    updatePrintPreview();
 });
 </script>
 {% endblock %}

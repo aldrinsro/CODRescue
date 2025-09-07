@@ -69,6 +69,43 @@ class EtiquetteTemplate(models.Model):
     couleur_secondaire = models.CharField(max_length=7, default='#1E40AF', verbose_name="Couleur secondaire")
     couleur_texte = models.CharField(max_length=7, default='#1F2937', verbose_name="Couleur du texte")
     
+    # Icônes professionnelles
+    icone_client = models.CharField(max_length=50, default='fas fa-user', verbose_name="Icône client")
+    icone_telephone = models.CharField(max_length=50, default='fas fa-phone', verbose_name="Icône téléphone")
+    icone_adresse = models.CharField(max_length=50, default='fas fa-map-marker-alt', verbose_name="Icône adresse")
+    icone_ville = models.CharField(max_length=50, default='fas fa-building', verbose_name="Icône ville")
+    icone_article = models.CharField(max_length=50, default='fas fa-box', verbose_name="Icône article")
+    icone_prix = models.CharField(max_length=50, default='fas fa-money-bill-wave', verbose_name="Icône prix")
+    icone_marque = models.CharField(max_length=50, default='fas fa-crown', verbose_name="Icône marque")
+    icone_website = models.CharField(max_length=50, default='fas fa-globe', verbose_name="Icône website")
+    icone_panier = models.CharField(max_length=50, default='fas fa-shopping-cart', verbose_name="Icône panier")
+    icone_code = models.CharField(max_length=50, default='fas fa-barcode', verbose_name="Icône code")
+    icone_date = models.CharField(max_length=50, default='fas fa-calendar-alt', verbose_name="Icône date")
+    
+    # Paramètres de personnalisation d'impression
+    print_code_width = models.IntegerField(default=250, verbose_name="Largeur code impression (px)")
+    print_code_height = models.IntegerField(default=80, verbose_name="Hauteur code impression (px)")
+    print_contact_width = models.IntegerField(default=250, verbose_name="Largeur section contact (px)")
+    print_show_prices = models.BooleanField(default=True, verbose_name="Afficher les prix à l'impression")
+    print_show_articles = models.BooleanField(default=True, verbose_name="Afficher la liste des articles")
+    print_show_client_info = models.BooleanField(default=True, verbose_name="Afficher les infos client")
+    print_show_contact_info = models.BooleanField(default=True, verbose_name="Afficher les infos de contact")
+    print_show_brand = models.BooleanField(default=True, verbose_name="Afficher la marque YOZAK")
+    print_show_date = models.BooleanField(default=True, verbose_name="Afficher la date")
+    print_show_total_circle = models.BooleanField(default=True, verbose_name="Afficher le cercle total articles")
+    
+    # Paramètres de mise en page d'impression
+    print_margin_top = models.IntegerField(default=10, verbose_name="Marge haut (px)")
+    print_margin_bottom = models.IntegerField(default=10, verbose_name="Marge bas (px)")
+    print_margin_left = models.IntegerField(default=10, verbose_name="Marge gauche (px)")
+    print_margin_right = models.IntegerField(default=10, verbose_name="Marge droite (px)")
+    print_padding = models.IntegerField(default=15, verbose_name="Espacement interne (px)")
+    
+    # Paramètres de police d'impression
+    print_font_size_title = models.IntegerField(default=16, verbose_name="Taille police titre impression")
+    print_font_size_text = models.IntegerField(default=12, verbose_name="Taille police texte impression")
+    print_font_size_small = models.IntegerField(default=10, verbose_name="Taille police petit texte impression")
+    
     # Métadonnées
     actif = models.BooleanField(default=True)
     cree_par = models.ForeignKey(User, on_delete=models.CASCADE, related_name='templates_etiquettes')

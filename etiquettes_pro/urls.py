@@ -22,6 +22,8 @@ urlpatterns = [
     path('etiquettes/', views.etiquette_list, name='etiquette_list'),
     path('etiquettes/<int:etiquette_id>/pdf/', views.generate_etiquette_pdf_pillow, name='etiquette_pdf'),
     path('etiquettes/<int:etiquette_id>/preview/', views.preview_etiquette, name='etiquette_preview'),
+    path('etiquettes/<int:etiquette_id>/print-data/', views.etiquette_print_data, name='etiquette_print_data'),
+    path('templates/<int:template_id>/update-print-settings/', views.update_template_print_settings, name='update_template_print_settings'),
     path('barcode/<str:code_data>/', views.generate_barcode_image, name='generate_barcode_image'),
     path('qrcode/<str:code_data>/', views.generate_qrcode_image, name='generate_qrcode_image'),
     

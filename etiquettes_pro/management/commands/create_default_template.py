@@ -41,6 +41,18 @@ class Command(BaseCommand):
             couleur_principale='#374151',  # Gris foncé pour l'en-tête
             couleur_secondaire='#6B7280',  # Gris moyen pour les sections
             couleur_texte='#1F2937',       # Gris très foncé pour le texte
+            # Icônes professionnelles par défaut
+            icone_client='fas fa-user',
+            icone_telephone='fas fa-phone',
+            icone_adresse='fas fa-map-marker-alt',
+            icone_ville='fas fa-building',
+            icone_article='fas fa-box',
+            icone_prix='fas fa-money-bill-wave',
+            icone_marque='fas fa-crown',
+            icone_website='fas fa-globe',
+            icone_panier='fas fa-shopping-cart',
+            icone_code='fas fa-barcode',
+            icone_date='fas fa-calendar-alt',
             actif=True,
             cree_par=User.objects.filter(is_superuser=True).first() or User.objects.first()
         )
