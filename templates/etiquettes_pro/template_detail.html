@@ -1,0 +1,281 @@
+{% extends 'composant_generale/Superpreparation/base.html' %}
+{% load static %}
+
+{% block title %}{{ template.nom }} - YZ-CMD{% endblock %}
+
+{% block page_title %}{{ template.nom }}{% endblock %}
+{% block page_subtitle %}Détails du template d'étiquette{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<!-- CSS externe pour les styles Superpreparation -->
+<link rel="stylesheet" href="{% static 'css/Superpreparation/page_cmd_confim.css' %}">
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="main-content transition-all duration-300" id="mainContent">
+    <!-- Toast notifications container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- En-tête de la page -->
+    <div class="page-header">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center">
+            <div>
+                <h1 class="text-3xl font-bold flex items-center mb-2">
+                    <i class="fas fa-file-alt mr-3 text-green-300"></i>
+                    {{ template.nom }}
+                </h1>
+                <p class="text-white opacity-90">Détails du template d'étiquette</p>
+            </div>
+            <div class="flex gap-4 mt-4 md:mt-0">
+                <a href="{% url 'etiquettes_pro:template_edit' template.pk %}" class="theme-button-primary">
+                    <i class="fas fa-edit"></i> Modifier
+                </a>
+                <a href="{% url 'etiquettes_pro:template_list' %}" class="theme-button-secondary">
+                    <i class="fas fa-arrow-left"></i> Retour à la liste
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Informations générales -->
+        <div class="theme-card">
+            <h3 class="section-title">
+                <i class="fas fa-info-circle text-blue-500"></i>
+                Informations Générales
+            </h3>
+            <div class="space-y-4">
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-600">Nom :</span>
+                    <span class="font-semibold text-gray-800">{{ template.nom }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-600">Type :</span>
+                    <span class="status-badge confirmee">{{ template.get_type_etiquette_display }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-600">Format :</span>
+                    <span class="status-badge en-preparation">{{ template.get_format_page_display }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-600">Statut :</span>
+                    <span class="status-badge {% if template.actif %}confirmee{% else %}en-preparation{% endif %}">
+                        {% if template.actif %}Actif{% else %}Inactif{% endif %}
+                    </span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-600">Créé par :</span>
+                    <span class="font-semibold text-gray-800">{{ template.cree_par.username }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-600">Date de création :</span>
+                    <span class="font-semibold text-gray-800">{{ template.date_creation|date:"d/m/Y H:i" }}</span>
+                </div>
+                {% if template.description %}
+                <div>
+                    <span class="text-gray-600 block mb-2">Description :</span>
+                    <p class="text-gray-800 bg-gray-50 p-3 rounded-lg">{{ template.description }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Dimensions -->
+        <div class="theme-card">
+            <h3 class="section-title">
+                <i class="fas fa-ruler text-blue-500"></i>
+                Dimensions
+            </h3>
+            <div class="space-y-4">
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-600">Largeur :</span>
+                    <span class="font-semibold text-gray-800">{{ template.largeur }} mm</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-600">Hauteur :</span>
+                    <span class="font-semibold text-gray-800">{{ template.hauteur }} mm</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-600">Surface :</span>
+                    <span class="font-semibold text-gray-800">{{ template.largeur|floatformat:0 }} × {{ template.hauteur|floatformat:0 }} mm</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Code-barres/QR -->
+        <div class="theme-card">
+            <h3 class="section-title">
+                <i class="fas fa-barcode text-blue-500"></i>
+                Code-barres / QR Code
+            </h3>
+            <div class="space-y-4">
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-600">Type de code :</span>
+                    <span class="status-badge confirmee">{{ template.get_code_type_display }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-600">Taille :</span>
+                    <span class="font-semibold text-gray-800">{{ template.code_size }} mm</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-600">Position :</span>
+                    <span class="font-semibold text-gray-800">{{ template.get_code_position_display }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Typographie -->
+        <div class="theme-card">
+            <h3 class="section-title">
+                <i class="fas fa-font text-blue-500"></i>
+                Typographie
+            </h3>
+            <div class="space-y-4">
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-600">Police du titre :</span>
+                    <span class="font-semibold text-gray-800">{{ template.police_titre }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-600">Taille du titre :</span>
+                    <span class="font-semibold text-gray-800">{{ template.taille_titre }} px</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-600">Police du texte :</span>
+                    <span class="font-semibold text-gray-800">{{ template.police_texte }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-600">Taille du texte :</span>
+                    <span class="font-semibold text-gray-800">{{ template.taille_texte }} px</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Couleurs -->
+        <div class="theme-card">
+            <h3 class="section-title">
+                <i class="fas fa-palette text-blue-500"></i>
+                Couleurs
+            </h3>
+            <div class="space-y-4">
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-600">Couleur principale :</span>
+                    <div class="flex items-center space-x-2">
+                        <div class="w-6 h-6 rounded border border-gray-300" style="background-color: {{ template.couleur_principale }};"></div>
+                        <span class="font-semibold text-gray-800">{{ template.couleur_principale }}</span>
+                    </div>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-600">Couleur secondaire :</span>
+                    <div class="flex items-center space-x-2">
+                        <div class="w-6 h-6 rounded border border-gray-300" style="background-color: {{ template.couleur_secondaire }};"></div>
+                        <span class="font-semibold text-gray-800">{{ template.couleur_secondaire }}</span>
+                    </div>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-600">Couleur du texte :</span>
+                    <div class="flex items-center space-x-2">
+                        <div class="w-6 h-6 rounded border border-gray-300" style="background-color: {{ template.couleur_texte }};"></div>
+                        <span class="font-semibold text-gray-800">{{ template.couleur_texte }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Aperçu du template -->
+    <div class="theme-card mt-6">
+        <h3 class="section-title">
+            <i class="fas fa-eye text-blue-500"></i>
+            Aperçu du Template
+        </h3>
+        <div class="p-6">
+            <div class="template-preview bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                <div class="preview-label bg-white border border-gray-200 rounded-lg max-w-md mx-auto overflow-hidden shadow-lg p-4">
+                    <!-- Code-barres et date -->
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center">
+                            <div class="w-16 h-20 bg-black flex items-center justify-center mr-3">
+                                <div class="w-full h-full bg-white" style="background-image: repeating-linear-gradient(90deg, transparent 0px, transparent 1px, black 1px, black 2px);"></div>
+                            </div>
+                            <div class="text-xs font-mono">212166</div>
+                        </div>
+                        <div class="text-white px-3 py-1 text-sm font-bold" style="background-color: {{ template.couleur_principale }};">
+                            8/30/2025
+                        </div>
+                    </div>
+                    
+                    <!-- Informations client -->
+                    <div class="space-y-2 mb-4" style="color: {{ template.couleur_texte }};">
+                        <div class="flex items-center text-sm">
+                            <i class="fas fa-user w-4 mr-2"></i>
+                            <span>HAYAT</span>
+                        </div>
+                        <div class="flex items-center text-sm">
+                            <i class="fas fa-phone w-4 mr-2"></i>
+                            <span>06 33 28 84 70</span>
+                        </div>
+                        <div class="flex items-center text-sm">
+                            <i class="fas fa-map-marker-alt w-4 mr-2"></i>
+                            <span>HAY LFARAH 1 RUE IBN ROUMI NE 5</span>
+                        </div>
+                        <div class="flex items-center text-sm">
+                            <i class="fas fa-building w-4 mr-2"></i>
+                            <span>SETTAT</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Séparateur -->
+                    <div class="border-t border-gray-300 my-3"></div>
+                    
+                    <!-- Description produit -->
+                    <div class="text-sm font-semibold mb-3" style="color: {{ template.couleur_texte }};">
+                        ESPA FEM YZ1017 NOIR P36
+                    </div>
+                    
+                    <!-- Séparateur -->
+                    <div class="border-t border-gray-300 my-3"></div>
+                    
+                    <!-- Prix et ville -->
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-lg font-bold" style="color: {{ template.couleur_texte }};">
+                            235 DH
+                        </span>
+                        <div class="text-white px-3 py-1 text-sm font-bold" style="background-color: {{ template.couleur_secondaire }};">
+                            SETTAT
+                        </div>
+                    </div>
+                    
+                    <!-- Pied de page -->
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <span class="text-lg font-bold" style="color: {{ template.couleur_texte }};">
+                                YOZAK
+                            </span>
+                        </div>
+                        <div class="text-right text-xs" style="color: {{ template.couleur_texte }};">
+                            <div>www.yoozak.com</div>
+                            <div>06 34 21 56 39 / 47</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex justify-center space-x-4 mt-8">
+        <a href="{% url 'etiquettes_pro:template_edit' template.pk %}" class="theme-button-primary">
+            <i class="fas fa-edit"></i> Modifier le Template
+        </a>
+        <a href="{% url 'etiquettes_pro:template_list' %}" class="theme-button-secondary">
+            <i class="fas fa-arrow-left"></i> Retour à la liste
+        </a>
+        <a href="{% url 'etiquettes_pro:template_delete' template.pk %}" class="theme-button-secondary bg-red-600 hover:bg-red-700" 
+           onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce template ?')">
+            <i class="fas fa-trash"></i> Supprimer
+        </a>
+    </div>
+</div>
+{% endblock %}

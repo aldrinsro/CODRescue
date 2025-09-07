@@ -1,0 +1,273 @@
+{% extends 'composant_generale/Superpreparation/base.html' %}
+{% load static %}
+
+{% block title %}Étiquettes Professionnelles - YZ-CMD{% endblock %}
+
+{% block page_title %}Étiquettes Professionnelles{% endblock %}
+{% block page_subtitle %}Système d'impression haute qualité avec ReportLab{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<!-- CSS externe pour les styles Superpreparation -->
+<link rel="stylesheet" href="{% static 'css/Superpreparation/page_cmd_confim.css' %}">
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="main-content transition-all duration-300" id="mainContent">
+    <!-- Toast notifications container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- En-tête de la page -->
+    <div class="page-header">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center">
+            <div>
+                <h1 class="text-3xl font-bold flex items-center mb-2">
+                    <i class="fas fa-tags mr-3 text-green-300"></i>
+                    Étiquettes Professionnelles
+                </h1>
+                <p class="text-white opacity-90">Système d'impression haute qualité avec ReportLab</p>
+            </div>
+            <div class="flex items-center gap-6 mt-4 md:mt-0">
+                <div class="text-center">
+                    <div class="text-3xl font-bold text-white">{{ templates_count|default:0 }}</div>
+                    <div class="text-sm text-white opacity-80">Templates actifs</div>
+                </div>
+                <div class="text-center border-l border-white/30 pl-6 ml-6">
+                    <div class="text-3xl font-bold text-white">{{ etiquettes_count|default:0 }}</div>
+                    <div class="text-sm text-white opacity-80">Étiquettes total</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Statistiques -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+        <div class="stats-card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-2xl font-bold text-gray-800">{{ templates_count|default:0 }}</div>
+                    <div class="text-sm text-gray-600">Templates Actifs</div>
+                </div>
+                <div class="stats-icon">
+                    <i class="fas fa-file-alt"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="stats-card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-2xl font-bold text-gray-800">{{ etiquettes_count|default:0 }}</div>
+                    <div class="text-sm text-gray-600">Étiquettes Total</div>
+                </div>
+                <div class="stats-icon">
+                    <i class="fas fa-tags"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="stats-card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-2xl font-bold text-gray-800">{{ etiquettes_ready|default:0 }}</div>
+                    <div class="text-sm text-gray-600">Prêtes à Imprimer</div>
+                </div>
+                <div class="stats-icon">
+                    <i class="fas fa-print"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="stats-card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-2xl font-bold text-gray-800">{{ etiquettes_printed|default:0 }}</div>
+                    <div class="text-sm text-gray-600">Déjà Imprimées</div>
+                </div>
+                <div class="stats-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions rapides -->
+    <div class="info-section mb-6">
+        <h3 class="section-title">
+            <i class="fas fa-bolt text-yellow-500"></i>
+            Actions Rapides
+        </h3>
+        <div class="flex flex-wrap gap-4">
+            <a href="{% url 'etiquettes_pro:template_list' %}" class="theme-button-primary">
+                <i class="fas fa-list"></i> Voir les Templates
+            </a>
+            <a href="{% url 'etiquettes_pro:template_create' %}" class="theme-button-primary">
+                <i class="fas fa-plus"></i> Créer un Template
+            </a>
+            <a href="{% url 'etiquettes_pro:etiquette_list' %}" class="theme-button-primary">
+                <i class="fas fa-tags"></i> Voir les Étiquettes
+            </a>
+            <a href="{% url 'etiquettes_pro:etiquettes_commandes_confirmees' %}" class="theme-button-primary">
+                <i class="fas fa-magic"></i> Étiquettes Commandes Confirmées
+            </a>
+        </div>
+    </div>
+
+    <!-- Fonctionnalités principales -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+        <div class="theme-card">
+            <div class="flex items-center mb-4">
+                <div class="info-icon blue mr-4">
+                    <i class="fas fa-edit"></i>
+                </div>
+                <h4 class="text-lg font-semibold text-gray-800">Templates Personnalisables</h4>
+            </div>
+            <p class="text-gray-600 text-sm">
+                Créez et personnalisez vos templates d'étiquettes avec des dimensions, polices et couleurs adaptées à vos besoins.
+            </p>
+        </div>
+        
+        <div class="theme-card">
+            <div class="flex items-center mb-4">
+                <div class="info-icon green mr-4">
+                    <i class="fas fa-barcode"></i>
+                </div>
+                <h4 class="text-lg font-semibold text-gray-800">Codes-barres & QR Codes</h4>
+            </div>
+            <p class="text-gray-600 text-sm">
+                Génération automatique de codes-barres et QR codes haute qualité pour une scannabilité optimale.
+            </p>
+        </div>
+        
+        <div class="theme-card">
+            <div class="flex items-center mb-4">
+                <div class="info-icon purple mr-4">
+                    <i class="fas fa-file-pdf"></i>
+                </div>
+                <h4 class="text-lg font-semibold text-gray-800">PDF Professionnel</h4>
+            </div>
+            <p class="text-gray-600 text-sm">
+                Génération de PDF haute résolution avec ReportLab pour une impression de qualité professionnelle.
+            </p>
+        </div>
+        
+        
+        <div class="theme-card">
+            <div class="flex items-center mb-4">
+                <div class="info-icon blue mr-4">
+                    <i class="fas fa-sync-alt"></i>
+                </div>
+                <h4 class="text-lg font-semibold text-gray-800">Intégration Django</h4>
+            </div>
+            <p class="text-gray-600 text-sm">
+                Intégration native avec vos modèles Django (Commandes, Articles, Clients) pour une synchronisation automatique.
+            </p>
+        </div>
+        
+        <div class="theme-card">
+            <div class="flex items-center mb-4">
+                <div class="info-icon green mr-4">
+                    <i class="fas fa-mobile-alt"></i>
+                </div>
+                <h4 class="text-lg font-semibold text-gray-800">Interface Responsive</h4>
+            </div>
+            <p class="text-gray-600 text-sm">
+                Interface moderne et responsive qui s'adapte à tous les écrans pour une utilisation optimale.
+            </p>
+        </div>
+    </div>
+
+    <!-- Templates récents -->
+    {% if recent_templates %}
+    <div class="info-section mb-6">
+        <h3 class="section-title">
+            <i class="fas fa-clock text-blue-500"></i>
+            Templates Récents
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for template in recent_templates %}
+            <div class="theme-card">
+                <h5 class="text-lg font-semibold text-gray-800 mb-2">{{ template.nom }}</h5>
+                <div class="flex flex-wrap gap-2 mb-3">
+                    <span class="status-badge confirmee">{{ template.get_type_etiquette_display }}</span>
+                    <span class="status-badge en-preparation">{{ template.get_format_page_display }}</span>
+                </div>
+                <p class="text-gray-600 text-sm mb-4">{{ template.description|truncatechars:100 }}</p>
+                <a href="{% url 'etiquettes_pro:template_detail' template.pk %}" class="theme-button-secondary">
+                    <i class="fas fa-eye"></i> Voir
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Étiquettes récentes -->
+    {% if recent_etiquettes %}
+    <div class="info-section mb-6">
+        <h3 class="section-title">
+            <i class="fas fa-tags text-green-500"></i>
+            Étiquettes Récentes
+        </h3>
+        <div class="table-container">
+            <div class="table-responsive">
+                <table class="w-full">
+                    <thead class="table-header">
+                        <tr>
+                            <th class="table-cell">Référence</th>
+                            <th class="table-cell">Template</th>
+                            <th class="table-cell">Statut</th>
+                            <th class="table-cell">Date</th>
+                            <th class="table-cell">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for etiquette in recent_etiquettes %}
+                        <tr class="table-row">
+                            <td class="table-cell">{{ etiquette.reference }}</td>
+                            <td class="table-cell">{{ etiquette.template.nom }}</td>
+                            <td class="table-cell">
+                                {% if etiquette.statut == 'ready' %}
+                                    <span class="status-badge confirmee">Prête</span>
+                                {% elif etiquette.statut == 'printed' %}
+                                    <span class="status-badge terminee">Imprimée</span>
+                                {% elif etiquette.statut == 'draft' %}
+                                    <span class="status-badge en-preparation">Brouillon</span>
+                                {% else %}
+                                    <span class="status-badge">{{ etiquette.get_statut_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="table-cell">{{ etiquette.date_creation|date:"d/m/Y H:i" }}</td>
+                            <td class="table-cell">
+                                <div class="action-buttons-container">
+                                    <a href="{% url 'etiquettes_pro:etiquette_pdf' etiquette.id %}" class="action-button">
+                                        <i class="fas fa-download"></i> PDF
+                                    </a>
+                                    <a href="{% url 'etiquettes_pro:etiquette_preview' etiquette.id %}" class="theme-button-secondary">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Information sur ReportLab -->
+    <div class="info-section">
+        <h3 class="section-title">
+            <i class="fas fa-info-circle text-blue-500"></i>
+            À propos de ReportLab
+        </h3>
+        <p class="text-gray-600">
+            Ce système utilise <strong>ReportLab</strong>, une bibliothèque Python professionnelle pour la génération de PDF. 
+            ReportLab garantit une qualité d'impression exceptionnelle avec des codes-barres et QR codes parfaitement lisibles, 
+            optimisés pour tous types d'imprimantes et scanners.
+        </p>
+    </div>
+</div>
+{% endblock %}

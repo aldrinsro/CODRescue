@@ -1,5 +1,5 @@
 from django.urls import path
-from . import views, views_etiquettes
+from . import views
 
 app_name = 'commande'
  
@@ -46,10 +46,4 @@ urlpatterns = [
     # API
     path('api/commande/<int:commande_id>/panier/', views.api_panier_commande, name='api_panier_commande'),
     path('rechercher-client-telephone/', views.rechercher_client_telephone, name='rechercher_client_telephone'),
-    
-    # Étiquettes professionnelles
-    path('etiquettes/', views_etiquettes.EtiquetteGeneratorView.as_view(), name='etiquettes_generator'),
-    path('etiquettes/generate/', views_etiquettes.EtiquetteGeneratorView.as_view(), name='generate_etiquettes'),
-    path('api/commande/<int:commande_id>/articles/', views_etiquettes.get_commande_articles, name='get_commande_articles'),
-    path('etiquettes/preview/<int:commande_id>/<int:template_id>/', views_etiquettes.preview_etiquette, name='preview_etiquette'),
 ]

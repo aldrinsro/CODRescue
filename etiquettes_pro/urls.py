@@ -1,0 +1,35 @@
+from django.urls import path, include
+from . import views
+from . import views_redirect
+
+app_name = 'etiquettes_pro'
+
+urlpatterns = [
+    # Dashboard
+    path('', views.etiquettes_dashboard, name='dashboard'),
+    
+    # Redirection après login
+    path('redirect/', views_redirect.redirect_to_etiquettes, name='redirect_after_login'),
+    
+    # Templates
+    path('templates/', views.EtiquetteTemplateListView.as_view(), name='template_list'),
+    path('templates/create/', views.create_template, name='template_create'),
+    path('templates/<int:pk>/', views.template_detail, name='template_detail'),
+    path('templates/<int:pk>/edit/', views.edit_template, name='template_edit'),
+    path('templates/<int:pk>/delete/', views.delete_template, name='template_delete'),
+    
+    # Étiquettes
+    path('etiquettes/', views.etiquette_list, name='etiquette_list'),
+    path('etiquettes/<int:etiquette_id>/pdf/', views.generate_etiquette_pdf_pillow, name='etiquette_pdf'),
+    path('etiquettes/<int:etiquette_id>/preview/', views.preview_etiquette, name='etiquette_preview'),
+    path('barcode/<str:code_data>/', views.generate_barcode_image, name='generate_barcode_image'),
+    path('qrcode/<str:code_data>/', views.generate_qrcode_image, name='generate_qrcode_image'),
+    
+    # Génération automatique pour commandes confirmées
+    path('etiquettes-commandes-confirmees/', views.etiquettes_commandes_confirmees, name='etiquettes_commandes_confirmees'),
+    path('generate-etiquettes-confirmees/', views.generate_etiquettes_commandes_confirmees, name='generate_etiquettes_confirmees'),
+    
+    # API endpoints
+    path('api/templates/', views.api_template_list, name='api_template_list'),
+    path('api/etiquettes/', views.api_etiquette_list, name='api_etiquette_list'),
+]

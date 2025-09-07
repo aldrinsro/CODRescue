@@ -1,0 +1,640 @@
+{% extends 'composant_generale/Superpreparation/base.html' %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block title %}{% if template %}Modifier le Template{% else %}Nouveau Template{% endif %} - YZ-CMD{% endblock %}
+
+{% block page_title %}{% if template %}Modifier le Template{% else %}Nouveau Template{% endif %}{% endblock %}
+{% block page_subtitle %}{% if template %}Modification du template d'étiquette{% else %}Création d'un nouveau template d'étiquette{% endif %}{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<!-- CSS externe pour les styles Superpreparation -->
+<link rel="stylesheet" href="{% static 'css/Superpreparation/page_cmd_confim.css' %}">
+<style>
+    .template-preview {
+        background: #f8f9fa;
+        border: 2px dashed #dee2e6;
+        border-radius: 10px;
+        padding: 20px;
+        text-align: center;
+    }
+
+    .preview-label {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        max-width: 300px;
+        margin: 0 auto;
+        overflow: hidden;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .preview-header {
+        background: var(--preparation-primary);
+        color: white;
+        padding: 10px 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 14px;
+        font-weight: bold;
+    }
+
+    .preview-body {
+        padding: 15px;
+    }
+
+    .preview-info {
+        text-align: left;
+        margin-bottom: 15px;
+        font-size: 12px;
+        line-height: 1.4;
+    }
+
+    .preview-code {
+        background: #f9f9f9;
+        border: 1px solid #eee;
+        border-radius: 4px;
+        padding: 20px;
+        margin: 10px 0;
+    }
+
+    .code-placeholder {
+        color: #6c757d;
+        font-size: 24px;
+    }
+
+    .preview-footer {
+        background: var(--preparation-primary);
+        color: white;
+        padding: 8px 15px;
+        font-size: 12px;
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="main-content transition-all duration-300" id="mainContent">
+    <!-- Toast notifications container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- En-tête de la page -->
+    <div class="page-header">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center">
+            <div>
+                <h1 class="text-3xl font-bold flex items-center mb-2">
+                    <i class="fas fa-{% if template %}edit{% else %}plus{% endif %} mr-3 text-green-300"></i>
+                    {% if template %}Modifier le Template{% else %}Nouveau Template{% endif %}
+                </h1>
+                <p class="text-white opacity-90">{% if template %}Modification du template d'étiquette{% else %}Création d'un nouveau template d'étiquette{% endif %}</p>
+            </div>
+            <div class="mt-4 md:mt-0">
+                <a href="{% url 'etiquettes_pro:template_list' %}" class="theme-button-secondary">
+                    <i class="fas fa-arrow-left"></i> Retour à la liste
+                </a>
+            </div>
+        </div>
+    </div>
+    <form method="post" class="space-y-6">
+        {% csrf_token %}
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Informations générales -->
+            <div class="theme-card">
+                <h3 class="section-title">
+                    <i class="fas fa-info-circle text-blue-500"></i>
+                    Informations Générales
+                </h3>
+                <div class="space-y-4">
+                    <div class="form-group">
+                        <label for="nom" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-tag text-blue-500"></i> Nom du Template *
+                        </label>
+                        <input type="text" class="theme-input" id="nom" name="nom" 
+                               value="{% if template %}{{ template.nom }}{% endif %}" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="description" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-align-left text-blue-500"></i> Description
+                        </label>
+                        <textarea class="theme-input" id="description" name="description" rows="3">{% if template %}{{ template.description }}{% endif %}</textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="type_etiquette" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-tags text-blue-500"></i> Type d'Étiquette *
+                        </label>
+                        <select class="theme-input" id="type_etiquette" name="type_etiquette" required>
+                            <option value="article" {% if template and template.type_etiquette == 'article' %}selected{% endif %}>Article</option>
+                            <option value="commande" {% if template and template.type_etiquette == 'commande' %}selected{% endif %}>Commande</option>
+                            <option value="livraison" {% if template and template.type_etiquette == 'livraison' %}selected{% endif %}>Livraison</option>
+                            <option value="stock" {% if template and template.type_etiquette == 'stock' %}selected{% endif %}>Stock</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <div class="flex items-center">
+                            <input type="checkbox" class="theme-checkbox" id="actif" name="actif" 
+                                   {% if not template or template.actif %}checked{% endif %}>
+                            <label class="ml-2 text-sm text-gray-700" for="actif">
+                                <i class="fas fa-check-circle text-blue-500"></i> Template actif
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            </div>
+
+            <!-- Dimensions -->
+            <div class="theme-card">
+                <h3 class="section-title">
+                    <i class="fas fa-ruler text-blue-500"></i>
+                    Dimensions
+                </h3>
+                <div class="space-y-4">
+                    <div class="form-group">
+                        <label for="format_page" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-file-alt text-blue-500"></i> Format de Page *
+                        </label>
+                        <select class="theme-input" id="format_page" name="format_page" required>
+                            <option value="A4" {% if template and template.format_page == 'A4' %}selected{% endif %}>A4 (210x297mm)</option>
+                            <option value="A5" {% if template and template.format_page == 'A5' %}selected{% endif %}>A5 (148x210mm)</option>
+                            <option value="A6" {% if template and template.format_page == 'A6' %}selected{% endif %}>A6 (105x148mm)</option>
+                            <option value="CUSTOM" {% if template and template.format_page == 'CUSTOM' %}selected{% endif %}>Personnalisé</option>
+                        </select>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4" id="custom-dimensions" style="display: none;">
+                        <div class="form-group">
+                            <label for="largeur" class="block text-sm font-medium text-gray-700 mb-2">
+                                <i class="fas fa-arrows-alt-h text-blue-500"></i> Largeur (mm)
+                            </label>
+                            <input type="number" class="theme-input" id="largeur" name="largeur" 
+                                   value="{% if template %}{{ template.largeur }}{% else %}210{% endif %}" min="50" max="500">
+                        </div>
+                        <div class="form-group">
+                            <label for="hauteur" class="block text-sm font-medium text-gray-700 mb-2">
+                                <i class="fas fa-arrows-alt-v text-blue-500"></i> Hauteur (mm)
+                            </label>
+                            <input type="number" class="theme-input" id="hauteur" name="hauteur" 
+                                   value="{% if template %}{{ template.hauteur }}{% else %}297{% endif %}" min="50" max="500">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Code-barres/QR -->
+        <div class="theme-card">
+            <h3 class="section-title">
+                <i class="fas fa-barcode text-blue-500"></i>
+                Code-barres / QR Code
+            </h3>
+            <div class="space-y-4">
+                <div class="form-group">
+                    <label for="code_type" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-qrcode text-blue-500"></i> Type de Code *
+                    </label>
+                    <select class="theme-input" id="code_type" name="code_type" required>
+                        <option value="barcode" {% if template and template.code_type == 'barcode' %}selected{% endif %}>Code-barres uniquement</option>
+                        <option value="qr" {% if template and template.code_type == 'qr' %}selected{% endif %}>QR Code uniquement</option>
+                        <option value="both" {% if template and template.code_type == 'both' %}selected{% endif %}>Les deux</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="code_size" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-expand-arrows-alt text-blue-500"></i> Taille du Code (mm)
+                    </label>
+                    <input type="number" class="theme-input" id="code_size" name="code_size" 
+                           value="{% if template %}{{ template.code_size }}{% else %}80{% endif %}" min="20" max="200">
+                </div>
+                
+                <div class="form-group">
+                    <label for="code_position" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-align-center text-blue-500"></i> Position du Code
+                    </label>
+                    <select class="theme-input" id="code_position" name="code_position">
+                        <option value="center" {% if template and template.code_position == 'center' %}selected{% endif %}>Centre</option>
+                        <option value="left" {% if template and template.code_position == 'left' %}selected{% endif %}>Gauche</option>
+                        <option value="right" {% if template and template.code_position == 'right' %}selected{% endif %}>Droite</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="code_width" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-arrows-alt-h text-blue-500"></i> Largeur du Code (mm)
+                    </label>
+                    <input type="number" class="theme-input" id="code_width" name="code_width" 
+                           value="{% if template %}{{ template.code_width }}{% else %}80{% endif %}" min="20" max="200">
+                    <p class="text-xs text-gray-500 mt-1">Largeur du code-barres ou QR code</p>
+                </div>
+                
+                <div class="form-group">
+                    <label for="code_height" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-arrows-alt-v text-blue-500"></i> Hauteur du Code (mm)
+                    </label>
+                    <input type="number" class="theme-input" id="code_height" name="code_height" 
+                           value="{% if template %}{{ template.code_height }}{% else %}25{% endif %}" min="10" max="100">
+                    <p class="text-xs text-gray-500 mt-1">Hauteur du code-barres ou QR code</p>
+                </div>
+                
+                <div class="form-group">
+                    <label for="code_quality" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-star text-blue-500"></i> Qualité du Code
+                    </label>
+                    <select class="theme-input" id="code_quality" name="code_quality">
+                        <option value="standard" {% if template and template.code_quality == 'standard' %}selected{% endif %}>Standard (300 DPI)</option>
+                        <option value="high" {% if template and template.code_quality == 'high' %}selected{% endif %}>Haute qualité (600 DPI)</option>
+                        <option value="ultra" {% if template and template.code_quality == 'ultra' %}selected{% endif %}>Ultra qualité (4K)</option>
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1">Qualité d'impression du code</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Typographie -->
+        <div class="theme-card">
+            <h3 class="section-title">
+                <i class="fas fa-font text-blue-500"></i>
+                Typographie
+            </h3>
+            <div class="space-y-4">
+                <div class="form-group">
+                    <label for="police_titre" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-bold text-blue-500"></i> Police du Titre
+                    </label>
+                    <select class="theme-input" id="police_titre" name="police_titre">
+                        <option value="Helvetica-Bold" {% if template and template.police_titre == 'Helvetica-Bold' %}selected{% endif %}>Helvetica Bold</option>
+                        <option value="Times-Bold" {% if template and template.police_titre == 'Times-Bold' %}selected{% endif %}>Times Bold</option>
+                        <option value="Courier-Bold" {% if template and template.police_titre == 'Courier-Bold' %}selected{% endif %}>Courier Bold</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="taille_titre" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-text-height text-blue-500"></i> Taille du Titre (px)
+                    </label>
+                    <input type="number" class="theme-input" id="taille_titre" name="taille_titre" 
+                           value="{% if template %}{{ template.taille_titre }}{% else %}16{% endif %}" min="8" max="48">
+                </div>
+                
+                <div class="form-group">
+                    <label for="police_texte" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-font text-blue-500"></i> Police du Texte
+                    </label>
+                    <select class="theme-input" id="police_texte" name="police_texte">
+                        <option value="Helvetica" {% if template and template.police_texte == 'Helvetica' %}selected{% endif %}>Helvetica</option>
+                        <option value="Times-Roman" {% if template and template.police_texte == 'Times-Roman' %}selected{% endif %}>Times Roman</option>
+                        <option value="Courier" {% if template and template.police_texte == 'Courier' %}selected{% endif %}>Courier</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="taille_texte" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-text-width text-blue-500"></i> Taille du Texte (px)
+                    </label>
+                    <input type="number" class="theme-input" id="taille_texte" name="taille_texte" 
+                           value="{% if template %}{{ template.taille_texte }}{% else %}12{% endif %}" min="6" max="24">
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Paramètres de Bordures -->
+    <div class="theme-card">
+        <h3 class="section-title">
+            <i class="fas fa-square text-blue-500"></i>
+            Paramètres de Bordures
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="form-group">
+                <div class="flex items-center">
+                    <input type="checkbox" class="theme-checkbox" id="border_enabled" name="border_enabled" 
+                           {% if not template or template.border_enabled %}checked{% endif %}>
+                    <label class="ml-2 text-sm text-gray-700" for="border_enabled">
+                        <i class="fas fa-check-square text-blue-500"></i> Activer les bordures
+                    </label>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">Ajouter des bordures autour des sections et du ticket</p>
+            </div>
+            
+            <div class="form-group">
+                <label for="border_width" class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-expand-arrows-alt text-blue-500"></i> Épaisseur des Bordures (mm)
+                </label>
+                <input type="number" class="theme-input" id="border_width" name="border_width" 
+                       value="{% if template %}{{ template.border_width }}{% else %}1.0{% endif %}" 
+                       min="0.1" max="5.0" step="0.1">
+                <p class="text-xs text-gray-500 mt-1">Épaisseur en millimètres (0.1 à 5.0)</p>
+            </div>
+            
+            <div class="form-group">
+                <label for="border_color" class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-paint-brush text-blue-500"></i> Couleur des Bordures
+                </label>
+                <div class="flex items-center space-x-3">
+                    <input type="color" class="w-12 h-10 rounded border border-gray-300 cursor-pointer" 
+                           id="border_color" name="border_color" 
+                           value="{% if template %}{{ template.border_color }}{% else %}#000000{% endif %}">
+                    <input type="text" class="theme-input flex-1" 
+                           value="{% if template %}{{ template.border_color }}{% else %}#000000{% endif %}" 
+                           placeholder="#000000" pattern="^#[0-9A-Fa-f]{6}$">
+                </div>
+                <p class="text-xs text-gray-500 mt-1">Couleur des bordures (format hexadécimal)</p>
+            </div>
+            
+            <div class="form-group">
+                <label for="border_radius" class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-circle text-blue-500"></i> Rayon des Coins Arrondis (mm)
+                </label>
+                <input type="number" class="theme-input" id="border_radius" name="border_radius" 
+                       value="{% if template %}{{ template.border_radius }}{% else %}2.0{% endif %}" 
+                       min="0" max="10.0" step="0.5">
+                <p class="text-xs text-gray-500 mt-1">Rayon pour les coins arrondis (0 = carrés)</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Couleurs -->
+    <div class="theme-card">
+        <h3 class="section-title">
+            <i class="fas fa-palette text-blue-500"></i>
+            Couleurs
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="form-group">
+                <label for="couleur_principale" class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-paint-brush text-blue-500"></i> Couleur Principale
+                </label>
+                <div class="flex items-center space-x-3">
+                    <input type="color" class="w-12 h-10 rounded border border-gray-300 cursor-pointer" 
+                           id="couleur_principale" name="couleur_principale" 
+                           value="{% if template %}{{ template.couleur_principale }}{% else %}#3B82F6{% endif %}">
+                    <input type="text" class="theme-input flex-1" 
+                           value="{% if template %}{{ template.couleur_principale }}{% else %}#3B82F6{% endif %}" 
+                           placeholder="#3B82F6" pattern="^#[0-9A-Fa-f]{6}$">
+                </div>
+                <p class="text-xs text-gray-500 mt-1">Couleur de l'en-tête et des éléments principaux</p>
+            </div>
+            
+            <div class="form-group">
+                <label for="couleur_secondaire" class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-paint-brush text-green-500"></i> Couleur Secondaire
+                </label>
+                <div class="flex items-center space-x-3">
+                    <input type="color" class="w-12 h-10 rounded border border-gray-300 cursor-pointer" 
+                           id="couleur_secondaire" name="couleur_secondaire" 
+                           value="{% if template %}{{ template.couleur_secondaire }}{% else %}#1E40AF{% endif %}">
+                    <input type="text" class="theme-input flex-1" 
+                           value="{% if template %}{{ template.couleur_secondaire }}{% else %}#1E40AF{% endif %}" 
+                           placeholder="#1E40AF" pattern="^#[0-9A-Fa-f]{6}$">
+                </div>
+                <p class="text-xs text-gray-500 mt-1">Couleur du pied de page et des accents</p>
+            </div>
+            
+            <div class="form-group">
+                <label for="couleur_texte" class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-font text-purple-500"></i> Couleur du Texte
+                </label>
+                <div class="flex items-center space-x-3">
+                    <input type="color" class="w-12 h-10 rounded border border-gray-300 cursor-pointer" 
+                           id="couleur_texte" name="couleur_texte" 
+                           value="{% if template %}{{ template.couleur_texte }}{% else %}#1F2937{% endif %}">
+                    <input type="text" class="theme-input flex-1" 
+                           value="{% if template %}{{ template.couleur_texte }}{% else %}#1F2937{% endif %}" 
+                           placeholder="#1F2937" pattern="^#[0-9A-Fa-f]{6}$">
+                </div>
+                <p class="text-xs text-gray-500 mt-1">Couleur du texte principal</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Aperçu -->
+    <div class="theme-card">
+        <h3 class="section-title">
+            <i class="fas fa-eye text-blue-500"></i>
+            Aperçu du Template
+        </h3>
+        <div class="p-6">
+            <div class="template-preview" id="template-preview">
+                <div class="preview-label" id="preview-label" style="max-width: 400px; margin: 0 auto;">
+                    <!-- Code-barres et date -->
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center">
+                            <div class="w-16 h-20 bg-black flex items-center justify-center mr-3">
+                                <div class="w-full h-full bg-white" style="background-image: repeating-linear-gradient(90deg, transparent 0px, transparent 1px, black 1px, black 2px);"></div>
+                            </div>
+                            <div class="text-xs font-mono">212166</div>
+                        </div>
+                        <div class="bg-gray-600 text-white px-3 py-1 text-sm font-bold" id="preview-date-bar" style="background-color: {% if template %}{{ template.couleur_principale }}{% else %}#374151{% endif %};">
+                            8/30/2025
+                        </div>
+                    </div>
+                    
+                    <!-- Informations client -->
+                    <div class="space-y-2 mb-4" id="preview-client-info" style="color: {% if template %}{{ template.couleur_texte }}{% else %}#1F2937{% endif %};">
+                        <div class="flex items-center text-sm">
+                            <i class="fas fa-user w-4 mr-2"></i>
+                            <span>HAYAT</span>
+                        </div>
+                        <div class="flex items-center text-sm">
+                            <i class="fas fa-phone w-4 mr-2"></i>
+                            <span>06 33 28 84 70</span>
+                        </div>
+                        <div class="flex items-center text-sm">
+                            <i class="fas fa-map-marker-alt w-4 mr-2"></i>
+                            <span>HAY LFARAH 1 RUE IBN ROUMI NE 5</span>
+                        </div>
+                        <div class="flex items-center text-sm">
+                            <i class="fas fa-building w-4 mr-2"></i>
+                            <span>SETTAT</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Séparateur -->
+                    <div class="border-t border-gray-300 my-3"></div>
+                    
+                    <!-- Description produit -->
+                    <div class="text-sm font-semibold mb-3" id="preview-product" style="color: {% if template %}{{ template.couleur_texte }}{% else %}#1F2937{% endif %};">
+                        ESPA FEM YZ1017 NOIR P36
+                    </div>
+                    
+                    <!-- Séparateur -->
+                    <div class="border-t border-gray-300 my-3"></div>
+                    
+                    <!-- Prix et ville -->
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-lg font-bold" id="preview-price" style="color: {% if template %}{{ template.couleur_texte }}{% else %}#1F2937{% endif %};">
+                            235 DH
+                        </span>
+                        <div class="bg-gray-600 text-white px-3 py-1 text-sm font-bold" id="preview-city-bar" style="background-color: {% if template %}{{ template.couleur_secondaire }}{% else %}#374151{% endif %};">
+                            SETTAT
+                        </div>
+                    </div>
+                    
+                    <!-- Pied de page -->
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <span class="text-lg font-bold" style="color: {% if template %}{{ template.couleur_texte }}{% else %}#1F2937{% endif %};">
+                                YOZAK
+                            </span>
+                        </div>
+                        <div class="text-right text-xs" id="preview-footer-info" style="color: {% if template %}{{ template.couleur_texte }}{% else %}#1F2937{% endif %};">
+                            <div>www.yoozak.com</div>
+                            <div>06 34 21 56 39 / 47</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+        <!-- Boutons d'action -->
+        <div class="flex justify-center space-x-4 mt-8">
+            <button type="submit" class="theme-button-primary">
+                <i class="fas fa-save"></i> 
+                {% if template %}Mettre à jour{% else %}Créer{% endif %} le Template
+            </button>
+            <a href="{% url 'etiquettes_pro:template_list' %}" class="theme-button-secondary">
+                <i class="fas fa-times"></i> Annuler
+            </a>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const formatSelect = document.getElementById('format_page');
+    const customDimensions = document.getElementById('custom-dimensions');
+    
+    function toggleCustomDimensions() {
+        if (formatSelect.value === 'CUSTOM') {
+            customDimensions.style.display = 'block';
+        } else {
+            customDimensions.style.display = 'none';
+        }
+    }
+    
+    formatSelect.addEventListener('change', toggleCustomDimensions);
+    toggleCustomDimensions(); // Initial call
+    
+    // Synchronisation des champs de couleur
+    function syncColorFields() {
+        const colorInputs = document.querySelectorAll('input[type="color"]');
+        colorInputs.forEach(colorInput => {
+            const textInput = colorInput.parentElement.querySelector('input[type="text"]');
+            
+            // Synchroniser color picker vers text input
+            colorInput.addEventListener('input', function() {
+                textInput.value = this.value;
+                updatePreview();
+            });
+            
+            // Synchroniser text input vers color picker
+            textInput.addEventListener('input', function() {
+                if (/^#[0-9A-Fa-f]{6}$/.test(this.value)) {
+                    colorInput.value = this.value;
+                    updatePreview();
+                }
+            });
+        });
+    }
+    
+    // Gestion des bordures
+    function toggleBorderFields() {
+        const borderEnabled = document.getElementById('border_enabled');
+        const borderWidth = document.getElementById('border_width');
+        const borderColor = document.getElementById('border_color');
+        const borderRadius = document.getElementById('border_radius');
+        
+        function updateBorderFields() {
+            const enabled = borderEnabled.checked;
+            borderWidth.disabled = !enabled;
+            borderColor.disabled = !enabled;
+            borderRadius.disabled = !enabled;
+            
+            // Mettre à jour l'aperçu
+            updatePreview();
+        }
+        
+        borderEnabled.addEventListener('change', updateBorderFields);
+        updateBorderFields(); // Initial call
+    }
+    
+    // Mise à jour de l'aperçu en temps réel
+    function updatePreview() {
+        const couleurPrincipale = document.getElementById('couleur_principale').value;
+        const couleurSecondaire = document.getElementById('couleur_secondaire').value;
+        const couleurTexte = document.getElementById('couleur_texte').value;
+        
+        // Paramètres de bordures
+        const borderEnabled = document.getElementById('border_enabled').checked;
+        const borderWidth = document.getElementById('border_width').value;
+        const borderColor = document.getElementById('border_color').value;
+        const borderRadius = document.getElementById('border_radius').value;
+        
+        // Mettre à jour les barres de couleur
+        const previewDateBar = document.getElementById('preview-date-bar');
+        if (previewDateBar) {
+            previewDateBar.style.backgroundColor = couleurPrincipale;
+        }
+        
+        const previewCityBar = document.getElementById('preview-city-bar');
+        if (previewCityBar) {
+            previewCityBar.style.backgroundColor = couleurSecondaire;
+        }
+        
+        // Mettre à jour le texte
+        const previewClientInfo = document.getElementById('preview-client-info');
+        if (previewClientInfo) {
+            previewClientInfo.style.color = couleurTexte;
+        }
+        
+        const previewProduct = document.getElementById('preview-product');
+        if (previewProduct) {
+            previewProduct.style.color = couleurTexte;
+        }
+        
+        const previewPrice = document.getElementById('preview-price');
+        if (previewPrice) {
+            previewPrice.style.color = couleurTexte;
+        }
+        
+        const previewFooterInfo = document.getElementById('preview-footer-info');
+        if (previewFooterInfo) {
+            previewFooterInfo.style.color = couleurTexte;
+        }
+        
+        // Mettre à jour les bordures de l'aperçu
+        const previewLabel = document.getElementById('preview-label');
+        if (previewLabel) {
+            if (borderEnabled) {
+                previewLabel.style.border = `${borderWidth}px solid ${borderColor}`;
+                previewLabel.style.borderRadius = `${borderRadius}px`;
+            } else {
+                previewLabel.style.border = '1px solid #ddd';
+                previewLabel.style.borderRadius = '8px';
+            }
+        }
+    }
+    
+    // Initialiser la synchronisation des couleurs
+    syncColorFields();
+    
+    // Initialiser la gestion des bordures
+    toggleBorderFields();
+    
+    // Mise à jour de l'aperçu pour tous les autres champs
+    const inputs = document.querySelectorAll('input, select, textarea');
+    inputs.forEach(input => {
+        if (input.type !== 'color') {
+            input.addEventListener('input', updatePreview);
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,268 @@
+{% extends 'composant_generale/Superpreparation/base.html' %}
+{% load static %}
+
+{% block title %}Mes Étiquettes - YZ-CMD{% endblock %}
+
+{% block page_title %}Mes Étiquettes{% endblock %}
+{% block page_subtitle %}Gestion et impression des étiquettes professionnelles{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<!-- CSS externe pour les styles Superpreparation -->
+<link rel="stylesheet" href="{% static 'css/Superpreparation/page_cmd_confim.css' %}">
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="main-content transition-all duration-300" id="mainContent">
+    <!-- Toast notifications container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- En-tête de la page -->
+    <div class="page-header">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center">
+            <div>
+                <h1 class="text-3xl font-bold flex items-center mb-2">
+                    <i class="fas fa-tags mr-3 text-green-300"></i>
+                    Mes Étiquettes
+                </h1>
+                <p class="text-white opacity-90">Gestion et impression des étiquettes professionnelles</p>
+            </div>
+            <div class="mt-4 md:mt-0">
+                <a href="{% url 'etiquettes_pro:template_create' %}" class="theme-button-primary">
+                    <i class="fas fa-plus"></i> Créer une Étiquette
+                </a>
+            </div>
+        </div>
+    </div>
+    <!-- Filtres et recherche -->
+    <div class="search-section mb-6">
+        <form method="get" class="flex flex-col md:flex-row gap-4 items-end">
+            <div class="flex-1">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Rechercher</label>
+                <input type="text" name="search" class="theme-input w-full" placeholder="Référence, template..." value="{{ request.GET.search }}">
+            </div>
+            <div class="flex-1">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Statut</label>
+                <select name="statut" class="theme-input w-full">
+                    <option value="">Tous les statuts</option>
+                    <option value="draft" {% if request.GET.statut == 'draft' %}selected{% endif %}>Brouillon</option>
+                    <option value="ready" {% if request.GET.statut == 'ready' %}selected{% endif %}>Prête</option>
+                    <option value="printed" {% if request.GET.statut == 'printed' %}selected{% endif %}>Imprimée</option>
+                </select>
+            </div>
+            <div class="flex-1">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Template</label>
+                <select name="template" class="theme-input w-full">
+                    <option value="">Tous les templates</option>
+                    {% for template in templates %}
+                    <option value="{{ template.id }}" {% if request.GET.template == template.id|stringformat:"s" %}selected{% endif %}>
+                        {{ template.nom }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex gap-2">
+                <button type="submit" class="theme-button-primary">
+                    <i class="fas fa-search"></i> Filtrer
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Liste des étiquettes -->
+    {% if etiquettes %}
+    <div class="table-container">
+        <div class="table-responsive">
+            <table class="w-full">
+                <thead class="table-header">
+                    <tr>
+                        <th class="table-cell">Référence</th>
+                        <th class="table-cell">Template</th>
+                        <th class="table-cell">Commande</th>
+                        <th class="table-cell">Article</th>
+                        <th class="table-cell">Statut</th>
+                        <th class="table-cell">Date de Création</th>
+                        <th class="table-cell">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for etiquette in etiquettes %}
+                    <tr class="table-row">
+                        <td class="table-cell">
+                            <strong>{{ etiquette.reference }}</strong>
+                        </td>
+                        <td class="table-cell">
+                            <span class="status-badge confirmee">{{ etiquette.template.nom }}</span>
+                        </td>
+                        <td class="table-cell">
+                            {% if etiquette.commande_id %}
+                                <span class="text-gray-800">
+                                    #{{ etiquette.commande_id }}
+                                </span>
+                            {% else %}
+                                <span class="text-gray-400">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="table-cell">
+                            {% if etiquette.nom_article %}
+                                {{ etiquette.nom_article|truncatechars:30 }}
+                            {% else %}
+                                <span class="text-gray-400">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="table-cell">
+                            {% if etiquette.statut == 'ready' %}
+                                <span class="status-badge confirmee">
+                                    <i class="fas fa-check"></i> Prête
+                                </span>
+                            {% elif etiquette.statut == 'printed' %}
+                                <span class="status-badge terminee">
+                                    <i class="fas fa-print"></i> Imprimée
+                                </span>
+                            {% elif etiquette.statut == 'draft' %}
+                                <span class="status-badge en-preparation">
+                                    <i class="fas fa-edit"></i> Brouillon
+                                </span>
+                            {% else %}
+                                <span class="status-badge">{{ etiquette.get_statut_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="table-cell">
+                            <small class="text-gray-600">{{ etiquette.date_creation|date:"d/m/Y H:i" }}</small>
+                        </td>
+                        <td class="table-cell">
+                            <div class="action-buttons-container">
+                                <a href="{% url 'etiquettes_pro:etiquette_pdf' etiquette.id %}" 
+                                   class="action-button" title="Télécharger PDF">
+                                    <i class="fas fa-download"></i>
+                                </a>
+                                <a href="{% url 'etiquettes_pro:etiquette_preview' etiquette.id %}" 
+                                   class="theme-button-secondary" title="Aperçu">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if etiquette.statut == 'draft' %}
+                                <button class="theme-button-secondary" title="Modifier">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+<!-- Pagination -->
+{% if etiquettes.has_other_pages %}
+<nav aria-label="Pagination des étiquettes">
+    <ul class="pagination justify-content-center">
+        {% if etiquettes.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}{% if request.GET.template %}&template={{ request.GET.template }}{% endif %}">
+                    <i class="fas fa-angle-double-left"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ etiquettes.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}{% if request.GET.template %}&template={{ request.GET.template }}{% endif %}">
+                    <i class="fas fa-angle-left"></i>
+                </a>
+            </li>
+        {% endif %}
+        
+        <li class="page-item active">
+            <span class="page-link">
+                Page {{ etiquettes.number }} sur {{ etiquettes.paginator.num_pages }}
+            </span>
+        </li>
+        
+        {% if etiquettes.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ etiquettes.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}{% if request.GET.template %}&template={{ request.GET.template }}{% endif %}">
+                    <i class="fas fa-angle-right"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ etiquettes.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}{% if request.GET.template %}&template={{ request.GET.template }}{% endif %}">
+                    <i class="fas fa-angle-double-right"></i>
+                </a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+{% else %}
+<!-- Message si aucune étiquette -->
+<div class="text-center py-5">
+    <div class="empty-state">
+        <i class="fas fa-tags fa-3x text-muted mb-3"></i>
+        <h4 class="text-muted">Aucune étiquette trouvée</h4>
+        <p class="text-muted">
+            {% if request.GET.search or request.GET.statut or request.GET.template %}
+                Aucune étiquette ne correspond à vos critères de recherche.
+                <a href="{% url 'etiquettes_pro:etiquette_list' %}" class="etiquettes-btn mt-2">
+                    <i class="fas fa-times"></i> Effacer les filtres
+                </a>
+            {% else %}
+                Vous n'avez pas encore créé d'étiquettes.
+                <a href="{% url 'etiquettes_pro:template_create' %}" class="etiquettes-btn etiquettes-btn-success mt-2">
+                    <i class="fas fa-plus"></i> Créer votre première étiquette
+                </a>
+            {% endif %}
+        </p>
+    </div>
+</div>
+{% endif %}
+
+    <!-- Statistiques rapides -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+        <div class="stats-card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-2xl font-bold text-gray-800">{{ total_count|default:0 }}</div>
+                    <div class="text-sm text-gray-600">Total</div>
+                </div>
+                <div class="stats-icon">
+                    <i class="fas fa-tags"></i>
+                </div>
+            </div>
+        </div>
+        <div class="stats-card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-2xl font-bold text-gray-800">{{ draft_count|default:0 }}</div>
+                    <div class="text-sm text-gray-600">Brouillons</div>
+                </div>
+                <div class="stats-icon">
+                    <i class="fas fa-edit"></i>
+                </div>
+            </div>
+        </div>
+        <div class="stats-card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-2xl font-bold text-gray-800">{{ ready_count|default:0 }}</div>
+                    <div class="text-sm text-gray-600">Prêtes</div>
+                </div>
+                <div class="stats-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+            </div>
+        </div>
+        <div class="stats-card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-2xl font-bold text-gray-800">{{ printed_count|default:0 }}</div>
+                    <div class="text-sm text-gray-600">Imprimées</div>
+                </div>
+                <div class="stats-icon">
+                    <i class="fas fa-print"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,178 @@
+{% extends 'composant_generale/Superpreparation/base.html' %}
+{% load static %}
+
+{% block title %}Templates d'Étiquettes - YZ-CMD{% endblock %}
+
+{% block page_title %}Templates d'Étiquettes{% endblock %}
+{% block page_subtitle %}Gestion des modèles d'étiquettes personnalisables{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<!-- CSS externe pour les styles Superpreparation -->
+<link rel="stylesheet" href="{% static 'css/Superpreparation/page_cmd_confim.css' %}">
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="main-content transition-all duration-300" id="mainContent">
+    <!-- Toast notifications container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- En-tête de la page -->
+    <div class="page-header">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center">
+            <div>
+                <h1 class="text-3xl font-bold flex items-center mb-2">
+                    <i class="fas fa-list mr-3 text-green-300"></i>
+                    Templates d'Étiquettes
+                </h1>
+                <p class="text-white opacity-90">Gestion des modèles d'étiquettes personnalisables</p>
+            </div>
+            <div class="mt-4 md:mt-0">
+                <a href="{% url 'etiquettes_pro:template_create' %}" class="theme-button-primary">
+                    <i class="fas fa-plus"></i> Nouveau Template
+                </a>
+            </div>
+        </div>
+    </div>
+    <!-- Filtres et recherche -->
+    <div class="search-section mb-6">
+        <form method="get" class="flex flex-col md:flex-row gap-4 items-end">
+            <div class="flex-1">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Type de template</label>
+                <select name="type" class="theme-input w-full">
+                    <option value="">Tous les types</option>
+                    <option value="article" {% if request.GET.type == 'article' %}selected{% endif %}>Article</option>
+                    <option value="commande" {% if request.GET.type == 'commande' %}selected{% endif %}>Commande</option>
+                    <option value="livraison" {% if request.GET.type == 'livraison' %}selected{% endif %}>Livraison</option>
+                    <option value="stock" {% if request.GET.type == 'stock' %}selected{% endif %}>Stock</option>
+                </select>
+            </div>
+            <div class="flex-1">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Rechercher</label>
+                <input type="text" name="search" class="theme-input w-full" placeholder="Rechercher..." value="{{ request.GET.search }}">
+            </div>
+            <div class="flex gap-2">
+                <button type="submit" class="theme-button-primary">
+                    <i class="fas fa-search"></i> Filtrer
+                </button>
+                <a href="{% url 'etiquettes_pro:dashboard' %}" class="theme-button-secondary">
+                    <i class="fas fa-arrow-left"></i> Retour
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Liste des templates -->
+    {% if templates %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+        {% for template in templates %}
+        <div class="theme-card">
+            <div class="flex justify-between items-center mb-4">
+                <h5 class="text-lg font-semibold text-gray-800">{{ template.nom }}</h5>
+                <span class="status-badge {% if template.actif %}confirmee{% else %}en-preparation{% endif %}">
+                    {% if template.actif %}Actif{% else %}Inactif{% endif %}
+                </span>
+            </div>
+            
+            <p class="text-gray-600 text-sm mb-4">{{ template.description|truncatechars:120 }}</p>
+            
+            <div class="grid grid-cols-2 gap-4 mb-4 p-3 bg-gray-50 rounded-lg">
+                <div class="text-center">
+                    <div class="font-semibold text-gray-800">{{ template.get_type_etiquette_display }}</div>
+                    <div class="text-xs text-gray-500">Type</div>
+                </div>
+                <div class="text-center">
+                    <div class="font-semibold text-gray-800">{{ template.get_format_page_display }}</div>
+                    <div class="text-xs text-gray-500">Format</div>
+                </div>
+            </div>
+            
+            <div class="space-y-2 mb-4 text-sm text-gray-600">
+                <div class="flex items-center">
+                    <i class="fas fa-code w-4 mr-2"></i>
+                    {{ template.get_code_type_display }}
+                </div>
+                <div class="flex items-center">
+                    <i class="fas fa-ruler w-4 mr-2"></i>
+                    {{ template.largeur }}x{{ template.hauteur }}mm
+                </div>
+                <div class="flex items-center">
+                    <i class="fas fa-font w-4 mr-2"></i>
+                    {{ template.police_titre }}, {{ template.taille_titre }}px
+                </div>
+                <div class="flex items-center">
+                    <i class="fas fa-user w-4 mr-2"></i>
+                    {{ template.cree_par.username }}
+                </div>
+                <div class="flex items-center">
+                    <i class="fas fa-calendar w-4 mr-2"></i>
+                    {{ template.date_creation|date:"d/m/Y" }}
+                </div>
+            </div>
+            
+            <div class="flex gap-2">
+                <a href="{% url 'etiquettes_pro:template_detail' template.pk %}" class="theme-button-secondary flex-1 text-center">
+                    <i class="fas fa-eye"></i> Voir
+                </a>
+                <a href="{% url 'etiquettes_pro:template_edit' template.pk %}" class="theme-button-secondary flex-1 text-center">
+                    <i class="fas fa-edit"></i> Modifier
+                </a>
+                <a href="{% url 'etiquettes_pro:template_delete' template.pk %}" class="theme-button-secondary flex-1 text-center" 
+                   onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce template ?')">
+                    <i class="fas fa-trash"></i> Supprimer
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <div class="theme-pagination-controls">
+        <div class="flex justify-center items-center gap-2">
+            {% if page_obj.has_previous %}
+                <a href="?page=1{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="theme-button-secondary">
+                    <i class="fas fa-angle-double-left"></i>
+                </a>
+                <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="theme-button-secondary">
+                    <i class="fas fa-angle-left"></i>
+                </a>
+            {% endif %}
+            
+            <span class="px-4 py-2 text-gray-700 font-medium">
+                Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}
+            </span>
+            
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="theme-button-secondary">
+                    <i class="fas fa-angle-right"></i>
+                </a>
+                <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="theme-button-secondary">
+                    <i class="fas fa-angle-double-right"></i>
+                </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-state-icon">
+            <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <h4 class="text-xl font-semibold text-gray-700 mb-3">Aucun template trouvé</h4>
+        <p class="text-gray-600 mb-6">
+            {% if request.GET.search or request.GET.type %}
+                Aucun template ne correspond à vos critères de recherche.
+            {% else %}
+                Vous n'avez pas encore créé de template d'étiquette.
+            {% endif %}
+        </p>
+        <a href="{% url 'etiquettes_pro:template_create' %}" class="theme-button-primary">
+            <i class="fas fa-plus"></i> Créer votre premier template
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
