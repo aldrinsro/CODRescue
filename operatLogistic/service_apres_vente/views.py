@@ -481,6 +481,14 @@ def commandes_livrees(request):
     # Récupérer le paramètre d'onglet
     current_tab = request.GET.get('tab', 'toutes')
     
+    # Gestion du filtre de temps
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    preset = request.GET.get('preset')
+    
+    # Construire la requête de base avec tous les filtres
+    from datetime import datetime, timedelta
+    
     # Base query pour les commandes livrées
     base_query = Commande.objects.filter(
         etats__enum_etat__libelle='Livrée',
@@ -488,17 +496,11 @@ def commandes_livrees(request):
     ).select_related('client', 'ville', 'ville__region').prefetch_related(
         'etats__enum_etat', 'etats__operateur',
         'envois', 'paniers__article'
-    ).order_by('-etats__date_debut').distinct()
+    )
     
-    # Gestion du filtre de temps
-    start_date = request.GET.get('start_date')
-    end_date = request.GET.get('end_date')
-    preset = request.GET.get('preset')
-    
-    # Appliquer le filtre de temps si des paramètres sont fournis
+    # Appliquer le filtre de temps une seule fois
     if start_date and end_date:
         try:
-            from datetime import datetime
             start_datetime = datetime.strptime(start_date, '%Y-%m-%d')
             end_datetime = datetime.strptime(end_date, '%Y-%m-%d')
             # Ajouter 23:59:59 à la date de fin pour inclure toute la journée
@@ -506,82 +508,53 @@ def commandes_livrees(request):
             
             # Filtrer par date de début des états "Livrée"
             base_query = base_query.filter(
-                etats__enum_etat__libelle='Livrée',
                 etats__date_debut__date__range=[start_datetime.date(), end_datetime.date()]
             )
-            print(f"🔍 Filtre de temps appliqué: {start_date} à {end_date}")
         except ValueError:
-            print("❌ Erreur de format de date dans les paramètres de filtre")
+            pass  # Ignorer les erreurs de format de date
     elif preset:
         # Appliquer des presets prédéfinis
-        from datetime import datetime, timedelta
         today = datetime.now().date()
         
         if preset == 'today':
-            base_query = base_query.filter(
-                etats__enum_etat__libelle='Livrée',
-                etats__date_debut__date=today
-            )
+            base_query = base_query.filter(etats__date_debut__date=today)
         elif preset == 'yesterday':
             yesterday = today - timedelta(days=1)
-            base_query = base_query.filter(
-                etats__enum_etat__libelle='Livrée',
-                etats__date_debut__date=yesterday
-            )
+            base_query = base_query.filter(etats__date_debut__date=yesterday)
         elif preset == 'this_week':
             # Lundi de cette semaine
             monday = today - timedelta(days=today.weekday())
-            base_query = base_query.filter(
-                etats__enum_etat__libelle='Livrée',
-                etats__date_debut__date__gte=monday
-            )
+            base_query = base_query.filter(etats__date_debut__date__gte=monday)
         elif preset == 'last_week':
             # Lundi de la semaine dernière
             last_monday = today - timedelta(days=today.weekday() + 7)
             last_sunday = last_monday + timedelta(days=6)
-            base_query = base_query.filter(
-                etats__enum_etat__libelle='Livrée',
-                etats__date_debut__date__range=[last_monday, last_sunday]
-            )
+            base_query = base_query.filter(etats__date_debut__date__range=[last_monday, last_sunday])
         elif preset == 'this_month':
             # Premier jour du mois
             first_day = today.replace(day=1)
-            base_query = base_query.filter(
-                etats__enum_etat__libelle='Livrée',
-                etats__date_debut__date__gte=first_day
-            )
+            base_query = base_query.filter(etats__date_debut__date__gte=first_day)
         elif preset == 'last_month':
             # Premier jour du mois dernier
             if today.month == 1:
                 first_day_last_month = today.replace(year=today.year-1, month=12, day=1)
-            else:
-                first_day_last_month = today.replace(month=today.month-1, day=1)
-            # Dernier jour du mois dernier
-            if today.month == 1:
                 last_day_last_month = today.replace(year=today.year-1, month=12, day=31)
             else:
+                first_day_last_month = today.replace(month=today.month-1, day=1)
                 last_day_last_month = (today.replace(month=today.month, day=1) - timedelta(days=1))
-            base_query = base_query.filter(
-                etats__enum_etat__libelle='Livrée',
-                etats__date_debut__date__range=[first_day_last_month, last_day_last_month]
-            )
+            base_query = base_query.filter(etats__date_debut__date__range=[first_day_last_month, last_day_last_month])
         elif preset == 'this_year':
             # Premier jour de l'année
             first_day_year = today.replace(month=1, day=1)
-            base_query = base_query.filter(
-                etats__enum_etat__libelle='Livrée',
-                etats__date_debut__date__gte=first_day_year
-            )
+            base_query = base_query.filter(etats__date_debut__date__gte=first_day_year)
         elif preset == 'last_year':
             # Premier et dernier jour de l'année dernière
             first_day_last_year = today.replace(year=today.year-1, month=1, day=1)
             last_day_last_year = today.replace(year=today.year-1, month=12, day=31)
-            base_query = base_query.filter(
-                etats__enum_etat__libelle='Livrée',
-                etats__date_debut__date__range=[first_day_last_year, last_day_last_year]
-            )
-        
-        print(f"🔍 Preset appliqué: {preset}")
+            base_query = base_query.filter(etats__date_debut__date__range=[first_day_last_year, last_day_last_year])
+    
+    # Ajouter l'ordre et distinct une seule fois
+    base_query = base_query.order_by('-etats__date_debut').distinct()
     
     # Filtrer selon l'onglet sélectionné
     if current_tab == 'payees':
@@ -596,17 +569,22 @@ def commandes_livrees(request):
     commandes_payees = base_query.filter(payement='Payé').count()
     commandes_non_payees = base_query.exclude(payement='Payé').count()
     
-    # Enrichir les données pour chaque commande
-    for commande in commandes:
-        # Trouver l'état actuel
-        commande.etat_actuel_sav = commande.etats.filter(
-            enum_etat__libelle='Livrée',
-            date_fin__isnull=True
-        ).first()
+    # Enrichir les données pour chaque commande - optimisé pour éviter les requêtes N+1
+    commandes_list = list(commandes)  # Évaluer une seule fois
+    
+    for commande in commandes_list:
+        # Trouver l'état actuel depuis les données préchargées
+        commande.etat_actuel_sav = next(
+            (etat for etat in commande.etats.all() 
+             if etat.enum_etat.libelle == 'Livrée' and etat.date_fin is None), 
+            None
+        )
         
-        # Calculer le nombre d'articles dans la commande
-        commande.nombre_articles = commande.paniers.count()
+        # Utiliser les données préchargées pour compter les articles
+        panier_list = list(commande.paniers.all())
+        commande.nombre_articles = len(panier_list)
         
+        # Construire les données des articles depuis les paniers préchargés
         commande.articles_livres_partiellement = [
             {
                 'article_id': panier.article.id,
@@ -617,13 +595,13 @@ def commandes_livrees(request):
                 'quantite_livree': panier.quantite,
                 'prix_unitaire': float(getattr(panier.article, 'prix_unitaire', 0.0) or 0.0)
             }
-            for panier in commande.paniers.all()
+            for panier in panier_list
         ]
         commande.articles_renvoyes = []
     
     # Créer le contexte avec les variables supplémentaires
     context = {
-        'commandes': commandes,
+        'commandes': commandes_list,
         'current_tab': current_tab,
         'total_commandes': total_commandes,
         'commandes_payees': commandes_payees,

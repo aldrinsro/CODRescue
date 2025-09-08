@@ -24,8 +24,6 @@ from django.template.loader import render_to_string
 
 # Create your views here.
 
-
-
 @login_required
 def dashboard(request):
     """Page d'accueil de l'interface opérateur de confirmation"""
@@ -146,7 +144,7 @@ def liste_commandes(request):
     commandes_list = Commande.objects.filter(
         etats__operateur=operateur,
         etats__date_fin__isnull=True,
-        etats__enum_etat__libelle__in=['Affectée', 'En cours de confirmation', 'Retour Confirmation']
+        etats__enum_etat__libelle__in=['Affectée', 'En cours de confirmation', 'Retour Confirmation', 'Confirmation décalée']
     ).distinct().select_related(
         'client', 'ville', 'ville__region'
     ).prefetch_related(
@@ -184,9 +182,15 @@ def liste_commandes(request):
         etats__operateur=operateur,
             etats__date_fin__isnull=True, 
             etats__enum_etat__libelle='Retour Confirmation'
+        ).distinct().count(),
+        
+        'confirmation_decalee': Commande.objects.filter(
+            etats__operateur=operateur,
+            etats__date_fin__isnull=True, 
+            etats__enum_etat__libelle='Confirmation décalée'
         ).distinct().count()
     }
-    stats['total'] = stats['en_attente'] + stats['en_cours'] + stats['retournees']
+    stats['total'] = stats['en_attente'] + stats['en_cours'] + stats['retournees'] + stats['confirmation_decalee']
 
     # Filtrage par onglet
     tab = request.GET.get('tab', 'toutes')
@@ -194,11 +198,12 @@ def liste_commandes(request):
         'en_attente': {'libelle': 'Affectée', 'display': 'En Attente'},
         'en_cours': {'libelle': 'En cours de confirmation', 'display': 'En Cours'},
         'retournees': {'libelle': 'Retour Confirmation', 'display': 'Retournées'},
+        'confirmation_decalee': {'libelle': 'Confirmation décalée', 'display': 'Confirmation Décalée'},
     }
     
     current_tab_display_name = "Toutes"
     if tab in tab_map:
-        commandes_list = commandes_list.filter(etats__operateur=operateur, etats__enum_etat__libelle=tab_map[tab]['libelle'], etats__date_fin__isnull=True)
+        commandes_list = commandes_list.filter(etats__enum_etat__libelle=tab_map[tab]['libelle'], etats__date_fin__isnull=True)
         current_tab_display_name = tab_map[tab]['display']
     
     # Pagination

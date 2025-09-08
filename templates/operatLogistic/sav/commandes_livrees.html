@@ -367,12 +367,18 @@
 <!-- Modale des Actions SAV -->
 <div id="savActionsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
     <div class="relative top-10 mx-auto p-6 border w-full max-w-2xl shadow-lg rounded-lg bg-white">
+        <div class="flex justify-between items-start mb-6">
+            <div class="text-center flex-1">
+                <h3 class="text-xl leading-6 font-bold text-gray-900 mb-2">Actions de Livraison (SAV)</h3>
+                <p class="text-sm text-gray-600">Commande <span id="commandeIdDisplay" class="font-semibold text-blue-600"></span></p>
+            </div>
+             <button onclick="fermerModalSav()" class="text-gray-400 hover:text-gray-600 transition-colors p-2 rounded-full hover:bg-gray-100" title="Fermer">
+                 <i class="fas fa-times text-2xl"></i>
+             </button>
+        </div>
         <div class="text-center">
-            <h3 class="text-xl leading-6 font-bold text-gray-900 mb-2">Actions de Livraison (SAV)</h3>
-            <p class="text-sm text-gray-600 mb-6">Commande <span id="commandeIdDisplay" class="font-semibold text-blue-600"></span></p>
-            
             <!-- Grille des actions SAV -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <button onclick="selectSavAction('Retournée (SAV)')" class="sav-action-card bg-red-50 hover:bg-red-100 border-2 border-red-200 hover:border-red-300 rounded-lg p-4 transition-all duration-200">
                     <div class="flex flex-col items-center">
                         <i class="fas fa-times-circle text-3xl text-red-500 mb-2"></i>
@@ -381,20 +387,55 @@
                     </div>
                 </button>
 
-                {% if commande.payement == 'Non payé' %}
-                 <button onclick="marquerCommePaye()" class="sav-action-card bg-green-50 hover:bg-green-100 border-2 border-green-200 hover:border-green-300 rounded-lg p-4 transition-all duration-200">
-                     <div class="flex flex-col items-center">
-                         <i class="fas fa-money-bill-wave text-3xl text-green-500 mb-2"></i>
-                         <span class="font-semibold text-green-800">Marquer Payé</span>
-                         <span class="text-xs text-green-600 mt-1">Confirmer le paiement</span>
-                     </div>
-                 </button>
-                 {% endif %}
+                <button id="marquerPayeBtn" onclick="marquerCommePaye()" class="sav-action-card bg-green-50 hover:bg-green-100 border-2 border-green-200 hover:border-green-300 rounded-lg p-4 transition-all duration-200">
+                    <div class="flex flex-col items-center">
+                        <i class="fas fa-money-bill-wave text-3xl text-green-500 mb-2"></i>
+                        <span class="font-semibold text-green-800">Marquer Payé</span>
+                        <span class="text-xs text-green-600 mt-1">Confirmer le paiement</span>
+                    </div>
+                </button>
             </div>
             
             <div class="flex justify-center">
-                <button id="cancelSavActionsBtn" class="px-6 py-2 bg-gray-500 text-white text-base font-medium rounded-md shadow-sm hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300 transition-colors">
+                <button id="cancelSavActionsBtn" onclick="fermerModalSav()" class="px-6 py-2 bg-gray-500 text-white text-base font-medium rounded-md shadow-sm hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300 transition-colors">
                     <i class="fas fa-times mr-2"></i>Fermer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modale de Confirmation pour Marquer Payé -->
+<div id="confirmPayeModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-60">
+    <div class="relative top-20 mx-auto p-6 border w-full max-w-md shadow-lg rounded-lg bg-white">
+        <div class="text-center">
+            <!-- Icône de confirmation -->
+            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+                <i class="fas fa-money-bill-wave text-2xl text-green-600"></i>
+            </div>
+            
+            <!-- Titre -->
+            <h3 class="text-lg font-medium text-gray-900 mb-2">Confirmer le Paiement</h3>
+            
+            <!-- Message -->
+            <div class="mb-6">
+                <p class="text-sm text-gray-500">
+                    Êtes-vous sûr de vouloir marquer la commande 
+                    <span id="confirmCommandeId" class="font-semibold text-blue-600"></span> 
+                    comme payée ?
+                </p>
+                <p class="text-xs text-gray-400 mt-2">
+                    Cette action mettra à jour le statut de paiement de la commande.
+                </p>
+            </div>
+            
+            <!-- Boutons d'action -->
+            <div class="flex space-x-3 justify-center">
+                <button id="confirmPayeBtn" onclick="confirmerPaiement()" class="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors">
+                    <i class="fas fa-check mr-2"></i>Confirmer
+                </button>
+                <button id="cancelPayeBtn" onclick="annulerPaiement()" class="px-4 py-2 bg-gray-300 text-gray-700 text-sm font-medium rounded-md shadow-sm hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors">
+                    <i class="fas fa-times mr-2"></i>Annuler
                 </button>
             </div>
         </div>
@@ -408,6 +449,19 @@
 <script>
 let currentCommandeId = null;
 let currentCommandeIdYz = null;
+let currentCommandePayement = null;
+let savedCommandeId = null; // Variable pour sauvegarder l'ID pendant la confirmation
+
+// Fonction pour fermer la modale SAV et réinitialiser les variables
+function fermerModalSav() {
+    const actionsModal = document.getElementById('savActionsModal');
+    if (actionsModal) {
+        actionsModal.classList.add('hidden');
+    }
+    currentCommandeId = null;
+    currentCommandeIdYz = null;
+    currentCommandePayement = null;
+}
 
 // Fonction pour afficher les détails des articles
 function afficherDetailsArticles(commandeId, commandeNum) {
@@ -711,15 +765,71 @@ function fermerPanierComplet() {
 }
 
 function openSavActionsModal(commandeId, commandeIdYz) {
-    currentCommandeId = commandeId;
-    currentCommandeIdYz = commandeIdYz;
-    document.getElementById('commandeIdDisplay').textContent = commandeIdYz;
-    document.getElementById('savActionsModal').classList.remove('hidden');
+    try {
+        console.log('🔍 Debug - openSavActionsModal appelée avec:', { commandeId, commandeIdYz });
+        currentCommandeId = commandeId;
+        currentCommandeIdYz = commandeIdYz;
+        console.log('🔍 Debug - Variables assignées:', { currentCommandeId, currentCommandeIdYz });
+        
+        // Récupérer les données de la commande depuis le DOM
+        const row = document.querySelector(`tr[data-commande-id="${commandeId}"]`);
+        if (!row) {
+            console.error('Commande non trouvée:', commandeId);
+            alert('Erreur: Commande non trouvée');
+            return;
+        }
+        
+        // Extraire le statut de paiement depuis la ligne du tableau
+        const payementCell = row.querySelector('td:nth-child(8)'); // Colonne statut de paiement
+        if (payementCell) {
+            const payementSpan = payementCell.querySelector('span');
+            if (payementSpan) {
+                const payementText = payementSpan.textContent.trim();
+                // Logique corrigée : si le texte contient "Non Payée" ou "Non payé", c'est non payé
+                if (payementText.includes('Non Payée') || payementText.includes('Non payé')) {
+                    currentCommandePayement = 'Non payé';
+                } else if (payementText.includes('Payé')) {
+                    currentCommandePayement = 'Payé';
+                } else {
+                    currentCommandePayement = 'Non payé'; // Par défaut
+                }
+                console.log('🔍 Debug - Texte de paiement extrait:', payementText);
+                console.log('🔍 Debug - Statut interprété:', currentCommandePayement);
+            }
+        }
+        
+        // Mettre à jour l'affichage
+        document.getElementById('commandeIdDisplay').textContent = commandeIdYz;
+        
+        // Gérer l'affichage du bouton "Marquer Payé" selon le statut
+        const marquerPayeBtn = document.getElementById('marquerPayeBtn');
+        console.log('🔍 Debug - Bouton marquerPayeBtn trouvé:', marquerPayeBtn);
+        console.log('🔍 Debug - Statut de paiement:', currentCommandePayement);
+        
+        if (marquerPayeBtn) {
+            if (currentCommandePayement === 'Payé') {
+                marquerPayeBtn.style.display = 'none';
+                console.log('🔍 Debug - Bouton masqué (commande payée)');
+            } else {
+                marquerPayeBtn.style.display = 'block';
+                console.log('🔍 Debug - Bouton affiché (commande non payée)');
+            }
+        } else {
+            console.error('❌ Debug - Bouton marquerPayeBtn non trouvé dans le DOM');
+        }
+        
+        // Afficher la modale
+        document.getElementById('savActionsModal').classList.remove('hidden');
+        
+    } catch (error) {
+        console.error('Erreur lors de l\'ouverture de la modale SAV:', error);
+        alert('Erreur lors de l\'ouverture de la modale');
+    }
 }
 
 function selectSavAction(etat) {
     // Fermer la modale des actions
-    document.getElementById('savActionsModal').classList.add('hidden');
+    fermerModalSav();
     
     // Rediriger vers la page de détail avec l'action appropriée
     const detailUrl = `/operateur-logistique/commande/${currentCommandeId}/`;
@@ -733,40 +843,85 @@ function selectSavAction(etat) {
 }
 
 function marquerCommePaye() {
-    // Fermer la modale des actions SAV
-    document.getElementById('savActionsModal').classList.add('hidden');
+    console.log('🔍 Debug - marquerCommePaye appelée avec:', { currentCommandeId, currentCommandeIdYz });
     
-    // Confirmer l'action
-    if (confirm(`Êtes-vous sûr de vouloir marquer la commande ${currentCommandeIdYz} comme payée ?`)) {
-        // Créer un FormData pour envoyer les données
-        const formData = new FormData();
-        formData.append('statut_paiement', 'Payé');
-        
-        // Envoyer la requête AJAX
-        fetch(`/operateur-logistique/sav/commande/${currentCommandeId}/marquer-payee/`, {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showNotification('success', data.message, 4000);
-                // Recharger la page pour mettre à jour la liste
-                setTimeout(() => {
-                    location.reload();
-                }, 2000);
-            } else {
-                showNotification('error', `Erreur: ${data.error}`, 6000);
-            }
-        })
-        .catch(error => {
-            console.error('Erreur:', error);
-            showNotification('error', 'Erreur de réseau lors de la mise à jour du paiement.', 6000);
-        });
-    }
+    // Sauvegarder les variables avant de fermer la modale
+    const commandeId = currentCommandeId;
+    const commandeIdYz = currentCommandeIdYz;
+    
+    // Sauvegarder l'ID pour la confirmation
+    savedCommandeId = commandeId;
+    
+    // Fermer la modale des actions SAV
+    fermerModalSav();
+    
+    // Afficher la modale de confirmation
+    document.getElementById('confirmCommandeId').textContent = commandeIdYz;
+    document.getElementById('confirmPayeModal').classList.remove('hidden');
+}
+
+// Fonction pour confirmer le paiement
+function confirmerPaiement() {
+    console.log('🔍 Debug - confirmerPaiement appelée avec savedCommandeId:', savedCommandeId);
+    const commandeId = savedCommandeId;
+    
+    // Créer un FormData pour envoyer les données
+    const formData = new FormData();
+    formData.append('statut_paiement', 'Payé');
+    
+    // Envoyer la requête AJAX
+    fetch(`{% url 'operatLogistic:marquer_commande_payee' 0 %}`.replace('0', commandeId), {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Fermer la modale de confirmation
+            document.getElementById('confirmPayeModal').classList.add('hidden');
+            
+            // Afficher un message de succès plus élégant
+            const successMessage = document.createElement('div');
+            successMessage.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+            successMessage.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas fa-check-circle mr-2"></i>
+                    <span>${data.message || 'Commande marquée comme payée avec succès'}</span>
+                </div>
+            `;
+            document.body.appendChild(successMessage);
+            
+            // Supprimer le message après 3 secondes
+            setTimeout(() => {
+                successMessage.remove();
+            }, 3000);
+            
+            // Recharger la page pour mettre à jour la liste
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        } else {
+            // Fermer la modale de confirmation
+            document.getElementById('confirmPayeModal').classList.add('hidden');
+            alert(`Erreur: ${data.error}`);
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        // Fermer la modale de confirmation
+        document.getElementById('confirmPayeModal').classList.add('hidden');
+        alert('Erreur de réseau lors de la mise à jour du paiement.');
+    });
+}
+
+// Fonction pour annuler le paiement
+function annulerPaiement() {
+    console.log('🔍 Debug - Fonction annulerPaiement exécutée');
+    document.getElementById('confirmPayeModal').classList.add('hidden');
+    savedCommandeId = null; // Réinitialiser la variable sauvegardée
 }
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -797,7 +952,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Validation des dates
         function validateDates() {
-            if (startDateInput.value && endDateInput.value) {
+            if (startDateInput && endDateInput && startDateInput.value && endDateInput.value) {
                 const startDate = new Date(startDateInput.value);
                 const endDate = new Date(endDateInput.value);
                 
@@ -851,25 +1006,27 @@ document.addEventListener('DOMContentLoaded', function() {
     const actionsModal = document.getElementById('savActionsModal');
     const cancelActionsBtn = document.getElementById('cancelSavActionsBtn');
 
+
     // Fermer la modale des actions
     if (cancelActionsBtn) {
-        cancelActionsBtn.addEventListener('click', function() {
-            actionsModal.classList.add('hidden');
-            currentCommandeId = null;
-            currentCommandeIdYz = null;
-        });
+        cancelActionsBtn.addEventListener('click', fermerModalSav);
     }
 
     // Fermer les modales si on clique en dehors
     if (actionsModal) {
         actionsModal.addEventListener('click', function(e) {
             if (e.target === actionsModal) {
-                actionsModal.classList.add('hidden');
-                currentCommandeId = null;
-                currentCommandeIdYz = null;
+                fermerModalSav();
             }
         });
     }
+
+    // Fermer la modale avec la touche Échap
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && actionsModal && !actionsModal.classList.contains('hidden')) {
+            fermerModalSav();
+        }
+    });
 
     // Gestion de la modale des détails des articles
     const articlesDetailsModal = document.getElementById('articlesDetailsModal');
@@ -890,6 +1047,56 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+    
+    // Gestion de la modale de confirmation de paiement
+    const confirmPayeModal = document.getElementById('confirmPayeModal');
+    const confirmPayeBtn = document.getElementById('confirmPayeBtn');
+    const cancelPayeBtn = document.getElementById('cancelPayeBtn');
+    
+    console.log('🔍 Debug - Éléments de la modale de confirmation:', {
+        confirmPayeModal,
+        confirmPayeBtn,
+        cancelPayeBtn
+    });
+    
+    if (confirmPayeBtn) {
+        console.log('🔍 Debug - Ajout du gestionnaire d\'événement pour confirmPayeBtn');
+        confirmPayeBtn.addEventListener('click', function(e) {
+            console.log('🔍 Debug - Clic détecté sur confirmPayeBtn');
+            e.preventDefault();
+            e.stopPropagation();
+            confirmerPaiement();
+        });
+    } else {
+        console.error('❌ Debug - confirmPayeBtn non trouvé dans le DOM');
+    }
+    
+    if (cancelPayeBtn) {
+        console.log('🔍 Debug - Ajout du gestionnaire d\'événement pour cancelPayeBtn');
+        cancelPayeBtn.addEventListener('click', function(e) {
+            console.log('🔍 Debug - Clic détecté sur cancelPayeBtn');
+            e.preventDefault();
+            e.stopPropagation();
+            annulerPaiement();
+        });
+    } else {
+        console.error('❌ Debug - cancelPayeBtn non trouvé dans le DOM');
+    }
+    
+    if (confirmPayeModal) {
+        confirmPayeModal.addEventListener('click', function(e) {
+            if (e.target === confirmPayeModal) {
+                annulerPaiement();
+            }
+        });
+    }
+    
+    // Fermer la modale de confirmation avec la touche Échap
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && confirmPayeModal && !confirmPayeModal.classList.contains('hidden')) {
+            annulerPaiement();
+        }
+    });
     
     console.log('✅ Interface de filtre initialisée avec succès');
 });
