@@ -283,7 +283,6 @@ def creer_commande(request):
                     ville_id=ville_id,
                     adresse=adresse,
                     total_cmd=0,  # Sera calculé après ajout des articles
-                    is_upsell=is_upsell,
                     origine='ADMIN',  # Définir l'origine comme Administrateur
                     source=source,
                     payement=payement,

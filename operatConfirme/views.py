@@ -2599,7 +2599,6 @@ def creer_commande(request):
                         ville=ville,
                         adresse=adresse,
                         total_cmd=0,  # Sera calculé après ajout des articles
-                        is_upsell=is_upsell,
                         origine='OC',  # Définir l'origine comme Opérateur Confirmation
                         source=source,
                         payement=payement,
@@ -2774,9 +2773,14 @@ def api_panier_commande(request, commande_id):
             paniers = commande.paniers.all()
             total_articles = sum(panier.quantite for panier in paniers)
             total_montant = sum(panier.sous_total for panier in paniers)
-            frais_livraison = commande.ville.frais_livraison if commande.ville else 0
-            # Convertir explicitement en float pour éviter l'erreur Decimal + float
-            total_final = float(total_montant) + float(frais_livraison)
+            
+            # Calculer les frais de livraison SEULEMENT si activés
+            if commande.frais_livraison:
+                frais_livraison = commande.ville.frais_livraison if commande.ville else 0
+                total_final = float(total_montant) + float(frais_livraison)
+            else:
+                frais_livraison = 0
+                total_final = float(total_montant)
             
             # Construire la liste des articles pour le JSON
             articles_data = []

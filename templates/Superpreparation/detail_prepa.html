@@ -543,8 +543,14 @@
                     {% endfor %}
                     {% if paniers %}
                         <tr class="bg-gray-50">
-                            <td colspan="4" class="px-4 py-4 whitespace-nowrap text-sm font-bold text-gray-900 text-right">Total Commande:</td>
+                            {% if commande.frais_livraison %}
+                            <td colspan="4" class="px-4 py-4 whitespace-nowrap text-sm font-bold text-gray-900 text-right">Total Commande avec frais de livraison de {{ commande.ville.frais_livraison|default:0|floatformat:2 }} DH:</td>
+                            
                             <td class="px-4 py-4 whitespace-nowrap text-sm font-bold text-gray-900 text-right">{{ commande.total_cmd|floatformat:2 }} DH</td>
+                            {% else %}
+                            <td colspan="4" class="px-4 py-4 whitespace-nowrap text-sm font-bold text-gray-900 text-right">Total Commande:</td>s
+                            <td class="px-4 py-4 whitespace-nowrap text-sm font-bold text-gray-900 text-right">{{ commande.total_cmd|floatformat:2 }} DH</td>
+                            {% endif %}
                         </tr>
                     {% endif %}
                 </tbody>

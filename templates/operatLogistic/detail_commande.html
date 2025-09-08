@@ -170,6 +170,7 @@
                     {{ commande.total_cmd|floatformat:2 }} DH
                 </p>
                 <p class="text-xs text-orange-500 mt-1 flex items-center">
+                    {% if commande.frais_livraison %}
                     - {{ commande.ville.frais_livraison|default:0|floatformat:2 }} DH livraison
                     <button type="button" 
                             onclick="afficherModalFraisLivraison()" 
@@ -177,6 +178,7 @@
                             title="Voir le détail des frais de livraison">
                         <i class="fas fa-info-circle text-xs"></i>
                     </button>
+                    {% endif %}
                 </p>
             </div>
         </div>
@@ -305,6 +307,7 @@
             <!-- Frais de livraison -->
             <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
                 <label class="block text-sm font-semibold mb-2 text-purple-600 flex items-center">
+                    
                     Frais de livraison :
                     <button type="button" 
                             onclick="afficherModalFraisLivraison()" 
@@ -313,10 +316,17 @@
                         <i class="fas fa-info-circle text-sm"></i>
                     </button>
                 </label>
+                {% if commande.frais_livraison %}
                 <p class="text-lg font-medium text-purple-800">
                     <i class="fas fa-truck mr-2"></i>
                     {{ commande.ville.frais_livraison|default:0|floatformat:2 }} DH
                 </p>
+                {% else %}
+                <p class="text-lg font-medium text-purple-800">
+                    <i class="fas fa-truck mr-2"></i>
+                    Non inclus dans cette commande 
+                </p>
+                {% endif %}
             </div>
 
             <!-- Adresse de livraison -->
@@ -551,6 +561,7 @@
                     </div>
                 </div>
                 
+                {% if commande.frais_livraison %}
                 <!-- Détail des frais de livraison -->
                 <div class="flex justify-end items-center text-xs text-gray-600">
                     <i class="fas fa-truck mr-1"></i>
@@ -562,6 +573,7 @@
                         <i class="fas fa-info-circle text-xs"></i>
                     </button>
                 </div>
+                {% endif %}
             </div>
          </div>
     </div>
