@@ -671,7 +671,7 @@ def modifier_article(request, id):
                     
                     # Message avec info sur l'upsell si désactivé
                     upsell_message = ""
-                    if upsell_was_active and phase in ['LIQUIDATION', 'EN_TEST'] and old_phase != phase:
+                    if upsell_was_active and phase in ['LIQUIDATION'] and old_phase != phase:
                         upsell_message = " L'upsell a été automatiquement désactivé."
                     
                     if phase == 'LIQUIDATION':
@@ -1430,7 +1430,7 @@ def changer_phase(request, id):
             article.save()
             
             # Message en fonction de la phase avec info sur l'upsell
-            upsell_message = " L'upsell a été automatiquement désactivé." if upsell_was_active and phase in ['LIQUIDATION', 'EN_TEST'] else ""
+            upsell_message = " L'upsell a été automatiquement désactivé." if upsell_was_active and phase in ['LIQUIDATION'] else ""
             
             if phase == 'EN_COURS':
                 promotion_message = " Les promotions actives ont été désactivées." if article.promotions.filter(active=False).exists() else ""

@@ -323,8 +323,8 @@ class Article(models.Model):
                     'prix_actuel': 'Assurez-vous qu\'il n\'y a pas plus de 2 chiffres après la virgule.'
                 })
         
-        # Désactiver automatiquement l'upsell pour les articles en liquidation ou en test
-        if self.isUpsell and self.phase in ['LIQUIDATION', ]:
+        # Désactiver automatiquement l'upsell pour les articles en liquidation seulement
+        if self.isUpsell and self.phase in ['LIQUIDATION']:
             self.isUpsell = False
             
         # Vérifier qu'un article en promotion n'est pas marqué comme upsell
@@ -432,7 +432,7 @@ class Article(models.Model):
     def should_disable_upsell(self):
         """Vérifie si l'upsell devrait être désactivé automatiquement"""
         return (
-            self.phase in ['LIQUIDATION', 'EN_TEST'] or
+            self.phase in ['LIQUIDATION'] or  # Seulement la liquidation désactive l'upsell
             (self.pk and self.has_promo_active)
         )
 

@@ -273,7 +273,7 @@
                 </div>
                 <div>
                     <div class="flex items-center mb-4">
-                        {% if article.phase == 'LIQUIDATION' or article.phase == 'EN_TEST' %}
+                        {% if article.phase == 'LIQUIDATION'  %}
                         <input type="checkbox" name="isUpsell" id="id_isUpsell" class="w-5 h-5 mr-2 text-gray-400 border-gray-300 rounded opacity-50 cursor-not-allowed" disabled>
                         <label for="id_isUpsell" class="font-medium text-sm text-gray-500">Est un produit Upsell (désactivé pour les articles en {{ article.get_phase_display|lower }})</label>
                         {% else %}
