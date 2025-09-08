@@ -1,6 +1,10 @@
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
-from .models import Commande
+from django.utils import timezone
+from .models import Commande, EtatCommande, EnumEtatCmd
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 @receiver(pre_save, sender=Commande)
@@ -67,4 +71,64 @@ def auto_recalcul_totaux_upsell(sender, instance, created, **kwargs):
             
         finally:
             # Nettoyer le flag
-            delattr(instance, '_recalcul_en_cours') 
+            delattr(instance, '_recalcul_en_cours')
+
+
+@receiver(post_save, sender=EtatCommande)
+def check_delayed_confirmations(sender, instance, created, **kwargs):
+    """
+    Vérifie automatiquement les confirmations décalées expirées
+    et les migre vers l'état "Confirmée"
+    """
+    # Éviter la récursion infinie
+    if hasattr(instance, '_transition_en_cours'):
+        return
+    
+    # Vérifier si c'est un état "Confirmation décalée" avec une date de fin
+    if (instance.enum_etat.libelle == 'Confirmation décalée' and 
+        instance.date_fin_delayed and 
+        instance.date_fin is None):  # État encore actif
+        
+        now = timezone.now()
+        
+        
+        # Vérifier si la date de fin est atteinte
+        if instance.date_fin_delayed <= now:
+            try:
+                # Marquer pour éviter la récursion
+                instance._transition_en_cours = True
+                
+                # Récupérer l'état "Confirmée"
+                etat_confirmee = EnumEtatCmd.objects.get(libelle='Confirmée')
+                
+                # Fermer l'état "Confirmation décalée"
+                instance.date_fin = now
+                instance.save()
+                
+                # Créer le nouvel état "Confirmée"
+                nouvel_etat = EtatCommande.objects.create(
+                    commande=instance.commande,
+                    enum_etat=etat_confirmee,
+                    operateur=instance.operateur,
+                    date_debut=now,
+                    commentaire=f'Transition automatique depuis "Confirmation décalée" (fin prévue: {instance.date_fin_delayed.strftime("%d/%m/%Y %H:%M")})'
+                )
+                
+                logger.info(
+                    f'Transition automatique: Commande {instance.commande.id_yz} '
+                    f'de "Confirmation décalée" vers "Confirmée"'
+                )
+                
+                print(f"🔄 Transition automatique: Commande {instance.commande.id_yz}")
+                print(f"   Confirmation décalée → Confirmée")
+                print(f"   Date de fin prévue: {instance.date_fin_delayed.strftime('%d/%m/%Y %H:%M')}")
+                
+            except Exception as e:
+                logger.error(
+                    f'Erreur transition automatique commande {instance.commande.id_yz}: {str(e)}'
+                )
+                print(f"❌ Erreur transition automatique: {str(e)}")
+            finally:
+                # Nettoyer le flag
+                if hasattr(instance, '_transition_en_cours'):
+                    delattr(instance, '_transition_en_cours') 

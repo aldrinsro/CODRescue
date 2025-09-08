@@ -2282,10 +2282,10 @@ function confirmerCommande() {
         return;
                 }
                 
-    console.log('✅ Toutes les vérifications passées, confirmation en cours...');
+    console.log('✅ Toutes les vérifications passées, ouverture du modal de sélection...');
     
-    // Afficher le modal de confirmation
-    showConfirmationModal();
+    // Afficher le modal de sélection du type de confirmation
+    showConfirmationTypeModal();
     return;
     
     // Afficher une notification de traitement en cours
@@ -2299,7 +2299,8 @@ function confirmerCommande() {
                     'X-CSRFToken': '{{ csrf_token }}'
                 },
                 body: JSON.stringify({
-                    'commentaire': 'Commande confirmée après vérification complète'
+                    'commentaire': 'Commande confirmée après vérification complète',
+                    'confirmation_type': confirmationType
                 })
         })
         .then(response => response.json())
@@ -5564,12 +5565,124 @@ document.addEventListener('keydown', function(event) {
     }
 });
 
+// ================== MODAL DE SÉLECTION DU TYPE DE CONFIRMATION ==================
+
+// Fonction pour afficher le modal de sélection du type de confirmation
+function showConfirmationTypeModal() {
+    const modal = document.getElementById('confirmationTypeModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+}
+
+// Fonction pour masquer le modal de sélection du type de confirmation
+function hideConfirmationTypeModal() {
+    const modal = document.getElementById('confirmationTypeModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+}
+
+// Fonction pour sélectionner le type de confirmation
+function selectConfirmationType(confirmationType) {
+    // Stocker le type de confirmation dans la variable globale
+    currentConfirmationType = confirmationType;
+    
+    // Masquer le modal de sélection
+    hideConfirmationTypeModal();
+    
+    // Afficher le modal de confirmation avec le type sélectionné
+    showConfirmationModal(confirmationType);
+}
+
+// Fonction pour afficher le formulaire de confirmation décalée
+function showDelayedConfirmationForm() {
+    // Masquer le modal de sélection
+    hideConfirmationTypeModal();
+    
+    // Définir la date par défaut (demain à 9h)
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(9, 0, 0, 0);
+    
+    const dateInput = document.getElementById('delayedEndDate');
+    const timeInput = document.getElementById('delayedEndTime');
+    
+    if (dateInput && timeInput) {
+        dateInput.value = tomorrow.toISOString().split('T')[0];
+        timeInput.value = '09:00';
+    }
+    
+    // Afficher le modal de confirmation décalée
+    const modal = document.getElementById('delayedConfirmationModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+}
+
+// Fonction pour masquer le modal de confirmation décalée
+function hideDelayedConfirmationModal() {
+    const modal = document.getElementById('delayedConfirmationModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+}
+
+// Fonction pour confirmer la confirmation décalée
+function confirmDelayedConfirmation() {
+    const dateInput = document.getElementById('delayedEndDate');
+    const timeInput = document.getElementById('delayedEndTime');
+    
+    if (!dateInput.value || !timeInput.value) {
+        showNotification('⚠️ Veuillez renseigner la date et l\'heure de fin', 'error');
+        return;
+    }
+    
+    // Créer la date de fin
+    const endDateTime = new Date(dateInput.value + 'T' + timeInput.value);
+    const now = new Date();
+    
+    if (endDateTime <= now) {
+        showNotification('⚠️ La date de fin doit être dans le futur', 'error');
+        return;
+    }
+    
+    // Stocker le type de confirmation et la date de fin
+    currentConfirmationType = 'delayed';
+    currentDelayedEndDate = endDateTime.toISOString();
+    
+    // Masquer le modal de confirmation décalée
+    hideDelayedConfirmationModal();
+    
+    // Afficher le modal de confirmation final
+    showConfirmationModal('delayed');
+}
+
 // ================== MODAL DE CONFIRMATION ==================
 
 // Fonction pour afficher le modal de confirmation
-function showConfirmationModal() {
+function showConfirmationModal(confirmationType = 'immediate') {
     const modal = document.getElementById('confirmationModal');
     if (modal) {
+        // Adapter le contenu du modal selon le type de confirmation
+        const title = modal.querySelector('h3');
+        const message = modal.querySelector('h4');
+        const icon = modal.querySelector('.fas.fa-check-circle');
+        
+        if (confirmationType === 'delayed') {
+            title.textContent = 'Confirmation Décalée';
+            message.textContent = 'Êtes-vous sûr de vouloir mettre cette commande en confirmation décalée ?';
+            icon.className = 'fas fa-clock text-white text-xl';
+        } else {
+            title.textContent = 'Confirmation Immédiate';
+            message.textContent = 'Êtes-vous sûr de vouloir confirmer immédiatement cette commande ?';
+            icon.className = 'fas fa-bolt text-white text-xl';
+        }
+        
         modal.classList.remove('hidden');
         modal.classList.add('flex');
     }
@@ -5584,12 +5697,19 @@ function hideConfirmationModal() {
     }
 }
 
+// Variables globales pour stocker le type de confirmation et la date de fin
+let currentConfirmationType = 'immediate';
+let currentDelayedEndDate = null;
+
 // Fonction pour procéder à la confirmation
 function proceedWithConfirmation() {
     hideConfirmationModal();
     
     // Afficher une notification de traitement en cours
-    showNotification('⏳ Confirmation en cours... (vérification du stock)', 'info');
+    const message = currentConfirmationType === 'delayed' ? 
+        '⏳ Mise en confirmation décalée... (vérification du stock)' : 
+        '⏳ Confirmation en cours... (vérification du stock)';
+    showNotification(message, 'info');
     
     // Récupérer les informations de livraison du formulaire
     const villeSelect = document.getElementById('ville-select');
@@ -5613,7 +5733,9 @@ function proceedWithConfirmation() {
                 body: JSON.stringify({
                     'commentaire': 'Commande confirmée après vérification complète',
                     'ville_livraison': villeId,
-                    'adresse_livraison': adresse
+                    'adresse_livraison': adresse,
+                    'confirmation_type': currentConfirmationType,
+                    'date_fin_delayed': currentDelayedEndDate
                 })
         })
         .then(response => response.json())
@@ -6449,6 +6571,138 @@ function modifierArticle(panierId) {
 }
 
 </script>
+
+<!-- Modal de Sélection du Type de Confirmation -->
+<div id="confirmationTypeModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50 flex items-center justify-center">
+    <div class="relative p-8 bg-white w-full max-w-lg m-auto flex-col flex rounded-xl shadow-2xl animate-fade-in-down" style="border: 2px solid #f7d9c4;">
+        <!-- En-tête du modal -->
+        <div class="flex justify-between items-center pb-4 border-b" style="border-color: #f7d9c4;">
+            <div class="flex items-center">
+                <div class="w-12 h-12 rounded-full flex items-center justify-center mr-4" style="background: linear-gradient(135deg, #4B352A, #6d4b3b);">
+                    <i class="fas fa-cogs text-white text-xl"></i>
+                </div>
+                <h3 class="text-2xl font-bold" style="color: #4B352A;">Type de Confirmation</h3>
+            </div>
+            <button onclick="hideConfirmationTypeModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+        
+        <!-- Contenu du modal -->
+        <div class="py-6">
+            <p class="text-gray-600 mb-6">Choisissez le type de confirmation pour cette commande :</p>
+            
+            <!-- Options de confirmation -->
+            <div class="space-y-4">
+                <!-- Confirmation Immédiate -->
+                <button onclick="selectConfirmationType('immediate')" 
+                        class="w-full p-4 rounded-lg border-2 border-transparent hover:border-green-300 transition-all duration-200 bg-green-50 hover:bg-green-100">
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center mr-4">
+                            <i class="fas fa-bolt text-white text-xl"></i>
+                        </div>
+                        <div class="text-left">
+                            <h4 class="text-lg font-semibold text-gray-900">Confirmation Immédiate</h4>
+                            <p class="text-gray-600 text-sm">La commande sera confirmée et passera directement à l'état "Confirmée"</p>
+                        </div>
+                    </div>
+                </button>
+                
+                <!-- Confirmation Décalée -->
+                <button onclick="showDelayedConfirmationForm()" 
+                        class="w-full p-4 rounded-lg border-2 border-transparent hover:border-orange-300 transition-all duration-200 bg-orange-50 hover:bg-orange-100">
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 rounded-full bg-orange-500 flex items-center justify-center mr-4">
+                            <i class="fas fa-clock text-white text-xl"></i>
+                        </div>
+                        <div class="text-left">
+                            <h4 class="text-lg font-semibold text-gray-900">Confirmation Décalée</h4>
+                            <p class="text-gray-600 text-sm">La commande sera mise en "Confirmation décalée" avec une date de fin automatique</p>
+                        </div>
+                    </div>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Boutons du modal -->
+        <div class="flex justify-end space-x-3 pt-4 border-t" style="border-color: #f7d9c4;">
+            <button onclick="hideConfirmationTypeModal()" 
+                    class="px-6 py-3 rounded-lg font-medium transition-all duration-200 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-300" 
+                    style="background-color: #f7d9c4; color: #4B352A;">
+                <i class="fas fa-times mr-2"></i>
+                Annuler
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmation Décalée avec Date -->
+<div id="delayedConfirmationModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50 flex items-center justify-center">
+    <div class="relative p-8 bg-white w-full max-w-lg m-auto flex-col flex rounded-xl shadow-2xl animate-fade-in-down" style="border: 2px solid #f7d9c4;">
+        <!-- En-tête du modal -->
+        <div class="flex justify-between items-center pb-4 border-b" style="border-color: #f7d9c4;">
+            <div class="flex items-center">
+                <div class="w-12 h-12 rounded-full flex items-center justify-center mr-4" style="background: linear-gradient(135deg, #F97316, #EA580C);">
+                    <i class="fas fa-clock text-white text-xl"></i>
+                </div>
+                <h3 class="text-2xl font-bold" style="color: #4B352A;">Confirmation Décalée</h3>
+            </div>
+            <button onclick="hideDelayedConfirmationModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+        
+        <!-- Contenu du modal -->
+        <div class="py-6">
+            <p class="text-gray-600 mb-6">Définissez la date et l'heure de fin de la confirmation décalée :</p>
+            
+            <!-- Formulaire de date -->
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Date de fin</label>
+                    <input type="date" id="delayedEndDate" 
+                           class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-orange-300 focus:border-orange-300" 
+                           style="border-color: #f7d9c4;">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Heure de fin</label>
+                    <input type="time" id="delayedEndTime" 
+                           class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-orange-300 focus:border-orange-300" 
+                           style="border-color: #f7d9c4;">
+                </div>
+                <div class="bg-orange-50 p-4 rounded-lg">
+                    <div class="flex items-start">
+                        <i class="fas fa-info-circle text-orange-500 mt-1 mr-3"></i>
+                        <div class="text-sm text-orange-700">
+                            <p class="font-medium mb-1">Information importante :</p>
+                            <p>À la date et heure définies, la commande passera automatiquement à l'état "Confirmée".</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Boutons du modal -->
+        <div class="flex justify-end space-x-3 pt-4 border-t" style="border-color: #f7d9c4;">
+            <button onclick="hideDelayedConfirmationModal()" 
+                    class="px-6 py-3 rounded-lg font-medium transition-all duration-200 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-300" 
+                    style="background-color: #f7d9c4; color: #4B352A;">
+                <i class="fas fa-times mr-2"></i>
+                Annuler
+            </button>
+            <button onclick="confirmDelayedConfirmation()" 
+                    class="px-6 py-3 text-white rounded-lg font-medium transition-all duration-200 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transform hover:-translate-y-0.5" 
+                    style="background: linear-gradient(135deg, #F97316, #EA580C); focus:ring-color: #F97316;">
+                <i class="fas fa-check mr-2"></i>
+                Confirmer
+            </button>
+        </div>
+    </div>
+</div>
 
 <!-- Modal de Confirmation Tailwind -->
 <div id="confirmationModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50 flex items-center justify-center">

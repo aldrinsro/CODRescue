@@ -234,8 +234,11 @@ def confirmer_commande_ajax(request, commande_id):
             import json
             data = json.loads(request.body)
             commentaire = data.get('commentaire', '')
+            confirmation_type = data.get('confirmation_type', 'immediate')  # 'immediate' ou 'delayed'
+            date_fin_delayed = data.get('date_fin_delayed', None)
         except:
             commentaire = ''
+            confirmation_type = 'immediate'
     
     try:
         # Récupérer l'opérateur
@@ -373,23 +376,31 @@ def confirmer_commande_ajax(request, commande_id):
                     'stock_insuffisant': stock_insuffisant
                 })
             
-            # Créer le nouvel état "confirmée"
-            enum_confirmee = EnumEtatCmd.objects.get(libelle='Confirmée')
+            # Déterminer l'état suivant selon le type de confirmation
+            if confirmation_type == 'delayed':
+                # Confirmation décalée : passer à l'état "Confirmation décalée"
+                enum_suivant = EnumEtatCmd.objects.get(libelle='Confirmation décalée')
+                print(f"🕐 DEBUG: Confirmation décalée sélectionnée")
+            else:
+                # Confirmation immédiate : passer à l'état "Confirmée"
+                enum_suivant = EnumEtatCmd.objects.get(libelle='Confirmée')
+                print(f"⚡ DEBUG: Confirmation immédiate sélectionnée")
             
             # Fermer l'état actuel
             etat_actuel.date_fin = timezone.now()
             etat_actuel.save()
             print(f"🔄 DEBUG: État actuel fermé: {etat_actuel.enum_etat.libelle}")
             
-            # Créer le nouvel état Confirmée (historisation courte)
+            # Créer le nouvel état selon le type de confirmation
             nouvel_etat = EtatCommande.objects.create(
                 commande=commande,
-                enum_etat=enum_confirmee,
+                enum_etat=enum_suivant,
                 operateur=operateur,
                 date_debut=timezone.now(),
-                commentaire=commentaire
+                commentaire=commentaire,
+                date_fin_delayed=date_fin_delayed if confirmation_type == 'delayed' and date_fin_delayed else None
             )
-            print(f"✅ DEBUG: Nouvel état créé: Confirmée")
+            print(f"✅ DEBUG: Nouvel état créé: {enum_suivant.libelle}")
 
             # L'état "Confirmée" reste actif (pas de date_fin définie)
             # La commande sera visible dans la liste des commandes confirmées
@@ -405,9 +416,16 @@ def confirmer_commande_ajax(request, commande_id):
             for item in articles_decrémentes:
                 print(f"   - {item['article']}: {item['ancien_stock']} → {item['nouveau_stock']} (-{item['quantite_decrémententée']})")
         
+        # Message selon le type de confirmation
+        if confirmation_type == 'delayed':
+            message = f'Commande {commande.id_yz} mise en confirmation décalée avec succès.'
+        else:
+            message = f'Commande {commande.id_yz} confirmée immédiatement avec succès.'
+        
         return JsonResponse({
             'success': True, 
-            'message': f'Commande {commande.id_yz} confirmée avec succès.',
+            'message': message,
+            'confirmation_type': confirmation_type,
             'articles_decrémentes': len(articles_decrémentes),
             'details_stock': articles_decrémentes,
             'redirect_url': '/operateur-confirme/confirmation/'

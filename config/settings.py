@@ -91,6 +91,7 @@ MIDDLEWARE = [
     'config.middleware.SessionTimeoutMiddleware',
     'config.middleware.UserTypeValidationMiddleware',
     'config.middleware.CSRFDebugMiddleware',
+    'commande.middleware.DelayedConfirmationMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django_browser_reload.middleware.BrowserReloadMiddleware',
 ]

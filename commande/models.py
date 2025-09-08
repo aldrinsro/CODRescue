@@ -307,6 +307,7 @@ class EtatCommande(models.Model):
     date_fin = models.DateTimeField(blank=True, null=True)
     commentaire = models.TextField(blank=True, null=True)
     operateur = models.ForeignKey(Operateur, on_delete=models.CASCADE, related_name='etats_modifies', blank=True, null=True)
+    date_fin_delayed = models.DateTimeField(blank=True, null=True, verbose_name="Date de fin de confirmation décalée")
     
     class Meta:
         verbose_name = "État de commande(Suivi de commande)"
