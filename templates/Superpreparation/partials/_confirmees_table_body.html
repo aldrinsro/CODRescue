@@ -14,12 +14,12 @@
     data-operateur="{% if commande.etat_confirmation.operateur %}{{ commande.etat_confirmation.operateur.nom }} {{ commande.etat_confirmation.operateur.prenom }}{% elif commande.etat_actuel.operateur %}{{ commande.etat_actuel.operateur.nom }} {{ commande.etat_actuel.operateur.prenom }}{% endif %}">
 
     <!-- Checkbox de sélection pour affectation -->
-    <td class="px-4 py-4 whitespace-nowrap text-center">
-            <input type="checkbox" class="commande-checkbox form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" data-commande-id="{{ commande.id }}" data-id-yz="{{ commande.id_yz }}">
+    <td class="column-checkbox px-2 py-3 whitespace-nowrap text-center">
+        <input type="checkbox" class="commande-checkbox form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" data-commande-id="{{ commande.id }}" data-id-yz="{{ commande.id_yz }}">
     </td>
 
     <!-- ID YZ -->
-    <td class="px-4 py-4 text-sm font-medium text-gray-900 border-r" style="border-color: #F5DEB3;">
+    <td class="column-id-yz px-2 py-3 text-sm font-medium text-gray-900 truncate">
         <div class="id-info">
             <div class="id-yz font-bold" style="color: #2e1b22;">ID YZ: {{ commande.id_yz }}</div>
             <div class="id-db text-xs text-gray-500">ID DB: {{ commande.id }}</div>
@@ -27,7 +27,7 @@
     </td>
 
     <!-- N° Externe -->
-    <td class="px-4 py-4 text-sm text-gray-600 border-r" style="border-color: #F5DEB3;">
+    <td class="column-num-ext px-2 py-3 text-sm text-gray-600 truncate">
         <div class="num-cmd-info">
             <div class="num-cmd font-medium">{{ commande.num_cmd|default:"Non renseigné" }}</div>
             {% if commande.num_cmd %}
@@ -37,7 +37,7 @@
     </td>
 
     <!-- Client -->
-    <td class="px-4 py-4 text-sm border-r" style="border-color: #F5DEB3;">
+    <td class="column-client px-2 py-3 text-sm truncate">
         {% if commande.client %}
             <div class="client-info">
                 <div class="client-name">{{ commande.client.nom }} {{ commande.client.prenom }}</div>
@@ -54,7 +54,7 @@
     </td>
 
     <!-- Téléphone -->
-    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-600 border-r" style="border-color: #F5DEB3;">
+    <td class="column-telephone px-2 py-3 whitespace-nowrap text-sm text-gray-600 truncate">
         {% if commande.client %}
             <span class="font-medium">{{ commande.client.numero_tel|default:"Non renseigné" }}</span>
         {% else %}
@@ -63,7 +63,7 @@
     </td>
 
     <!-- Ville & Région -->
-    <td class="px-4 py-4 text-sm border-r" style="border-color: #F5DEB3;">
+    <td class="column-ville-client px-2 py-3 text-sm truncate">
         {% if commande.ville %}
             <div class="ville-info">
                 <div class="ville-name">{{ commande.ville.nom }}</div>
@@ -80,14 +80,14 @@
     </td>
 
     <!-- Total -->
-    <td class="px-4 py-4 text-sm font-bold border-r" style="border-color: #F5DEB3;">
+    <td class="column-total px-2 py-3 text-sm font-bold truncate">
         <div class="total-info">
             <div class="text-green-600 font-bold">{{ commande.total_cmd|floatformat:2 }} DH</div>
         </div>
     </td>
 
     <!-- Date Confirmation -->
-    <td class="px-4 py-4 text-sm border-r" style="border-color: #F5DEB3;">
+    <td class="column-date px-2 py-3 text-sm truncate">
         {% if commande.etat_confirmation %}
             <div class="date-confirmation-info">
                 <div class="date font-medium text-gray-900">{{ commande.etat_confirmation.date_debut|date:"d/m/Y" }}</div>
@@ -102,7 +102,7 @@
     </td>
 
     <!-- Opérateur Confirmation -->
-    <td class="px-4 py-4 text-sm border-r" style="border-color: #F5DEB3;">
+    <td class="column-operateur px-2 py-3 text-sm truncate">
         {% if commande.etat_confirmation and commande.etat_confirmation.operateur %}
             <div class="flex items-center space-x-2">
                 <div class="w-6 h-6 rounded-full flex items-center justify-center" style="background-color: #2e1b22;">
@@ -135,7 +135,7 @@
     </td>
 
     <!-- État Préparation -->
-    <td class="px-4 py-4 text-sm border-r" style="border-color: #F5DEB3;">
+    <td class="column-etat-prepa px-2 py-3 text-sm truncate">
         <div class="flex flex-col space-y-1">
             <!-- État actuel avec icône d'information -->
             <div class="flex items-center">
@@ -196,7 +196,7 @@
     </td>
 
     <!-- Actions -->
-    <td class="px-4 py-4 whitespace-nowrap text-center">
+    <td class="column-actions px-2 py-3 whitespace-nowrap text-center">
         <div class="flex justify-center space-x-2">
             <!-- Checkbox pour impression (petit) -->
             <input type="checkbox" class="etiquette-checkbox form-checkbox h-3 w-3 text-blue-600 rounded focus:ring-blue-500" data-etiquette-id="{{ commande.id }}" title="Sélectionner pour impression">

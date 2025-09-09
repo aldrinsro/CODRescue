@@ -46,88 +46,196 @@
     </div>
 
     <!-- Statistiques rapides -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 lg:mb-8">
         <!-- Commandes actives -->
-        <div class="group bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:shadow-2xl hover:scale-105 border border-gray-100" style="border-color: var(--preparation-border-accent);">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center">
-                    <div class="p-4 rounded-full bg-gradient-to-r from-red-100 to-red-200 text-red-600 transition-all duration-300 group-hover:from-red-500 group-hover:to-red-600 group-hover:text-white group-hover:scale-110">
-                        <i class="fas fa-clock text-2xl"></i>
+        <div class="group bg-white rounded-xl shadow-lg p-3 sm:p-4 transition-all duration-300 hover:shadow-2xl hover:scale-105 border border-gray-100 h-full flex flex-col" style="border-color: var(--preparation-border-accent);">
+            <div class="flex items-center justify-between flex-grow">
+                <div class="flex items-center flex-grow">
+                    <div class="p-2 sm:p-3 rounded-full bg-gradient-to-r from-red-100 to-red-200 text-red-600 transition-all duration-300 group-hover:from-red-500 group-hover:to-red-600 group-hover:text-white group-hover:scale-110 flex-shrink-0">
+                        <i class="fas fa-clock text-lg sm:text-xl"></i>
                     </div>
-                    <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-600 group-hover:text-gray-700 transition-colors duration-300">À traiter</p>
-                        <p class="text-3xl font-bold text-gray-900 transition-all duration-300 group-hover:text-red-600">{{ stats.total_actives }}</p>
+                    <div class="ml-2 sm:ml-3 flex-grow">
+                        <p class="text-xs font-medium text-gray-600 group-hover:text-gray-700 transition-colors duration-300">À traiter</p>
+                        <p class="text-xl sm:text-2xl font-bold text-gray-900 transition-all duration-300 group-hover:text-red-600">{{ stats.total_actives }}</p>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- Commandes traitées -->
-        <div class="group bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:shadow-2xl hover:scale-105 border border-gray-100" style="border-color: var(--preparation-border-accent);">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center">
-                    <div class="p-4 rounded-full bg-gradient-to-r from-green-100 to-green-200 text-green-600 transition-all duration-300 group-hover:from-green-500 group-hover:to-green-600 group-hover:text-white group-hover:scale-110">
-                        <i class="fas fa-check-circle text-2xl"></i>
+        <div class="group bg-white rounded-xl shadow-lg p-3 sm:p-4 transition-all duration-300 hover:shadow-2xl hover:scale-105 border border-gray-100 h-full flex flex-col" style="border-color: var(--preparation-border-accent);">
+            <div class="flex items-center justify-between flex-grow">
+                <div class="flex items-center flex-grow">
+                    <div class="p-2 sm:p-3 rounded-full bg-gradient-to-r from-green-100 to-green-200 text-green-600 transition-all duration-300 group-hover:from-green-500 group-hover:to-green-600 group-hover:text-white group-hover:scale-110 flex-shrink-0">
+                        <i class="fas fa-check-circle text-lg sm:text-xl"></i>
                     </div>
-                    <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-600 group-hover:text-gray-700 transition-colors duration-300">Traitées</p>
-                        <p class="text-3xl font-bold text-gray-900 transition-all duration-300 group-hover:text-green-600">{{ stats.total_traitees }}</p>
+                    <div class="ml-2 sm:ml-3 flex-grow">
+                        <p class="text-xs font-medium text-gray-600 group-hover:text-gray-700 transition-colors duration-300">Traitées</p>
+                        <p class="text-xl sm:text-2xl font-bold text-gray-900 transition-all duration-300 group-hover:text-green-600">{{ stats.total_traitees }}</p>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- Valeur actives -->
-        <div class="group bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:shadow-2xl hover:scale-105 border border-gray-100" style="border-color: var(--preparation-border-accent);">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center">
-                    <div class="p-4 rounded-full bg-gradient-to-r from-orange-100 to-orange-200 text-orange-600 transition-all duration-300 group-hover:from-orange-500 group-hover:to-orange-600 group-hover:text-white group-hover:scale-110">
-                        <i class="fas fa-coins text-2xl"></i>
+        <div class="group bg-white rounded-xl shadow-lg p-3 sm:p-4 transition-all duration-300 hover:shadow-2xl hover:scale-105 border border-gray-100 h-full flex flex-col" style="border-color: var(--preparation-border-accent);">
+            <div class="flex items-center justify-between flex-grow">
+                <div class="flex items-center flex-grow">
+                    <div class="p-2 sm:p-3 rounded-full bg-gradient-to-r from-orange-100 to-orange-200 text-orange-600 transition-all duration-300 group-hover:from-orange-500 group-hover:to-orange-600 group-hover:text-white group-hover:scale-110 flex-shrink-0">
+                        <i class="fas fa-coins text-lg sm:text-xl"></i>
                     </div>
-                    <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-600 group-hover:text-gray-700 transition-colors duration-300">Valeur Actives</p>
-                        <p class="text-3xl font-bold text-gray-900 transition-all duration-300 group-hover:text-orange-600">{{ stats.valeur_actives|floatformat:0 }} DH</p>
+                    <div class="ml-2 sm:ml-3 flex-grow">
+                        <p class="text-xs font-medium text-gray-600 group-hover:text-gray-700 transition-colors duration-300">Valeur Actives</p>
+                        <p class="text-xl sm:text-2xl font-bold text-gray-900 transition-all duration-300 group-hover:text-orange-600">{{ stats.valeur_actives|floatformat:0 }} DH</p>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- Valeur traitées -->
-        <div class="group bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:shadow-2xl hover:scale-105 border border-gray-100" style="border-color: var(--preparation-border-accent);">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center">
-                    <div class="p-4 rounded-full bg-gradient-to-r from-blue-100 to-blue-200 text-blue-600 transition-all duration-300 group-hover:from-blue-500 group-hover:to-blue-600 group-hover:text-white group-hover:scale-110">
-                        <i class="fas fa-coins text-2xl"></i>
+        <div class="group bg-white rounded-xl shadow-lg p-3 sm:p-4 transition-all duration-300 hover:shadow-2xl hover:scale-105 border border-gray-100 h-full flex flex-col" style="border-color: var(--preparation-border-accent);">
+            <div class="flex items-center justify-between flex-grow">
+                <div class="flex items-center flex-grow">
+                    <div class="p-2 sm:p-3 rounded-full bg-gradient-to-r from-blue-100 to-blue-200 text-blue-600 transition-all duration-300 group-hover:from-blue-500 group-hover:to-blue-600 group-hover:text-white group-hover:scale-110 flex-shrink-0">
+                        <i class="fas fa-coins text-lg sm:text-xl"></i>
                     </div>
-                    <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-600 group-hover:text-gray-700 transition-colors duration-300">Valeur Traitées</p>
-                        <p class="text-3xl font-bold text-gray-900 transition-all duration-300 group-hover:text-blue-600">{{ stats.valeur_traitees|floatformat:0 }} DH</p>
+                    <div class="ml-2 sm:ml-3 flex-grow">
+                        <p class="text-xs font-medium text-gray-600 group-hover:text-gray-700 transition-colors duration-300">Valeur Traitées</p>
+                        <p class="text-xl sm:text-2xl font-bold text-gray-900 transition-all duration-300 group-hover:text-blue-600">{{ stats.valeur_traitees|floatformat:0 }} DH</p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
+<!-- Section de recherche -->
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+    <div class="px-4 py-3 border-b border-gray-200">
+        <h3 class="text-lg font-medium text-gray-900">Recherche et Filtres</h3>
+        <p class="text-sm text-gray-500 mt-1">Recherchez et filtrez les commandes retournées</p>
+    </div>
+    
+    <div class="p-4">
 {% include 'Superpreparation/includes/smart-search-toolbar.html' %}
-        
-    <div class="overflow-x-auto rounded-lg shadow-sm border border-gray-200">
-        <table class="min-w-full divide-y divide-gray-200">
+    </div>
+</div>
+
+<!-- Section des données -->
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+    <div class="px-4 py-3 border-b border-gray-200">
+        <h3 class="text-lg font-medium text-gray-900">Commandes Retournées</h3>
+        <p class="text-sm text-gray-500 mt-1">Gestion des commandes retournées par les clients</p>
+    </div>
+    
+    <div class="p-4">
+        <!-- Version mobile/tablette : Cartes -->
+        {% if commandes_retournees %}
+        <div class="block lg:hidden space-y-3 mb-4">
+            {% for commande in commandes_retournees %}
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-3 hover:shadow-md transition-shadow duration-200">
+                <!-- En-tête de la carte -->
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center space-x-2">
+                        <div class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+                            <span class="text-red-600 font-bold text-xs">{{ commande.id_yz }}</span>
+                        </div>
+                        <div>
+                            <h3 class="font-semibold text-gray-900 text-sm">{{ commande.client.prenom }} {{ commande.client.nom }}</h3>
+                            <p class="text-xs text-gray-500">{{ commande.num_cmd|default:"-" }}</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-sm font-bold text-red-600">{{ commande.total_cmd|floatformat:2 }} DH</div>
+                        <div class="text-xs text-gray-500">{{ commande.paniers.count }} article{{ commande.paniers.count|pluralize }}</div>
+                    </div>
+                </div>
+                
+                <!-- Informations détaillées -->
+                <div class="space-y-2 text-xs text-gray-600">
+                    <div class="flex items-center">
+                        <i class="fas fa-phone w-4 mr-2"></i>
+                        <span>{{ commande.client.numero_tel|default:"Non renseigné" }}</span>
+                    </div>
+                    {% if commande.ville %}
+                    <div class="flex items-center">
+                        <i class="fas fa-map-marker-alt w-4 mr-2"></i>
+                        <span>{{ commande.ville.nom }}, {{ commande.ville.region.nom_region }}</span>
+                    </div>
+                    {% endif %}
+                    {% if commande.etat_retournee %}
+                    <div class="flex items-center">
+                        <i class="fas fa-calendar w-4 mr-2"></i>
+                        <span>Retournée le {{ commande.etat_retournee.date_debut|date:"d/m/Y H:i" }}</span>
+                    </div>
+                    {% endif %}
+                    {% if current_tab == 'traitees' and commande.etat_retournee.date_fin %}
+                    <div class="flex items-center">
+                        <i class="fas fa-check w-4 mr-2"></i>
+                        <span>Traitée le {{ commande.etat_retournee.date_fin|date:"d/m/Y H:i" }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Actions -->
+                <div class="flex items-center justify-between mt-3 pt-3 border-t border-gray-200">
+                    <div class="flex items-center space-x-2">
+                        <a href="{% url 'Superpreparation:detail_prepa' commande.pk %}"
+                           class="inline-flex items-center px-2.5 py-1 rounded-md shadow-sm text-white text-xs transition-all hover:shadow-lg"
+                           style="background-color: var(--preparation-primary);"
+                           title="Voir le panier">
+                            <i class="fas fa-shopping-cart mr-1"></i>
+                            Panier
+                        </a>
+                        {% if current_tab == 'actives' %}
+                        <button onclick="ouvrirModalTraitement({{ commande.pk }}, '{{ commande.id_yz }}', '{{ commande.num_cmd|default:commande.id_yz }}')"
+                                class="inline-flex items-center px-2.5 py-1 rounded-md shadow-sm text-white text-xs transition-all hover:shadow-lg bg-orange-600"
+                                title="Traiter la commande">
+                            <i class="fas fa-tools mr-1"></i>
+                            Traiter
+                        </button>
+                        {% endif %}
+                    </div>
+                    <div class="flex items-center">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                            <i class="fas fa-undo mr-1"></i>
+                            Retournée
+                        </span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Bouton de sélection des colonnes -->
+        <div class="hidden lg:flex justify-end mb-3">
+            <button id="columnToggle" onclick="toggleColumnVisibility()" 
+                    class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all duration-300"
+                    title="Sélectionner les colonnes">
+                <i class="fas fa-columns mr-2 text-gray-500"></i>
+                Sélectionner les colonnes
+            </button>
+        </div>
+
+        <!-- Version desktop : Tableau -->
+        <div class="hidden lg:block overflow-x-auto rounded-lg shadow-sm border border-gray-200 mb-4">
+        <table class="w-full divide-y divide-gray-200 table-auto">
             <thead style="background-color: var(--preparation-primary);">
                 <tr>
-                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">ID YZ</th>
-                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">N° Externe</th>
-                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Client</th>
-                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Téléphone</th>
-                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Ville & Région</th>
-                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Date de renvoie</th>
-                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Date de traitement</th>
+                    <th class="column-id-yz px-2 py-3 text-left text-xs font-medium text-white uppercase tracking-wider" style="width: 8%;">ID YZ</th>
+                    <th class="column-num-ext px-2 py-3 text-left text-xs font-medium text-white uppercase tracking-wider" style="width: 10%;">N° Externe</th>
+                    <th class="column-client px-2 py-3 text-left text-xs font-medium text-white uppercase tracking-wider" style="width: 15%;">Client</th>
+                    <th class="column-telephone px-2 py-3 text-left text-xs font-medium text-white uppercase tracking-wider" style="width: 10%;">Téléphone</th>
+                    <th class="column-ville-region px-2 py-3 text-left text-xs font-medium text-white uppercase tracking-wider" style="width: 12%;">Ville & Région</th>
+                    <th class="column-date-retour px-2 py-3 text-left text-xs font-medium text-white uppercase tracking-wider" style="width: 10%;">Date de retour</th>
+                    <th class="column-date-traitement px-2 py-3 text-left text-xs font-medium text-white uppercase tracking-wider" style="width: 10%;">Date de traitement</th>
                     {% if current_tab == 'traitees' %}
-                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Traité par</th>
+                    <th class="column-operateur px-2 py-3 text-left text-xs font-medium text-white uppercase tracking-wider" style="width: 12%;">Traité par</th>
                     {% endif %}
-                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Total</th>
-                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">État</th>
-                    <th scope="col" class="px-4 py-3 text-center text-xs font-medium text-white uppercase tracking-wider">Panier</th>
-                    <th scope="col" class="px-4 py-3 text-center text-xs font-medium text-white uppercase tracking-wider">Actions</th>
+                    <th class="column-total px-2 py-3 text-left text-xs font-medium text-white uppercase tracking-wider" style="width: 8%;">Total</th>
+                    <th class="column-etat px-2 py-3 text-left text-xs font-medium text-white uppercase tracking-wider" style="width: 8%;">État</th>
+                    <th class="column-panier px-2 py-3 text-center text-xs font-medium text-white uppercase tracking-wider" style="width: 8%;">Panier</th>
+                    <th class="column-actions px-2 py-3 text-center text-xs font-medium text-white uppercase tracking-wider" style="width: 8%;">Actions</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
@@ -145,19 +253,26 @@
                         data-total="{{ commande.total_cmd }}"
                         data-etat="Retournée"
                         data-operateur="{% if commande.etat_actuel.operateur %}{{ commande.etat_actuel.operateur.nom }} {{ commande.etat_actuel.operateur.prenom }}{% endif %}">
-                        <td class="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            {{ commande.id_yz }}
+                        <!-- ID YZ -->
+                        <td class="column-id-yz px-2 py-3 text-sm font-medium text-gray-900 truncate">
+                            <span class="font-bold">{{ commande.id_yz }}</span>
                         </td>
-                        <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{{ commande.num_cmd|default:"-" }}</td>
-                        <!-- Colonne Client -->
-                        <td class="px-4 py-4 whitespace-nowrap">
+
+                        <!-- N° Externe -->
+                        <td class="column-num-ext px-2 py-3 text-sm text-gray-500 truncate">
+                            {{ commande.num_cmd|default:"-" }}
+                        </td>
+
+                        <!-- Client -->
+                        <td class="column-client px-2 py-3 truncate">
                             <div class="text-sm font-medium text-gray-900">{{ commande.client.prenom }} {{ commande.client.nom }}</div>
                             {% if commande.client.email %}
                             <div class="text-xs text-gray-500">{{ commande.client.email }}</div>
                             {% endif %}
                         </td>
-                        <!-- Colonne Téléphone -->
-                        <td class="px-4 py-4 whitespace-nowrap">
+
+                        <!-- Téléphone -->
+                        <td class="column-telephone px-2 py-3 truncate">
                             {% if commande.client.numero_tel %}
                             <div class="text-sm text-gray-900 font-medium">
                                 <i class="fas fa-phone mr-1"></i>
@@ -167,15 +282,19 @@
                             <div class="text-sm text-gray-500">Non renseigné</div>
                             {% endif %}
                         </td>
-                        <!-- Colonne Ville & Région (ville de livraison) -->
-                        <td class="px-4 py-4 whitespace-nowrap">
+
+                        <!-- Ville & Région -->
+                        <td class="column-ville-region px-2 py-3 truncate">
                             {% if commande.ville %}
                                 <div class="text-sm text-gray-900">{{ commande.ville.nom }}</div>
+                                <div class="text-xs text-gray-500">{{ commande.ville.region.nom_region }}</div>
                             {% else %}
                                 <div class="text-sm text-gray-500">Non définie</div>
                             {% endif %}
                         </td>
-                        <td class="px-4 py-4 whitespace-nowrap">
+
+                        <!-- Date de retour -->
+                        <td class="column-date-retour px-2 py-3 truncate">
                             {% if commande.etat_retournee %}
                                 <div class="text-sm text-gray-900">{{ commande.etat_retournee.date_debut|date:"d/m/Y" }}</div>
                                 <div class="text-xs text-gray-500">{{ commande.etat_retournee.date_debut|date:"H:i" }}</div>
@@ -183,7 +302,9 @@
                                 <div class="text-sm text-gray-500">Non définie</div>
                             {% endif %}
                         </td>
-                        <td class="px-4 py-4 whitespace-nowrap">
+
+                        <!-- Date de traitement -->
+                        <td class="column-date-traitement px-2 py-3 truncate">
                             {% if current_tab == 'actives' %}
                                 <div class="text-sm text-gray-500 italic">En attente</div>
                             {% else %}
@@ -195,8 +316,10 @@
                                 {% endif %}
                             {% endif %}
                         </td>
+
+                        <!-- Traité par (seulement pour l'onglet traitées) -->
                         {% if current_tab == 'traitees' %}
-                        <td class="px-4 py-4 whitespace-nowrap">
+                        <td class="column-operateur px-2 py-3 truncate">
                             {% if commande.etat_retournee and commande.etat_retournee.operateur %}
                                 <div class="text-sm text-gray-900">{{ commande.etat_retournee.operateur.nom }} {{ commande.etat_retournee.operateur.prenom }}</div>
                                 <div class="text-xs text-gray-500">{{ commande.etat_retournee.operateur.type_operateur }}</div>
@@ -205,26 +328,33 @@
                             {% endif %}
                         </td>
                         {% endif %}
-                        <td class="px-4 py-4 whitespace-nowrap">
-                            <div class="text-sm font-bold text-green-600">{{ commande.total_cmd|floatformat:2 }} DH</div>
+
+                        <!-- Total -->
+                        <td class="column-total px-2 py-3 truncate">
+                            <div class="text-sm font-bold text-red-600">{{ commande.total_cmd|floatformat:2 }} DH</div>
                         </td>
 
-                        <td class="px-4 py-4 whitespace-nowrap">
+                        <!-- État -->
+                        <td class="column-etat px-2 py-3 text-sm truncate">
                             <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
                                 <i class="fas fa-undo mr-1"></i>
                                 Retournée
                             </span>
                         </td>
-                        <td class="px-4 py-4 whitespace-nowrap text-center">
+
+                        <!-- Panier -->
+                        <td class="column-panier px-2 py-3 text-center">
                             <a href="{% url 'Superpreparation:detail_prepa' commande.pk %}" 
-                               class="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md shadow-sm text-white transition-all hover:shadow-lg"
-                               style="background-color: var(--preparation-primary); hover:background-color: var(--preparation-dark);"
+                               class="inline-flex items-center px-2.5 py-1 rounded-md shadow-sm text-white transition-all hover:shadow-lg"
+                               style="background-color: var(--preparation-primary);"
                                title="Voir le panier de cette commande">
-                                <i class="fas fa-shopping-cart mr-1"></i> 
-                                {{ commande.paniers.count }} article{{ commande.paniers.count|pluralize }}
+                                <i class="fas fa-shopping-cart text-sm mr-1"></i>
+                                <span class="text-xs">{{ commande.paniers.count }}</span>
                             </a>
                         </td>
-                        <td>
+
+                        <!-- Actions -->
+                        <td class="column-actions px-2 py-3 text-center">
                             {% if current_tab == 'actives' %}
                                 <button onclick="ouvrirModalTraitement({{ commande.pk }}, '{{ commande.id_yz }}', '{{ commande.num_cmd|default:commande.id_yz }}')"
                                 class="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-orange-600 hover:bg-orange-700 transition-colors">
@@ -263,6 +393,7 @@
                 {% endif %}
             </tbody>
         </table>
+        </div>
     </div>
 </div>
 </div>
@@ -549,4 +680,147 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <!-- Script pour les commandes retournées -->
 <script src="{% static 'js/Superpreparation/Retournée/Commande_retournée.js' %}"></script>
+
+<!-- JavaScript standardisé pour le masquage de colonnes -->
+<script>
+// Fonction pour masquer/afficher les colonnes
+function toggleColumnVisibility() {
+    const button = document.getElementById('columnToggle');
+    
+    // Créer le modal de sélection des colonnes
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+    modal.innerHTML = `
+        <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">Sélectionner les colonnes</h3>
+                <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="space-y-3">
+                <!-- Checkboxes pour chaque colonne -->
+                <label class="flex items-center">
+                    <input type="checkbox" class="column-checkbox" data-column="column-id-yz" checked>
+                    <span class="ml-2 text-sm text-gray-700">ID YZ</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="checkbox" class="column-checkbox" data-column="column-num-ext" checked>
+                    <span class="ml-2 text-sm text-gray-700">N° Externe</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="checkbox" class="column-checkbox" data-column="column-client" checked>
+                    <span class="ml-2 text-sm text-gray-700">Client</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="checkbox" class="column-checkbox" data-column="column-telephone" checked>
+                    <span class="ml-2 text-sm text-gray-700">Téléphone</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="checkbox" class="column-checkbox" data-column="column-ville-region" checked>
+                    <span class="ml-2 text-sm text-gray-700">Ville & Région</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="checkbox" class="column-checkbox" data-column="column-date-retour" checked>
+                    <span class="ml-2 text-sm text-gray-700">Date de retour</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="checkbox" class="column-checkbox" data-column="column-date-traitement" checked>
+                    <span class="ml-2 text-sm text-gray-700">Date de traitement</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="checkbox" class="column-checkbox" data-column="column-operateur" checked>
+                    <span class="ml-2 text-sm text-gray-700">Traité par</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="checkbox" class="column-checkbox" data-column="column-total" checked>
+                    <span class="ml-2 text-sm text-gray-700">Total</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="checkbox" class="column-checkbox" data-column="column-etat" checked>
+                    <span class="ml-2 text-sm text-gray-700">État</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="checkbox" class="column-checkbox" data-column="column-panier" checked>
+                    <span class="ml-2 text-sm text-gray-700">Panier</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="checkbox" class="column-checkbox" data-column="column-actions" checked>
+                    <span class="ml-2 text-sm text-gray-700">Actions</span>
+                </label>
+            </div>
+            <div class="flex justify-end space-x-3 mt-6">
+                <button onclick="this.closest('.fixed').remove()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md">
+                    Annuler
+                </button>
+                <button onclick="applyColumnVisibility(this.closest('.fixed'))" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md">
+                    Appliquer
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    loadColumnVisibility();
+}
+
+// Charger l'état actuel des colonnes
+function loadColumnVisibility() {
+    const hiddenColumns = JSON.parse(localStorage.getItem('hiddenColumns') || '[]');
+    const checkboxes = document.querySelectorAll('.column-checkbox');
+    
+    checkboxes.forEach(checkbox => {
+        const column = checkbox.dataset.column;
+        checkbox.checked = !hiddenColumns.includes(column);
+    });
+}
+
+// Appliquer la visibilité des colonnes
+function applyColumnVisibility(modal) {
+    const checkboxes = modal.querySelectorAll('.column-checkbox');
+    const hiddenColumns = [];
+    
+    checkboxes.forEach(checkbox => {
+        if (!checkbox.checked) {
+            hiddenColumns.push(checkbox.dataset.column);
+        }
+    });
+    
+    // Sauvegarder dans localStorage
+    localStorage.setItem('hiddenColumns', JSON.stringify(hiddenColumns));
+    
+    // Appliquer la visibilité
+    updateColumnVisibility(hiddenColumns);
+    
+    // Fermer le modal
+    modal.remove();
+}
+
+// Mettre à jour la visibilité des colonnes
+function updateColumnVisibility(hiddenColumns) {
+    // Liste des colonnes disponibles pour cette page
+    const columns = [
+        'column-id-yz', 'column-num-ext', 'column-client', 'column-telephone',
+        'column-ville-region', 'column-date-retour', 'column-date-traitement',
+        'column-operateur', 'column-total', 'column-etat', 'column-panier', 'column-actions'
+    ];
+    
+    columns.forEach(column => {
+        const elements = document.querySelectorAll(`.${column}`);
+        elements.forEach(element => {
+            if (hiddenColumns.includes(column)) {
+                element.style.display = 'none';
+            } else {
+                element.style.display = '';
+            }
+        });
+    });
+}
+
+// Charger la visibilité des colonnes au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+    const hiddenColumns = JSON.parse(localStorage.getItem('hiddenColumns') || '[]');
+    updateColumnVisibility(hiddenColumns);
+});
+</script>
 {% endblock %}

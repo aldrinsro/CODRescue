@@ -40,52 +40,63 @@
     </div>
 
     <!-- Statistiques -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 lg:mb-8">
         <!-- Aujourd'hui -->
-        <div class="stats-card group rounded-xl shadow-lg p-4 transition-all duration-300 hover:shadow-2xl border animate-slideInUp" style="animation-delay: 0.1s;">
-                <div class="flex items-center">
-                <div class="stats-icon group-hover:scale-110 transition-all duration-300">
-                        <i class="fas fa-calendar-day text-xl"></i>
+        <div class="group bg-white rounded-xl shadow-lg p-3 sm:p-4 transition-all duration-300 hover:shadow-2xl hover:scale-105 border border-gray-100 h-full flex flex-col animate-slideInUp" style="animation-delay: 0.1s;">
+            <div class="flex items-center justify-between flex-grow">
+                <div class="flex items-center flex-grow">
+                    <div class="p-2 sm:p-3 rounded-full bg-gradient-to-r from-green-100 to-green-200 text-green-600 transition-all duration-300 group-hover:from-green-500 group-hover:to-green-600 group-hover:text-white group-hover:scale-110 flex-shrink-0">
+                        <i class="fas fa-calendar-day text-lg sm:text-xl"></i>
             </div>
-                    <div class="ml-3">
-                    <p class="text-xs font-medium text-gray-600">Aujourd'hui</p>
-                    <p class="text-2xl font-bold text-gray-900 group-hover:text-green-600 transition-colors">{{ confirmees_aujourd_hui|default:0 }}</p>
+                    <div class="ml-2 sm:ml-3 flex-grow">
+                        <p class="text-xs font-medium text-gray-600 group-hover:text-gray-700 transition-colors duration-300">Aujourd'hui</p>
+                        <p class="text-xl sm:text-2xl font-bold text-gray-900 transition-all duration-300 group-hover:text-green-600">{{ confirmees_aujourd_hui|default:0 }}</p>
             </div>
         </div>
             </div>
+        </div>
+        
         <!-- Cette semaine -->
-        <div class="stats-card group rounded-xl shadow-lg p-4 transition-all duration-300 hover:shadow-2xl border animate-slideInUp" style="animation-delay: 0.2s;">
-                <div class="flex items-center">
-                <div class="stats-icon group-hover:scale-110 transition-all duration-300">
-                        <i class="fas fa-calendar-week text-xl"></i>
+        <div class="group bg-white rounded-xl shadow-lg p-3 sm:p-4 transition-all duration-300 hover:shadow-2xl hover:scale-105 border border-gray-100 h-full flex flex-col animate-slideInUp" style="animation-delay: 0.2s;">
+            <div class="flex items-center justify-between flex-grow">
+                <div class="flex items-center flex-grow">
+                    <div class="p-2 sm:p-3 rounded-full bg-gradient-to-r from-blue-100 to-blue-200 text-blue-600 transition-all duration-300 group-hover:from-blue-500 group-hover:to-blue-600 group-hover:text-white group-hover:scale-110 flex-shrink-0">
+                        <i class="fas fa-calendar-week text-lg sm:text-xl"></i>
             </div>
-                    <div class="ml-3">
-                    <p class="text-xs font-medium text-gray-600">Cette semaine</p>
-                    <p class="text-2xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">{{ confirmees_semaine|default:0 }}</p>
+                    <div class="ml-2 sm:ml-3 flex-grow">
+                        <p class="text-xs font-medium text-gray-600 group-hover:text-gray-700 transition-colors duration-300">Cette semaine</p>
+                        <p class="text-xl sm:text-2xl font-bold text-gray-900 transition-all duration-300 group-hover:text-blue-600">{{ confirmees_semaine|default:0 }}</p>
         </div>
             </div>
         </div>
+        </div>
+        
         <!-- Ce mois -->
-        <div class="stats-card group rounded-xl shadow-lg p-4 transition-all duration-300 hover:shadow-2xl border animate-slideInUp" style="animation-delay: 0.3s;">
-                <div class="flex items-center">
-                <div class="stats-icon group-hover:scale-110 transition-all duration-300">
-                        <i class="fas fa-calendar-alt text-xl"></i>
+        <div class="group bg-white rounded-xl shadow-lg p-3 sm:p-4 transition-all duration-300 hover:shadow-2xl hover:scale-105 border border-gray-100 h-full flex flex-col animate-slideInUp" style="animation-delay: 0.3s;">
+            <div class="flex items-center justify-between flex-grow">
+                <div class="flex items-center flex-grow">
+                    <div class="p-2 sm:p-3 rounded-full bg-gradient-to-r from-purple-100 to-purple-200 text-purple-600 transition-all duration-300 group-hover:from-purple-500 group-hover:to-purple-600 group-hover:text-white group-hover:scale-110 flex-shrink-0">
+                        <i class="fas fa-calendar-alt text-lg sm:text-xl"></i>
                     </div>
-                    <div class="ml-3">
-                    <p class="text-xs font-medium text-gray-600">Ce mois</p>
-                    <p class="text-2xl font-bold text-gray-900 group-hover:text-purple-600 transition-colors">{{ confirmees_mois|default:0 }}</p>
+                    <div class="ml-2 sm:ml-3 flex-grow">
+                        <p class="text-xs font-medium text-gray-600 group-hover:text-gray-700 transition-colors duration-300">Ce mois</p>
+                        <p class="text-xl sm:text-2xl font-bold text-gray-900 transition-all duration-300 group-hover:text-purple-600">{{ confirmees_mois|default:0 }}</p>
                 </div>
             </div>
         </div>
+        </div>
+        
         <!-- Total -->
-        <div class="stats-card group rounded-xl shadow-lg p-4 transition-all duration-300 hover:shadow-2xl border animate-slideInUp" style="animation-delay: 0.4s;">
-                <div class="flex items-center">
-                <div class="stats-icon group-hover:scale-110 transition-all duration-300">
-                    <i class="fas fa-check-double text-xl"></i>
+        <div class="group bg-white rounded-xl shadow-lg p-3 sm:p-4 transition-all duration-300 hover:shadow-2xl hover:scale-105 border border-gray-100 h-full flex flex-col animate-slideInUp" style="animation-delay: 0.4s;">
+            <div class="flex items-center justify-between flex-grow">
+                <div class="flex items-center flex-grow">
+                    <div class="p-2 sm:p-3 rounded-full bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-600 transition-all duration-300 group-hover:from-yellow-500 group-hover:to-yellow-600 group-hover:text-white group-hover:scale-110 flex-shrink-0">
+                        <i class="fas fa-check-double text-lg sm:text-xl"></i>
                     </div>
-                    <div class="ml-3">
-                    <p class="text-xs font-medium text-gray-600">Total Confirmées</p>
-                    <p class="text-2xl font-bold text-gray-900 group-hover:text-yellow-600 transition-colors">{{ total_confirmees|default:0 }}</p>
+                    <div class="ml-2 sm:ml-3 flex-grow">
+                        <p class="text-xs font-medium text-gray-600 group-hover:text-gray-700 transition-colors duration-300">Total Confirmées</p>
+                        <p class="text-xl sm:text-2xl font-bold text-gray-900 transition-all duration-300 group-hover:text-yellow-600">{{ total_confirmees|default:0 }}</p>
+                    </div>
                 </div>
             </div>
             </div>
@@ -181,25 +192,139 @@
     </div>
     {% endif %}
 
-    <!-- Tableau des commandes confirmées -->
+    <!-- Version mobile/tablette : Cartes -->
     {% if page_obj.object_list %}
-    <div class="table-responsive mb-6 theme-card rounded-xl shadow-lg">
-        <table class="min-w-full divide-y divide-gray-200">
+    <div class="block lg:hidden space-y-3 mb-6">
+        {% for commande in page_obj %}
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-3 hover:shadow-md transition-shadow duration-200">
+            <!-- En-tête de la carte -->
+            <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <span class="text-blue-600 font-bold text-xs">{{ commande.id_yz }}</span>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold text-gray-900 text-sm">{{ commande.client.nom }} {{ commande.client.prenom }}</h3>
+                        <p class="text-xs text-gray-500">{{ commande.num_cmd|default:"N° externe non renseigné" }}</p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <div class="text-sm font-bold text-green-600">{{ commande.total_cmd|floatformat:2 }} DH</div>
+                    <div class="text-xs text-gray-500">{{ commande.client.numero_tel|default:"Tél. non renseigné" }}</div>
+                </div>
+            </div>
+            
+            <!-- Informations détaillées -->
+            <div class="grid grid-cols-2 gap-2 mb-2 text-xs">
+                <div>
+                    <span class="text-gray-500">Ville:</span>
+                    <div class="font-medium">{{ commande.ville.nom|default:commande.ville_init|default:"Non spécifiée" }}</div>
+                </div>
+                <div>
+                    <span class="text-gray-500">Date conf.:</span>
+                    <div class="font-medium">
+                        {% if commande.etat_confirmation %}
+                            {{ commande.etat_confirmation.date_debut|date:"d/m/Y" }}
+                        {% else %}
+                            Non confirmée
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Opérateur -->
+            <div class="mb-2 text-xs">
+                <span class="text-gray-500">Opérateur:</span>
+                <div class="font-medium">
+                    {% if commande.etat_confirmation and commande.etat_confirmation.operateur %}
+                        {{ commande.etat_confirmation.operateur.nom }} {{ commande.etat_confirmation.operateur.prenom }}
+                    {% elif commande.etat_actuel and commande.etat_actuel.operateur %}
+                        {{ commande.etat_actuel.operateur.nom }} {{ commande.etat_actuel.operateur.prenom }}
+                    {% else %}
+                        Non affectée
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- États -->
+            <div class="flex flex-wrap gap-1 mb-2">
+                {% with commande.etat_actuel as etat_actuel %}
+                    {% if etat_actuel.enum_etat.libelle == 'En préparation' %}
+                        <span class="px-1.5 py-0.5 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                            <i class="fas fa-box-open mr-1"></i>En préparation
+                        </span>
+                    {% elif etat_actuel.enum_etat.libelle == 'Collectée' %}
+                        <span class="px-1.5 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                            <i class="fas fa-box mr-1"></i>Collectée
+                        </span>
+                    {% elif etat_actuel.enum_etat.libelle == 'Emballée' %}
+                        <span class="px-1.5 py-0.5 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
+                            <i class="fas fa-boxes mr-1"></i>Emballée
+                        </span>
+                    {% elif etat_actuel.enum_etat.libelle == 'Préparée' %}
+                        <span class="px-1.5 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                            <i class="fas fa-check-circle mr-1"></i>Préparée
+                        </span>
+                    {% else %}
+                        <span class="px-1.5 py-0.5 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                            <i class="fas fa-info-circle mr-1"></i>{{ etat_actuel.enum_etat.libelle }}
+                        </span>
+                    {% endif %}
+                {% endwith %}
+            </div>
+            
+            <!-- Actions -->
+            <div class="flex items-center justify-between pt-2 border-t border-gray-200">
+                <div class="flex items-center space-x-1">
+                    <input type="checkbox" class="etiquette-checkbox form-checkbox h-3 w-3 text-blue-600 rounded focus:ring-blue-500" data-etiquette-id="{{ commande.id }}" title="Sélectionner pour impression">
+                    <span class="text-xs text-gray-500">Impression</span>
+                </div>
+                <div class="flex items-center space-x-1">
+                    <a href="{% url 'Superpreparation:detail_prepa' commande.pk %}" 
+                       class="inline-flex items-center justify-center w-7 h-7 rounded-md shadow-sm text-white text-xs bg-blue-600 hover:bg-blue-700">
+                        <i class="fas fa-eye"></i>
+                    </a>
+                    <button onclick="showAffectationModal({{ commande.id }}, '{{ commande.id_yz }}')" 
+                            class="inline-flex items-center justify-center w-7 h-7 rounded-md shadow-sm text-white text-xs bg-green-600 hover:bg-green-700">
+                        <i class="fas fa-users"></i>
+                    </button>
+                    <button class="print-btn inline-flex items-center justify-center w-7 h-7 rounded-md shadow-sm text-white text-xs bg-blue-600 hover:bg-blue-700" data-commande-id="{{ commande.id }}">
+                        <i class="fas fa-print"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Contrôles du tableau -->
+    <div class="hidden lg:flex justify-end mb-4">
+        <button id="columnToggle" onclick="toggleColumnVisibility()" 
+                class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all duration-300"
+                title="Sélectionner les colonnes">
+            <i class="fas fa-columns mr-2 text-gray-500"></i>
+            Sélectionner les colonnes
+        </button>
+    </div>
+
+    <!-- Version desktop : Tableau -->
+    <div class="hidden lg:block overflow-x-auto rounded-lg shadow-sm border border-gray-200 mb-6">
+        <table class="w-full divide-y divide-gray-200 table-auto">
             <thead class="bg-[var(--preparation-primary)] border-b-[3px] border-[var(--preparation-primary)] text-white">
                 <tr>
-                    <th class="px-3 py-2 text-left">
+                    <th class="column-checkbox px-2 py-3 text-left" style="width: 5%;">
                         <input type="checkbox" id="selectAll" class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" data-target="affectation-btn">
                 </th>
-                    <th class="px-3 py-2 text-left text-sm font-medium text-white uppercase tracking-wider">ID YZ</th>
-                    <th class="px-3 py-2 text-left text-sm font-medium text-white uppercase tracking-wider">N° Externe</th>
-                    <th class="px-3 py-2 text-left text-sm font-medium text-white uppercase tracking-wider">Client</th>
-                    <th class="px-3 py-2 text-left text-sm font-medium text-white uppercase tracking-wider">Téléphone</th>
-                    <th class="px-3 py-2 text-left text-sm font-medium text-white uppercase tracking-wider">Ville & Région</th>
-                    <th class="px-3 py-2 text-left text-sm font-medium text-white uppercase tracking-wider">Total</th>
-                    <th class="px-3 py-2 text-left text-sm font-medium text-white uppercase tracking-wider">Date Confirmation</th>
-                    <th class="px-3 py-2 text-left text-sm font-medium text-white uppercase tracking-wider">Opérateur Conf.</th>
-                    <th class="px-3 py-2 text-left text-sm font-medium text-white uppercase tracking-wider">État Préparation</th>
-                    <th class="px-3 py-2 text-center text-sm font-medium text-white uppercase tracking-wider">Actions</th>
+                    <th class="column-id-yz px-2 py-3 text-left text-xs font-medium text-white uppercase tracking-wider" style="width: 8%;">ID YZ</th>
+                    <th class="column-num-ext px-2 py-3 text-left text-xs font-medium text-white uppercase tracking-wider" style="width: 10%;">N° Externe</th>
+                    <th class="column-client px-2 py-3 text-left text-xs font-medium text-white uppercase tracking-wider" style="width: 15%;">Client</th>
+                    <th class="column-telephone px-2 py-3 text-left text-xs font-medium text-white uppercase tracking-wider" style="width: 10%;">Téléphone</th>
+                    <th class="column-ville-client px-2 py-3 text-left text-xs font-medium text-white uppercase tracking-wider" style="width: 12%;">Ville & Région</th>
+                    <th class="column-total px-2 py-3 text-left text-xs font-medium text-white uppercase tracking-wider" style="width: 8%;">Total</th>
+                    <th class="column-date px-2 py-3 text-left text-xs font-medium text-white uppercase tracking-wider" style="width: 10%;">Date Confirmation</th>
+                    <th class="column-operateur px-2 py-3 text-left text-xs font-medium text-white uppercase tracking-wider" style="width: 12%;">Opérateur Conf.</th>
+                    <th class="column-etat-prepa px-2 py-3 text-left text-xs font-medium text-white uppercase tracking-wider" style="width: 10%;">État Préparation</th>
+                    <th class="column-actions px-2 py-3 text-center text-xs font-medium text-white uppercase tracking-wider" style="width: 10%;">Actions</th>
                     </tr>
                 </thead>
             <tbody id="commandTableBody" class="bg-white divide-y divide-gray-200">
@@ -1760,6 +1885,143 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     console.log('✅ [COMMANDES CONFIRMEES] Système d\'étiquettes initialisé');
+});
+
+// ===== SYSTÈME DE MASQUAGE DE COLONNES =====
+// Fonction pour masquer/afficher les colonnes
+function toggleColumnVisibility() {
+    const button = document.getElementById('columnToggle');
+    
+    // Créer le modal de sélection des colonnes
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+    modal.innerHTML = `
+        <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">Sélectionner les colonnes</h3>
+                <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="space-y-3">
+                <!-- Checkboxes pour chaque colonne -->
+                <label class="flex items-center">
+                    <input type="checkbox" class="column-checkbox" data-column="column-checkbox" checked>
+                    <span class="ml-2 text-sm text-gray-700">Sélection</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="checkbox" class="column-checkbox" data-column="column-id-yz" checked>
+                    <span class="ml-2 text-sm text-gray-700">ID YZ</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="checkbox" class="column-checkbox" data-column="column-num-ext" checked>
+                    <span class="ml-2 text-sm text-gray-700">N° Externe</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="checkbox" class="column-checkbox" data-column="column-client" checked>
+                    <span class="ml-2 text-sm text-gray-700">Client</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="checkbox" class="column-checkbox" data-column="column-telephone" checked>
+                    <span class="ml-2 text-sm text-gray-700">Téléphone</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="checkbox" class="column-checkbox" data-column="column-ville-client" checked>
+                    <span class="ml-2 text-sm text-gray-700">Ville & Région</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="checkbox" class="column-checkbox" data-column="column-total" checked>
+                    <span class="ml-2 text-sm text-gray-700">Total</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="checkbox" class="column-checkbox" data-column="column-date" checked>
+                    <span class="ml-2 text-sm text-gray-700">Date Confirmation</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="checkbox" class="column-checkbox" data-column="column-operateur" checked>
+                    <span class="ml-2 text-sm text-gray-700">Opérateur Conf.</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="checkbox" class="column-checkbox" data-column="column-etat-prepa" checked>
+                    <span class="ml-2 text-sm text-gray-700">État Préparation</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="checkbox" class="column-checkbox" data-column="column-actions" checked>
+                    <span class="ml-2 text-sm text-gray-700">Actions</span>
+                </label>
+            </div>
+            <div class="flex justify-end space-x-3 mt-6">
+                <button onclick="this.closest('.fixed').remove()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md">
+                    Annuler
+                </button>
+                <button onclick="applyColumnVisibility(this.closest('.fixed'))" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md">
+                    Appliquer
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    loadColumnVisibility();
+}
+
+// Charger l'état actuel des colonnes
+function loadColumnVisibility() {
+    const hiddenColumns = JSON.parse(localStorage.getItem('hiddenColumns') || '[]');
+    const checkboxes = document.querySelectorAll('.column-checkbox');
+    
+    checkboxes.forEach(checkbox => {
+        const column = checkbox.dataset.column;
+        checkbox.checked = !hiddenColumns.includes(column);
+    });
+}
+
+// Appliquer la visibilité des colonnes
+function applyColumnVisibility(modal) {
+    const checkboxes = modal.querySelectorAll('.column-checkbox');
+    const hiddenColumns = [];
+    
+    checkboxes.forEach(checkbox => {
+        if (!checkbox.checked) {
+            hiddenColumns.push(checkbox.dataset.column);
+        }
+    });
+    
+    // Sauvegarder dans localStorage
+    localStorage.setItem('hiddenColumns', JSON.stringify(hiddenColumns));
+    
+    // Appliquer la visibilité
+    updateColumnVisibility(hiddenColumns);
+    
+    // Fermer le modal
+    modal.remove();
+}
+
+// Mettre à jour la visibilité des colonnes
+function updateColumnVisibility(hiddenColumns) {
+    // Liste des colonnes disponibles
+    const columns = [
+        'column-checkbox', 'column-id-yz', 'column-num-ext', 'column-client',
+        'column-telephone', 'column-ville-client', 'column-total', 'column-date',
+        'column-operateur', 'column-etat-prepa', 'column-actions'
+    ];
+    
+    columns.forEach(column => {
+        const elements = document.querySelectorAll(`.${column}`);
+        elements.forEach(element => {
+            if (hiddenColumns.includes(column)) {
+                element.style.display = 'none';
+            } else {
+                element.style.display = '';
+            }
+        });
+    });
+}
+
+// Charger la visibilité des colonnes au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+    const hiddenColumns = JSON.parse(localStorage.getItem('hiddenColumns') || '[]');
+    updateColumnVisibility(hiddenColumns);
 });
 </script>
 
