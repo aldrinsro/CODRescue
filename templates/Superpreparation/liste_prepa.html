@@ -194,132 +194,53 @@
                 </div>
             </form>
 
-            <!-- Barre de recherche intelligente -->
-            <div class="relative w-full lg:w-auto lg:ml-auto">
-                <div class="mb-2 sm:mb-3">
-                    <p class="text-gray-700 text-xs sm:text-sm">
-                        <span class="hidden sm:inline">Recherche intelligente et filtres avancés pour optimiser votre suivi des commandes.</span>
-                        <span class="sm:hidden">Recherche intelligente</span>
-                    </p>
-                </div>
-                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:space-x-2">
-                    <div class="relative flex-1 sm:flex-none">
-                        <input type="text" id="smartSearch" 
-                               placeholder="Recherche intelligente..." 
-                               class="block w-full sm:w-64 px-3 sm:px-4 py-2 pr-10 border border-gray-300 rounded shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm h-10"
-                               autocomplete="off">
-                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
-                            <i class="fas fa-search text-gray-400"></i>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <button onclick="clearSmartSearch()" 
-                                class="inline-flex items-center justify-center px-3 py-2 bg-gray-500 hover:bg-gray-600 text-white text-sm font-medium rounded transition-colors h-10 w-10 sm:w-auto">
-                            <i class="fas fa-times"></i>
-                            <span class="hidden sm:inline ml-1">Effacer</span>
-                        </button>
-                        <button onclick="toggleAdvancedSearch()" 
-                                class="inline-flex items-center justify-center px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded transition-colors h-10 w-10 sm:w-auto">
-                            <i class="fas fa-filter sm:mr-2"></i>
-                            <span class="hidden sm:inline">Filtres</span>
-                        </button>
-                    </div>
-                </div>
+            {% include 'Superpreparation/includes/smart-search-toolbar.html' %}
+            
+            <!-- Script de recherche intelligente (chargé tôt pour les boutons) -->
+            <script src="{% static 'js/Superpreparation/Suivi_des_Commandes/suivi-commandes-smart-search.js' %}"></script>
+            
+            <!-- Script de fallback pour les fonctions manquantes -->
+            <script>
+                // Fallback si les fonctions ne sont pas chargées
+                if (typeof window.toggleAdvancedSearch === 'undefined') {
+                    window.toggleAdvancedSearch = function() {
+                        const advancedSearch = document.getElementById('advancedSearch');
+                        if (advancedSearch) {
+                            const isHidden = advancedSearch.style.display === 'none' || advancedSearch.classList.contains('hidden');
+                            if (isHidden) {
+                                advancedSearch.style.display = 'block';
+                                advancedSearch.classList.remove('hidden');
+                            } else {
+                                advancedSearch.style.display = 'none';
+                                advancedSearch.classList.add('hidden');
+                            }
+                        }
+                    };
+                }
                 
-                <!-- Filtres avancés -->
-                <div id="advancedSearch" class="hidden absolute top-full left-0 right-0 sm:right-auto mt-2 bg-white border border-gray-300 rounded-md shadow-lg p-3 sm:p-4 z-50 min-w-full sm:min-w-96">
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">ID YZ</label>
-                            <input type="text" id="filterIdYz" placeholder="ID YZ..." 
-                                   class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">N° Externe</label>
-                            <input type="text" id="filterNumCmd" placeholder="N° commande..." 
-                                   class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Client</label>
-                            <input type="text" id="filterClient" placeholder="Nom ou prénom..." 
-                                   class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Téléphone</label>
-                            <input type="text" id="filterPhone" placeholder="Numéro..." 
-                                   class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                            <input type="email" id="filterEmail" placeholder="Email..." 
-                                   class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Ville Client</label>
-                            <input type="text" id="filterVilleClient" placeholder="Ville client..." 
-                                   class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Ville & Région</label>
-                            <input type="text" id="filterVilleRegion" placeholder="Ville/région..." 
-                                   class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Date Affectation</label>
-                            <input type="date" id="filterDateAffectation" 
-                                   class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Total Min</label>
-                            <input type="number" id="filterTotalMin" placeholder="0" 
-                                   class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Total Max</label>
-                            <input type="number" id="filterTotalMax" placeholder="1000" 
-                                   class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">État</label>
-                            <input type="text" id="filterEtat" placeholder="État..." 
-                                   class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Opérateur</label>
-                            <input type="text" id="filterOperateur" placeholder="Opérateur..." 
-                                   class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
-                        </div>
-                    </div>
-                    <div class="mt-4 flex justify-between">
-                        <button onclick="applyFilters()" 
-                                class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded transition-colors h-10">
-                            <i class="fas fa-check mr-2"></i>
-                            Appliquer
-                        </button>
-                        <button onclick="clearFilters()" 
-                                class="inline-flex items-center px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white text-sm font-medium rounded transition-colors h-10">
-                            <i class="fas fa-eraser mr-2"></i>
-                            Effacer
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Indicateur de résultats -->
-        <div id="searchResults" class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md hidden">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center">
-                    <i class="fas fa-search text-blue-600 mr-2"></i>
-                    <span class="text-blue-800">
-                        <span id="resultCount">0</span> résultat(s) trouvé(s)
-                    </span>
-                </div>
-                <button onclick="clearAllSearch()" class="text-blue-600 hover:text-blue-800 text-sm">
-                    <i class="fas fa-times mr-1"></i>Effacer tout
-                </button>
-            </div>
-        </div>
+                if (typeof window.clearSmartSearch === 'undefined') {
+                    window.clearSmartSearch = function() {
+                        const searchInput = document.getElementById('smartSearch');
+                        if (searchInput) {
+                            searchInput.value = '';
+                        }
+                        const filterInputs = document.querySelectorAll('#advancedSearch input, #advancedSearch select');
+                        filterInputs.forEach(input => {
+                            if (input.type === 'checkbox') {
+                                input.checked = false;
+                            } else {
+                                input.value = '';
+                            }
+                        });
+                    };
+                }
+                
+                if (typeof window.applyFilters === 'undefined') {
+                    window.applyFilters = function() {
+                        console.log('🔍 Filtres appliqués (fallback)');
+                    };
+                }
+            </script>
         
         <!-- Version mobile/tablette : Cartes -->
         <div class="block lg:hidden space-y-3">
@@ -447,7 +368,7 @@
 
         <!-- Version desktop : Tableau -->
         <div class="hidden lg:block overflow-x-auto rounded-lg shadow-sm border border-gray-200">
-            <table class="w-full divide-y divide-gray-200 table-auto">
+            <table id="suivi-prepa-table" class="w-full divide-y divide-gray-200 table-auto">
                 <thead style="background-color: var(--preparation-primary);">
                     <tr>
                         <th scope="col" class="column-id-yz px-2 py-3 text-left text-xs font-medium text-white uppercase tracking-wider" style="width: 8%;">ID YZ</th>
@@ -1060,71 +981,34 @@
             </table>
         </div>
 
-        <!-- Pagination -->
-        {% if commandes_affectees.has_other_pages %}
-        <div class="flex flex-col sm:flex-row items-center justify-between border-t border-gray-200 bg-white px-3 sm:px-4 lg:px-6 py-3 sm:py-4 mt-4 gap-3 sm:gap-0">
-            <!-- Version mobile -->
-            <div class="flex flex-1 justify-between sm:hidden w-full">
-                {% if commandes_affectees.has_previous %}
-                    <a href="?page={{ commandes_affectees.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if items_per_page %}&items_per_page={{ items_per_page }}{% endif %}" class="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                        <i class="fas fa-chevron-left mr-1"></i>Précédent
-                    </a>
-                {% endif %}
-                {% if commandes_affectees.has_next %}
-                    <a href="?page={{ commandes_affectees.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if items_per_page %}&items_per_page={{ items_per_page }}{% endif %}" class="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                        Suivant<i class="fas fa-chevron-right ml-1"></i>
-                    </a>
-                {% endif %}
-            </div>
-            
-            <!-- Version desktop -->
-            <div class="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
-                <div>
-                    <p class="text-sm text-gray-700">
-                        <span class="hidden lg:inline">Affichage de</span>
-                        <span class="font-medium">{{ commandes_affectees.start_index }}</span>
-                        <span class="hidden lg:inline">à</span>
-                        <span class="lg:hidden">-</span>
-                        <span class="font-medium">{{ commandes_affectees.end_index }}</span>
-                        <span class="hidden lg:inline">sur</span>
-                        <span class="lg:hidden">/</span>
-                        <span class="font-medium">{{ commandes_affectees.paginator.count }}</span>
-                        <span class="hidden lg:inline">résultats</span>
-                    </p>
-                </div>
-                <div>
-                    <nav class="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
-                        {% if commandes_affectees.has_previous %}
-                            <a href="?page={{ commandes_affectees.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if items_per_page %}&items_per_page={{ items_per_page }}{% endif %}" class="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20">
-                                <span class="sr-only">Précédent</span>
-                                <i class="fas fa-chevron-left"></i>
-                            </a>
-                        {% endif %}
-                        {% for p in commandes_affectees.paginator.page_range %}
-                            {% if p == commandes_affectees.number %}
-                                <span class="relative z-10 inline-flex items-center bg-blue-600 px-4 py-2 text-sm font-semibold text-white focus:z-20">{{ p }}</span>
-                            {% else %}
-                                <a href="?page={{ p }}{% if search_query %}&search={{ search_query }}{% endif %}{% if items_per_page %}&items_per_page={{ items_per_page }}{% endif %}" class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20">{{ p }}</a>
-                            {% endif %}
-                        {% endfor %}
-                        {% if commandes_affectees.has_next %}
-                            <a href="?page={{ commandes_affectees.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if items_per_page %}&items_per_page={{ items_per_page }}{% endif %}" class="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20">
-                                <span class="sr-only">Suivant</span>
-                                <i class="fas fa-chevron-right"></i>
-                            </a>
-                        {% endif %}
-                    </nav>
-                </div>
-            </div>
-        </div>
-        {% endif %}
+        <!-- Pagination (client) sera insérée dynamiquement sous la table -->
     </div>
 </div>
 
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/Suivi_des_Commandes/liste-prepra-smart-search.js' %}"></script>
+<script src="{% static 'js/common/pagination-table.js' %}"></script>
+
+<!-- Initialisation de la pagination générique (contrat commun) -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialiser la recherche intelligente
+    if (window.initSuiviCommandesSearch) {
+        window.initSuiviCommandesSearch('en_preparation');
+    }
+    
+    // Initialiser la pagination
+    if (window.createSmartTablePagination) {
+        window.createSmartTablePagination({
+            tableSelector: '#suivi-prepa-table',
+            rowSelector: '.commande-row',
+            perPageOptions: [10,12,25,50,100],
+            defaultPerPage: 12
+        });
+    }
+});
+</script>
 
 <script>
 function formatMoney(v) { try { return parseFloat(v).toFixed(2) + ' DH'; } catch(e) { return '0.00 DH'; } }

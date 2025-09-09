@@ -97,25 +97,54 @@
             </div>
         </form>
 
-        <!-- Barre de recherche intelligente -->
-        <div class="relative ml-auto">
-            <div class="flex items-center space-x-2">
-                <div class="relative">
-                    <input type="text" id="smartSearch" 
-                           placeholder="Recherche intelligente..." 
-                           class="block px-4 py-2 pr-10 border border-gray-300 rounded shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 text-sm w-64 h-10"
-                           autocomplete="off">
-                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
-                        <i class="fas fa-search text-gray-400"></i>
-                    </div>
-                </div>
-                <button onclick="clearSmartSearch()" 
-                        class="inline-flex items-center px-3 py-2 bg-gray-500 hover:bg-gray-600 text-white text-sm font-medium rounded transition-colors h-10">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-        </div>
+        {% include 'Superpreparation/includes/smart-search-toolbar.html' %}
     </div>
+    
+    <!-- Script de recherche intelligente (chargé tôt pour les boutons) -->
+    <script src="{% static 'js/Superpreparation/Suivi_des_Commandes/suivi-commandes-smart-search.js' %}"></script>
+    
+    <!-- Script de fallback pour les fonctions manquantes -->
+    <script>
+        // Fallback si les fonctions ne sont pas chargées
+        if (typeof window.toggleAdvancedSearch === 'undefined') {
+            window.toggleAdvancedSearch = function() {
+                const advancedSearch = document.getElementById('advancedSearch');
+                if (advancedSearch) {
+                    const isHidden = advancedSearch.style.display === 'none' || advancedSearch.classList.contains('hidden');
+                    if (isHidden) {
+                        advancedSearch.style.display = 'block';
+                        advancedSearch.classList.remove('hidden');
+                    } else {
+                        advancedSearch.style.display = 'none';
+                        advancedSearch.classList.add('hidden');
+                    }
+                }
+            };
+        }
+        
+        if (typeof window.clearSmartSearch === 'undefined') {
+            window.clearSmartSearch = function() {
+                const searchInput = document.getElementById('smartSearch');
+                if (searchInput) {
+                    searchInput.value = '';
+                }
+                const filterInputs = document.querySelectorAll('#advancedSearch input, #advancedSearch select');
+                filterInputs.forEach(input => {
+                    if (input.type === 'checkbox') {
+                        input.checked = false;
+                    } else {
+                        input.value = '';
+                    }
+                });
+            };
+        }
+        
+        if (typeof window.applyFilters === 'undefined') {
+            window.applyFilters = function() {
+                console.log('🔍 Filtres appliqués (fallback)');
+            };
+        }
+    </script>
         
     <!-- Version mobile/tablette : Cartes -->
     {% if commandes %}
@@ -192,7 +221,7 @@
 
     <!-- Version desktop : Tableau -->
     <div class="hidden lg:block overflow-x-auto rounded-lg shadow-sm border border-gray-200 mb-4">
-        <table class="w-full divide-y divide-gray-200 table-auto">
+        <table id="suivi-prepa-table-emballees" class="w-full divide-y divide-gray-200 table-auto">
             <thead style="background-color: var(--preparation-primary);">
                 <tr>
                     <th class="column-id-yz px-2 py-3 text-left text-xs font-medium text-white uppercase tracking-wider" style="width: 8%;">ID YZ</th>
@@ -422,7 +451,6 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/Suivi_des_Commandes/liste-prepra-smart-search.js' %}"></script>
 
 <script>
 function formatMoney(v) { try { return parseFloat(v).toFixed(2) + ' DH'; } catch(e) { return '0.00 DH'; } }
@@ -716,6 +744,25 @@ function updateColumnVisibility(hiddenColumns) {
 document.addEventListener('DOMContentLoaded', function() {
     const hiddenColumns = JSON.parse(localStorage.getItem('hiddenColumns') || '[]');
     updateColumnVisibility(hiddenColumns);
+});
+</script>
+<script src="{% static 'js/common/pagination-table.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialiser la recherche intelligente
+    if (window.initSuiviCommandesSearch) {
+        window.initSuiviCommandesSearch('emballees');
+    }
+    
+    // Initialiser la pagination
+    if (window.createSmartTablePagination) {
+        window.createSmartTablePagination({
+            tableSelector: '#suivi-prepa-table-emballees',
+            rowSelector: '.commande-row',
+            perPageOptions: [10,12,25,50,100],
+            defaultPerPage: 12
+        });
+    }
 });
 </script>
 

@@ -518,11 +518,8 @@ def liste_prepa(request):
         cmd.etats.filter(date_debut__lt=date_limite_urgence).exists()
     )
     
-    # Pagination
-    from django.core.paginator import Paginator
-    paginator = Paginator(commandes_enrichies, items_per_page)
-    page_number = request.GET.get('page', 1)
-    commandes_page = paginator.get_page(page_number)
+    # Pagination serveur désactivée pour laisser la pagination client gérer l'affichage
+    commandes_page = commandes_enrichies
     
     # Contexte
     context = {
@@ -580,18 +577,9 @@ def commandes_preparees(request):
         etats__date_debut__date=today
     ).count()
 
-    # Pagination
-    items_per_page = request.GET.get('items_per_page', 10)
-    try:
-        items_per_page = int(items_per_page)
-        if items_per_page <= 0:
-            items_per_page = 10
-    except (ValueError, TypeError):
-        items_per_page = 10
-
-    paginator = Paginator(commandes_preparees, items_per_page)
-    page_number = request.GET.get('page', 1)
-    commandes_page = paginator.get_page(page_number)
+    # Désactivation de la pagination serveur: laisser le client gérer
+    items_per_page = request.GET.get('items_per_page', 'all')
+    commandes_page = commandes_preparees
 
     context = {
         'page_title': 'Commandes Préparées',
@@ -729,6 +717,17 @@ def commandes_livrees_partiellement(request):
         .prefetch_related('paniers__article', 'etats')
         .distinct()
     )
+    
+    # Recherche
+    search_query = request.GET.get('search', '')
+    if search_query:
+        commandes_livrees_partiellement_qs = commandes_livrees_partiellement_qs.filter(
+            Q(id_yz__icontains=search_query) |
+            Q(num_cmd__icontains=search_query) |
+            Q(client__nom__icontains=search_query) |
+            Q(client__prenom__icontains=search_query) |
+            Q(client__numero_tel__icontains=search_query)
+        ).distinct()
     commandes_livrees_partiellement = []
     for commande_originale in commandes_livrees_partiellement_qs:
         commande_renvoi = Commande.objects.filter(
@@ -758,6 +757,7 @@ def commandes_livrees_partiellement(request):
         'profile': operateur_profile,
         'commandes_livrees_partiellement': commandes_livrees_partiellement,
         'commandes_count': len(commandes_livrees_partiellement),
+        'search_query': search_query,
         'active_tab': 'livrees_partiellement',
         'is_readonly': True,
         'is_tracking_page': True
@@ -780,6 +780,9 @@ def commandes_retournees(request):
     # Récupérer le paramètre d'onglet
     tab = request.GET.get('tab', 'actives')
     
+    # Recherche
+    search_query = request.GET.get('search', '')
+    
     # Commandes ACTIVES (sans date_fin) - à traiter
     commandes_actives_qs = (
         Commande.objects
@@ -795,6 +798,24 @@ def commandes_retournees(request):
         .prefetch_related('paniers__article', 'etats')
         .distinct()
     )
+    
+    # Appliquer la recherche si fournie
+    if search_query:
+        commandes_actives_qs = commandes_actives_qs.filter(
+            Q(id_yz__icontains=search_query) |
+            Q(num_cmd__icontains=search_query) |
+            Q(client__nom__icontains=search_query) |
+            Q(client__prenom__icontains=search_query) |
+            Q(client__numero_tel__icontains=search_query)
+        ).distinct()
+        
+        commandes_traitees_qs = commandes_traitees_qs.filter(
+            Q(id_yz__icontains=search_query) |
+            Q(num_cmd__icontains=search_query) |
+            Q(client__nom__icontains=search_query) |
+            Q(client__prenom__icontains=search_query) |
+            Q(client__numero_tel__icontains=search_query)
+        ).distinct()
 
     commandes_actives = list(commandes_actives_qs)
     commandes_traitees = list(commandes_traitees_qs)
@@ -835,6 +856,7 @@ def commandes_retournees(request):
         'commandes_actives': commandes_actives,
         'commandes_traitees': commandes_traitees,
         'commandes_count': len(commandes_actives) if tab == 'actives' else len(commandes_traitees),
+        'search_query': search_query,
         'stats': stats,
         'active_tab': 'retournees',
         'current_tab': tab,
@@ -5417,53 +5439,14 @@ def commandes_confirmees(request):
     # Tri par date de confirmation (plus récentes en premier)
     commandes_confirmees = commandes_confirmees.order_by('-etats__date_debut')
 
-    # Créer une copie des données non paginées pour les statistiques AVANT la pagination
+    # Fournir un page_obj compatible pour le template (une seule page avec toutes les commandes)
     commandes_non_paginees = commandes_confirmees
-
-    # Paramètres de pagination flexible
-    items_per_page = request.GET.get('items_per_page', 25)
+    total_count_confirmees = commandes_confirmees.count()
+    paginator = Paginator(commandes_confirmees, total_count_confirmees or 1)
+    page_obj = paginator.get_page(1)
+    items_per_page = request.GET.get('items_per_page', 'all')
     start_range = request.GET.get('start_range')
     end_range = request.GET.get('end_range')
-
-    # Gestion de la pagination flexible
-    if start_range and end_range:
-        try:
-            start_range = int(start_range)
-            end_range = int(end_range)
-            if start_range > 0 and end_range >= start_range:
-                # Pagination par plage personnalisée
-                commandes_confirmees = commandes_confirmees[start_range-1:end_range]
-                paginator = Paginator(commandes_confirmees, end_range - start_range + 1)
-                page_obj = paginator.get_page(1)
-            else:
-                # Plage invalide, utiliser la pagination normale
-                items_per_page = 25
-                paginator = Paginator(commandes_confirmees, items_per_page)
-                page_number = request.GET.get('page', 1)
-                page_obj = paginator.get_page(page_number)
-        except (ValueError, TypeError):
-            # Erreur de conversion, utiliser la pagination normale
-            items_per_page = 25
-            paginator = Paginator(commandes_confirmees, items_per_page)
-            page_number = request.GET.get('page', 1)
-            page_obj = paginator.get_page(page_number)
-    else:
-        # Pagination normale
-        if items_per_page == 'all':
-            # Afficher toutes les commandes
-            paginator = Paginator(commandes_confirmees, commandes_confirmees.count())
-            page_obj = paginator.get_page(1)
-        else:
-            try:
-                items_per_page = int(items_per_page)
-                if items_per_page <= 0:
-                    items_per_page = 25
-            except (ValueError, TypeError):
-                items_per_page = 25
-            
-            paginator = Paginator(commandes_confirmees, items_per_page)
-            page_number = request.GET.get('page', 1)
-            page_obj = paginator.get_page(page_number)
 
     # Statistiques
     today = timezone.now().date()
@@ -5523,13 +5506,7 @@ def commandes_confirmees(request):
             'page_obj': page_obj
         }, request=request)
         
-        html_pagination = render_to_string('Superpreparation/partials/_confirmees_pagination.html', {
-            'page_obj': page_obj,
-            'search_query': search_query,
-            'items_per_page': items_per_page,
-            'start_range': start_range,
-            'end_range': end_range
-        }, request=request)
+        html_pagination = ''
         
         html_pagination_info = render_to_string('Superpreparation/partials/_confirmees_pagination_info.html', {
             'page_obj': page_obj

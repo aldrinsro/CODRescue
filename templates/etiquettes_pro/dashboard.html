@@ -724,13 +724,19 @@ function createTablePaginationControls() {
     paginationContainer.appendChild(infoContainer);
     paginationContainer.appendChild(controlsContainer);
     
-    // Insérer après le tableau
-    const tableContainer = document.querySelector('.table-responsive');
-    if (tableContainer) {
-        tableContainer.parentNode.insertBefore(paginationContainer, tableContainer.nextSibling);
+    // Insérer après le tableau (compatibilité sans .table-responsive)
+    const etiquettesTable = document.getElementById('etiquettes-table');
+    let insertAfterNode = null;
+    if (etiquettesTable) {
+        // Essayer d'insérer après le conteneur direct si existant, sinon après la table
+        insertAfterNode = etiquettesTable.closest('div') || etiquettesTable;
+    }
+
+    if (insertAfterNode && insertAfterNode.parentNode) {
+        insertAfterNode.parentNode.insertBefore(paginationContainer, insertAfterNode.nextSibling);
         console.log('✅ [PAGINATION-TABLEAU] Contrôles de pagination insérés');
     } else {
-        console.error('❌ [PAGINATION-TABLEAU] Conteneur du tableau non trouvé');
+        console.error('❌ [PAGINATION-TABLEAU] Impossible d\'insérer les contrôles: tableau introuvable');
     }
 }
 
