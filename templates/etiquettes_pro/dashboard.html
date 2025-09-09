@@ -4,7 +4,7 @@
 {% block title %}Étiquettes Professionnelles - YZ-CMD{% endblock %}
 
 {% block page_title %}Étiquettes Professionnelles{% endblock %}
-{% block page_subtitle %}Système d'impression haute qualité avec ReportLab{% endblock %}
+{% block page_subtitle %}Système d'impression haute qualité pour commandes confirmées{% endblock %}
 
 {% block extra_css %}
 {{ block.super }}
@@ -26,248 +26,699 @@
                     <i class="fas fa-tags mr-3 text-green-300"></i>
                     Étiquettes Professionnelles
                 </h1>
-                <p class="text-white opacity-90">Système d'impression haute qualité avec ReportLab</p>
+                <p class="text-white opacity-90">Système d'impression haute qualité pour commandes confirmées</p>
             </div>
-            <div class="flex items-center gap-6 mt-4 md:mt-0">
-                <div class="text-center">
-                    <div class="text-3xl font-bold text-white">{{ templates_count|default:0 }}</div>
-                    <div class="text-sm text-white opacity-80">Templates actifs</div>
-                </div>
-                <div class="text-center border-l border-white/30 pl-6 ml-6">
-                    <div class="text-3xl font-bold text-white">{{ etiquettes_count|default:0 }}</div>
-                    <div class="text-sm text-white opacity-80">Étiquettes total</div>
-                </div>
+            <div class="mt-4 md:mt-0">
+                <a href="{% url 'etiquettes_pro:template_create' %}" class="theme-button-primary">
+                    <i class="fas fa-plus"></i> Créer une Étiquette
+                </a>
             </div>
         </div>
     </div>
-    <!-- Statistiques -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-        <div class="stats-card">
-            <div class="flex items-center justify-between">
-                <div>
-                    <div class="text-2xl font-bold text-gray-800">{{ templates_count|default:0 }}</div>
-                    <div class="text-sm text-gray-600">Templates Actifs</div>
-                </div>
-                <div class="stats-icon">
-                    <i class="fas fa-file-alt"></i>
-                </div>
-            </div>
-        </div>
-        
+
+    <!-- Statistiques rapides -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div class="stats-card">
             <div class="flex items-center justify-between">
                 <div>
                     <div class="text-2xl font-bold text-gray-800">{{ etiquettes_count|default:0 }}</div>
-                    <div class="text-sm text-gray-600">Étiquettes Total</div>
+                    <div class="text-sm text-gray-600">Total</div>
                 </div>
                 <div class="stats-icon">
                     <i class="fas fa-tags"></i>
                 </div>
             </div>
         </div>
-        
+        <div class="stats-card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-2xl font-bold text-gray-800">{{ templates_count|default:0 }}</div>
+                    <div class="text-sm text-gray-600">Templates</div>
+                </div>
+                <div class="stats-icon">
+                    <i class="fas fa-file-alt"></i>
+                </div>
+            </div>
+        </div>
         <div class="stats-card">
             <div class="flex items-center justify-between">
                 <div>
                     <div class="text-2xl font-bold text-gray-800">{{ etiquettes_ready|default:0 }}</div>
-                    <div class="text-sm text-gray-600">Prêtes à Imprimer</div>
-                </div>
-                <div class="stats-icon">
-                    <i class="fas fa-print"></i>
-                </div>
-            </div>
-        </div>
-        
-        <div class="stats-card">
-            <div class="flex items-center justify-between">
-                <div>
-                    <div class="text-2xl font-bold text-gray-800">{{ etiquettes_printed|default:0 }}</div>
-                    <div class="text-sm text-gray-600">Déjà Imprimées</div>
+                    <div class="text-sm text-gray-600">Prêtes</div>
                 </div>
                 <div class="stats-icon">
                     <i class="fas fa-check-circle"></i>
                 </div>
             </div>
         </div>
+        <div class="stats-card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-2xl font-bold text-gray-800">{{ etiquettes_printed|default:0 }}</div>
+                    <div class="text-sm text-gray-600">Imprimées</div>
+                </div>
+                <div class="stats-icon">
+                    <i class="fas fa-print"></i>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- Actions rapides -->
+
+
+    <!-- Étiquettes avec pagination intelligente -->
+    {% if all_etiquettes_with_commandes %}
     <div class="info-section mb-6">
+        <div class="flex items-center justify-between mb-4">
+            <div>
         <h3 class="section-title">
-            <i class="fas fa-bolt text-yellow-500"></i>
-            Actions Rapides
+                    <i class="fas fa-tags" style="color: var(--preparation-success);"></i>
+                    Étiquettes des Commandes Confirmées
         </h3>
-        <div class="flex flex-wrap gap-4">
-            <a href="{% url 'etiquettes_pro:template_list' %}" class="theme-button-primary">
-                <i class="fas fa-list"></i> Voir les Templates
-            </a>
-            <a href="{% url 'etiquettes_pro:template_create' %}" class="theme-button-primary">
-                <i class="fas fa-plus"></i> Créer un Template
-            </a>
-            <a href="{% url 'etiquettes_pro:etiquette_list' %}" class="theme-button-primary">
-                <i class="fas fa-tags"></i> Voir les Étiquettes
-            </a>
-            <a href="{% url 'etiquettes_pro:etiquettes_commandes_confirmees' %}" class="theme-button-primary">
-                <i class="fas fa-magic"></i> Étiquettes Commandes Confirmées
-            </a>
-        </div>
-    </div>
-
-    <!-- Fonctionnalités principales -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-        <div class="theme-card">
-            <div class="flex items-center mb-4">
-                <div class="info-icon blue mr-4">
-                    <i class="fas fa-edit"></i>
-                </div>
-                <h4 class="text-lg font-semibold text-gray-800">Templates Personnalisables</h4>
+                <p class="text-sm text-gray-600 mt-1">
+                    Seules les étiquettes des commandes confirmées avec des articles dans le panier sont affichées
+                </p>
             </div>
-            <p class="text-gray-600 text-sm">
-                Créez et personnalisez vos templates d'étiquettes avec des dimensions, polices et couleurs adaptées à vos besoins.
-            </p>
+            <div class="flex items-center space-x-2">
+                <span id="etiquettes-count" class="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">{{ total_count|default:0 }}</span>
+                <button id="refresh-etiquettes" class="theme-button-secondary text-sm">
+                    <i class="fas fa-sync-alt mr-1"></i>Actualiser
+                </button>
+            </div>
         </div>
         
-        <div class="theme-card">
-            <div class="flex items-center mb-4">
-                <div class="info-icon green mr-4">
-                    <i class="fas fa-barcode"></i>
+        <!-- Barre d'outils de sélection multiple -->
+        <div id="bulk-actions-toolbar" class="bg-gray-50 rounded-lg p-4 mb-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <span class="text-sm text-gray-600">
+                        <span id="selected-count">0</span> étiquette(s) sélectionnée(s)
+                    </span>
+                    <div class="flex items-center space-x-2">
+                        <button id="select-all-btn" class="theme-button-secondary text-sm">
+                            <i class="fas fa-check-square mr-1"></i>Tout sélectionner
+                        </button>
+                        <button id="deselect-all-btn" class="theme-button-secondary text-sm">
+                            <i class="fas fa-square mr-1"></i>Tout désélectionner
+                        </button>
+                    </div>
                 </div>
-                <h4 class="text-lg font-semibold text-gray-800">Codes-barres & QR Codes</h4>
+                    <div class="flex items-center space-x-2">
+                        <button id="bulk-print-btn" class="theme-button-primary">
+                            <i class="fas fa-print mr-2"></i>Imprimer sélection
+                        </button>
+                        <button id="bulk-delete-btn" class="theme-button-danger">
+                            <i class="fas fa-trash mr-2"></i>Supprimer sélection
+                        </button>
+                </div>
             </div>
-            <p class="text-gray-600 text-sm">
-                Génération automatique de codes-barres et QR codes haute qualité pour une scannabilité optimale.
-            </p>
         </div>
         
-        <div class="theme-card">
-            <div class="flex items-center mb-4">
-                <div class="info-icon purple mr-4">
-                    <i class="fas fa-file-pdf"></i>
-                </div>
-                <h4 class="text-lg font-semibold text-gray-800">PDF Professionnel</h4>
-            </div>
-            <p class="text-gray-600 text-sm">
-                Génération de PDF haute résolution avec ReportLab pour une impression de qualité professionnelle.
-            </p>
-        </div>
-        
-        
-        <div class="theme-card">
-            <div class="flex items-center mb-4">
-                <div class="info-icon blue mr-4">
-                    <i class="fas fa-sync-alt"></i>
-                </div>
-                <h4 class="text-lg font-semibold text-gray-800">Intégration Django</h4>
-            </div>
-            <p class="text-gray-600 text-sm">
-                Intégration native avec vos modèles Django (Commandes, Articles, Clients) pour une synchronisation automatique.
-            </p>
-        </div>
-        
-        <div class="theme-card">
-            <div class="flex items-center mb-4">
-                <div class="info-icon green mr-4">
-                    <i class="fas fa-mobile-alt"></i>
-                </div>
-                <h4 class="text-lg font-semibold text-gray-800">Interface Responsive</h4>
-            </div>
-            <p class="text-gray-600 text-sm">
-                Interface moderne et responsive qui s'adapte à tous les écrans pour une utilisation optimale.
-            </p>
-        </div>
-    </div>
-
-    <!-- Templates récents -->
-    {% if recent_templates %}
-    <div class="info-section mb-6">
-        <h3 class="section-title">
-            <i class="fas fa-clock text-blue-500"></i>
-            Templates Récents
-        </h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {% for template in recent_templates %}
-            <div class="theme-card">
-                <h5 class="text-lg font-semibold text-gray-800 mb-2">{{ template.nom }}</h5>
-                <div class="flex flex-wrap gap-2 mb-3">
-                    <span class="status-badge confirmee">{{ template.get_type_etiquette_display }}</span>
-                    <span class="status-badge en-preparation">{{ template.get_format_page_display }}</span>
-                </div>
-                <p class="text-gray-600 text-sm mb-4">{{ template.description|truncatechars:100 }}</p>
-                <a href="{% url 'etiquettes_pro:template_detail' template.pk %}" class="theme-button-secondary">
-                    <i class="fas fa-eye"></i> Voir
-                </a>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-    {% endif %}
-
-    <!-- Étiquettes récentes -->
-    {% if recent_etiquettes %}
-    <div class="info-section mb-6">
-        <h3 class="section-title">
-            <i class="fas fa-tags text-green-500"></i>
-            Étiquettes Récentes
-        </h3>
-        <div class="table-container">
-            <div class="table-responsive">
-                <table class="w-full">
-                    <thead class="table-header">
-                        <tr>
-                            <th class="table-cell">Référence</th>
-                            <th class="table-cell">Template</th>
-                            <th class="table-cell">Statut</th>
-                            <th class="table-cell">Date</th>
-                            <th class="table-cell">Actions</th>
+        <div class="table-responsive mb-6 theme-card rounded-xl shadow-lg">
+            <table class="min-w-full divide-y divide-gray-200" id="etiquettes-table">
+                <thead class="bg-[var(--preparation-primary)] border-b-[3px] border-[var(--preparation-primary)] text-white">
+                    <tr>
+                        <th class="px-3 py-2 text-left">
+                            <input type="checkbox" id="select-all-checkbox" class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" data-target="select-all-btn">
+                        </th>
+                        <th class="px-3 py-2 text-left text-sm font-medium text-white uppercase tracking-wider">Référence</th>
+                        <th class="px-3 py-2 text-left text-sm font-medium text-white uppercase tracking-wider">Template</th>
+                        <th class="px-3 py-2 text-left text-sm font-medium text-white uppercase tracking-wider">Commande</th>
+                        <th class="px-3 py-2 text-left text-sm font-medium text-white uppercase tracking-wider">Statut</th>
+                        <th class="px-3 py-2 text-left text-sm font-medium text-white uppercase tracking-wider">État Commande</th>
+                        <th class="px-3 py-2 text-left text-sm font-medium text-white uppercase tracking-wider">Date</th>
+                        <th class="px-3 py-2 text-center text-sm font-medium text-white uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        {% for etiquette in recent_etiquettes %}
-                        <tr class="table-row">
-                            <td class="table-cell">{{ etiquette.reference }}</td>
-                            <td class="table-cell">{{ etiquette.template.nom }}</td>
-                            <td class="table-cell">
-                                {% if etiquette.statut == 'ready' %}
-                                    <span class="status-badge confirmee">Prête</span>
-                                {% elif etiquette.statut == 'printed' %}
-                                    <span class="status-badge terminee">Imprimée</span>
-                                {% elif etiquette.statut == 'draft' %}
-                                    <span class="status-badge en-preparation">Brouillon</span>
+                <tbody id="etiquettes-tbody" class="bg-white divide-y divide-gray-200">
+                    {% for item in all_etiquettes_with_commandes %}
+                    <tr class="etiquette-row hover:bg-gray-50 transition-colors duration-200" data-etiquette-id="{{ item.etiquette.id }}">
+                        <td class="px-3 py-2 whitespace-nowrap">
+                            <input type="checkbox" class="etiquette-checkbox form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" data-etiquette-id="{{ item.etiquette.id }}">
+                        </td>
+                        <td class="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900 etiquette-reference">{{ item.etiquette.reference }}</td>
+                        <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500 etiquette-template">{{ item.etiquette.template.nom }}</td>
+                        <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500 etiquette-commande">
+                            {% if item.etiquette.nom_article %}
+                                {{ item.etiquette.nom_article }}
+                            {% elif item.etiquette.commande_id %}
+                                #{{ item.etiquette.commande_id }}
+                            {% else %}
+                                <span class="text-gray-400">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-3 py-2 whitespace-nowrap">
+                            {% if item.etiquette.statut == 'ready' %}
+                                <span class="etiquette-statut px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Prête</span>
+                            {% elif item.etiquette.statut == 'printed' %}
+                                <span class="etiquette-statut px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">Imprimée</span>
+                            {% elif item.etiquette.statut == 'draft' %}
+                                <span class="etiquette-statut px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">Brouillon</span>
+                            {% else %}
+                                <span class="etiquette-statut px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">{{ item.etiquette.get_statut_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-3 py-2 whitespace-nowrap">
+                            {% if item.etat_commande %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full text-white" style="background-color: {{ item.etat_commande.enum_etat.couleur }};">
+                                    {{ item.etat_commande.enum_etat.libelle }}
+                                </span>
+                            {% elif item.commande %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">État inconnu</span>
                                 {% else %}
-                                    <span class="status-badge">{{ etiquette.get_statut_display }}</span>
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                                    {% if item.etiquette.commande_id %}Commande non trouvée{% else %}Pas de commande{% endif %}
+                                </span>
                                 {% endif %}
                             </td>
-                            <td class="table-cell">{{ etiquette.date_creation|date:"d/m/Y H:i" }}</td>
-                            <td class="table-cell">
-                                <div class="action-buttons-container">
-                                    <a href="{% url 'etiquettes_pro:etiquette_pdf' etiquette.id %}" class="action-button">
-                                        <i class="fas fa-download"></i> PDF
-                                    </a>
-                                    <a href="{% url 'etiquettes_pro:etiquette_preview' etiquette.id %}" class="theme-button-secondary">
+                        <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500 etiquette-date">{{ item.etiquette.date_creation|date:"d/m/Y H:i" }}</td>
+                        <td class="px-3 py-2 whitespace-nowrap text-center text-sm font-medium">
+                            <a href="{% url 'etiquettes_pro:etiquette_preview' item.etiquette.id %}" class="text-indigo-600 hover:text-indigo-900 transition-colors duration-200" title="Aperçu">
                                         <i class="fas fa-eye"></i>
                                     </a>
-                                </div>
                             </td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
+            
+        </div>
+    </div>
+    {% else %}
+    <!-- Message si aucune étiquette -->
+    <div class="info-section mb-6">
+        <div class="text-center py-8">
+            <div class="empty-state">
+                <i class="fas fa-tags fa-3x text-gray-400 mb-3"></i>
+                <h4 class="text-gray-600">Aucune étiquette trouvée</h4>
+                <p class="text-gray-500 mb-4">
+                    Vous n'avez pas encore créé d'étiquettes.
+                </p>
+                <a href="{% url 'etiquettes_pro:template_create' %}" class="theme-button-primary">
+                    <i class="fas fa-plus mr-2"></i> Créer votre première étiquette
+                </a>
+            </div>
         </div>
     </div>
     {% endif %}
 
-    <!-- Information sur ReportLab -->
-    <div class="info-section">
-        <h3 class="section-title">
-            <i class="fas fa-info-circle text-blue-500"></i>
-            À propos de ReportLab
-        </h3>
-        <p class="text-gray-600">
-            Ce système utilise <strong>ReportLab</strong>, une bibliothèque Python professionnelle pour la génération de PDF. 
-            ReportLab garantit une qualité d'impression exceptionnelle avec des codes-barres et QR codes parfaitement lisibles, 
-            optimisés pour tous types d'imprimantes et scanners.
-        </p>
-    </div>
+
 </div>
+
+<!-- Scripts pour la pagination et recherche intelligente -->
+<script src="{% static 'js/etiquettes_pro/smart-search.js' %}"></script>
+<script src="{% static 'js/etiquettes_pro/bulk-print.js' %}"></script>
+<script src="{% static 'js/etiquettes_pro/bulk-delete.js' %}"></script>
+
+<!-- Script de pagination intelligente pour le tableau dashboard -->
+<script>
+// ================== PAGINATION INTELLIGENTE POUR TABLEAU DASHBOARD ==================
+
+// Variables globales pour la pagination du tableau
+let currentPage = 1;
+let itemsPerPage = 12;  // 12 éléments par page par défaut
+let totalItems = 0;
+let allRows = [];
+let filteredRows = [];
+
+// Initialisation de la pagination du tableau
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🔧 [DASHBOARD ÉTIQUETTES] Initialisation de la pagination du tableau');
+    
+    // Délai pour s'assurer que tous les éléments sont chargés
+    setTimeout(() => {
+        initializeTablePagination();
+    }, 100);
+});
+
+// Initialiser la pagination du tableau
+function initializeTablePagination() {
+    console.log('🔧 [PAGINATION-TABLEAU] Initialisation de la pagination intelligente');
+    
+    // Collecter toutes les lignes du tableau
+    collectAllRows();
+    
+    // Vérifier s'il y a des éléments à paginer
+    if (allRows.length === 0) {
+        console.log('⚠️ [PAGINATION-TABLEAU] Aucune ligne trouvée pour la pagination');
+        return;
+    }
+    
+    console.log(`✅ [PAGINATION-TABLEAU] ${totalItems} lignes collectées`);
+    
+    // Créer les contrôles de pagination
+    createTablePaginationControls();
+    
+    // Afficher la première page
+    showTablePage(1);
+}
+
+// Collecter toutes les lignes du tableau
+function collectAllRows() {
+    console.log('🔍 [PAGINATION-TABLEAU] Collecte des lignes...');
+    
+    const rows = document.querySelectorAll('.etiquette-row');
+    allRows = Array.from(rows).map((row, index) => {
+        return {
+            element: row,
+            index: index,
+            reference: row.querySelector('.etiquette-reference')?.textContent?.trim() || '',
+            template: row.querySelector('.etiquette-template')?.textContent?.trim() || '',
+            commande: row.querySelector('.etiquette-commande')?.textContent?.trim() || '',
+            date: row.querySelector('.etiquette-date')?.textContent?.trim() || '',
+            statut: row.querySelector('.etiquette-statut')?.textContent?.trim() || ''
+        };
+    });
+    
+    totalItems = allRows.length;
+    filteredRows = [...allRows];
+    
+    console.log(`📊 [PAGINATION-TABLEAU] ${totalItems} lignes collectées`);
+}
+
+// Créer les contrôles de pagination pour le tableau
+function createTablePaginationControls() {
+    // Vérifier si les contrôles existent déjà
+    if (document.getElementById('tablePaginationControls')) {
+        return;
+    }
+    
+    console.log('🎛️ [PAGINATION-TABLEAU] Création des contrôles de pagination');
+    
+    // Créer le conteneur de pagination avec le thème uniforme
+    const paginationContainer = document.createElement('div');
+    paginationContainer.id = 'tablePaginationControls';
+    paginationContainer.className = 'flex items-center justify-between mt-6 px-6 py-4 bg-white rounded-xl shadow-lg border border-gray-200';
+    
+    // Informations sur les éléments
+    const infoContainer = document.createElement('div');
+    infoContainer.className = 'flex items-center text-sm text-gray-600';
+    infoContainer.innerHTML = `
+        <i class="fas fa-info-circle mr-2 text-gray-500"></i>
+        <span id="tablePaginationInfo">Affichage de 1 à ${Math.min(itemsPerPage, totalItems)} sur ${totalItems} étiquettes</span>
+    `;
+    
+    // Contrôles de pagination
+    const controlsContainer = document.createElement('div');
+    controlsContainer.className = 'flex items-center space-x-2';
+    
+    // Bouton précédent
+    const prevButton = document.createElement('button');
+    prevButton.id = 'tablePrevPage';
+    prevButton.className = 'px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-100 hover:border-gray-400 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors';
+    prevButton.innerHTML = '<i class="fas fa-chevron-left mr-1"></i>Précédent';
+    prevButton.addEventListener('click', () => {
+        if (currentPage > 1) {
+            showTablePage(currentPage - 1);
+        }
+    });
+    
+    // Numéros de page
+    const pageNumbersContainer = document.createElement('div');
+    pageNumbersContainer.id = 'tablePageNumbers';
+    pageNumbersContainer.className = 'flex items-center space-x-1';
+    
+    // Bouton suivant
+    const nextButton = document.createElement('button');
+    nextButton.id = 'tableNextPage';
+    nextButton.className = 'px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-100 hover:border-gray-400 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors';
+    nextButton.innerHTML = 'Suivant<i class="fas fa-chevron-right ml-1"></i>';
+    nextButton.addEventListener('click', () => {
+        const totalPages = Math.ceil(filteredRows.length / itemsPerPage);
+        if (currentPage < totalPages) {
+            showTablePage(currentPage + 1);
+        }
+    });
+    
+    // Séparateur
+    const separator = document.createElement('div');
+    separator.className = 'mx-2 text-gray-400';
+    separator.innerHTML = '|';
+    
+    // Sélecteur d'éléments par page
+    const itemsPerPageSelect = document.createElement('select');
+    itemsPerPageSelect.id = 'tableItemsPerPageSelect';
+    itemsPerPageSelect.className = 'theme-input text-sm';
+    itemsPerPageSelect.innerHTML = `
+        <option value="6">6 par page</option>
+        <option value="9">9 par page</option>
+        <option value="12" selected>12 par page</option>
+        <option value="15">15 par page</option>
+        <option value="18">18 par page</option>
+        <option value="21">21 par page</option>
+        <option value="24">24 par page</option>
+    `;
+    itemsPerPageSelect.addEventListener('change', (e) => {
+        itemsPerPage = parseInt(e.target.value);
+        currentPage = 1;
+        showTablePage(1);
+    });
+    
+    // Assembler les contrôles
+    controlsContainer.appendChild(prevButton);
+    controlsContainer.appendChild(pageNumbersContainer);
+    controlsContainer.appendChild(nextButton);
+    controlsContainer.appendChild(separator);
+    controlsContainer.appendChild(itemsPerPageSelect);
+    
+    // Assembler le conteneur principal
+    paginationContainer.appendChild(infoContainer);
+    paginationContainer.appendChild(controlsContainer);
+    
+    // Insérer après le tableau
+    const tableContainer = document.querySelector('.table-responsive');
+    if (tableContainer) {
+        tableContainer.parentNode.insertBefore(paginationContainer, tableContainer.nextSibling);
+        console.log('✅ [PAGINATION-TABLEAU] Contrôles de pagination insérés');
+    } else {
+        console.error('❌ [PAGINATION-TABLEAU] Conteneur du tableau non trouvé');
+    }
+}
+
+// Afficher une page spécifique du tableau
+function showTablePage(page) {
+    const totalPages = Math.ceil(filteredRows.length / itemsPerPage);
+    
+    if (page < 1 || page > totalPages) {
+        return;
+    }
+    
+    currentPage = page;
+    
+    console.log(`📄 [PAGINATION-TABLEAU] Affichage de la page ${page}/${totalPages}`);
+    
+    // Masquer toutes les lignes
+    allRows.forEach(row => {
+        row.element.style.display = 'none';
+        row.element.style.opacity = '0';
+        row.element.style.transform = 'translateY(20px)';
+    });
+    
+    // Calculer les indices de début et fin
+    const startIndex = (page - 1) * itemsPerPage;
+    const endIndex = Math.min(startIndex + itemsPerPage, filteredRows.length);
+    
+    // Afficher les lignes de la page courante
+    for (let i = startIndex; i < endIndex; i++) {
+        const row = filteredRows[i];
+        row.element.style.display = '';
+        row.element.style.opacity = '1';
+        row.element.style.transform = 'translateY(0)';
+    }
+    
+    // Mettre à jour les contrôles
+    updateTablePaginationControls();
+    
+    // Animation d'apparition
+    animateTablePageItems(startIndex, endIndex);
+}
+
+// Mettre à jour les contrôles de pagination du tableau
+function updateTablePaginationControls() {
+    const totalPages = Math.ceil(filteredRows.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage + 1;
+    const endIndex = Math.min(currentPage * itemsPerPage, filteredRows.length);
+    
+    // Mettre à jour les informations
+    const infoElement = document.getElementById('tablePaginationInfo');
+    if (infoElement) {
+        if (filteredRows.length === 0) {
+            infoElement.textContent = 'Aucune étiquette à afficher';
+        } else {
+            infoElement.textContent = `Affichage de ${startIndex} à ${endIndex} sur ${filteredRows.length} étiquettes`;
+        }
+    }
+    
+    // Mettre à jour les boutons précédent/suivant
+    const prevButton = document.getElementById('tablePrevPage');
+    const nextButton = document.getElementById('tableNextPage');
+    
+    if (prevButton) {
+        prevButton.disabled = currentPage === 1;
+    }
+    if (nextButton) {
+        nextButton.disabled = currentPage === totalPages || totalPages === 0;
+    }
+    
+    // Mettre à jour les numéros de page
+    updateTablePageNumbers(totalPages);
+}
+
+// Mettre à jour les numéros de page du tableau
+function updateTablePageNumbers(totalPages) {
+    const pageNumbersContainer = document.getElementById('tablePageNumbers');
+    if (!pageNumbersContainer) return;
+    
+    pageNumbersContainer.innerHTML = '';
+    
+    if (totalPages <= 1) return;
+    
+    // Logique de pagination intelligente
+    const maxVisiblePages = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+    
+    // Ajuster si on est proche de la fin
+    if (endPage - startPage + 1 < maxVisiblePages) {
+        startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+    
+    // Bouton première page
+    if (startPage > 1) {
+        const firstButton = createTablePageButton(1, currentPage === 1);
+        pageNumbersContainer.appendChild(firstButton);
+        
+        if (startPage > 2) {
+            const ellipsis = document.createElement('span');
+            ellipsis.className = 'px-2 py-1 text-gray-500';
+            ellipsis.textContent = '...';
+            pageNumbersContainer.appendChild(ellipsis);
+        }
+    }
+    
+    // Pages visibles
+    for (let i = startPage; i <= endPage; i++) {
+        const pageButton = createTablePageButton(i, currentPage === i);
+        pageNumbersContainer.appendChild(pageButton);
+    }
+    
+    // Bouton dernière page
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+            const ellipsis = document.createElement('span');
+            ellipsis.className = 'px-2 py-1 text-gray-500';
+            ellipsis.textContent = '...';
+            pageNumbersContainer.appendChild(ellipsis);
+        }
+        
+        const lastButton = createTablePageButton(totalPages, currentPage === totalPages);
+        pageNumbersContainer.appendChild(lastButton);
+    }
+}
+
+// Créer un bouton de page pour le tableau
+function createTablePageButton(pageNumber, isActive) {
+    const button = document.createElement('button');
+    button.className = `px-3 py-1 text-sm font-medium rounded-md transition-colors ${
+        isActive 
+            ? 'bg-gray-800 text-white border border-gray-800' 
+            : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 hover:border-gray-400'
+    }`;
+    button.textContent = pageNumber;
+    button.addEventListener('click', () => showTablePage(pageNumber));
+    return button;
+}
+
+// Animation des éléments de la page du tableau
+function animateTablePageItems(startIndex, endIndex) {
+    const itemsToAnimate = filteredRows.slice(startIndex, endIndex);
+    
+    itemsToAnimate.forEach((item, index) => {
+        setTimeout(() => {
+            item.element.style.transition = 'all 0.3s ease-out';
+            item.element.style.opacity = '1';
+            item.element.style.transform = 'translateY(0)';
+        }, index * 50); // Délai progressif
+    });
+}
+
+// Filtrer les lignes du tableau
+function filterTableRows(filteredData) {
+    console.log('🔍 [PAGINATION-TABLEAU] Filtrage des lignes');
+    filteredRows = filteredData || allRows;
+    currentPage = 1;
+    showTablePage(1);
+}
+
+// Fonction pour réinitialiser la pagination du tableau
+function resetTablePagination() {
+    console.log('🔄 [PAGINATION-TABLEAU] Réinitialisation de la pagination');
+    filteredRows = [...allRows];
+    currentPage = 1;
+    showTablePage(1);
+}
+
+// API publique pour la pagination intelligente du tableau
+window.smartPaginationTable = {
+    init: initializeTablePagination,
+    showPage: showTablePage,
+    filterRows: filterTableRows,
+    resetPagination: resetTablePagination,
+    getFilteredRows: () => filteredRows,
+    getStats: () => ({
+        currentPage: currentPage,
+        totalPages: Math.ceil(filteredRows.length / itemsPerPage),
+        itemsPerPage: itemsPerPage,
+        totalItems: totalItems,
+        filteredItems: filteredRows.length,
+        startIndex: (currentPage - 1) * itemsPerPage + 1,
+        endIndex: Math.min(currentPage * itemsPerPage, filteredRows.length)
+    }),
+    setItemsPerPage: (newItemsPerPage) => {
+        itemsPerPage = newItemsPerPage;
+        currentPage = 1;
+        showTablePage(1);
+    }
+};
+
+console.log('✅ [PAGINATION-TABLEAU] Module de pagination intelligente pour tableau chargé');
+</script>
+
+
+<!-- Script de débogage pour la barre d'outils -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🔍 [DEBUG DASHBOARD] DOM chargé');
+    
+    const toolbar = document.getElementById('bulk-actions-toolbar');
+    console.log('🔍 [DEBUG DASHBOARD] Barre d\'outils trouvée:', toolbar);
+    
+    if (toolbar) {
+        console.log('🔍 [DEBUG DASHBOARD] Classes de la barre d\'outils:', toolbar.className);
+        console.log('🔍 [DEBUG DASHBOARD] Style display:', window.getComputedStyle(toolbar).display);
+        console.log('🔍 [DEBUG DASHBOARD] Style visibility:', window.getComputedStyle(toolbar).visibility);
+        
+        // Forcer la visibilité
+        toolbar.classList.remove('hidden');
+        toolbar.style.display = 'block';
+        toolbar.style.visibility = 'visible';
+        
+        console.log('🔍 [DEBUG DASHBOARD] Barre d\'outils forcée visible');
+    }
+    
+    // Vérifier les boutons
+    const printBtn = document.getElementById('bulk-print-btn');
+    const deleteBtn = document.getElementById('bulk-delete-btn');
+    
+    console.log('🔍 [DEBUG DASHBOARD] Bouton impression:', printBtn);
+    console.log('🔍 [DEBUG DASHBOARD] Bouton suppression:', deleteBtn);
+    
+    if (printBtn) {
+        printBtn.disabled = false;
+        console.log('🔍 [DEBUG DASHBOARD] Bouton impression activé');
+    }
+    
+    if (deleteBtn) {
+        deleteBtn.disabled = false;
+        console.log('🔍 [DEBUG DASHBOARD] Bouton suppression activé');
+    }
+});
+</script>
+
+<!-- Script pour connecter le checkbox de l'en-tête avec les boutons de sélection -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🔍 [DEBUG DASHBOARD] Initialisation des contrôles de sélection');
+    
+    // Récupérer les éléments
+    const headerCheckbox = document.getElementById('select-all-checkbox');
+    const selectAllBtn = document.getElementById('select-all-btn');
+    const deselectAllBtn = document.getElementById('deselect-all-btn');
+    const refreshBtn = document.getElementById('refresh-etiquettes');
+    
+    console.log('🔍 [DEBUG DASHBOARD] Éléments trouvés:', {
+        headerCheckbox: !!headerCheckbox,
+        selectAllBtn: !!selectAllBtn,
+        deselectAllBtn: !!deselectAllBtn,
+        refreshBtn: !!refreshBtn
+    });
+    
+    // Connecter le checkbox de l'en-tête avec les boutons
+    if (headerCheckbox) {
+        headerCheckbox.addEventListener('change', function() {
+            console.log('🔍 [DEBUG DASHBOARD] Checkbox en-tête changé:', this.checked);
+            
+            if (this.checked) {
+                // Simuler un clic sur "Tout sélectionner"
+                if (selectAllBtn) {
+                    selectAllBtn.click();
+                }
+            } else {
+                // Simuler un clic sur "Tout désélectionner"
+                if (deselectAllBtn) {
+                    deselectAllBtn.click();
+                }
+            }
+        });
+    }
+    
+    // Gérer le bouton Actualiser
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', function() {
+            console.log('🔍 [DEBUG DASHBOARD] Bouton Actualiser cliqué');
+            
+            // Afficher un indicateur de chargement
+            const originalText = this.innerHTML;
+            this.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Actualisation...';
+            this.disabled = true;
+            
+            // Recharger la page après un court délai
+            setTimeout(() => {
+                window.location.reload();
+            }, 500);
+        });
+    }
+    
+    // Synchroniser l'état du checkbox de l'en-tête avec les sélections
+    function syncHeaderCheckbox() {
+        if (headerCheckbox) {
+            const checkboxes = document.querySelectorAll('.etiquette-checkbox');
+            const checkedBoxes = document.querySelectorAll('.etiquette-checkbox:checked');
+            
+            if (checkboxes.length === 0) {
+                headerCheckbox.indeterminate = false;
+                headerCheckbox.checked = false;
+            } else if (checkedBoxes.length === checkboxes.length) {
+                headerCheckbox.indeterminate = false;
+                headerCheckbox.checked = true;
+            } else if (checkedBoxes.length > 0) {
+                headerCheckbox.indeterminate = true;
+                headerCheckbox.checked = false;
+            } else {
+                headerCheckbox.indeterminate = false;
+                headerCheckbox.checked = false;
+            }
+        }
+    }
+    
+    // Écouter les changements sur les checkboxes individuelles
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('etiquette-checkbox')) {
+            console.log('🔍 [DEBUG DASHBOARD] Checkbox individuel changé');
+            syncHeaderCheckbox();
+        }
+    });
+    
+    // Synchroniser au chargement
+    syncHeaderCheckbox();
+    
+    console.log('✅ [DEBUG DASHBOARD] Contrôles de sélection initialisés');
+    
+    // Vérifier que EtiquettePrinter est disponible
+});
+</script>
+
+{% block extra_js %}
+{% endblock %}
 {% endblock %}

@@ -4,7 +4,7 @@
 {% block title %}Mes Étiquettes - YZ-CMD{% endblock %}
 
 {% block page_title %}Mes Étiquettes{% endblock %}
-{% block page_subtitle %}Gestion et impression des étiquettes professionnelles{% endblock %}
+{% block page_subtitle %}Gestion et impression des étiquettes pour commandes confirmées{% endblock %}
 
 {% block extra_css %}
 {{ block.super }}
@@ -26,7 +26,7 @@
                     <i class="fas fa-tags mr-3 text-green-300"></i>
                     Mes Étiquettes
                 </h1>
-                <p class="text-white opacity-90">Gestion et impression des étiquettes professionnelles</p>
+                <p class="text-white opacity-90">Gestion et impression des étiquettes pour commandes confirmées</p>
             </div>
             <div class="mt-4 md:mt-0">
                 <a href="{% url 'etiquettes_pro:template_create' %}" class="theme-button-primary">
@@ -35,190 +35,9 @@
             </div>
         </div>
     </div>
-    <!-- Filtres et recherche -->
-    <div class="search-section mb-6">
-        <form method="get" class="flex flex-col md:flex-row gap-4 items-end">
-            <div class="flex-1">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Rechercher</label>
-                <input type="text" name="search" class="theme-input w-full" placeholder="Référence, template..." value="{{ request.GET.search }}">
-            </div>
-            <div class="flex-1">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Statut</label>
-                <select name="statut" class="theme-input w-full">
-                    <option value="">Tous les statuts</option>
-                    <option value="draft" {% if request.GET.statut == 'draft' %}selected{% endif %}>Brouillon</option>
-                    <option value="ready" {% if request.GET.statut == 'ready' %}selected{% endif %}>Prête</option>
-                    <option value="printed" {% if request.GET.statut == 'printed' %}selected{% endif %}>Imprimée</option>
-                </select>
-            </div>
-            <div class="flex-1">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Template</label>
-                <select name="template" class="theme-input w-full">
-                    <option value="">Tous les templates</option>
-                    {% for template in templates %}
-                    <option value="{{ template.id }}" {% if request.GET.template == template.id|stringformat:"s" %}selected{% endif %}>
-                        {{ template.nom }}
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="flex gap-2">
-                <button type="submit" class="theme-button-primary">
-                    <i class="fas fa-search"></i> Filtrer
-                </button>
-            </div>
-        </form>
-    </div>
-
-    <!-- Liste des étiquettes -->
-    {% if etiquettes %}
-    <div class="table-container">
-        <div class="table-responsive">
-            <table class="w-full">
-                <thead class="table-header">
-                    <tr>
-                        <th class="table-cell">Référence</th>
-                        <th class="table-cell">Template</th>
-                        <th class="table-cell">Commande</th>
-                        <th class="table-cell">Article</th>
-                        <th class="table-cell">Statut</th>
-                        <th class="table-cell">Date de Création</th>
-                        <th class="table-cell">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for etiquette in etiquettes %}
-                    <tr class="table-row">
-                        <td class="table-cell">
-                            <strong>{{ etiquette.reference }}</strong>
-                        </td>
-                        <td class="table-cell">
-                            <span class="status-badge confirmee">{{ etiquette.template.nom }}</span>
-                        </td>
-                        <td class="table-cell">
-                            {% if etiquette.commande_id %}
-                                <span class="text-gray-800">
-                                    #{{ etiquette.commande_id }}
-                                </span>
-                            {% else %}
-                                <span class="text-gray-400">-</span>
-                            {% endif %}
-                        </td>
-                        <td class="table-cell">
-                            {% if etiquette.nom_article %}
-                                {{ etiquette.nom_article|truncatechars:30 }}
-                            {% else %}
-                                <span class="text-gray-400">-</span>
-                            {% endif %}
-                        </td>
-                        <td class="table-cell">
-                            {% if etiquette.statut == 'ready' %}
-                                <span class="status-badge confirmee">
-                                    <i class="fas fa-check"></i> Prête
-                                </span>
-                            {% elif etiquette.statut == 'printed' %}
-                                <span class="status-badge terminee">
-                                    <i class="fas fa-print"></i> Imprimée
-                                </span>
-                            {% elif etiquette.statut == 'draft' %}
-                                <span class="status-badge en-preparation">
-                                    <i class="fas fa-edit"></i> Brouillon
-                                </span>
-                            {% else %}
-                                <span class="status-badge">{{ etiquette.get_statut_display }}</span>
-                            {% endif %}
-                        </td>
-                        <td class="table-cell">
-                            <small class="text-gray-600">{{ etiquette.date_creation|date:"d/m/Y H:i" }}</small>
-                        </td>
-                        <td class="table-cell">
-                            <div class="action-buttons-container">
-                                <a href="{% url 'etiquettes_pro:etiquette_pdf' etiquette.id %}" 
-                                   class="action-button" title="Télécharger PDF">
-                                    <i class="fas fa-download"></i>
-                                </a>
-                                <a href="{% url 'etiquettes_pro:etiquette_preview' etiquette.id %}" 
-                                   class="theme-button-secondary" title="Aperçu">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                                {% if etiquette.statut == 'draft' %}
-                                <button class="theme-button-secondary" title="Modifier">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                {% endif %}
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-<!-- Pagination -->
-{% if etiquettes.has_other_pages %}
-<nav aria-label="Pagination des étiquettes">
-    <ul class="pagination justify-content-center">
-        {% if etiquettes.has_previous %}
-            <li class="page-item">
-                <a class="page-link" href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}{% if request.GET.template %}&template={{ request.GET.template }}{% endif %}">
-                    <i class="fas fa-angle-double-left"></i>
-                </a>
-            </li>
-            <li class="page-item">
-                <a class="page-link" href="?page={{ etiquettes.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}{% if request.GET.template %}&template={{ request.GET.template }}{% endif %}">
-                    <i class="fas fa-angle-left"></i>
-                </a>
-            </li>
-        {% endif %}
-        
-        <li class="page-item active">
-            <span class="page-link">
-                Page {{ etiquettes.number }} sur {{ etiquettes.paginator.num_pages }}
-            </span>
-        </li>
-        
-        {% if etiquettes.has_next %}
-            <li class="page-item">
-                <a class="page-link" href="?page={{ etiquettes.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}{% if request.GET.template %}&template={{ request.GET.template }}{% endif %}">
-                    <i class="fas fa-angle-right"></i>
-                </a>
-            </li>
-            <li class="page-item">
-                <a class="page-link" href="?page={{ etiquettes.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}{% if request.GET.template %}&template={{ request.GET.template }}{% endif %}">
-                    <i class="fas fa-angle-double-right"></i>
-                </a>
-            </li>
-        {% endif %}
-    </ul>
-</nav>
-{% endif %}
-
-{% else %}
-<!-- Message si aucune étiquette -->
-<div class="text-center py-5">
-    <div class="empty-state">
-        <i class="fas fa-tags fa-3x text-muted mb-3"></i>
-        <h4 class="text-muted">Aucune étiquette trouvée</h4>
-        <p class="text-muted">
-            {% if request.GET.search or request.GET.statut or request.GET.template %}
-                Aucune étiquette ne correspond à vos critères de recherche.
-                <a href="{% url 'etiquettes_pro:etiquette_list' %}" class="etiquettes-btn mt-2">
-                    <i class="fas fa-times"></i> Effacer les filtres
-                </a>
-            {% else %}
-                Vous n'avez pas encore créé d'étiquettes.
-                <a href="{% url 'etiquettes_pro:template_create' %}" class="etiquettes-btn etiquettes-btn-success mt-2">
-                    <i class="fas fa-plus"></i> Créer votre première étiquette
-                </a>
-            {% endif %}
-        </p>
-    </div>
-</div>
-{% endif %}
 
     <!-- Statistiques rapides -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div class="stats-card">
             <div class="flex items-center justify-between">
                 <div>
@@ -264,8 +83,294 @@
             </div>
         </div>
     </div>
+
+    <!-- Section Commandes avec Paniers -->
+    <div class="bg-white rounded-xl shadow-lg border border-gray-200 mb-6">
+        <div class="p-6">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center">
+                    <i class="fas fa-shopping-cart mr-3 text-blue-600"></i>
+                    <h2 class="text-lg font-bold text-gray-800">Commandes Confirmées avec Paniers</h2>
+                    <span id="commandes-count" class="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">0</span>
+                    <div id="auto-refresh-indicator" class="ml-2 flex items-center text-xs text-gray-500">
+                        <i class="fas fa-sync-alt mr-1"></i>
+                        <span>Auto-actualisation: 30s</span>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button id="refresh-commandes" class="theme-button-secondary text-sm">
+                        <i class="fas fa-sync-alt mr-1"></i>Actualiser
+                    </button>
+                    <button id="generate-all-etiquettes" class="theme-button-primary text-sm" disabled>
+                        <i class="fas fa-magic mr-1"></i>Générer Toutes les Étiquettes
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Liste des commandes avec paniers -->
+            <div id="commandes-container" class="space-y-3">
+                <div id="commandes-loading" class="text-center py-8">
+                    <i class="fas fa-spinner fa-spin text-2xl text-gray-400 mb-2"></i>
+                    <p class="text-gray-500">Chargement des commandes...</p>
+                </div>
+                <div id="commandes-list" class="hidden">
+                    <!-- Les commandes seront chargées dynamiquement ici -->
+                </div>
+                <div id="no-commandes" class="hidden text-center py-8">
+                    <i class="fas fa-check-circle text-3xl text-green-500 mb-2"></i>
+                    <p class="text-gray-600">Toutes les commandes confirmées avec paniers ont déjà des étiquettes !</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barre d'outils de sélection multiple -->
+    <div id="bulk-actions-toolbar" class="bg-white rounded-xl shadow-lg border border-gray-200 mb-6 p-4">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <span class="text-sm text-gray-600">
+                    <span id="selected-count">0</span> étiquette(s) sélectionnée(s)
+                </span>
+                <div class="flex items-center space-x-2">
+                    <button id="select-all-btn" class="theme-button-secondary text-sm">
+                        <i class="fas fa-check-square mr-1"></i>Tout sélectionner
+                    </button>
+                    <button id="deselect-all-btn" class="theme-button-secondary text-sm">
+                        <i class="fas fa-square mr-1"></i>Tout désélectionner
+                    </button>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2">
+                <button id="bulk-print-btn" class="theme-button-primary">
+                    <i class="fas fa-print mr-2"></i>Imprimer sélection
+                </button>
+                <button id="bulk-delete-btn" class="theme-button-danger">
+                    <i class="fas fa-trash mr-2"></i>Supprimer sélection
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Liste des étiquettes -->
+    {% if etiquettes %}
+    <div id="etiquettes-container" class="etiquettes-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {% for etiquette in etiquettes %}
+        <div class="etiquette-card bg-white rounded-xl shadow-lg border border-gray-200 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1" data-etiquette-id="{{ etiquette.id }}">
+            <!-- En-tête de la carte -->
+            <div class="p-4 border-b border-gray-100">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center space-x-3">
+                        <input type="checkbox" class="etiquette-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2" data-etiquette-id="{{ etiquette.id }}">
+                        <h3 class="etiquette-reference text-lg font-bold text-gray-800">{{ etiquette.reference }}</h3>
+                    </div>
+                    {% if etiquette.statut == 'ready' %}
+                        <span class="etiquette-statut status-badge confirmee">
+                            <i class="fas fa-check"></i> Prête
+                        </span>
+                    {% elif etiquette.statut == 'printed' %}
+                        <span class="etiquette-statut status-badge terminee">
+                            <i class="fas fa-print"></i> Imprimée
+                        </span>
+                    {% elif etiquette.statut == 'draft' %}
+                        <span class="etiquette-statut status-badge en-preparation">
+                            <i class="fas fa-edit"></i> Brouillon
+                        </span>
+                    {% else %}
+                        <span class="etiquette-statut status-badge">{{ etiquette.get_statut_display }}</span>
+                    {% endif %}
+                </div>
+                <p class="etiquette-template text-sm text-gray-600">
+                    <i class="fas fa-tag mr-2 text-blue-500"></i>{{ etiquette.template.nom }}
+                </p>
+            </div>
+            
+            <!-- Contenu de la carte -->
+            <div class="p-4">
+                <div class="space-y-3">
+                    <!-- Commande -->
+                    <div class="flex items-center">
+                        <i class="fas fa-shopping-cart w-5 text-green-500 mr-3"></i>
+                        <div>
+                            <p class="text-xs text-gray-500">Commande</p>
+                            <p class="etiquette-commande text-sm font-medium text-gray-800">
+                                {% if etiquette.nom_article %}
+                                    {{ etiquette.nom_article }}
+                                {% elif etiquette.commande_id %}
+                                    #{{ etiquette.commande_id }}
+                                {% else %}
+                                    <span class="text-gray-400">-</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <!-- Articles -->
+                    <div class="flex items-center">
+                        <i class="fas fa-box w-5 text-orange-500 mr-3"></i>
+                        <div>
+                            <p class="text-xs text-gray-500">Articles</p>
+                            <p class="text-sm font-medium text-gray-800 etiquette-articles">
+                                {% if etiquette.cart_items %}
+                                    {% for item in etiquette.cart_items %}
+                                        {% if forloop.first %}
+                                            {% if item.reference %}
+                                                <span class="font-semibold text-blue-600">{{ item.reference }}</span><br>
+                                                <span class="text-gray-600">{{ item.nom|truncatechars:20 }}</span>
+                                            {% else %}
+                                                {{ item.nom|truncatechars:25 }}
+                                            {% endif %}
+                                        {% endif %}
+                                    {% endfor %}
+                                    {% if etiquette.cart_items|length > 1 %}
+                                        <span class="text-gray-500">+{{ etiquette.cart_items|length|add:"-1" }} autres</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-gray-400">-</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <!-- Client -->
+                    {% if etiquette.client_nom %}
+                    <div class="flex items-center">
+                        <i class="fas fa-user w-5 text-purple-500 mr-3"></i>
+                        <div>
+                            <p class="text-xs text-gray-500">Client</p>
+                            <p class="etiquette-client text-sm font-medium text-gray-800">{{ etiquette.client_nom|truncatechars:25 }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Date -->
+                    <div class="flex items-center">
+                        <i class="fas fa-calendar w-5 text-indigo-500 mr-3"></i>
+                        <div>
+                            <p class="text-xs text-gray-500">Créée le</p>
+                            <p class="etiquette-date text-sm font-medium text-gray-800">{{ etiquette.date_creation|date:"d/m/Y H:i" }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Actions -->
+            <div class="p-4 border-t border-gray-100 bg-gray-50 rounded-b-xl">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                        <!-- Bouton PDF supprimé -->
+                        <a href="{% url 'etiquettes_pro:etiquette_preview' etiquette.id %}" 
+                           class="theme-button-secondary" title="Aperçu">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                        {% if etiquette.statut == 'draft' %}
+                        <button class="theme-button-secondary" title="Modifier">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        {% endif %}
+                    </div>
+                    <div class="text-xs text-gray-500">
+                        ID: {{ etiquette.id }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- La pagination intelligente sera gérée par JavaScript -->
+
+{% else %}
+<!-- Message si aucune étiquette -->
+<div class="text-center py-5">
+    <div class="empty-state">
+        <i class="fas fa-tags fa-3x text-muted mb-3"></i>
+        <h4 class="text-muted">Aucune étiquette trouvée</h4>
+        <p class="text-muted mb-4">
+            {% if request.GET.search or request.GET.statut or request.GET.template %}
+                Aucune étiquette ne correspond à vos critères de recherche.
+            {% else %}
+                Vous n'avez pas encore créé d'étiquettes.
+            {% endif %}
+        </p>
+        
+        {% if request.GET.search or request.GET.statut or request.GET.template %}
+            <a href="{% url 'etiquettes_pro:etiquette_list' %}" class="theme-button-secondary">
+                <i class="fas fa-times mr-2"></i> Effacer les filtres
+            </a>
+        {% else %}
+            <a href="{% url 'etiquettes_pro:template_create' %}" class="theme-button-primary">
+                <i class="fas fa-plus mr-2"></i> Créer votre première étiquette
+            </a>
+        {% endif %}
+    </div>
 </div>
+{% endif %}
+
+</div>
+
+<!-- Scripts pour la pagination et recherche intelligente -->
+<script src="{% static 'js/etiquettes_pro/smart-pagination.js' %}"></script>
+<script src="{% static 'js/etiquettes_pro/smart-search.js' %}"></script>
+<script src="{% static 'js/etiquettes_pro/bulk-print.js' %}"></script>
+<script src="{% static 'js/etiquettes_pro/bulk-delete.js' %}"></script>
+<script src="{% static 'js/etiquettes_pro/realtime-commandes.js' %}"></script>
 
 <!-- Script d'impression -->
 <script src="{% static 'js/print_etiquette.js' %}"></script>
+
+<!-- Script de débogage pour la barre d'outils -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🔍 [DEBUG] DOM chargé');
+    
+    const toolbar = document.getElementById('bulk-actions-toolbar');
+    console.log('🔍 [DEBUG] Barre d\'outils trouvée:', toolbar);
+    
+    if (toolbar) {
+        console.log('🔍 [DEBUG] Classes de la barre d\'outils:', toolbar.className);
+        console.log('🔍 [DEBUG] Style display:', window.getComputedStyle(toolbar).display);
+        console.log('🔍 [DEBUG] Style visibility:', window.getComputedStyle(toolbar).visibility);
+        
+        // Forcer la visibilité
+        toolbar.classList.remove('hidden');
+        toolbar.style.display = 'block';
+        toolbar.style.visibility = 'visible';
+        
+        console.log('🔍 [DEBUG] Barre d\'outils forcée visible');
+    }
+    
+    // Vérifier les boutons
+    const printBtn = document.getElementById('bulk-print-btn');
+    const deleteBtn = document.getElementById('bulk-delete-btn');
+    
+    console.log('🔍 [DEBUG] Bouton impression:', printBtn);
+    console.log('🔍 [DEBUG] Bouton suppression:', deleteBtn);
+    
+    if (printBtn) {
+        printBtn.disabled = false;
+        console.log('🔍 [DEBUG] Bouton impression activé');
+    }
+    
+    if (deleteBtn) {
+        deleteBtn.disabled = false;
+        console.log('🔍 [DEBUG] Bouton suppression activé');
+    }
+});
+</script>
+
+{% block extra_js %}
+<script>
+// Initialisation des modules après le chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🔧 [ÉTIQUETTES] Initialisation des modules intelligents');
+    
+    // Vérifier que les modules sont chargés
+    if (window.smartPaginationEtiquettes && window.smartSearchEtiquettes) {
+        console.log('✅ [ÉTIQUETTES] Modules de pagination et recherche chargés');
+    } else {
+        console.error('❌ [ÉTIQUETTES] Modules non chargés');
+    }
+});
+</script>
+{% endblock %}
 {% endblock %}

@@ -100,28 +100,44 @@ class EtiquettePrinter {
     }
 
     extractEtiquetteId(card) {
-        // Essayer différentes méthodes pour extraire l'ID de l'étiquette
+        console.log('🔍 [PRINT] Extraction de l\'ID de l\'étiquette...', card);
+        
+        // Méthode 1: Attribut data-etiquette-id (priorité)
         const dataId = card.dataset.etiquetteId;
-        if (dataId) return dataId;
-
-        const href = card.querySelector('a[href*="/etiquette/"]')?.href;
-        if (href) {
-            const match = href.match(/\/etiquette\/(\d+)/);
-            if (match) return match[1];
+        if (dataId) {
+            console.log('✅ [PRINT] ID trouvé via data-etiquette-id:', dataId);
+            return dataId;
         }
 
-        // Fallback: chercher dans l'URL actuelle
+        // Méthode 2: Chercher dans les liens de la carte
+        const links = card.querySelectorAll('a[href*="/etiquette/"]');
+        for (const link of links) {
+            const match = link.href.match(/\/etiquette\/(\d+)/);
+            if (match) {
+                console.log('✅ [PRINT] ID trouvé via lien dans la carte:', match[1]);
+                return match[1];
+            }
+        }
+
+        // Méthode 3: Chercher dans l'URL actuelle (si on est sur une page d'étiquette)
         const currentUrl = window.location.pathname;
         const urlMatch = currentUrl.match(/\/etiquette\/(\d+)/);
-        if (urlMatch) return urlMatch[1];
-
-        // Fallback: chercher dans les liens de la page
-        const links = document.querySelectorAll('a[href*="/etiquette/"]');
-        if (links.length > 0) {
-            const match = links[0].href.match(/\/etiquette\/(\d+)/);
-            if (match) return match[1];
+        if (urlMatch) {
+            console.log('✅ [PRINT] ID trouvé via URL actuelle:', urlMatch[1]);
+            return urlMatch[1];
         }
 
+        // Méthode 4: Fallback - chercher dans tous les liens de la page
+        const allLinks = document.querySelectorAll('a[href*="/etiquette/"]');
+        for (const link of allLinks) {
+            const match = link.href.match(/\/etiquette\/(\d+)/);
+            if (match) {
+                console.log('✅ [PRINT] ID trouvé via lien global:', match[1]);
+                return match[1];
+            }
+        }
+
+        console.error('❌ [PRINT] Aucun ID d\'étiquette trouvé');
         return null;
     }
 
@@ -1035,6 +1051,9 @@ class EtiquettePrinter {
     }
 }
 
+// Exposer la classe globalement
+window.EtiquettePrinter = EtiquettePrinter;
+
 // Initialiser l'imprimeur d'étiquettes
 console.log('🔍 [PRINT] Initialisation du système d\'impression...');
-new EtiquettePrinter();
+window.etiquettePrinter = new EtiquettePrinter();

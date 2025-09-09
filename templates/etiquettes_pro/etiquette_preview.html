@@ -961,9 +961,7 @@ fetch('{% url "etiquettes_pro:generate_qrcode_image" etiquette.code_data %}')
     
     <!-- Boutons d'action -->
     <div class="action-buttons">
-        <a href="{% url 'etiquettes_pro:etiquette_pdf' etiquette.id %}" class="theme-button-primary">
-            <i class="fas fa-download"></i> Télécharger PDF
-        </a>
+        <!-- Bouton PDF supprimé -->
         <a href="#" class="print-btn-manual theme-button-success" data-etiquette-id="{{ etiquette.id }}">
             <i class="fas fa-print"></i> Imprimer
         </a>

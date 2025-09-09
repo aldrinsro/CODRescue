@@ -20,18 +20,17 @@ urlpatterns = [
     
     # Étiquettes
     path('etiquettes/', views.etiquette_list, name='etiquette_list'),
-    path('etiquettes/<int:etiquette_id>/pdf/', views.generate_etiquette_pdf_pillow, name='etiquette_pdf'),
     path('etiquettes/<int:etiquette_id>/preview/', views.preview_etiquette, name='etiquette_preview'),
     path('etiquettes/<int:etiquette_id>/print-data/', views.etiquette_print_data, name='etiquette_print_data'),
+    path('etiquettes/<int:etiquette_id>/delete/', views.delete_etiquette, name='delete_etiquette'),
     path('templates/<int:template_id>/update-print-settings/', views.update_template_print_settings, name='update_template_print_settings'),
     path('barcode/<str:code_data>/', views.generate_barcode_image, name='generate_barcode_image'),
     path('qrcode/<str:code_data>/', views.generate_qrcode_image, name='generate_qrcode_image'),
     
-    # Génération automatique pour commandes confirmées
-    path('etiquettes-commandes-confirmees/', views.etiquettes_commandes_confirmees, name='etiquettes_commandes_confirmees'),
-    path('generate-etiquettes-confirmees/', views.generate_etiquettes_commandes_confirmees, name='generate_etiquettes_confirmees'),
     
     # API endpoints
     path('api/templates/', views.api_template_list, name='api_template_list'),
     path('api/etiquettes/', views.api_etiquette_list, name='api_etiquette_list'),
+    path('api/commandes-with-paniers/', views.get_commandes_with_paniers, name='get_commandes_with_paniers'),
+    path('generate-etiquettes-manually/', views.generate_etiquettes_manually, name='generate_etiquettes_manually'),
 ]

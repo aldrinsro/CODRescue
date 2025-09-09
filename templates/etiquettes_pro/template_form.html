@@ -193,6 +193,42 @@
                 <i class="fas fa-barcode text-blue-500"></i>
                 Code-barres / QR Code
             </h3>
+            
+            <!-- Configurations recommandées -->
+            <div class="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+                <h4 class="text-md font-medium text-gray-700 mb-3 flex items-center">
+                    <i class="fas fa-star text-yellow-500 mr-2"></i>Configurations recommandées
+                </h4>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <button type="button" class="config-preset-btn" data-preset="standard" 
+                            onclick="applyCodePreset('standard')">
+                        <div class="text-center p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-300 transition-colors">
+                            <i class="fas fa-barcode text-blue-600 text-lg mb-1"></i>
+                            <div class="text-sm font-medium text-gray-700">Standard</div>
+                            <div class="text-xs text-gray-500">80x25mm, Centre</div>
+                        </div>
+                    </button>
+                    
+                    <button type="button" class="config-preset-btn" data-preset="compact" 
+                            onclick="applyCodePreset('compact')">
+                        <div class="text-center p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-300 transition-colors">
+                            <i class="fas fa-compress text-green-600 text-lg mb-1"></i>
+                            <div class="text-sm font-medium text-gray-700">Compact</div>
+                            <div class="text-xs text-gray-500">60x20mm, Gauche</div>
+                        </div>
+                    </button>
+                    
+                    <button type="button" class="config-preset-btn" data-preset="large" 
+                            onclick="applyCodePreset('large')">
+                        <div class="text-center p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-300 transition-colors">
+                            <i class="fas fa-expand text-purple-600 text-lg mb-1"></i>
+                            <div class="text-sm font-medium text-gray-700">Grand</div>
+                            <div class="text-xs text-gray-500">100x30mm, Droite</div>
+                        </div>
+                    </button>
+                </div>
+            </div>
+            
             <div class="space-y-4">
                 <div class="form-group">
                     <label for="code_type" class="block text-sm font-medium text-gray-700 mb-2">
@@ -999,6 +1035,93 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialiser l'aperçu d'impression
     updatePrintPreview();
+    
+    // Fonction pour appliquer les configurations recommandées des codes
+    window.applyCodePreset = function(preset) {
+        const presets = {
+            'standard': {
+                code_width: 80,
+                code_height: 25,
+                code_position: 'center',
+                code_quality: 'high',
+                print_padding: 15,
+                print_margin_top: 10
+            },
+            'compact': {
+                code_width: 60,
+                code_height: 20,
+                code_position: 'left',
+                code_quality: 'standard',
+                print_padding: 10,
+                print_margin_top: 8
+            },
+            'large': {
+                code_width: 100,
+                code_height: 30,
+                code_position: 'right',
+                code_quality: 'ultra',
+                print_padding: 20,
+                print_margin_top: 15
+            }
+        };
+        
+        const config = presets[preset];
+        if (!config) return;
+        
+        // Appliquer les valeurs
+        document.getElementById('code_width').value = config.code_width;
+        document.getElementById('code_height').value = config.code_height;
+        document.getElementById('code_position').value = config.code_position;
+        document.getElementById('code_quality').value = config.code_quality;
+        document.getElementById('print_padding').value = config.print_padding;
+        document.getElementById('print_margin_top').value = config.print_margin_top;
+        
+        // Mettre à jour l'aperçu
+        updatePreview();
+        updatePrintPreview();
+        
+        // Feedback visuel
+        const btn = document.querySelector(`[data-preset="${preset}"]`);
+        btn.style.transform = 'scale(0.95)';
+        setTimeout(() => {
+            btn.style.transform = 'scale(1)';
+        }, 150);
+        
+        // Toast de confirmation
+        showToast(`Configuration "${preset}" appliquée avec succès!`, 'success');
+    };
+    
+    // Fonction pour afficher des toasts
+    function showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg text-white font-medium transition-all duration-300 transform translate-x-full`;
+        
+        if (type === 'success') {
+            toast.style.backgroundColor = '#10B981';
+        } else if (type === 'error') {
+            toast.style.backgroundColor = '#EF4444';
+        } else {
+            toast.style.backgroundColor = '#3B82F6';
+        }
+        
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        
+        // Animation d'entrée
+        setTimeout(() => {
+            toast.style.transform = 'translateX(0)';
+        }, 100);
+        
+        // Animation de sortie
+        setTimeout(() => {
+            toast.style.transform = 'translateX(full)';
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 300);
+        }, 3000);
+    }
 });
 </script>
 {% endblock %}

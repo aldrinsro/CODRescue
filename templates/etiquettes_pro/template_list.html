@@ -118,10 +118,11 @@
                 <a href="{% url 'etiquettes_pro:template_edit' template.pk %}" class="theme-button-secondary flex-1 text-center">
                     <i class="fas fa-edit"></i> Modifier
                 </a>
-                <a href="{% url 'etiquettes_pro:template_delete' template.pk %}" class="theme-button-secondary flex-1 text-center" 
-                   onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce template ?')">
+                <button class="template-delete-btn theme-button-secondary flex-1 text-center" 
+                        data-template-id="{{ template.pk }}" 
+                        data-template-name="{{ template.nom }}">
                     <i class="fas fa-trash"></i> Supprimer
-                </a>
+                </button>
             </div>
         </div>
         {% endfor %}
@@ -175,4 +176,7 @@
     </div>
     {% endif %}
 </div>
+
+<!-- Scripts -->
+<script src="{% static 'js/etiquettes_pro/template-delete.js' %}"></script>
 {% endblock %}

@@ -3696,37 +3696,7 @@ def api_panier_commande(request, commande_id):
         }, status=500)
 
 @superviseur_preparation_required
-def imprimer_tickets_preparation(request):
-    """
-    Vue pour imprimer les tickets de préparation SANS changer l'état des commandes.
-    Permet d'imprimer ou de réimprimer des tickets pour les commandes en préparation.
-    """
-    try:
-        operateur_profile = request.user.profil_operateur
-        if not operateur_profile.is_preparation:
-            return HttpResponse("Accès non autorisé.", status=403)
-    except Operateur.DoesNotExist:
-        return HttpResponse("Profil opérateur non trouvé.", status=403)
-    commande_ids_str = request.GET.get('ids')
-    if not commande_ids_str:
-        return HttpResponse("Aucun ID de commande fourni.", status=400)
-    try:
-        commande_ids = [int(id) for id in commande_ids_str.split(',') if id.isdigit()]
-    except ValueError:
-        return HttpResponse("IDs de commande invalides.", status=400)
-    commandes = Commande.objects.filter(
-        id__in=commande_ids,
-        etats__operateur=operateur_profile,
-        etats__enum_etat__libelle='En préparation',
-        etats__date_fin__isnull=True
-    ).distinct()
-
-    if not commandes.exists():
-        messages.info(request, "L'impression des tickets est désactivée. Utilisez les outils de gestion.")
-        return redirect('Superpreparation:liste_prepa')
-    code128 = barcode.get_barcode_class('code128')
-    messages.info(request, "L'impression des tickets a été retirée de l'interface superviseur.")
-    return redirect('Superpreparation:liste_prepa')
+# Fonction d'impression de tickets supprimée
 
 
 def get_operateur_display_name(operateur):
@@ -5671,38 +5641,15 @@ def get_article_variants(request, article_id):
             'error': 'Erreur lors de la récupération des variantes'
         }, status=500)
 
-def generate_barcode_for_commande(commande_id_yz):
-    """Fonction utilitaire pour générer le code-barres d'une commande"""
-    try:
-        barcode_data = str(commande_id_yz)
-        print(f"📊 Génération du code-barres: {barcode_data}")
-        
-        # Créer un code-barres avec les mêmes options que Prepacommande
-        code128 = barcode.get_barcode_class("code128")
-        barcode_instance = code128(barcode_data, writer=ImageWriter())
-        buffer = BytesIO()
-        barcode_instance.write(
-            buffer,
-            options={
-                "write_text": False,
-                "module_height": 4.0,  # Hauteur augmentée pour meilleure lisibilité
-                "module_width": 0.15,  # Largeur augmentée pour impression claire
-                "quiet_zone": 2.0,     # Zone de silence autour du code-barres
-            },
-        )
-        barcode_base64 = base64.b64encode(buffer.getvalue()).decode()
-        print(f"✅ Code-barres généré avec succès (dimensions optimisées)")
-        return barcode_base64
-    except Exception as barcode_error:
-            print(f"❌ Erreur lors de la génération du code-barres: {str(barcode_error)}")
-    return ""
 
 
 @superviseur_preparation_required
-def api_ticket_commande(request):
-    """API pour récupérer le contenu HTML du ticket de commande"""
+def api_etiquettes_articles(request):
+    """API pour récupérer le contenu HTML des étiquettes des articles"""
     try:
         ids = request.GET.get('ids')
+        format_type = request.GET.get('format', 'qr')  # 'qr' ou 'barcode'
+        
         if not ids:
             return JsonResponse({'error': 'IDs des commandes requis'}, status=400)
         
