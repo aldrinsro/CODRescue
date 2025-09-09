@@ -10,6 +10,7 @@ from django.core.paginator import Paginator
 from django.db.models import Q
 import json
 import io
+import base64
 from datetime import datetime
 
 from .decorators import superviseur_required, can_manage_templates, can_view_templates, can_print_etiquettes
@@ -23,6 +24,8 @@ from reportlab.lib.colors import black, white, blue, red, green
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
 from reportlab.lib import colors
+import qrcode
+from io import BytesIO
 from .models import EtiquetteTemplate, Etiquette
 from commande.models import Commande
 from article.models import Article
@@ -95,7 +98,7 @@ def generate_barcode_image(request, code_data):
         img_buffer = io.BytesIO()
         barcode_class.write(img_buffer, options=options)
         img_buffer.seek(0)
-        
+            
         image_size = len(img_buffer.getvalue())
         logger.info(f"✅ [BARCODE] Image PNG générée avec python-barcode - Taille: {image_size} bytes")
         
@@ -157,7 +160,7 @@ def generate_qrcode_image(request, code_data):
         img_buffer = io.BytesIO()
         img.save(img_buffer, format='PNG')
         img_buffer.seek(0)
-        
+                
         image_size = len(img_buffer.getvalue())
         logger.info(f"✅ [QRCODE] Image PNG générée avec qrcode - Taille: {image_size} bytes")
         
@@ -169,7 +172,7 @@ def generate_qrcode_image(request, code_data):
         
         logger.info(f"✅ [QRCODE] Réponse HTTP créée avec succès")
         return response
-        
+            
     except Exception as e:
         logger.error(f"❌ [QRCODE] Erreur lors de la génération: {str(e)}")
         logger.error(f"❌ [QRCODE] Type d'erreur: {type(e).__name__}")
@@ -239,6 +242,426 @@ def etiquettes_dashboard(request):
         'printed_count': printed_count,
     }
     return render(request, 'etiquettes_pro/dashboard.html', context)
+
+
+@superviseur_required
+@can_print_etiquettes
+def generate_qr_codes_articles(request, etiquette_id):
+    """Générer les codes QR pour tous les articles du panier de la commande confirmée"""
+    try:
+        # Récupérer l'étiquette
+        etiquette = get_object_or_404(Etiquette, id=etiquette_id)
+        
+        # Récupérer la commande associée
+        if not etiquette.commande_id:
+            return JsonResponse({
+                'success': False,
+                'error': 'Aucune commande associée à cette étiquette'
+            }, status=400)
+        
+        commande = get_object_or_404(Commande, id=int(etiquette.commande_id))
+        
+        # Vérifier que la commande est confirmée
+        etat_actuel = commande.etat_actuel
+        if not etat_actuel or not etat_actuel.enum_etat or etat_actuel.enum_etat.libelle != 'Confirmée':
+            return JsonResponse({
+                'success': False,
+                'error': 'La commande doit être confirmée pour générer les codes QR'
+            }, status=400)
+        
+        # Récupérer tous les articles du panier
+        paniers = commande.paniers.select_related('article', 'variante').all()
+        
+        if not paniers.exists():
+            return JsonResponse({
+                'success': False,
+                'error': 'Aucun article trouvé dans le panier de cette commande'
+            }, status=400)
+        
+        # Préparer les données pour le template
+        articles_data = []
+        
+        for panier in paniers:
+            article = panier.article
+            variante = panier.variante
+            
+            # Générer le code QR
+            qr_content = f"{article.reference or article.nom}"
+            if variante and variante.reference_variante:
+                qr_content = variante.reference_variante
+            
+            # Créer le QR code
+            qr = qrcode.QRCode(
+                version=1,
+                error_correction=qrcode.constants.ERROR_CORRECT_L,
+                box_size=6,
+                border=4,
+            )
+            qr.add_data(qr_content)
+            qr.make(fit=True)
+            
+            # Convertir en image base64 pour l'affichage HTML
+            qr_img = qr.make_image(fill_color="black", back_color="white")
+            img_buffer = BytesIO()
+            qr_img.save(img_buffer, format='PNG')
+            img_buffer.seek(0)
+            
+            qr_base64 = base64.b64encode(img_buffer.getvalue()).decode()
+            
+            # Préparer les données de l'article
+            article_data = {
+                'article': article,
+                'variante': variante,
+                'panier': panier,
+                'qr_content': qr_content,
+                'qr_image': f"data:image/png;base64,{qr_base64}"
+            }
+            
+            articles_data.append(article_data)
+        
+        # Rendre le template HTML pour l'impression
+        context = {
+            'commande': commande,
+            'etiquette': etiquette,
+            'articles_data': articles_data,
+        }
+        
+        return render(request, 'etiquettes_pro/qr_codes_print.html', context)
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur lors de la génération des codes QR: {str(e)}'
+        }, status=500)
+
+
+@superviseur_required
+@can_print_etiquettes
+def generate_qr_codes_simple(request, etiquette_id):
+    """Générer les codes QR simples (sans détails) pour tous les articles du panier de la commande confirmée"""
+    try:
+        # Récupérer l'étiquette
+        etiquette = get_object_or_404(Etiquette, id=etiquette_id)
+        
+        # Récupérer la commande associée
+        if not etiquette.commande_id:
+            return JsonResponse({
+                'success': False,
+                'error': 'Aucune commande associée à cette étiquette'
+            }, status=400)
+        
+        commande = get_object_or_404(Commande, id=int(etiquette.commande_id))
+        
+        # Vérifier que la commande est confirmée
+        etat_actuel = commande.etat_actuel
+        if not etat_actuel or not etat_actuel.enum_etat or etat_actuel.enum_etat.libelle != 'Confirmée':
+            return JsonResponse({
+                'success': False,
+                'error': 'La commande doit être confirmée pour générer les codes QR'
+            }, status=400)
+        
+        # Récupérer tous les articles du panier
+        paniers = commande.paniers.select_related('article', 'variante').all()
+        
+        if not paniers.exists():
+            return JsonResponse({
+                'success': False,
+                'error': 'Aucun article trouvé dans le panier de cette commande'
+            }, status=400)
+        
+        # Préparer les données pour le template
+        articles_data = []
+        
+        for panier in paniers:
+            article = panier.article
+            variante = panier.variante
+            
+            # Générer le code QR
+            qr_content = f"{article.reference or article.nom}"
+            if variante and variante.reference_variante:
+                qr_content = variante.reference_variante
+            
+            # Créer le QR code
+            qr = qrcode.QRCode(
+                version=1,
+                error_correction=qrcode.constants.ERROR_CORRECT_L,
+                box_size=8,
+                border=4,
+            )
+            qr.add_data(qr_content)
+            qr.make(fit=True)
+            
+            # Convertir en image base64 pour l'affichage HTML
+            qr_img = qr.make_image(fill_color="black", back_color="white")
+            img_buffer = BytesIO()
+            qr_img.save(img_buffer, format='PNG')
+            img_buffer.seek(0)
+            
+            qr_base64 = base64.b64encode(img_buffer.getvalue()).decode()
+            
+            # Préparer les données de l'article (seulement pour la quantité)
+            article_data = {
+                'article': article,
+                'variante': variante,
+                'panier': panier,
+                'qr_content': qr_content,
+                'qr_image': f"data:image/png;base64,{qr_base64}"
+            }
+            
+            articles_data.append(article_data)
+        
+        # Rendre le template HTML pour l'impression simple
+        context = {
+            'commande': commande,
+            'etiquette': etiquette,
+            'articles_data': articles_data,
+        }
+        
+        return render(request, 'etiquettes_pro/qr_codes_simple_print.html', context)
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur lors de la génération des codes QR: {str(e)}'
+        }, status=500)
+
+
+@superviseur_required
+@can_print_etiquettes
+@require_http_methods(["POST"])
+def bulk_print_qr_codes_simple(request):
+    """Impression multiple des codes QR simples pour plusieurs étiquettes sélectionnées"""
+    try:
+        # Récupérer les IDs des étiquettes sélectionnées
+        etiquette_ids = request.POST.getlist('etiquette_ids[]')
+        
+        if not etiquette_ids:
+            return JsonResponse({
+                'success': False,
+                'error': 'Aucune étiquette sélectionnée'
+            }, status=400)
+        
+        # Récupérer les étiquettes
+        etiquettes = Etiquette.objects.filter(id__in=etiquette_ids).select_related('template')
+        
+        if not etiquettes.exists():
+            return JsonResponse({
+                'success': False,
+                'error': 'Aucune étiquette valide trouvée'
+            }, status=400)
+        
+        # Préparer les données pour toutes les étiquettes
+        all_articles_data = []
+        commandes_info = []
+        
+        for etiquette in etiquettes:
+            if not etiquette.commande_id:
+                continue
+                
+            # Récupérer la commande par son ID
+            try:
+                commande = Commande.objects.select_related('client').get(id=int(etiquette.commande_id))
+            except (Commande.DoesNotExist, ValueError):
+                continue
+            
+            # Vérifier que la commande est confirmée
+            etat_actuel = commande.etat_actuel
+            if not etat_actuel or not etat_actuel.enum_etat or etat_actuel.enum_etat.libelle != 'Confirmée':
+                continue
+            
+            # Récupérer tous les articles du panier
+            paniers = commande.paniers.select_related('article', 'variante').all()
+            
+            if not paniers.exists():
+                continue
+            
+            # Ajouter les infos de la commande
+            commandes_info.append({
+                'commande': commande,
+                'etiquette': etiquette,
+                'paniers_count': paniers.count()
+            })
+            
+            # Générer les codes QR pour chaque article
+            for panier in paniers:
+                article = panier.article
+                variante = panier.variante
+                
+                # Générer le code QR
+                qr_content = f"{article.reference or article.nom}"
+                if variante and variante.reference_variante:
+                    qr_content = variante.reference_variante
+                
+                # Créer le QR code
+                qr = qrcode.QRCode(
+                    version=1,
+                    error_correction=qrcode.constants.ERROR_CORRECT_L,
+                    box_size=8,
+                    border=4,
+                )
+                qr.add_data(qr_content)
+                qr.make(fit=True)
+                
+                # Convertir en image base64 pour l'affichage HTML
+                qr_img = qr.make_image(fill_color="black", back_color="white")
+                img_buffer = BytesIO()
+                qr_img.save(img_buffer, format='PNG')
+                img_buffer.seek(0)
+                
+                qr_base64 = base64.b64encode(img_buffer.getvalue()).decode()
+                
+                # Répéter selon la quantité
+                for i in range(panier.quantite):
+                    article_data = {
+                        'article': article,
+                        'variante': variante,
+                        'panier': panier,
+                        'qr_content': qr_content,
+                        'qr_image': f"data:image/png;base64,{qr_base64}",
+                        'commande_num': commande.num_cmd,
+                        'etiquette_id': etiquette.id
+                    }
+                    all_articles_data.append(article_data)
+        
+        if not all_articles_data:
+            return JsonResponse({
+                'success': False,
+                'error': 'Aucun code QR à générer pour les étiquettes sélectionnées'
+            }, status=400)
+        
+        # Rendre le template HTML pour l'impression multiple
+        context = {
+            'commandes_info': commandes_info,
+            'all_articles_data': all_articles_data,
+            'total_qr_codes': len(all_articles_data)
+        }
+        
+        return render(request, 'etiquettes_pro/bulk_qr_codes_simple_print.html', context)
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur lors de la génération des codes QR: {str(e)}'
+        }, status=500)
+
+
+@superviseur_required
+@can_print_etiquettes
+@require_http_methods(["POST"])
+def bulk_print_qr_codes_details(request):
+    """Impression multiple des codes QR avec détails pour plusieurs étiquettes sélectionnées"""
+    try:
+        # Récupérer les IDs des étiquettes sélectionnées
+        etiquette_ids = request.POST.getlist('etiquette_ids[]')
+        
+        if not etiquette_ids:
+            return JsonResponse({
+                'success': False,
+                'error': 'Aucune étiquette sélectionnée'
+            }, status=400)
+        
+        # Récupérer les étiquettes
+        etiquettes = Etiquette.objects.filter(id__in=etiquette_ids).select_related('template')
+        
+        if not etiquettes.exists():
+            return JsonResponse({
+                'success': False,
+                'error': 'Aucune étiquette valide trouvée'
+            }, status=400)
+        
+        # Préparer les données pour toutes les étiquettes
+        all_articles_data = []
+        commandes_info = []
+        
+        for etiquette in etiquettes:
+            if not etiquette.commande_id:
+                continue
+                
+            # Récupérer la commande par son ID
+            try:
+                commande = Commande.objects.select_related('client').get(id=int(etiquette.commande_id))
+            except (Commande.DoesNotExist, ValueError):
+                continue
+            
+            # Vérifier que la commande est confirmée
+            etat_actuel = commande.etat_actuel
+            if not etat_actuel or not etat_actuel.enum_etat or etat_actuel.enum_etat.libelle != 'Confirmée':
+                continue
+            
+            # Récupérer tous les articles du panier
+            paniers = commande.paniers.select_related('article', 'variante').all()
+            
+            if not paniers.exists():
+                continue
+            
+            # Ajouter les infos de la commande
+            commandes_info.append({
+                'commande': commande,
+                'etiquette': etiquette,
+                'paniers_count': paniers.count()
+            })
+            
+            # Générer les codes QR pour chaque article
+            for panier in paniers:
+                article = panier.article
+                variante = panier.variante
+                
+                # Générer le code QR
+                qr_content = f"{article.reference or article.nom}"
+                if variante and variante.reference_variante:
+                    qr_content = variante.reference_variante
+        
+                # Créer le QR code
+                qr = qrcode.QRCode(
+                    version=1,
+                    error_correction=qrcode.constants.ERROR_CORRECT_L,
+                    box_size=6,
+                    border=4,
+                )
+                qr.add_data(qr_content)
+                qr.make(fit=True)
+                
+                # Convertir en image base64 pour l'affichage HTML
+                qr_img = qr.make_image(fill_color="black", back_color="white")
+                img_buffer = BytesIO()
+                qr_img.save(img_buffer, format='PNG')
+                img_buffer.seek(0)
+                
+                qr_base64 = base64.b64encode(img_buffer.getvalue()).decode()
+                
+                # Répéter selon la quantité
+                for i in range(panier.quantite):
+                    article_data = {
+                        'article': article,
+                        'variante': variante,
+                        'panier': panier,
+                        'qr_content': qr_content,
+                        'qr_image': f"data:image/png;base64,{qr_base64}",
+                        'commande_num': commande.num_cmd,
+                        'etiquette_id': etiquette.id
+                    }
+                    all_articles_data.append(article_data)
+        
+        if not all_articles_data:
+            return JsonResponse({
+                'success': False,
+                'error': 'Aucun code QR à générer pour les étiquettes sélectionnées'
+            }, status=400)
+        
+        # Rendre le template HTML pour l'impression multiple
+        context = {
+            'commandes_info': commandes_info,
+            'all_articles_data': all_articles_data,
+            'total_qr_codes': len(all_articles_data)
+        }
+        
+        return render(request, 'etiquettes_pro/bulk_qr_codes_details_print.html', context)
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur lors de la génération des codes QR: {str(e)}'
+        }, status=500)
 
 
 @superviseur_required

@@ -127,7 +127,13 @@
                         <button id="bulk-print-btn" class="theme-button-primary">
                             <i class="fas fa-print mr-2"></i>Imprimer sélection
                         </button>
-                        <button id="bulk-delete-btn" class="theme-button-danger">
+                        <button id="bulk-qr-details-btn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-2">
+                            <i class="fas fa-qrcode mr-2"></i>Codes QR avec détails
+                        </button>
+                        <button id="bulk-qr-simple-btn" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-2">
+                            <i class="fas fa-qrcode mr-2"></i>Codes QR simples
+                        </button>
+                        <button id="bulk-delete-btn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-2">
                             <i class="fas fa-trash mr-2"></i>Supprimer sélection
                         </button>
                 </div>
@@ -193,9 +199,17 @@
                             </td>
                         <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500 etiquette-date">{{ item.etiquette.date_creation|date:"d/m/Y H:i" }}</td>
                         <td class="px-3 py-2 whitespace-nowrap text-center text-sm font-medium">
-                            <a href="{% url 'etiquettes_pro:etiquette_preview' item.etiquette.id %}" class="text-indigo-600 hover:text-indigo-900 transition-colors duration-200" title="Aperçu">
+                            <div class="flex items-center justify-center space-x-2">
+                                <a href="{% url 'etiquettes_pro:etiquette_preview' item.etiquette.id %}" class="text-indigo-600 hover:text-indigo-900 transition-colors duration-200" title="Aperçu">
                                         <i class="fas fa-eye"></i>
                                     </a>
+                                <a href="{% url 'etiquettes_pro:generate_qr_codes_articles' item.etiquette.id %}" class="text-green-600 hover:text-green-900 transition-colors duration-200" title="Codes QR avec détails">
+                                    <i class="fas fa-qrcode"></i>
+                                </a>
+                                <a href="{% url 'etiquettes_pro:generate_qr_codes_simple' item.etiquette.id %}" class="text-gray-600 hover:text-gray-900 transition-colors duration-200" title="Codes QR simples">
+                                    <i class="fas fa-qrcode"></i>
+                                    </a>
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
@@ -228,8 +242,10 @@
 
 <!-- Scripts pour la pagination et recherche intelligente -->
 <script src="{% static 'js/etiquettes_pro/smart-search.js' %}"></script>
-<script src="{% static 'js/etiquettes_pro/bulk-print.js' %}"></script>
-<script src="{% static 'js/etiquettes_pro/bulk-delete.js' %}"></script>
+    <script src="{% static 'js/etiquettes_pro/bulk-print.js' %}"></script>
+    <script src="{% static 'js/etiquettes_pro/bulk-delete.js' %}"></script>
+    <script src="{% static 'js/etiquettes_pro/bulk-qr-simple.js' %}"></script>
+    <script src="{% static 'js/etiquettes_pro/bulk-qr-details.js' %}"></script>
 
 <!-- Script de pagination intelligente pour le tableau dashboard -->
 <script>

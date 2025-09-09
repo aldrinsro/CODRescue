@@ -175,20 +175,20 @@ class TemplateDeleter {
         }
 
         const toast = document.createElement('div');
-        toast.className = `toast toast-${type} mb-2 p-4 rounded-lg shadow-lg transform transition-all duration-300 translate-x-full`;
+        const bgColor = type === 'success' ? 'bg-green-500' : 
+                       type === 'error' ? 'bg-red-500' : 
+                       type === 'warning' ? 'bg-yellow-500' : 'bg-blue-500';
+        
+        toast.className = `${bgColor} text-white px-6 py-3 rounded-lg shadow-lg mb-2 max-w-md opacity-0 transform transition-all duration-300 ease-in-out`;
         
         const icon = type === 'success' ? 'fa-check-circle' : 
                     type === 'error' ? 'fa-exclamation-circle' : 
                     type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle';
         
-        const bgColor = type === 'success' ? 'bg-green-500' : 
-                       type === 'error' ? 'bg-red-500' : 
-                       type === 'warning' ? 'bg-yellow-500' : 'bg-blue-500';
-        
         toast.innerHTML = `
-            <div class="flex items-center space-x-2 text-white">
-                <i class="fas ${icon}"></i>
-                <span>${message}</span>
+            <div class="flex items-center space-x-2">
+                <i class="fas ${icon} mr-2"></i>
+                <span class="text-sm font-medium">${message}</span>
             </div>
         `;
         
@@ -196,18 +196,20 @@ class TemplateDeleter {
         
         // Animation d'entrée
         requestAnimationFrame(() => {
-            toast.classList.remove('translate-x-full');
+            toast.classList.remove('opacity-0');
+            toast.classList.add('opacity-100');
         });
         
         // Suppression automatique
         setTimeout(() => {
-            toast.classList.add('translate-x-full');
+            toast.classList.remove('opacity-100');
+            toast.classList.add('opacity-0');
             setTimeout(() => {
                 if (toast.parentNode) {
                     toast.parentNode.removeChild(toast);
                 }
             }, 300);
-        }, 4000);
+        }, 5000);
     }
 }
 

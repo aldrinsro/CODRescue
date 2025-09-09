@@ -354,49 +354,51 @@ class RealtimeCommandesManager {
     }
 
     showToast(message, type = 'info') {
-        const toastContainer = document.getElementById('toastContainer');
-        if (!toastContainer) return;
+        // Créer le conteneur de toast s'il n'existe pas
+        let toastContainer = document.getElementById('toastContainer');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.id = 'toastContainer';
+            toastContainer.className = 'fixed top-4 right-4 z-50';
+            document.body.appendChild(toastContainer);
+        }
 
         const toast = document.createElement('div');
-        toast.className = `toast toast-${type} fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transform transition-all duration-300 translate-x-full`;
+        const bgColor = type === 'success' ? 'bg-green-500' : 
+                       type === 'error' ? 'bg-red-500' : 
+                       type === 'warning' ? 'bg-yellow-500' : 'bg-blue-500';
         
-        const icon = type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle';
+        toast.className = `${bgColor} text-white px-6 py-3 rounded-lg shadow-lg mb-2 max-w-md opacity-0 transform transition-all duration-300 ease-in-out`;
+        
+        const icon = type === 'success' ? 'fa-check-circle' : 
+                    type === 'error' ? 'fa-exclamation-circle' : 
+                    type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle';
         
         toast.innerHTML = `
-            <div class="flex items-center space-x-2 text-white">
-                <i class="fas ${icon}"></i>
-                <span>${message}</span>
+            <div class="flex items-center space-x-2">
+                <i class="fas ${icon} mr-2"></i>
+                <span class="text-sm font-medium">${message}</span>
             </div>
         `;
         
         toastContainer.appendChild(toast);
         
-        // Animation d'entrée avec gestion d'erreur
+        // Animation d'entrée
         requestAnimationFrame(() => {
-            try {
-                toast.classList.remove('translate-x-full');
-            } catch (e) {
-                console.warn('Erreur animation toast:', e);
-            }
+            toast.classList.remove('opacity-0');
+            toast.classList.add('opacity-100');
         });
         
-        // Suppression automatique avec gestion d'erreur
+        // Suppression automatique
         setTimeout(() => {
-            try {
-                toast.classList.add('translate-x-full');
-                setTimeout(() => {
-                    try {
-                        if (toast.parentNode) {
-                            toast.parentNode.removeChild(toast);
-                        }
-                    } catch (e) {
-                        console.warn('Erreur suppression toast:', e);
-                    }
-                }, 300);
-            } catch (e) {
-                console.warn('Erreur animation sortie toast:', e);
-            }
-        }, 3000);
+            toast.classList.remove('opacity-100');
+            toast.classList.add('opacity-0');
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 300);
+        }, 5000);
     }
 
     startAutoRefresh() {
