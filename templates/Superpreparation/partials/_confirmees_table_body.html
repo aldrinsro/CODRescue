@@ -13,9 +13,9 @@
     data-etat="Confirmée"
     data-operateur="{% if commande.etat_confirmation.operateur %}{{ commande.etat_confirmation.operateur.nom }} {{ commande.etat_confirmation.operateur.prenom }}{% elif commande.etat_actuel.operateur %}{{ commande.etat_actuel.operateur.nom }} {{ commande.etat_actuel.operateur.prenom }}{% endif %}">
 
-    <!-- Checkbox de sélection -->
+    <!-- Checkbox de sélection pour affectation -->
     <td class="px-4 py-4 whitespace-nowrap text-center">
-        <input type="checkbox" class="commande-checkbox form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" data-commande-id="{{ commande.id }}">
+            <input type="checkbox" class="commande-checkbox form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" data-commande-id="{{ commande.id }}" data-id-yz="{{ commande.id_yz }}">
     </td>
 
     <!-- ID YZ -->
@@ -198,6 +198,9 @@
     <!-- Actions -->
     <td class="px-4 py-4 whitespace-nowrap text-center">
         <div class="flex justify-center space-x-2">
+            <!-- Checkbox pour impression (petit) -->
+            <input type="checkbox" class="etiquette-checkbox form-checkbox h-3 w-3 text-blue-600 rounded focus:ring-blue-500" data-etiquette-id="{{ commande.id }}" title="Sélectionner pour impression">
+            
             <!-- Bouton Détails -->
             <a href="{% url 'Superpreparation:detail_prepa' commande.pk %}" 
                class="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 shadow-sm hover:shadow-md"
@@ -223,6 +226,22 @@
             </button>
             {% endif %}
             
+            <!-- Boutons d'impression et codes QR -->
+            <button class="qr-details-btn p-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 shadow-sm hover:shadow-md" data-commande-id="{{ commande.id }}" title="Codes QR avec détails">
+                <i class="fas fa-qrcode text-sm"></i>
+            </button>
+            
+            <button class="qr-simple-btn p-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 shadow-sm hover:shadow-md" data-commande-id="{{ commande.id }}" title="Codes QR simples">
+                <i class="fas fa-qrcode text-sm"></i>
+            </button>
+            
+            <button class="preview-btn p-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 shadow-sm hover:shadow-md" data-commande-id="{{ commande.id }}" title="Aperçu">
+                <i class="fas fa-eye text-sm"></i>
+            </button>
+            
+            <button class="print-btn p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 shadow-sm hover:shadow-md" data-commande-id="{{ commande.id }}" title="Imprimer">
+                <i class="fas fa-print text-sm"></i>
+            </button>
 
         </div>
     </td>

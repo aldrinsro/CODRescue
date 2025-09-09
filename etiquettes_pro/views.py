@@ -963,9 +963,19 @@ def api_template_list(request):
 
 def api_etiquette_list(request):
     """API pour lister les étiquettes"""
-    etiquettes = Etiquette.objects.all()[:50]  # Limiter à 50
-    data = [{'id': e.id, 'reference': e.reference, 'statut': e.statut} for e in etiquettes]
-    return JsonResponse({'etiquettes': data})
+    # Vérifier si un filtre par commande_id est demandé
+    commande_id = request.GET.get('commande_id')
+    
+    if commande_id:
+        # Filtrer par commande_id
+        etiquettes = Etiquette.objects.filter(commande_id=str(commande_id))
+        print(f"🔍 [DEBUG API] Recherche étiquettes pour commande_id: {commande_id}, trouvées: {etiquettes.count()}")
+    else:
+        # Récupérer toutes les étiquettes (limitées à 50)
+        etiquettes = Etiquette.objects.all()[:50]
+    
+    data = [{'id': e.id, 'reference': e.reference, 'statut': e.statut, 'commande_id': e.commande_id} for e in etiquettes]
+    return JsonResponse(data, safe=False)
 
 
 
