@@ -136,64 +136,23 @@
             {% endif %}
         </div>
 
-        <!-- Barre d'outils -->
+        <!-- Barre d'outils simplifiée -->
         <div class="mb-4 sm:mb-6 flex flex-col lg:flex-row gap-3 lg:gap-2 bg-gray-50 p-3 sm:p-4 rounded-lg border border-gray-200">
-            <!-- Sélecteur éléments par page -->
-            <form method="GET" class="flex items-center w-full lg:w-auto">
-                {% if search_query %}
-                    <input type="hidden" name="search" value="{{ search_query }}">
-                {% endif %}
-                {% if filter_type != 'all' %}
-                    <input type="hidden" name="filter" value="{{ filter_type }}">
-                {% endif %}
-                
-                <!-- Container moderne pour le sélecteur -->
-                <div class="flex items-center bg-white rounded-xl shadow-sm border border-gray-200 px-3 sm:px-4 py-2 hover:shadow-md transition-all duration-300 group w-full lg:w-auto">
-                    <!-- Icône -->
-                    <div class="mr-3 p-1.5 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 group-hover:from-blue-100 group-hover:to-indigo-100 transition-all duration-300">
+            <!-- Indicateur de pagination client-side -->
+            <div class="flex items-center bg-white rounded-xl shadow-sm border border-gray-200 px-3 sm:px-4 py-2 w-full lg:w-auto">
+                <div class="mr-3 p-1.5 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50">
                         <i class="fas fa-list-ol text-blue-600 text-sm"></i>
                     </div>
-                    
-                    <!-- Label stylisé -->
-                    <label for="itemsPerPage" class="mr-2 sm:mr-3 text-xs sm:text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors duration-300">
-                        <span class="hidden sm:inline">Éléments/page</span>
-                        <span class="sm:hidden">Élém.</span>
-                    </label>
-                    
-                    <!-- Séparateur -->
-                    <div class="w-px h-6 bg-gray-300 mx-2"></div>
-                    
-                    <!-- Select stylisé (caché) -->
-                    <select id="itemsPerPage" name="items_per_page" onchange="this.form.submit()" 
-                            class="hidden">
-                        <option value="10" {% if items_per_page|default:10 == 10 %}selected{% endif %}>10</option>
-                        <option value="25" {% if items_per_page == 25 %}selected{% endif %}>25</option>
-                        <option value="50" {% if items_per_page == 50 %}selected{% endif %}>50</option>
-                        <option value="100" {% if items_per_page == 100 %}selected{% endif %}>100</option>
-                    </select>
-                    
-                    <!-- Dropdown personnalisé -->
-                    <div id="customDropdown" class="relative">
-                        <!-- Bouton d'affichage avec crochet intégré -->
-                        <button type="button" id="dropdownButton" 
-                                class="px-3 py-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors duration-300 cursor-pointer flex items-center gap-2 hover:bg-blue-50 rounded-lg px-3 py-2 transition-all duration-300">
-                            <span id="selectedValue">10</span>
-                            <i class="fas fa-chevron-down text-xs transition-transform duration-300"></i>
+                <span class="text-xs sm:text-sm font-medium text-gray-700">
+                    <span class="hidden sm:inline">Pagination intelligente activée</span>
+                    <span class="sm:hidden">Pagination active</span>
+                </span>
+                <button onclick="if(window.smartTablePagination) { window.smartTablePagination.refresh(); console.log('🔄 Pagination rafraîchie'); }" 
+                        class="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-600 rounded hover:bg-blue-200">
+                    Rafraîchir
                         </button>
-                        
-                        <!-- Liste des options -->
-                        <div id="dropdownOptions" class="absolute top-full left-0 right-0 sm:right-auto mt-1 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible transform scale-95 -translate-y-2 transition-all duration-200 z-50 min-w-full sm:min-w-[80px]">
-                            <div class="py-1">
-                                <div class="option-item px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm text-gray-700 hover:text-blue-700 transition-colors duration-150 text-center sm:text-left" data-value="10">10</div>
-                                <div class="option-item px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm text-gray-700 hover:text-blue-700 transition-colors duration-150 text-center sm:text-left" data-value="25">25</div>
-                                <div class="option-item px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm text-gray-700 hover:text-blue-700 transition-colors duration-150 text-center sm:text-left" data-value="50">50</div>
-                                <div class="option-item px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm text-gray-700 hover:text-blue-700 transition-colors duration-150 text-center sm:text-left" data-value="100">100</div>
                             </div>
                         </div>
-                    </div>
-                </div>
-            </form>
-                </div>
                 
         <!-- Recherche intelligente et filtres avancés -->
         {% include 'Superpreparation/includes/smart-search-toolbar.html' %}
@@ -1008,6 +967,8 @@ document.addEventListener('DOMContentLoaded', function() {
             perPageOptions: [10,12,25,50,100],
             defaultPerPage: 12
         });
+    } else {
+        console.error('❌ createSmartTablePagination non disponible');
     }
 });
 </script>
@@ -1323,253 +1284,13 @@ if (typeof window.toggleDropdown === 'undefined') {
     console.log('✅ Fonction toggleDropdown de la sidebar trouvée et préservée');
 }
 
-// Fonction pour ouvrir/fermer le dropdown de pagination (renommée pour éviter les conflits)
-function togglePaginationDropdown() {
-    const dropdown = document.getElementById('dropdownOptions');
-    const button = document.getElementById('dropdownButton');
-    const chevron = button.querySelector('.fa-chevron-down');
-    
-    if (isDropdownOpen) {
-        // Fermer le dropdown
-        dropdown.classList.remove('opacity-100', 'visible', 'scale-100', 'translate-y-0');
-        dropdown.classList.add('opacity-0', 'invisible', 'scale-95', '-translate-y-2');
-        isDropdownOpen = false;
-        button.classList.remove('text-blue-700');
-        button.classList.add('text-blue-600');
-        
-        // Animation du crochet (retour à la normale)
-        if (chevron) {
-            chevron.style.transform = 'rotate(0deg)';
-        }
-    } else {
-        // Ouvrir le dropdown
-        dropdown.classList.remove('opacity-0', 'invisible', 'scale-95', '-translate-y-2');
-        dropdown.classList.add('opacity-100', 'visible', 'scale-100', 'translate-y-0');
-        isDropdownOpen = true;
-        button.classList.remove('text-blue-600');
-        button.classList.add('text-blue-700');
-        
-        // Animation du crochet (rotation)
-        if (chevron) {
-            chevron.style.transform = 'rotate(180deg)';
-        }
-    }
-}
+// Ancienne logique de pagination supprimée
 
-// Fonction pour sélectionner une option
-function selectOption(value) {
-    const selectedValue = document.getElementById('selectedValue');
-    const hiddenSelect = document.getElementById('itemsPerPage');
-    
-    // Mettre à jour l'affichage
-    selectedValue.textContent = value;
-    
-    // Mettre à jour le select caché
-    hiddenSelect.value = value;
-    
-    // Fermer le dropdown
-    toggleDropdown();
-    
-    // Mettre à jour l'URL et recharger les données sans recharger la page
-    updatePaginationWithoutReload(value);
-}
+// Ancienne logique de pagination supprimée - remplacée par la pagination client-side
 
-// Initialisation quand le DOM est chargé
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('🔄 Configuration du dropdown personnalisé...');
-    
-    // Initialiser la valeur sélectionnée
-    const hiddenSelect = document.getElementById('itemsPerPage');
-    const selectedValue = document.getElementById('selectedValue');
-    if (hiddenSelect && selectedValue) {
-        selectedValue.textContent = hiddenSelect.value;
-    }
-    
-    // Configurer le bouton du dropdown
-    const dropdownButton = document.getElementById('dropdownButton');
-    if (dropdownButton) {
-        dropdownButton.addEventListener('click', function(e) {
-            e.preventDefault();
-            togglePaginationDropdown();
-        });
-    }
-    
-    // Configurer les options
-    const options = document.querySelectorAll('.option-item');
-    options.forEach(option => {
-        option.addEventListener('click', function() {
-            const value = this.getAttribute('data-value');
-            selectOption(value);
-        });
-    });
-    
-    // Fermer le dropdown si on clique ailleurs
-    document.addEventListener('click', function(e) {
-        const dropdown = document.getElementById('customDropdown');
-        if (dropdown && !dropdown.contains(e.target)) {
-            if (isDropdownOpen) {
-                togglePaginationDropdown();
-            }
-        }
-    });
-    
-    console.log('✅ Dropdown personnalisé configuré');
-    
-    // Initialiser les variables avec les valeurs actuelles de l'URL
-    initializeCurrentValues();
-});
+// Ancienne logique de pagination supprimée - remplacée par la pagination client-side
 
-// Fonction pour initialiser les valeurs actuelles
-function initializeCurrentValues() {
-    const urlParams = new URLSearchParams(window.location.search);
-    currentPage = parseInt(urlParams.get('page')) || 1;
-    currentFilter = urlParams.get('filter') || 'affectees_admin';
-    currentSearch = urlParams.get('search') || '';
-    
-    console.log('📋 Valeurs initiales:', { currentPage, currentFilter, currentSearch });
-}
-
-// Fonction pour mettre à jour la pagination sans recharger la page
-function updatePaginationWithoutReload(itemsPerPage) {
-    console.log('🔄 Mise à jour de la pagination sans rechargement...');
-    
-    // Construire l'URL avec les nouveaux paramètres
-    const url = new URL(window.location);
-    url.searchParams.set('items_per_page', itemsPerPage);
-    url.searchParams.set('page', '1'); // Retour à la première page
-    url.searchParams.delete('_'); // Supprimer le timestamp Django
-    
-    // Mettre à jour l'URL sans recharger la page
-    window.history.pushState({}, '', url);
-    
-    // Afficher un indicateur de chargement
-    showLoadingIndicator();
-    
-    // Faire la requête AJAX pour récupérer les nouvelles données
-    fetch(url.toString(), {
-        method: 'GET',
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            'Accept': 'text/html'
-        }
-    })
-    .then(response => response.text())
-    .then(html => {
-        // Extraire seulement la table des commandes
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, 'text/html');
-        
-        // Trouver la table dans la nouvelle page
-        const newTable = doc.querySelector('table');
-        const currentTable = document.querySelector('table');
-        
-        if (newTable && currentTable) {
-            // Remplacer la table
-            currentTable.innerHTML = newTable.innerHTML;
-            console.log('✅ Table mise à jour');
-        }
-        
-        // Mettre à jour la pagination si elle existe
-        const newPagination = doc.querySelector('.pagination');
-        const currentPagination = document.querySelector('.pagination');
-        
-        if (newPagination && currentPagination) {
-            currentPagination.innerHTML = newPagination.innerHTML;
-            console.log('✅ Pagination mise à jour');
-        }
-        
-        // Mettre à jour le compteur d'éléments si il existe
-        const newCounter = doc.querySelector('.text-sm.text-gray-700');
-        const currentCounter = document.querySelector('.text-sm.text-gray-700');
-        
-        if (newCounter && currentCounter) {
-            currentCounter.innerHTML = newCounter.innerHTML;
-            console.log('✅ Compteur mis à jour');
-        }
-        
-        // Cacher l'indicateur de chargement
-        hideLoadingIndicator();
-        
-        // Afficher une notification de succès
-        showSuccessMessage(`Pagination mise à jour : ${itemsPerPage} éléments par page`);
-        
-    })
-    .catch(error => {
-        console.error('❌ Erreur lors de la mise à jour:', error);
-        hideLoadingIndicator();
-        showErrorMessage('Erreur lors de la mise à jour de la pagination');
-        
-        // Fallback : recharger la page en cas d'erreur
-        setTimeout(() => {
-            window.location.reload();
-        }, 2000);
-    });
-}
-
-// Fonction pour afficher l'indicateur de chargement
-function showLoadingIndicator() {
-    // Créer ou afficher l'indicateur de chargement
-    let loader = document.getElementById('paginationLoader');
-    if (!loader) {
-        loader = document.createElement('div');
-        loader.id = 'paginationLoader';
-        loader.className = 'fixed top-4 right-4 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 flex items-center gap-2';
-        loader.innerHTML = `
-            <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-            <span>Mise à jour...</span>
-        `;
-        document.body.appendChild(loader);
-    }
-    loader.style.display = 'flex';
-}
-
-// Fonction pour cacher l'indicateur de chargement
-function hideLoadingIndicator() {
-    const loader = document.getElementById('paginationLoader');
-    if (loader) {
-        loader.style.display = 'none';
-    }
-}
-
-// Fonction pour afficher un message de succès
-function showSuccessMessage(message) {
-    // Créer ou afficher le message de succès
-    let successMsg = document.getElementById('successMessage');
-    if (!successMsg) {
-        successMsg = document.createElement('div');
-        successMsg.id = 'successMessage';
-        successMsg.className = 'fixed top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50';
-        document.body.appendChild(successMsg);
-    }
-    
-    successMsg.textContent = message;
-    successMsg.style.display = 'block';
-    
-    // Cacher après 3 secondes
-    setTimeout(() => {
-        successMsg.style.display = 'none';
-    }, 3000);
-}
-
-// Fonction pour afficher un message d'erreur
-function showErrorMessage(message) {
-    // Créer ou afficher le message d'erreur
-    let errorMsg = document.getElementById('errorMessage');
-    if (!errorMsg) {
-        errorMsg = document.createElement('div');
-        errorMsg.id = 'errorMessage';
-        errorMsg.className = 'fixed top-4 right-4 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg z-50';
-        document.body.appendChild(errorMsg);
-    }
-    
-    errorMsg.textContent = message;
-    errorMsg.style.display = 'block';
-    
-    // Cacher après 5 secondes
-    setTimeout(() => {
-        errorMsg.style.display = 'none';
-    }, 5000);
-}
+// Fonctions de messages supprimées - remplacées par la pagination client-side
 
 // Fonction pour afficher/masquer les détails d'état
 function toggleEtatDetails(commandeId) {
