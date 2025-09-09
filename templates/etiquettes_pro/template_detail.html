@@ -275,10 +275,14 @@
         <a href="{% url 'etiquettes_pro:template_list' %}" class="theme-button-secondary">
             <i class="fas fa-list"></i> Liste des Templates
         </a>
-        <a href="{% url 'etiquettes_pro:template_delete' template.pk %}" class="theme-button-secondary bg-red-600 hover:bg-red-700" 
-           onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce template ?')">
+        <button class="template-delete-btn theme-button-secondary bg-red-600 hover:bg-red-700" 
+                data-template-id="{{ template.pk }}" 
+                data-template-name="{{ template.nom }}">
             <i class="fas fa-trash"></i> Supprimer
-        </a>
+        </button>
     </div>
 </div>
+
+<!-- Scripts -->
+<script src="{% static 'js/etiquettes_pro/template-delete.js' %}"></script>
 {% endblock %}

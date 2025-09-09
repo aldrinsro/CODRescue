@@ -70,9 +70,9 @@ class TemplateDeleter {
                 this.showSuccess(data.message);
                 console.log(`✅ [TEMPLATE-DELETE] Template ${templateId} supprimé avec succès`);
                 
-                // Recharger la page pour mettre à jour l'affichage
+                // Rediriger vers la liste des templates après suppression
                 setTimeout(() => {
-                    window.location.reload();
+                    window.location.href = '/etiquettes-pro/templates/';
                 }, 1500);
             } else {
                 this.showError(data.error || 'Erreur inconnue');
