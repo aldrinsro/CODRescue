@@ -208,7 +208,10 @@
                                 </a>
                                 <a href="{% url 'etiquettes_pro:generate_qr_codes_simple' item.etiquette.id %}" class="text-gray-600 hover:text-gray-900 transition-colors duration-200" title="Codes QR simples">
                                     <i class="fas fa-qrcode"></i>
-                                    </a>
+                                </a>
+                                <button class="print-btn text-blue-600 hover:text-blue-900 transition-colors duration-200" data-etiquette-id="{{ item.etiquette.id }}" title="Imprimer">
+                                    <i class="fas fa-print"></i>
+                                </button>
                                 </div>
                             </td>
                         </tr>
@@ -246,6 +249,8 @@
     <script src="{% static 'js/etiquettes_pro/bulk-delete.js' %}"></script>
     <script src="{% static 'js/etiquettes_pro/bulk-qr-simple.js' %}"></script>
     <script src="{% static 'js/etiquettes_pro/bulk-qr-details.js' %}"></script>
+    <!-- Script d'impression individuelle -->
+    <script src="{% static 'js/print_etiquette.js' %}"></script>
 
 <!-- Script de pagination intelligente pour le tableau dashboard -->
 <script>
