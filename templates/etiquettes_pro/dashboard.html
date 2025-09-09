@@ -37,7 +37,30 @@
     </div>
 
     <!-- Statistiques rapides -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 lg:mb-8">
+    <!-- Accès rapide (section fine) -->
+    <div id="quick-access" class="bg-white rounded-lg shadow-sm border border-gray-200 mb-4">
+        <div class="px-4 py-2 border-b border-gray-100">
+            <h3 class="text-sm font-semibold text-gray-800 flex items-center">
+                <i class="fas fa-bolt mr-2 text-gray-500"></i> Accès rapide
+            </h3>
+        </div>
+        <div class="px-4 py-2">
+            <div class="flex flex-wrap items-center gap-2">
+                <a href="{% url 'etiquettes_pro:template_list' %}" class="theme-button-secondary text-sm px-3 py-1.5 flex items-center">
+                    <i class="fas fa-file-alt mr-2"></i> Modèles d'étiquettes
+                </a>
+                <a href="{% url 'etiquettes_pro:template_create' %}" class="theme-button-primary text-sm px-3 py-1.5 flex items-center">
+                    <i class="fas fa-plus mr-2"></i> Créer un modèle
+                </a>
+                <a href="{% url 'etiquettes_pro:etiquette_list' %}" class="theme-button-secondary text-sm px-3 py-1.5 flex items-center">
+                    <i class="fas fa-tags mr-2"></i> Mes étiquettes
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques rapides -->
+    <div id="stats-cards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 lg:mb-8">
         <!-- Total étiquettes -->
         <div class="group bg-white rounded-xl shadow-lg p-3 sm:p-4 transition-all duration-300 hover:shadow-2xl hover:scale-105 border border-gray-100 h-full flex flex-col" style="border-color: var(--preparation-border-accent);">
             <div class="flex items-center justify-between flex-grow">
@@ -367,6 +390,58 @@
     <script src="{% static 'js/etiquettes_pro/bulk-qr-details.js' %}"></script>
     <!-- Script d'impression individuelle -->
     <script src="{% static 'js/print_etiquette.js' %}"></script>
+
+    <!-- Repositionner Accès rapide après la Recherche Intelligente -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var quick = document.getElementById('quick-access');
+
+        if (!quick) {
+            return;
+        }
+
+        // Masquer temporairement pour éviter le clignotement lors du déplacement
+        var previousVisibility = quick.style.visibility;
+        quick.style.visibility = 'hidden';
+
+        function placeQuickAccessOnce() {
+            var search = document.getElementById('smartSearchContainer');
+            if (!search || !search.parentNode) {
+                return false;
+            }
+
+            // Idempotent: ne pas déplacer si déjà bien placé
+            if (search.nextSibling === quick) {
+                return true;
+            }
+
+            search.parentNode.insertBefore(quick, search.nextSibling);
+            return true;
+        }
+
+        // Essai immédiat
+        if (placeQuickAccessOnce()) {
+            quick.style.visibility = previousVisibility || '';
+            return;
+        }
+
+        // Observer l'apparition de la recherche intelligente puis déplacer une seule fois
+        var observer = new MutationObserver(function(mutations, obs) {
+            if (placeQuickAccessOnce()) {
+                quick.style.visibility = previousVisibility || '';
+                obs.disconnect();
+            }
+        });
+
+        observer.observe(document.body, { childList: true, subtree: true });
+
+        // Filet de sécurité: arrêt après 5 secondes si jamais introuvable
+        setTimeout(function() {
+            try { observer.disconnect(); } catch (e) {}
+            quick.style.visibility = previousVisibility || '';
+        }, 5000);
+    });
+    </script>
 
 <!-- Script de masquage de colonnes -->
 <script>

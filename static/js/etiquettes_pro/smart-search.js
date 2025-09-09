@@ -50,8 +50,12 @@ function collectAllEtiquettes() {
     
     allEtiquettes = Array.from(etiquetteElements).map((element, index) => {
         // Extraire les données de recherche
-        const reference = element.querySelector('.etiquette-reference')?.textContent?.trim() || '';
-        const template = element.querySelector('.etiquette-template')?.textContent?.trim() || '';
+        const reference = (isTableMode 
+            ? element.querySelector('.column-reference') 
+            : element.querySelector('.etiquette-reference'))?.textContent?.trim() || '';
+        const template = (isTableMode 
+            ? element.querySelector('.column-template') 
+            : element.querySelector('.etiquette-template'))?.textContent?.trim() || '';
         const statutElement = element.querySelector('.etiquette-statut');
         const statutDisplay = statutElement?.textContent?.trim() || '';
         
@@ -89,8 +93,12 @@ function collectAllEtiquettes() {
             }
         }
         
-        const date = element.querySelector('.etiquette-date')?.textContent?.trim() || '';
-        const commande = element.querySelector('.etiquette-commande')?.textContent?.trim() || '';
+        const date = (isTableMode 
+            ? element.querySelector('.column-date') 
+            : element.querySelector('.etiquette-date'))?.textContent?.trim() || '';
+        const commande = (isTableMode 
+            ? element.querySelector('.column-commande') 
+            : element.querySelector('.etiquette-commande'))?.textContent?.trim() || '';
         const articles = element.querySelector('.etiquette-articles')?.textContent?.trim() || '';
         const client = element.querySelector('.etiquette-client')?.textContent?.trim() || '';
         
@@ -286,21 +294,32 @@ function createSearchInterface() {
     searchContainer.appendChild(cardHeader);
     searchContainer.appendChild(cardContent);
     
-    // Insérer après les statistiques
-    const statsContainer = document.querySelector('.grid.grid-cols-2.lg\\:grid-cols-4.gap-4.mb-6');
-    if (statsContainer) {
-        statsContainer.parentNode.insertBefore(searchContainer, statsContainer.nextSibling);
-        console.log('✅ [RECHERCHE-ÉTIQUETTES] Interface de recherche insérée après les statistiques');
-    } else {
+    // Insérer après les statistiques, avec repositionnement et retries
+    const insertAfterStats = (attempt = 0) => {
+        const statsContainer = document.getElementById('stats-cards');
+        if (statsContainer) {
+            // Déplacer si déjà insérée ailleurs
+            if (searchContainer.parentNode) {
+                searchContainer.parentNode.removeChild(searchContainer);
+            }
+            statsContainer.parentNode.insertBefore(searchContainer, statsContainer.nextSibling);
+            return;
+        }
+        if (attempt < 10) {
+            setTimeout(() => insertAfterStats(attempt + 1), 200);
+            return;
+        }
         // Fallback : insérer après l'en-tête de la page
         const pageHeader = document.querySelector('.page-header');
         if (pageHeader) {
+            if (searchContainer.parentNode) {
+                searchContainer.parentNode.removeChild(searchContainer);
+            }
             pageHeader.parentNode.insertBefore(searchContainer, pageHeader.nextSibling);
-            console.log('✅ [RECHERCHE-ÉTIQUETTES] Interface de recherche insérée après l\'en-tête');
-        } else {
-            console.error('❌ [RECHERCHE-ÉTIQUETTES] Aucun conteneur parent trouvé');
         }
-    }
+    };
+
+    insertAfterStats();
 }
 
 // Attacher les event listeners
