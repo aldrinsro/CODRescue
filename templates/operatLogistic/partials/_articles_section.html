@@ -32,7 +32,7 @@
                     <div class="mt-2 flex flex-wrap gap-2">
                         {% if panier.article.pointure %}
                         <span class="inline-flex items-center px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
-                            <i class="fas fa-ruler-vertical mr-1"></i>{{ panier.article.pointure }}
+                            <i class="fas fa-ruler-vertical mr-1"></i>{{ panier.variante.pointure }}
                         </span>
                         {% else %}
                         <span class="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-xs">
@@ -42,7 +42,7 @@
                         
                         {% if panier.article.couleur %}
                         <span class="inline-flex items-center px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">
-                            <i class="fas fa-palette mr-1"></i>{{ panier.article.couleur }}
+                            <i class="fas fa-palette mr-1"></i>{{ panier.variante.couleur }}
                         </span>
                         {% else %}
                         <span class="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-xs">

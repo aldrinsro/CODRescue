@@ -690,7 +690,7 @@ def changer_etat_sav(request, commande_id):
             return JsonResponse({'success': False, 'error': 'Nouvel état non spécifié.'})
         
         # Validation des états autorisés
-        etats_autorises = ['Reportée', 'Livrée', 'Livrée avec changement', 'Retournée']
+        etats_autorises = ['Reportée', 'Livrée', 'Livrée Partiellement', 'Livrée avec changement', 'Retournée']
         if nouvel_etat not in etats_autorises:
             return JsonResponse({'success': False, 'error': 'État non autorisé.'})
         
@@ -712,6 +712,10 @@ def changer_etat_sav(request, commande_id):
                     commentaire_final = f"Reportée au {date_report}: {commentaire}"
                 else:
                     commentaire_final = f"{commentaire}"
+            elif nouvel_etat == 'Livrée':
+                commentaire_final = f"{commentaire}"
+            elif nouvel_etat == 'Livrée Partiellement':
+                commentaire_final = f"{commentaire}"
             elif nouvel_etat == 'Livrée avec changement':
                 commentaire_final = f"{commentaire}"
             elif nouvel_etat == 'Retournée':
@@ -744,8 +748,6 @@ def changer_etat_sav(request, commande_id):
                 conclusion=f"État changé vers '{nouvel_etat}'. {commentaire_final}",
                 operateur=operateur
             )
-            
-            messages.success(request, f"État de la commande changé vers '{nouvel_etat}' avec succès.")
             
             return JsonResponse({
                 'success': True,
@@ -1505,10 +1507,10 @@ def livraison_partielle(request, commande_id):
         commande = get_object_or_404(Commande, id=commande_id)
         
         # Vérifier que la commande est bien en cours de livraison
-        if not commande.etat_actuel or commande.etat_actuel.enum_etat.libelle != 'En cours de livraison':
+        if not commande.etat_actuel or commande.etat_actuel.enum_etat.libelle != 'En livraison':
             return JsonResponse({
                 'success': False, 
-                'error': 'Cette commande n\'est pas en cours de livraison. Seules les commandes en cours de livraison peuvent être livrées partiellement.'
+                'error': 'Cette commande n\'est pas en livraison. Seules les commandes en livraison peuvent être livrées partiellement.'
             })
         
         # Récupérer les données du formulaire
@@ -1516,16 +1518,15 @@ def livraison_partielle(request, commande_id):
         articles_livres = json.loads(request.POST.get('articles_livres', '[]'))
         articles_renvoyes = json.loads(request.POST.get('articles_renvoyes', '[]'))
         commentaire = request.POST.get('commentaire', '').strip()
-        type_retour = request.POST.get('type_retour', 'preparation').strip()
         
         # DEBUG: Afficher les valeurs reçues du frontend
         print("=== DEBUG RECEPTION LIVRAISON PARTIELLE ===")
         print(f"Articles livrés reçus (RAW): {articles_livres}")
         print(f"Articles renvoyés reçus (RAW): {articles_renvoyes}")
         for i, article in enumerate(articles_livres):
-            print(f"Article livré {i+1}: ID: {article.get('article_id', 'N/A')}, Nom: {article.get('article_nom', 'N/A')}, Prix: {article.get('data-article-prix', 'N/A')}, Prix Unitaire: {article.get('prix_unitaire', 'N/A')}") # Utilise data-article-prix ici
+            print(f"Article livré {i+1}: ID: {article.get('article_id', 'N/A')}, Variante ID: {article.get('variante_id', 'N/A')}, Nom: {article.get('nom', 'N/A')}, Prix Unitaire: {article.get('prix_unitaire', 'N/A')}")
         for i, article in enumerate(articles_renvoyes):
-            print(f"Article renvoyé {i+1}: ID: {article.get('article_id', 'N/A')}, Nom: {article.get('article_nom', 'N/A')}, Prix: {article.get('data-article-prix', 'N/A')}, Prix Unitaire: {article.get('prix_unitaire', 'N/A')}, État: {article.get('etat', 'N/A')}") # Utilise data-article-prix ici
+            print(f"Article renvoyé {i+1}: ID: {article.get('article_id', 'N/A')}, Variante ID: {article.get('variante_id', 'N/A')}, Nom: {article.get('nom', 'N/A')}, Prix Unitaire: {article.get('prix_unitaire', 'N/A')}")
         print("=== FIN DEBUG RECEPTION ===")
         
         if not commentaire:
@@ -1547,11 +1548,10 @@ def livraison_partielle(request, commande_id):
                 for i, article_data in enumerate(articles_renvoyes):
                     print(f"🔍 [DEBUG] Article renvoyé {i+1}: Données complètes = {article_data}")
                     
-                    etat = article_data.get('etat', 'bon')
                     article_id = article_data.get('id') or article_data.get('article_id')
                     quantite_raw = article_data.get('quantite', 0)
                     
-                    print(f"📊 [DEBUG] Article {i+1} - État: {etat}, ID: {article_id}, Quantité brute: {quantite_raw}")
+                    print(f"📊 [DEBUG] Article {i+1} - ID: {article_id}, Quantité brute: {quantite_raw}")
                     
                     try:
                         quantite = int(quantite_raw) if quantite_raw else 0
@@ -1565,14 +1565,12 @@ def livraison_partielle(request, commande_id):
                         recap_articles_renvoyes.append({
                             'nom': article_data.get('nom', f'Article ID {article_id}'),
                             'quantite': quantite,
-                            'etat': etat,
                             'message': f'Article renvoyé en préparation - Quantité: {quantite}'
                         })
                     else:
                         recap_articles_renvoyes.append({
                             'nom': article_data.get('nom', f'Article ID {article_id}'),
                             'quantite': quantite,
-                            'etat': etat,
                             'message': 'Article ou quantité invalide'
                         })
             else:
@@ -1590,10 +1588,6 @@ def livraison_partielle(request, commande_id):
             
             # 3. Créer le nouvel état avec le commentaire
             commentaire_etat = f"Livraison partielle effectuée. {commentaire}"
-            if type_retour == 'definitif':
-                commentaire_etat += f" Type de retour: Retour définitif client."
-            else:
-                commentaire_etat += f" Type de retour: Renvoi en préparation."
                 
             EtatCommande.objects.create(
                 commande=commande,
@@ -1628,157 +1622,155 @@ def livraison_partielle(request, commande_id):
             operateur_preparation_original = None
             
             if articles_renvoyes_filtres:
-                # Gérer selon le type de retour
-                if type_retour == 'preparation':
-                    # Retour en préparation : créer une nouvelle commande
-                    # Générer un ID YZ unique pour la commande de renvoi
-                    last_id_yz = Commande.objects.aggregate(
-                        max_id=Max('id_yz')
-                    )['max_id']
-                    new_id_yz = (last_id_yz or 0) + 1
-                    
-                    nouvelle_commande = Commande.objects.create(
-                        client=commande.client,
-                        ville=commande.ville,
-                        adresse=commande.adresse,
-                        total_cmd=0,  # Sera recalculé
-                        num_cmd=f"RENVOI-{commande.num_cmd}",
-                        id_yz=new_id_yz,
-                        is_upsell=False,
-                        compteur=0
-                    )
-                    
-                    total_renvoi = 0
-                    # Créer les paniers pour les articles renvoyés
-                    for article_data in articles_renvoyes_filtres:
-                        panier_original = commande.paniers.filter(
-                            article_id=article_data['article_id']
-                        ).first()
-                        
-                        if panier_original:
-                            from commande.models import Panier
-                            Panier.objects.create(
-                                commande=nouvelle_commande,
-                                article=panier_original.article,
-                                quantite=article_data['quantite'],
-                                sous_total=panier_original.article.prix_unitaire * article_data['quantite']
-                            )
-                            total_renvoi += panier_original.article.prix_unitaire * article_data['quantite']
-                    
-                    # Mettre à jour le total de la commande de renvoi
-                    nouvelle_commande.total_cmd = total_renvoi
-                    nouvelle_commande.save()
-                    
-                    # Mettre à jour les références pour utiliser les articles filtrés
-                    articles_renvoyes = articles_renvoyes_filtres
-                    
-                    print(f"✅ Commande de renvoi créée: {nouvelle_commande.num_cmd} (ID: {nouvelle_commande.id})")
-                    
-                elif type_retour == 'definitif':
-                    # Retour définitif : pas de nouvelle commande, juste réintégration au stock
-                    print(f"🔄 Retour définitif client - {len(articles_renvoyes_filtres)} articles retournés au stock")
-                    articles_renvoyes = articles_renvoyes_filtres
-                    
-                else:
-                    return JsonResponse({
-                        'success': False, 
-                        'error': f'Type de retour invalide: {type_retour}. Types autorisés: preparation, definitif'
-                    })
+                # Retour en préparation : créer une nouvelle commande
+                # Générer un ID YZ unique pour la commande de renvoi
+                last_id_yz = Commande.objects.aggregate(
+                    max_id=Max('id_yz')
+                )['max_id']
+                new_id_yz = (last_id_yz or 0) + 1
                 
-                # 4.1. Identifier et affecter à l'opérateur de préparation original (seulement pour retour en préparation)
-                if type_retour == 'preparation':
-                    # Chercher l'opérateur qui avait préparé cette commande initialement
+                nouvelle_commande = Commande.objects.create(
+                    client=commande.client,
+                    ville=commande.ville,
+                    adresse=commande.adresse,
+                    total_cmd=0,  # Sera recalculé
+                    num_cmd=f"RENVOI-{commande.num_cmd}",
+                    id_yz=new_id_yz,
+                    is_upsell=False,
+                    compteur=0
+                )
+                
+                total_renvoi = 0
+                # Créer les paniers pour les articles renvoyés
+                for article_data in articles_renvoyes_filtres:
+                    panier_original = commande.paniers.filter(
+                        id=article_data['panier_id']
+                    ).first()
                     
-                    # Chercher dans l'historique des états "En préparation" précédents de la commande originale
-                    etat_preparation_precedent = commande.etats.filter(
-                        enum_etat__libelle='En préparation',
+                    if panier_original:
+                        from commande.models import Panier
+                        variante_info = ""
+                        if panier_original.variante:
+                            variante_info = f" (Variante: {panier_original.variante.id}"
+                            if panier_original.variante.couleur:
+                                variante_info += f", Couleur: {panier_original.variante.couleur.nom}"
+                            if panier_original.variante.pointure:
+                                variante_info += f", Pointure: {panier_original.variante.pointure.pointure}"
+                            variante_info += ")"
+                        
+                        print(f"🔄 Création panier renvoi: {panier_original.article.nom}{variante_info}, Quantité: {article_data['quantite']}")
+                        
+                        Panier.objects.create(
+                            commande=nouvelle_commande,
+                            article=panier_original.article,
+                            variante=panier_original.variante,  # Inclure la variante
+                            quantite=article_data['quantite'],
+                            sous_total=panier_original.article.prix_unitaire * article_data['quantite']
+                        )
+                        total_renvoi += panier_original.article.prix_unitaire * article_data['quantite']
+                
+                # Mettre à jour le total de la commande de renvoi
+                nouvelle_commande.total_cmd = total_renvoi
+                nouvelle_commande.save()
+                
+                # Mettre à jour les références pour utiliser les articles filtrés
+                articles_renvoyes = articles_renvoyes_filtres
+                
+                print(f"✅ Commande de renvoi créée: {nouvelle_commande.num_cmd} (ID: {nouvelle_commande.id})")
+                
+                # 4.1. Identifier et affecter à l'opérateur de préparation original
+                # Chercher l'opérateur qui avait préparé cette commande initialement
+                
+                # Chercher dans l'historique des états "En préparation" précédents de la commande originale
+                etat_preparation_precedent = commande.etats.filter(
+                    enum_etat__libelle='En préparation',
+                    date_fin__isnull=False  # État terminé
+                ).order_by('-date_fin').first()
+                
+                if etat_preparation_precedent and etat_preparation_precedent.operateur:
+                    # Vérifier que cet opérateur est toujours actif et de type préparation
+                    if (etat_preparation_precedent.operateur.type_operateur == 'PREPARATION' and 
+                        etat_preparation_precedent.operateur.actif):
+                        operateur_preparation_original = etat_preparation_precedent.operateur
+                        print(f"✅ Opérateur original trouvé pour livraison partielle: {operateur_preparation_original.nom_complet}")
+                    else:
+                        print(f"⚠️  Opérateur original trouvé mais non disponible: {etat_preparation_precedent.operateur.nom_complet} (type: {etat_preparation_precedent.operateur.type_operateur}, actif: {etat_preparation_precedent.operateur.actif})")
+                else:
+                    print("⚠️  Aucun état 'En préparation' précédent trouvé dans l'historique de la commande")
+                    
+                    # Fallback : chercher l'état "À imprimer" précédent
+                    etat_imprimer_precedent = commande.etats.filter(
+                        enum_etat__libelle='À imprimer',
                         date_fin__isnull=False  # État terminé
                     ).order_by('-date_fin').first()
                     
-                    if etat_preparation_precedent and etat_preparation_precedent.operateur:
-                        # Vérifier que cet opérateur est toujours actif et de type préparation
-                        if (etat_preparation_precedent.operateur.type_operateur == 'PREPARATION' and 
-                            etat_preparation_precedent.operateur.actif):
-                            operateur_preparation_original = etat_preparation_precedent.operateur
-                            print(f"✅ Opérateur original trouvé pour livraison partielle: {operateur_preparation_original.nom_complet}")
+                    if etat_imprimer_precedent and etat_imprimer_precedent.operateur:
+                        if (etat_imprimer_precedent.operateur.type_operateur == 'PREPARATION' and 
+                            etat_imprimer_precedent.operateur.actif):
+                            operateur_preparation_original = etat_imprimer_precedent.operateur
+                            print(f"✅ Opérateur original trouvé (via 'À imprimer'): {operateur_preparation_original.nom_complet}")
                         else:
-                            print(f"⚠️  Opérateur original trouvé mais non disponible: {etat_preparation_precedent.operateur.nom_complet} (type: {etat_preparation_precedent.operateur.type_operateur}, actif: {etat_preparation_precedent.operateur.actif})")
+                            print(f"⚠️  Opérateur 'À imprimer' trouvé mais non disponible: {etat_imprimer_precedent.operateur.nom_complet}")
                     else:
-                        print("⚠️  Aucun état 'En préparation' précédent trouvé dans l'historique de la commande")
-                        
-                        # Fallback : chercher l'état "À imprimer" précédent
-                        etat_imprimer_precedent = commande.etats.filter(
-                            enum_etat__libelle='À imprimer',
-                            date_fin__isnull=False  # État terminé
-                        ).order_by('-date_fin').first()
-                        
-                        if etat_imprimer_precedent and etat_imprimer_precedent.operateur:
-                            if (etat_imprimer_precedent.operateur.type_operateur == 'PREPARATION' and 
-                                etat_imprimer_precedent.operateur.actif):
-                                operateur_preparation_original = etat_imprimer_precedent.operateur
-                                print(f"✅ Opérateur original trouvé (via 'À imprimer'): {operateur_preparation_original.nom_complet}")
-                            else:
-                                print(f"⚠️  Opérateur 'À imprimer' trouvé mais non disponible: {etat_imprimer_precedent.operateur.nom_complet}")
-                        else:
-                            print("⚠️  Aucun état 'À imprimer' précédent trouvé non plus")
+                        print("⚠️  Aucun état 'À imprimer' précédent trouvé non plus")
+                
+                # Si pas d'opérateur original trouvé ou plus actif, prendre le moins chargé
+                if not operateur_preparation_original:
+                    operateurs_preparation = Operateur.objects.filter(
+                        type_operateur='PREPARATION',
+                        actif=True
+                    ).order_by('id')
                     
-                    # Si pas d'opérateur original trouvé ou plus actif, prendre le moins chargé
-                    if not operateur_preparation_original:
-                        operateurs_preparation = Operateur.objects.filter(
-                            type_operateur='PREPARATION',
-                            actif=True
-                        ).order_by('id')
+                    if operateurs_preparation.exists():
+                        from django.db.models import Count, Q
                         
-                        if operateurs_preparation.exists():
-                            from django.db.models import Count, Q
-                            
-                            # Annoter chaque opérateur avec le nombre de commandes en cours
-                            operateurs_charges = operateurs_preparation.annotate(
-                                commandes_en_cours=Count('etats_modifies', filter=Q(
-                                    etats_modifies__enum_etat__libelle__in=['À imprimer', 'En préparation'],
-                                    etats_modifies__date_fin__isnull=True
-                                ))
-                            ).order_by('commandes_en_cours', 'id')
-                            
-                            # L'opérateur le moins chargé est le premier de la liste
-                            operateur_preparation_original = operateurs_charges.first()
-                            print(f"✅ Affectation au moins chargé pour livraison partielle: {operateur_preparation_original.nom_complet} ({operateur_preparation_original.commandes_en_cours} commandes en cours)")
-                        else:
-                            return JsonResponse({
-                                'success': False, 
-                                'error': 'Aucun opérateur de préparation disponible. Impossible de créer la commande de renvoi.'
-                            })
-                    
-                    # Vérification finale de sécurité
-                    if not operateur_preparation_original:
+                        # Annoter chaque opérateur avec le nombre de commandes en cours
+                        operateurs_charges = operateurs_preparation.annotate(
+                            commandes_en_cours=Count('etats_modifies', filter=Q(
+                                etats_modifies__enum_etat__libelle__in=['À imprimer', 'En préparation'],
+                                etats_modifies__date_fin__isnull=True
+                            ))
+                        ).order_by('commandes_en_cours', 'id')
+                        
+                        # L'opérateur le moins chargé est le premier de la liste
+                        operateur_preparation_original = operateurs_charges.first()
+                        print(f"✅ Affectation au moins chargé pour livraison partielle: {operateur_preparation_original.nom_complet} ({operateur_preparation_original.commandes_en_cours} commandes en cours)")
+                    else:
                         return JsonResponse({
                             'success': False, 
-                            'error': 'Impossible de déterminer un opérateur de préparation pour la commande de renvoi.'
+                            'error': 'Aucun opérateur de préparation disponible. Impossible de créer la commande de renvoi.'
                         })
-                    
-                    # Validation de l'affectation pour la commande de renvoi
-                    is_valid, validation_message = valider_affectation_commande(nouvelle_commande, operateur_preparation_original)
-                    if not is_valid:
-                        return JsonResponse({
-                            'success': False, 
-                            'error': f'Affectation invalide pour la commande de renvoi: {validation_message}'
-                        })
-                    
-                    print(f"✅ {validation_message} (livraison partielle)")
-                    
-                    # Créer l'état "En préparation" pour la commande de renvoi avec l'opérateur original
-                    etat_en_preparation, _ = EnumEtatCmd.objects.get_or_create(
-                        libelle='En préparation',
-                        defaults={'ordre': 30, 'couleur': '#3B82F6'}
-                    )
-                    
-                    EtatCommande.objects.create(
-                        commande=nouvelle_commande,
-                        enum_etat=etat_en_preparation,
-                        operateur=operateur_preparation_original,
-                        date_debut=timezone.now(),
-                        commentaire=f"Commande de renvoi créée suite à livraison partielle de {commande.id_yz}. Articles non livrés: {len(articles_renvoyes)}. Affectée à l'opérateur original: {operateur_preparation_original.nom_complet}"
-                    )
+                
+                # Vérification finale de sécurité
+                if not operateur_preparation_original:
+                    return JsonResponse({
+                        'success': False, 
+                        'error': 'Impossible de déterminer un opérateur de préparation pour la commande de renvoi.'
+                    })
+                
+                # Validation de l'affectation pour la commande de renvoi
+                is_valid, validation_message = valider_affectation_commande(nouvelle_commande, operateur_preparation_original)
+                if not is_valid:
+                    return JsonResponse({
+                        'success': False, 
+                        'error': f'Affectation invalide pour la commande de renvoi: {validation_message}'
+                    })
+                
+                print(f"✅ {validation_message} (livraison partielle)")
+                
+                # Créer l'état "En préparation" pour la commande de renvoi avec l'opérateur original
+                etat_en_preparation, _ = EnumEtatCmd.objects.get_or_create(
+                    libelle='En préparation',
+                    defaults={'ordre': 30, 'couleur': '#3B82F6'}
+                )
+                
+                EtatCommande.objects.create(
+                    commande=nouvelle_commande,
+                    enum_etat=etat_en_preparation,
+                    operateur=operateur_preparation_original,
+                    date_debut=timezone.now(),
+                    commentaire=f"Commande de renvoi créée suite à livraison partielle de {commande.id_yz}. Articles non livrés: {len(articles_renvoyes)}. Affectée à l'opérateur original: {operateur_preparation_original.nom_complet}"
+                )
             else:
                 # Cas où tous les articles sont livrés (pas d'articles à renvoyer)
                 print(f"✅ Tous les articles sont livrés - Pas de commande de renvoi nécessaire")
@@ -1787,8 +1779,9 @@ def livraison_partielle(request, commande_id):
             # 5. Mettre à jour les quantités des articles livrés dans la commande originale
             # et supprimer les articles complètement renvoyés
             for article_data in articles_livres:
+                # Filtrer par panier_id pour être sûr de cibler le bon panier
                 panier = commande.paniers.filter(
-                    article_id=article_data['article_id']
+                    id=article_data['panier_id']
                 ).first()
                 
                 if panier:
@@ -1802,10 +1795,10 @@ def livraison_partielle(request, commande_id):
                         panier.delete()
             
             # Supprimer les articles complètement renvoyés de la commande originale
-            # Utiliser les articles filtrés pour éviter les conflits
+            # Utiliser les panier_id pour être sûr de cibler les bons paniers
             if articles_renvoyes:  # Seulement si il y a des articles à renvoyer
-                articles_renvoyes_ids = [article_data['article_id'] for article_data in articles_renvoyes]
-                commande.paniers.filter(article_id__in=articles_renvoyes_ids).delete()
+                paniers_renvoyes_ids = [article_data['panier_id'] for article_data in articles_renvoyes]
+                commande.paniers.filter(id__in=paniers_renvoyes_ids).delete()
             
             # 6. Recalculer le total de la commande originale
             total_commande = commande.paniers.aggregate(
@@ -1839,7 +1832,6 @@ def livraison_partielle(request, commande_id):
                         prix_unitaire = 0.0
                     recap = {
                         'article_id': article_id,
-                        'etat': article_data.get('etat', 'inconnu'),
                         'quantite': article_data.get('quantite', 0),
                         'prix_unitaire': float(prix_unitaire)
                     }
@@ -1912,10 +1904,7 @@ def livraison_partielle(request, commande_id):
                         if recap_renvoi:
                             stock_avant = recap_renvoi['stock_avant']
                             stock_apres = recap_renvoi['stock_apres']
-                            if recap_renvoi['etat'] == 'bon':
-                                statut = 'Renvoyé (bon état)'
-                            else:
-                                statut = 'Renvoyé (défectueux)'
+                            statut = 'Renvoyé en préparation'
                         else:
                             # Non renvoyé, donc livré ou inchangé
                             stock_avant = article.qte_disponible
@@ -1955,12 +1944,8 @@ def livraison_partielle(request, commande_id):
             # === FIN AJOUT ===
             
             if articles_renvoyes:
-                if type_retour == 'preparation':
-                    messages.success(request, 
-                        f"Livraison partielle effectuée avec succès. {len(articles_livres)} article(s) livré(s), {len(articles_renvoyes)} article(s) renvoyé(s) en préparation.")
-                else:
-                    messages.success(request, 
-                        f"Livraison partielle effectuée avec succès. {len(articles_livres)} article(s) livré(s), {len(articles_renvoyes)} article(s) retourné(s) définitivement au stock.")
+                messages.success(request, 
+                    f"Livraison partielle effectuée avec succès. {len(articles_livres)} article(s) livré(s), {len(articles_renvoyes)} article(s) renvoyé(s) en préparation.")
             else:
                 messages.success(request, 
                     f"Livraison complète effectuée avec succès. Tous les {len(articles_livres)} article(s) ont été livrés au client.")
@@ -1970,9 +1955,8 @@ def livraison_partielle(request, commande_id):
                 'message': f'Livraison partielle effectuée avec succès',
                 'articles_livres': len(articles_livres),
                 'articles_renvoyes': len(articles_renvoyes),
-                'type_retour': type_retour,
-                'commande_renvoi_id': nouvelle_commande.id if type_retour == 'preparation' and articles_renvoyes else None,
-                'commande_renvoi_num': nouvelle_commande.id_yz if type_retour == 'preparation' and articles_renvoyes else None,
+                'commande_renvoi_id': nouvelle_commande.id if articles_renvoyes else None,
+                'commande_renvoi_num': nouvelle_commande.id_yz if articles_renvoyes else None,
                 'recap_articles_renvoyes': recap_articles_renvoyes,
                 'recap_stock_commande': recap_stock_commande
             })

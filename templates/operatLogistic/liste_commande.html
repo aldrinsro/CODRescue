@@ -312,6 +312,11 @@
                             <a href="{% url 'operatLogistic:detail_commande' commande.id %}" class="text-blue-600 hover:text-blue-800 transition-colors" title="Voir les détails">
                                 <i class="fas fa-eye"></i>
                             </a>
+                            <button onclick="openSavActionsModal({{ commande.id }}, '{{ commande.id_yz }}')" 
+                            class="text-orange-600 hover:text-orange-900 transition-colors ml-2"
+                            title="Actions SAV">
+                        <i class="fas fa-tools"></i>
+                             </button>
                         </div>
                     </td>
                 </tr>
@@ -372,6 +377,123 @@
     </div>
     {% endif %}
     {% endif %}
+</div>
+
+<!-- Modale des Actions SAV -->
+<div id="savActionsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-10 mx-auto p-6 border w-full max-w-2xl shadow-lg rounded-lg bg-white">
+        <div class="text-center">
+            <h3 class="text-xl leading-6 font-bold text-gray-900 mb-2">Actions de Livraison (SAV)</h3>
+            <p class="text-sm text-gray-600 mb-6">Commande <span id="commandeIdDisplay" class="font-semibold text-blue-600"></span></p>
+            
+            <!-- Grille des actions SAV -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <button onclick="openSavModal('Livrée')" class="sav-action-card bg-green-50 hover:bg-green-100 border-2 border-green-200 hover:border-green-300 rounded-lg p-4 transition-all duration-200">
+                    <div class="flex flex-col items-center">
+                        <i class="fas fa-check-circle text-3xl text-green-500 mb-2"></i>
+                        <span class="font-semibold text-green-800">Livrée</span>
+                        <span class="text-xs text-green-600 mt-1">Livraison réussie</span>
+                    </div>
+                </button>
+                
+                <button onclick="openSavModal('Livrée Partiellement')" class="sav-action-card bg-blue-50 hover:bg-blue-100 border-2 border-blue-200 hover:border-blue-300 rounded-lg p-4 transition-all duration-200">
+                    <div class="flex flex-col items-center">
+                        <i class="fas fa-box-open text-3xl text-blue-500 mb-2"></i>
+                        <span class="font-semibold text-blue-800">Livraison Partielle</span>
+                        <span class="text-xs text-blue-600 mt-1">Certains articles livrés</span>
+                    </div>
+                </button>
+                
+                <button onclick="openSavModal('Retournée')" class="sav-action-card bg-red-50 hover:bg-red-100 border-2 border-red-200 hover:border-red-300 rounded-lg p-4 transition-all duration-200">
+                    <div class="flex flex-col items-center">
+                        <i class="fas fa-times-circle text-3xl text-red-500 mb-2"></i>
+                        <span class="font-semibold text-red-800">Retournée (SAV)</span>
+                        <span class="text-xs text-red-600 mt-1">Retourner la commande</span>
+                    </div>
+                </button>
+            </div>
+            
+            <div class="flex justify-center">
+                <button id="cancelSavActionsBtn" onclick="fermerModalSav()" class="px-6 py-2 bg-gray-500 text-white text-base font-medium rounded-md shadow-sm hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300 transition-colors">
+                    <i class="fas fa-times mr-2"></i>Fermer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modale SAV pour changer l'état -->
+<div id="savModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-20 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white">
+        <div class="mt-3 text-center">
+            <h3 class="text-lg leading-6 font-medium text-gray-900" id="savModalTitle">Mettre à jour l'état</h3>
+            <div class="mt-2 px-7 py-3">
+                <form id="savForm" method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="nouvel_etat" id="nouvel_etat_input">
+                    <div class="text-left">
+                        <!-- Champ commentaire -->
+                        <div class="mb-4">
+                            <label for="commentaire" class="text-sm font-medium text-gray-700">Commentaire (obligatoire)</label>
+                            <select name="commentaire" id="commentaire" class="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" required>
+                                <option value="">Sélectionner un commentaire...</option>
+                                <optgroup label="Livraison" class="optgroup-livraison" style="display: none;">
+                                    <option value="Commande livrée avec succès">Commande livrée avec succès</option>
+                                    <option value="Livraison effectuée dans les délais">Livraison effectuée dans les délais</option>
+                                    <option value="Client satisfait de la livraison">Client satisfait de la livraison</option>
+                                    <option value="Livraison conforme à la commande">Livraison conforme à la commande</option>
+                                </optgroup>
+                                <optgroup label="Livraison Partielle" class="optgroup-livraison-partielle" style="display: none;">
+                                    <option value="Certains articles non disponibles">Certains articles non disponibles</option>
+                                    <option value="Stock insuffisant pour certains articles">Stock insuffisant pour certains articles</option>
+                                    <option value="Articles en cours de préparation">Articles en cours de préparation</option>
+                                    <option value="Livraison échelonnée demandée par le client">Livraison échelonnée demandée par le client</option>
+                                    <option value="Problème de qualité sur certains articles">Problème de qualité sur certains articles</option>
+                                </optgroup>
+                                <optgroup label="Retours et échanges" class="optgroup-retours" style="display: none;">
+                                    <option value="Retour demandé par le client">Retour demandé par le client</option>
+                                    <option value="Échange de taille demandé">Échange de taille demandé</option>
+                                    <option value="Échange de couleur demandé">Échange de couleur demandé</option>
+                                    <option value="Article ne correspond pas à la commande">Article ne correspond pas à la commande</option>
+                                </optgroup>
+                                <optgroup label="Problèmes de qualité" class="optgroup-problemes" style="display: none;">
+                                    <option value="Article défectueux détecté">Article défectueux détecté</option>
+                                    <option value="Problème de qualité signalé par le client">Problème de qualité signalé par le client</option>
+                                    <option value="Article endommagé lors du transport">Article endommagé lors du transport</option>
+                                    <option value="Défaut de fabrication constaté">Défaut de fabrication constaté</option>
+                                </optgroup>
+                                <optgroup label="Communication client" class="optgroup-communication" style="display: none;">
+                                    <option value="Client insatisfait de la qualité">Client insatisfait de la qualité</option>
+                                    <option value="Client demande un remboursement">Client demande un remboursement</option>
+                                    <option value="Problème de communication avec le client">Problème de communication avec le client</option>
+                                </optgroup>
+                                <optgroup label="Autres motifs" class="optgroup-autres" style="display: none;">
+                                    <option value="Demande spéciale du client">Demande spéciale du client</option>
+                                    <option value="Modification de commande demandée">Modification de commande demandée</option>
+                                    <option value="Autre motif - voir détails">Autre motif - voir détails</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                        
+                        <!-- Champ commentaire personnalisé (caché par défaut) -->
+                        <div id="commentairePersonnalise" class="mb-4 hidden">
+                            <label for="commentaireCustom" class="text-sm font-medium text-gray-700">Commentaire personnalisé</label>
+                            <textarea name="commentaireCustom" id="commentaireCustom" rows="3" class="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" placeholder="Décrivez le motif spécifique..."></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-end space-x-3 mt-6">
+                        <button type="button" id="cancelSavBtn" class="px-4 py-2 bg-gray-300 text-gray-700 text-sm font-medium rounded-md shadow-sm hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors">
+                            <i class="fas fa-times mr-2"></i>Annuler
+                        </button>
+                        <button type="button" id="confirmSavBtn" class="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors">
+                            <i class="fas fa-check mr-2"></i>Confirmer
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 </div>
 
 {% endblock %}
@@ -471,5 +593,246 @@ document.addEventListener('DOMContentLoaded', function() {
     
     console.log('✅ Interface de filtre initialisée avec succès');
 });
+
+// ================== GESTION DE LA MODALE SAV ==================
+
+// Variables globales pour la modale SAV
+let currentCommandeId = null;
+let currentCommandeIdYz = null;
+
+function openSavActionsModal(commandeId, commandeIdYz) {
+    currentCommandeId = commandeId;
+    currentCommandeIdYz = commandeIdYz;
+    document.getElementById('commandeIdDisplay').textContent = commandeIdYz;
+    document.getElementById('savActionsModal').classList.remove('hidden');
+}
+
+function openSavModal(etat, commandeId = null) {
+    // Si un ID de commande est fourni, l'utiliser, sinon utiliser currentCommandeId
+    if (commandeId) {
+        currentCommandeId = commandeId;
+    }
+    
+    // Vérifier qu'on a un ID de commande
+    if (!currentCommandeId) {
+        alert('❌ Erreur: Impossible de déterminer l\'ID de la commande');
+        return;
+    }
+    
+    document.getElementById('nouvel_etat_input').value = etat;
+    
+    // Titre et couleur selon l'état
+    let titre = '';
+    let couleur = '';
+    let icone = '';
+    
+    switch(etat) {
+        case 'Livrée':
+            titre = 'Marquer comme Livrée';
+            couleur = 'text-green-600';
+            icone = 'fa-check-circle';
+            break;
+        case 'Livrée Partiellement':
+            titre = 'Marquer comme Livrée Partiellement';
+            couleur = 'text-blue-600';
+            icone = 'fa-box-open';
+            break;
+        case 'Retournée':
+            titre = 'Retourner la Commande';
+            couleur = 'text-red-600';
+            icone = 'fa-times-circle';
+            break;
+        default:
+            titre = 'Mettre à jour l\'état';
+            couleur = 'text-gray-600';
+            icone = 'fa-edit';
+    }
+    
+    // Mettre à jour le titre de la modale
+    document.getElementById('savModalTitle').innerHTML = `
+        <i class="fas ${icone} ${couleur} mr-2"></i>${titre}
+    `;
+    
+    // Réinitialiser le formulaire
+    document.getElementById('commentaire').value = '';
+    
+    // Masquer le champ de commentaire personnalisé
+    const commentairePersonnalise = document.getElementById('commentairePersonnalise');
+    if (commentairePersonnalise) {
+        commentairePersonnalise.classList.add('hidden');
+    }
+    
+    // Gérer l'affichage des options de commentaire selon l'état
+    const optgroupLivraison = document.querySelector('.optgroup-livraison');
+    const optgroupLivraisonPartielle = document.querySelector('.optgroup-livraison-partielle');
+    const optgroupRetours = document.querySelector('.optgroup-retours');
+    const optgroupProblemes = document.querySelector('.optgroup-problemes');
+    const optgroupCommunication = document.querySelector('.optgroup-communication');
+    const optgroupAutres = document.querySelector('.optgroup-autres');
+    
+    // Masquer toutes les options par défaut
+    if (optgroupLivraison) optgroupLivraison.style.display = 'none';
+    if (optgroupLivraisonPartielle) optgroupLivraisonPartielle.style.display = 'none';
+    if (optgroupRetours) optgroupRetours.style.display = 'none';
+    if (optgroupProblemes) optgroupProblemes.style.display = 'none';
+    if (optgroupCommunication) optgroupCommunication.style.display = 'none';
+    if (optgroupAutres) optgroupAutres.style.display = 'none';
+    
+    // Afficher les options selon l'état
+    switch(etat) {
+        case 'Livrée':
+            if (optgroupLivraison) optgroupLivraison.style.display = 'block';
+            if (optgroupAutres) optgroupAutres.style.display = 'block';
+            break;
+        case 'Livrée Partiellement':
+            if (optgroupLivraisonPartielle) optgroupLivraisonPartielle.style.display = 'block';
+            if (optgroupAutres) optgroupAutres.style.display = 'block';
+            break;
+        case 'Retournée':
+            if (optgroupRetours) optgroupRetours.style.display = 'block';
+            if (optgroupProblemes) optgroupProblemes.style.display = 'block';
+            if (optgroupCommunication) optgroupCommunication.style.display = 'block';
+            if (optgroupAutres) optgroupAutres.style.display = 'block';
+            break;
+    }
+    
+    // Ouvrir le modal
+    document.getElementById('savModal').classList.remove('hidden');
+}
+
+function fermerModalSav() {
+    const actionsModal = document.getElementById('savActionsModal');
+    if (actionsModal) {
+        actionsModal.classList.add('hidden');
+    }
+    currentCommandeId = null;
+    currentCommandeIdYz = null;
+}
+
+// Gestion du select de commentaire
+const commentaireSelect = document.getElementById('commentaire');
+const commentairePersonnalise = document.getElementById('commentairePersonnalise');
+const commentaireCustom = document.getElementById('commentaireCustom');
+
+if (commentaireSelect && commentairePersonnalise && commentaireCustom) {
+    commentaireSelect.addEventListener('change', function() {
+        if (this.value === 'Autre motif - voir détails') {
+            commentairePersonnalise.classList.remove('hidden');
+            commentaireCustom.required = true;
+        } else {
+            commentairePersonnalise.classList.add('hidden');
+            commentaireCustom.required = false;
+            commentaireCustom.value = '';
+        }
+    });
+}
+
+// Gestion du formulaire SAV
+const savForm = document.getElementById('savForm');
+const confirmSavBtn = document.getElementById('confirmSavBtn');
+const cancelSavBtn = document.getElementById('cancelSavBtn');
+
+if (confirmSavBtn) {
+    confirmSavBtn.addEventListener('click', function(e) {
+        // Empêcher la soumission classique du formulaire
+        e.preventDefault();
+        
+        // Validation du formulaire SAV
+        const commentaire = document.getElementById('commentaire').value.trim();
+        if (commentaire === '') {
+            alert('⚠️ Le commentaire est obligatoire');
+            return;
+        }
+        
+        // Si "Autre motif" est sélectionné, vérifier le commentaire personnalisé
+        if (commentaire === 'Autre motif - voir détails') {
+            const commentaireCustom = document.getElementById('commentaireCustom');
+            if (!commentaireCustom || !commentaireCustom.value.trim()) {
+                alert('⚠️ Le commentaire personnalisé est obligatoire pour "Autre motif"');
+                return;
+            }
+        }
+        
+        // Soumettre le formulaire via AJAX
+        const formData = new FormData(savForm);
+        
+        // Si un commentaire personnalisé est fourni, l'ajouter
+        const commentaireCustom = document.getElementById('commentaireCustom');
+        if (commentaireCustom && commentaireCustom.value.trim()) {
+            formData.set('commentaire', commentaireCustom.value.trim());
+        }
+        
+        // Définir l'URL de soumission avec l'ID de la commande
+        const commandeId = currentCommandeId;
+        if (!commandeId) {
+            alert('❌ Erreur: Impossible de déterminer l\'ID de la commande');
+            return;
+        }
+        
+        const actionUrl = `/operateur-logistique/commande/${commandeId}/changer-etat-sav/`;
+        
+        fetch(actionUrl, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams(formData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(`✅ ${data.message}`);
+                // Fermer la modale SAV
+                document.getElementById('savModal').classList.add('hidden');
+                // Fermer aussi la modale des actions SAV
+                document.getElementById('savActionsModal').classList.add('hidden');
+                // Réinitialiser le formulaire
+                savForm.reset();
+                // Masquer le champ de commentaire personnalisé
+                const commentairePersonnalise = document.getElementById('commentairePersonnalise');
+                if (commentairePersonnalise) {
+                    commentairePersonnalise.classList.add('hidden');
+                }
+                // Pas de redirection - rester sur la même page
+            } else {
+                alert(`❌ Erreur: ${data.error}`);
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('❌ Une erreur est survenue lors de la soumission');
+        });
+    });
+}
+
+if (cancelSavBtn) {
+    cancelSavBtn.addEventListener('click', function() {
+        document.getElementById('savModal').classList.add('hidden');
+        savForm.reset();
+        // Masquer le champ de commentaire personnalisé
+        const commentairePersonnalise = document.getElementById('commentairePersonnalise');
+        if (commentairePersonnalise) {
+            commentairePersonnalise.classList.add('hidden');
+        }
+    });
+}
+
+// Fermer la modale SAV avec la touche Échap
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const savModal = document.getElementById('savModal');
+        if (savModal && !savModal.classList.contains('hidden')) {
+            savModal.classList.add('hidden');
+            savForm.reset();
+            const commentairePersonnalise = document.getElementById('commentairePersonnalise');
+            if (commentairePersonnalise) {
+                commentairePersonnalise.classList.add('hidden');
+            }
+        }
+    }
+});
+
+// ================== FIN GESTION MODALE SAV ==================
 </script>
 {% endblock %} 
