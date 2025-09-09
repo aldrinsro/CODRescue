@@ -136,7 +136,7 @@
             {% endif %}
         </div>
 
-        <!-- Barre d'outils avec recherche intelligente -->
+        <!-- Barre d'outils -->
         <div class="mb-4 sm:mb-6 flex flex-col lg:flex-row gap-3 lg:gap-2 bg-gray-50 p-3 sm:p-4 rounded-lg border border-gray-200">
             <!-- Sélecteur éléments par page -->
             <form method="GET" class="flex items-center w-full lg:w-auto">
@@ -193,54 +193,56 @@
                     </div>
                 </div>
             </form>
-
-            {% include 'Superpreparation/includes/smart-search-toolbar.html' %}
-            
-            <!-- Script de recherche intelligente (chargé tôt pour les boutons) -->
-            <script src="{% static 'js/Superpreparation/Suivi_des_Commandes/suivi-commandes-smart-search.js' %}"></script>
-            
-            <!-- Script de fallback pour les fonctions manquantes -->
-            <script>
-                // Fallback si les fonctions ne sont pas chargées
-                if (typeof window.toggleAdvancedSearch === 'undefined') {
-                    window.toggleAdvancedSearch = function() {
-                        const advancedSearch = document.getElementById('advancedSearch');
-                        if (advancedSearch) {
-                            const isHidden = advancedSearch.style.display === 'none' || advancedSearch.classList.contains('hidden');
-                            if (isHidden) {
-                                advancedSearch.style.display = 'block';
-                                advancedSearch.classList.remove('hidden');
-                            } else {
-                                advancedSearch.style.display = 'none';
-                                advancedSearch.classList.add('hidden');
-                            }
-                        }
-                    };
-                }
+                </div>
                 
-                if (typeof window.clearSmartSearch === 'undefined') {
-                    window.clearSmartSearch = function() {
-                        const searchInput = document.getElementById('smartSearch');
-                        if (searchInput) {
-                            searchInput.value = '';
+        <!-- Recherche intelligente et filtres avancés -->
+        {% include 'Superpreparation/includes/smart-search-toolbar.html' %}
+        
+        <!-- Script de recherche intelligente (chargé tôt pour les boutons) -->
+        <script src="{% static 'js/Superpreparation/Suivi_des_Commandes/suivi-commandes-smart-search.js' %}"></script>
+        
+        <!-- Script de fallback pour les fonctions manquantes -->
+        <script>
+            // Fallback si les fonctions ne sont pas chargées
+            if (typeof window.toggleAdvancedSearch === 'undefined') {
+                window.toggleAdvancedSearch = function() {
+                    const advancedSearch = document.getElementById('advancedSearch');
+                    if (advancedSearch) {
+                        const isHidden = advancedSearch.style.display === 'none' || advancedSearch.classList.contains('hidden');
+                        if (isHidden) {
+                            advancedSearch.style.display = 'block';
+                            advancedSearch.classList.remove('hidden');
+                        } else {
+                            advancedSearch.style.display = 'none';
+                            advancedSearch.classList.add('hidden');
                         }
-                        const filterInputs = document.querySelectorAll('#advancedSearch input, #advancedSearch select');
-                        filterInputs.forEach(input => {
-                            if (input.type === 'checkbox') {
-                                input.checked = false;
-                            } else {
-                                input.value = '';
-                            }
-                        });
-                    };
-                }
-                
-                if (typeof window.applyFilters === 'undefined') {
-                    window.applyFilters = function() {
-                        console.log('🔍 Filtres appliqués (fallback)');
-                    };
-                }
-            </script>
+                    }
+                };
+            }
+            
+            if (typeof window.clearSmartSearch === 'undefined') {
+                window.clearSmartSearch = function() {
+                    const searchInput = document.getElementById('smartSearch');
+                    if (searchInput) {
+                        searchInput.value = '';
+                    }
+                    const filterInputs = document.querySelectorAll('#advancedSearch input, #advancedSearch select');
+                    filterInputs.forEach(input => {
+                        if (input.type === 'checkbox') {
+                            input.checked = false;
+                        } else {
+                            input.value = '';
+                        }
+                    });
+                };
+            }
+            
+            if (typeof window.applyFilters === 'undefined') {
+                window.applyFilters = function() {
+                    console.log('🔍 Filtres appliqués (fallback)');
+                };
+            }
+        </script>
         
         <!-- Version mobile/tablette : Cartes -->
         <div class="block lg:hidden space-y-3">
