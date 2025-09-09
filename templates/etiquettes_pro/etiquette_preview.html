@@ -267,7 +267,7 @@ fetch('{% url "etiquettes_pro:generate_qrcode_image" etiquette.code_data %}')
     }
     
     .tab-btn:hover {
-        background: rgba(59, 130, 246, 0.1);
+        background: rgba(96, 246, 59, 0.1);
         color: #3b82f6;
     }
     
@@ -343,25 +343,29 @@ fetch('{% url "etiquettes_pro:generate_qrcode_image" etiquette.code_data %}')
     }
     
     .theme-button-primary {
-        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        background: #0E1D3D;
         color: white;
+        border: none;
     }
     
     .theme-button-primary:hover {
-        background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+        background: #1a2b5c;
         transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        box-shadow: 0 4px 12px rgba(14, 29, 61, 0.3);
     }
     
     .theme-button-secondary {
-        background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
-        color: white;
+        background: white;
+        color: #374151;
+        border: 2px solid #d1d5db;
     }
     
     .theme-button-secondary:hover {
-        background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
+        background: #f9fafb;
+        color: #1f2937;
+        border-color: #9ca3af;
         transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(107, 114, 128, 0.3);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
     
     /* Styles pour l'aperçu en temps réel */
@@ -375,10 +379,10 @@ fetch('{% url "etiquettes_pro:generate_qrcode_image" etiquette.code_data %}')
     
     /* Style pour le bouton d'impression (vert) */
     .theme-button-success {
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        border: 2px solid #047857;
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        border: 2px solid #1e40af;
         color: white;
-        box-shadow: 0 4px 15px rgba(16, 185, 129, 0.2);
+        box-shadow: 0 4px 15px rgba(59, 130, 246, 0.2);
         position: relative;
         overflow: hidden;
         font-weight: 600;
@@ -391,10 +395,10 @@ fetch('{% url "etiquettes_pro:generate_qrcode_image" etiquette.code_data %}')
     }
     
     .theme-button-success:hover {
-        background: linear-gradient(135deg, #059669 0%, #047857 100%);
-        border-color: #065f46;
+        background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+        border-color: #1e3a8a;
         transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+        box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
         color: white;
         text-decoration: none;
     }
@@ -727,7 +731,7 @@ fetch('{% url "etiquettes_pro:generate_qrcode_image" etiquette.code_data %}')
         
             
             <!-- Onglet Informations Template -->
-            <div class="tab-panel" id="template-info-tab">
+            <div class="tab-panel active" id="template-info-tab">
                 <div class="bg-white rounded-lg shadow-md p-6">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4">
                         <i class="fas fa-info-circle text-green-500 mr-2"></i>Informations du template
@@ -962,11 +966,14 @@ fetch('{% url "etiquettes_pro:generate_qrcode_image" etiquette.code_data %}')
     <!-- Boutons d'action -->
     <div class="action-buttons">
         <!-- Bouton PDF supprimé -->
-        <a href="#" class="print-btn-manual theme-button-success" data-etiquette-id="{{ etiquette.id }}">
+        <a href="#" class="print-btn-manual theme-button-primary" data-etiquette-id="{{ etiquette.id }}">
             <i class="fas fa-print"></i> Imprimer
         </a>
         <a href="{% url 'etiquettes_pro:template_detail' etiquette.template.pk %}" class="theme-button-secondary">
             <i class="fas fa-file-alt"></i> Voir le Template
+        </a>
+        <a href="{% url 'etiquettes_pro:dashboard' %}" class="theme-button-secondary">
+            <i class="fas fa-tachometer-alt"></i> Dashboard
         </a>
         <a href="{% url 'etiquettes_pro:etiquette_list' %}" class="theme-button-secondary">
             <i class="fas fa-list"></i> Retour à la liste
@@ -1016,9 +1023,23 @@ document.addEventListener('DOMContentLoaded', function() {
     const tabButtons = document.querySelectorAll('.tab-btn');
     const tabPanels = document.querySelectorAll('.tab-panel');
     
+    // Initialiser l'onglet actif par défaut
+    console.log('🔍 [ONGLETS] Initialisation des onglets...');
+    
+    // Vérifier que l'onglet "Informations Template" est actif par défaut
+    const templateInfoTab = document.getElementById('template-info-tab');
+    const templateInfoBtn = document.querySelector('[data-tab="template-info"]');
+    
+    if (templateInfoTab && templateInfoBtn) {
+        templateInfoTab.classList.add('active');
+        templateInfoBtn.classList.add('active');
+        console.log('✅ [ONGLETS] Onglet "Informations Template" activé par défaut');
+    }
+    
     tabButtons.forEach(button => {
         button.addEventListener('click', function() {
             const targetTab = this.getAttribute('data-tab');
+            console.log(`🔄 [ONGLETS] Clic sur l'onglet: ${targetTab}`);
             
             // Retirer la classe active de tous les boutons et panneaux
             tabButtons.forEach(btn => btn.classList.remove('active'));
@@ -1026,7 +1047,13 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Ajouter la classe active au bouton cliqué et au panneau correspondant
             this.classList.add('active');
-            document.getElementById(targetTab + '-tab').classList.add('active');
+            const targetPanel = document.getElementById(targetTab + '-tab');
+            if (targetPanel) {
+                targetPanel.classList.add('active');
+                console.log(`✅ [ONGLETS] Onglet "${targetTab}" activé`);
+            } else {
+                console.error(`❌ [ONGLETS] Panneau non trouvé: ${targetTab}-tab`);
+            }
         });
     });
     

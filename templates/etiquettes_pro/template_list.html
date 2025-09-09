@@ -57,7 +57,7 @@
                     <i class="fas fa-search"></i> Filtrer
                 </button>
                 <a href="{% url 'etiquettes_pro:dashboard' %}" class="theme-button-secondary">
-                    <i class="fas fa-arrow-left"></i> Retour
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
                 </a>
             </div>
         </form>
@@ -175,6 +175,19 @@
         </a>
     </div>
     {% endif %}
+
+    <!-- Boutons d'action -->
+    <div class="flex justify-center space-x-4 mt-8">
+        <a href="{% url 'etiquettes_pro:template_create' %}" class="theme-button-primary">
+            <i class="fas fa-plus"></i> Nouveau Template
+        </a>
+        <a href="{% url 'etiquettes_pro:dashboard' %}" class="theme-button-secondary" style="background: white !important; color: #374151 !important; border: 2px solid #d1d5db !important;">
+            <i class="fas fa-tachometer-alt"></i> Dashboard
+        </a>
+        <a href="{% url 'etiquettes_pro:etiquette_list' %}" class="theme-button-secondary" style="background: white !important; color: #374151 !important; border: 2px solid #d1d5db !important;">
+            <i class="fas fa-tags"></i> Mes Étiquettes
+        </a>
+    </div>
 </div>
 
 <!-- Scripts -->

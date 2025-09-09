@@ -269,8 +269,11 @@
         <a href="{% url 'etiquettes_pro:template_edit' template.pk %}" class="theme-button-primary">
             <i class="fas fa-edit"></i> Modifier le Template
         </a>
+        <a href="{% url 'etiquettes_pro:dashboard' %}" class="theme-button-secondary">
+            <i class="fas fa-tachometer-alt"></i> Dashboard
+        </a>
         <a href="{% url 'etiquettes_pro:template_list' %}" class="theme-button-secondary">
-            <i class="fas fa-arrow-left"></i> Retour à la liste
+            <i class="fas fa-list"></i> Liste des Templates
         </a>
         <a href="{% url 'etiquettes_pro:template_delete' template.pk %}" class="theme-button-secondary bg-red-600 hover:bg-red-700" 
            onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce template ?')">
