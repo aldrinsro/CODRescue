@@ -720,11 +720,13 @@ def commandes_livrees_partiellement(request):
             return redirect('Superpreparation:home')
     except Operateur.DoesNotExist:
         messages.error(request, "Votre profil opérateur n'existe pas.")
+
+        
         return redirect('login')
     commandes_livrees_partiellement_qs = (
         Commande.objects
         .filter(etats__enum_etat__libelle='Livrée Partiellement')
-        .filter(etats__enum_etat__libelle='En préparation', etats__operateur=operateur_profile)
+        .filter(etats__enum_etat__libelle='En préparation')
         .select_related('client', 'ville', 'ville__region')
         .prefetch_related('paniers__article', 'etats')
         .distinct()
@@ -1114,15 +1116,9 @@ def detail_prepa(request, pk):
     try:
 
         operateur_profile = request.user.profil_operateur
-
-        
-
         # Autoriser superviseur ou équipe préparation
-
         if not (operateur_profile.is_preparation or operateur_profile.is_superviseur_preparation):
-
             messages.error(request, "Accès non autorisé. Réservé à l'équipe préparation.")
-
             return redirect('Superpreparation:home')
 
             
@@ -2419,33 +2415,18 @@ def modifier_commande_prepa(request, commande_id):
 
 @superviseur_preparation_required
 def modifier_commande_superviseur(request, commande_id):
-
     """Page de modification complète d'une commande pour les superviseurs de préparation"""
-
     import json
-
     from commande.models import Commande, Operation
-
     from parametre.models import Ville
-
-    
-
     try:
-
         # Accepter PREPARATION et SUPERVISEUR_PREPARATION
-
         operateur = Operateur.objects.get(user=request.user, actif=True)
-
         if operateur.type_operateur not in ['PREPARATION', 'SUPERVISEUR_PREPARATION']:
-
             messages.error(request, "Accès non autorisé. Réservé à l'équipe préparation.")
-
             return redirect('Superpreparation:home')
-
     except Operateur.DoesNotExist:
-
         # Pas de profil: continuer (le décorateur a déjà validé l'accès via groupes)
-
         operateur = None
 
     

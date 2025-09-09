@@ -14,72 +14,6 @@ from commande.models  import Commande, Envoi, EnumEtatCmd, EtatCommande, Operati
 from article.models   import Article
 
 
-def corriger_affectation_commandes_renvoyees():
-    """
-    Fonction utilitaire pour corriger automatiquement l'affectation des commandes renvoyées.
-    À appeler périodiquement ou lors de problèmes d'affectation.
-    """
-    try:
-        # Trouver toutes les commandes renvoyées en préparation
-        commandes_renvoyees = Commande.objects.filter(
-            etats__enum_etat__libelle='En préparation',
-            etats__date_fin__isnull=True
-        ).distinct()
-        
-        corrections_effectuees = 0
-        
-        for commande in commandes_renvoyees:
-            # Trouver l'état actuel
-            etat_actuel = commande.etats.filter(
-                enum_etat__libelle='En préparation', 
-                date_fin__isnull=True
-            ).first()
-            
-            if not etat_actuel:
-                continue
-                
-            # Chercher l'opérateur original qui avait préparé
-            etat_preparee_original = commande.etats.filter(
-                enum_etat__libelle='Préparée',
-                date_fin__isnull=False
-            ).order_by('-date_fin').first()
-            
-            operateur_cible = None
-            
-            if etat_preparee_original and etat_preparee_original.operateur:
-                if (etat_preparee_original.operateur.type_operateur == 'PREPARATION' and 
-                    etat_preparee_original.operateur.actif):
-                    operateur_cible = etat_preparee_original.operateur
-            
-            # Si pas d'opérateur original, prendre le moins chargé
-            if not operateur_cible:
-                operateurs_preparation = Operateur.objects.filter(
-                    type_operateur='PREPARATION',
-                    actif=True
-                ).order_by('id')
-                
-                if operateurs_preparation.exists():
-                    from django.db.models import Count, Q
-                    operateur_cible = operateurs_preparation.annotate(
-                        commandes_en_cours=Count('etats_modifies', filter=Q(
-                            etats_modifies__enum_etat__libelle__in=['À imprimer', 'En préparation'],
-                            etats_modifies__date_fin__isnull=True
-                        ))
-                    ).order_by('commandes_en_cours', 'id').first()
-            
-            # Corriger l'affectation si nécessaire
-            if operateur_cible and etat_actuel.operateur != operateur_cible:
-                ancien_operateur = etat_actuel.operateur
-                etat_actuel.operateur = operateur_cible
-                etat_actuel.save()
-                corrections_effectuees += 1
-                print(f"✅ Correction: Commande {commande.id_yz} réaffectée de {ancien_operateur} vers {operateur_cible.nom_complet}")
-        
-        return corrections_effectuees
-        
-    except Exception as e:
-        print(f"❌ Erreur lors de la correction des affectations: {e}")
-        return 0
 
 
 def valider_affectation_commande(commande, operateur_preparation):
@@ -636,8 +570,6 @@ def modifier_profile_logistique(request):
     }
     return render(request, 'operatLogistic/modifier_profile.html', context)
 
-
-
 @login_required
 def parametre(request):
     return render(request, 'operatLogistic/parametre.html')
@@ -682,9 +614,11 @@ def changer_etat_sav(request, commande_id):
         commande = get_object_or_404(Commande, id=commande_id)
         
         # Récupérer les données du formulaire
+        print(f"DEBUG: POST data = {dict(request.POST)}")  # Debug
         nouvel_etat = request.POST.get('nouvel_etat')
         commentaire = request.POST.get('commentaire', '').strip()
         date_report = request.POST.get('date_report')
+        print(f"DEBUG: nouvel_etat = '{nouvel_etat}', commentaire = '{commentaire}'")  # Debug
         
         if not nouvel_etat:
             return JsonResponse({'success': False, 'error': 'Nouvel état non spécifié.'})
@@ -759,64 +693,6 @@ def changer_etat_sav(request, commande_id):
         return JsonResponse({'success': False, 'error': str(e)})
 
 
-@login_required
-@require_POST
-def creer_envoi(request, commande_id):
-    """Créer un envoi pour une commande."""
-    try:
-        operateur = Operateur.objects.get(user=request.user, type_operateur='LOGISTIQUE')
-    except Operateur.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Profil d\'opérateur logistique non trouvé.'})
-    
-    try:
-        commande = get_object_or_404(Commande, id=commande_id)
-        
-        with transaction.atomic():
-            # Vérifier si un envoi existe déjà
-            if commande.envois.exists():
-                return JsonResponse({'success': False, 'error': 'Un envoi existe déjà pour cette commande.'})
-            
-            # Créer l'envoi
-            envoi = Envoi.objects.create(
-                commande=commande,
-                date_livraison_prevue=timezone.now().date(),
-                operateur_creation=operateur,
-                status='en_preparation'
-            )
-            
-            # Générer un numéro d'envoi unique
-            envoi.numero_envoi = f"ENV-{commande.id_yz}-{envoi.id:04d}"
-            envoi.save()
-            
-            # Mettre à jour l'état de la commande si nécessaire
-            if not commande.etat_actuel or commande.etat_actuel.enum_etat.libelle != 'En cours de livraison':
-                # Fermer l'état actuel
-                if commande.etat_actuel:
-                    commande.etat_actuel.date_fin = timezone.now()
-                    commande.etat_actuel.save()
-                
-                # Créer l'état "En cours de livraison"
-                etat_enum, _ = EnumEtatCmd.objects.get_or_create(
-                    libelle='En cours de livraison',
-                    defaults={'ordre': 60, 'couleur': '#3B82F6'}
-                )
-                
-                EtatCommande.objects.create(
-                    commande=commande,
-                    enum_etat=etat_enum,
-                    operateur=operateur,
-                    date_debut=timezone.now(),
-                    commentaire=f"Envoi créé: {envoi.numero_envoi}"
-                )
-            
-            return JsonResponse({
-                'success': True,
-                'message': f'Envoi {envoi.numero_envoi} créé avec succès',
-                'numero_envoi': envoi.numero_envoi
-            })
-            
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)})
 
 
 @login_required
@@ -836,10 +712,18 @@ def rafraichir_articles(request, commande_id):
         from django.template.loader import render_to_string
         html = render_to_string('operatLogistic/partials/_articles_section.html', context, request=request)
         
+        # Données supplémentaires pour calcul côté frontend
+        frais_livraison = float(commande.ville.frais_livraison or 0)
+        inclure_frais = bool(getattr(commande, 'frais_livraison', False))
+        total_commande_avec_frais = float(commande.total_cmd) + (frais_livraison if inclure_frais else 0.0)
+
         return JsonResponse({
             'success': True,
             'html': html,
             'total_commande': float(commande.total_cmd),
+            'total_commande_avec_frais': total_commande_avec_frais,
+            'frais_livraison': frais_livraison,
+            'inclure_frais': inclure_frais,
             'articles_count': commande.paniers.count()
         })
         
@@ -899,104 +783,6 @@ def api_articles(request):
             'error': str(e)
         })
 
-
-@login_required
-@require_POST
-def creer_commande_sav(request, commande_id):
-    """Créer une nouvelle commande SAV pour les articles défectueux retournés."""
-    try:
-        operateur = Operateur.objects.get(user=request.user, type_operateur='LOGISTIQUE')
-    except Operateur.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Profil d\'opérateur logistique non trouvé.'})
-    
-    try:
-        commande_originale = get_object_or_404(Commande, id=commande_id)
-        
-        # Vérifier que la commande est dans un état qui permet la création d'une commande SAV
-        etats_sav_autorises = ['Retournée', 'Livrée', 'Livrée Partiellement', 'Livrée avec changement']
-        if not commande_originale.etat_actuel or commande_originale.etat_actuel.enum_etat.libelle not in etats_sav_autorises:
-            return JsonResponse({
-                'success': False, 
-                'error': f'Cette commande ne peut pas avoir de SAV. État actuel: {commande_originale.etat_actuel.enum_etat.libelle if commande_originale.etat_actuel else "Aucun"}'
-            })
-        
-        # Récupérer les articles défectueux depuis la requête POST
-        import json
-        articles_defectueux = json.loads(request.POST.get('articles_defectueux', '[]'))
-        commentaire = request.POST.get('commentaire', '')
-        
-        if not articles_defectueux:
-            return JsonResponse({'success': False, 'error': 'Aucun article défectueux spécifié.'})
-        
-        with transaction.atomic():
-            # Générer un ID YZ unique pour la commande SAV
-            last_id_yz = Commande.objects.aggregate(
-                max_id=Max('id_yz')
-            )['max_id']
-            new_id_yz = (last_id_yz or 0) + 1
-            
-            # Créer une nouvelle commande SAV
-            nouvelle_commande = Commande.objects.create(
-                client=commande_originale.client,
-                ville=commande_originale.ville,
-                adresse=commande_originale.adresse,
-                total_cmd=0,  # Sera recalculé
-                num_cmd=f"SAV-{commande_originale.num_cmd}",
-                id_yz=new_id_yz,
-                is_upsell=False,
-                compteur=0
-            )
-            
-            total = 0
-            # Créer les paniers pour les articles défectueux
-            for article_data in articles_defectueux:
-                article_id = article_data['article_id']
-                quantite = int(article_data['quantite'])
-                
-                # Récupérer l'article original
-                panier_original = commande_originale.paniers.filter(
-                    article_id=article_id
-                ).first()
-                
-                if panier_original:
-                    from commande.models import Panier
-                    Panier.objects.create(
-                        commande=nouvelle_commande,
-                        article=panier_original.article,
-                    quantite=quantite,
-                        sous_total=panier_original.article.prix_unitaire * quantite
-                    )
-                    total += panier_original.article.prix_unitaire * quantite
-            
-            # Mettre à jour le total de la commande
-            nouvelle_commande.total_cmd = total
-            nouvelle_commande.save()
-            
-            # Créer l'état initial "Non affectée"
-            enum_etat = EnumEtatCmd.objects.get(libelle='Non affectée')
-            EtatCommande.objects.create(
-                commande=nouvelle_commande,
-                enum_etat=enum_etat,
-                operateur=operateur,
-                date_debut=timezone.now(),
-                commentaire=f"Commande SAV créée pour articles défectueux de {commande_originale.id_yz}. {commentaire}"
-            )
-            
-            messages.success(request, 
-                f"Commande SAV {nouvelle_commande.id_yz} créée avec succès pour {len(articles_defectueux)} article(s) défectueux.")
-            
-            return JsonResponse({
-                'success': True,
-                'message': f'Commande SAV {nouvelle_commande.id_yz} créée avec succès',
-                'commande_sav_id': nouvelle_commande.id,
-                'commande_sav_num': nouvelle_commande.id_yz,
-                'total': float(total)
-            })
-            
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)})
-
-    
 @login_required
 @require_POST
 def ajouter_article(request, commande_id):
@@ -1451,48 +1237,6 @@ def commandes_renvoyees_preparation(request):
     return render(request, 'operatLogistic/commandes_renvoyees_preparation.html', context)
 
 
-@login_required
-@require_POST
-def supprimer_article(request, commande_id):
-    """Supprimer un article d'une commande."""
-    try:
-        operateur = Operateur.objects.get(user=request.user, type_operateur='LOGISTIQUE')
-    except Operateur.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Profil d\'opérateur logistique non trouvé.'})
-    
-    try:
-        commande = get_object_or_404(Commande, id=commande_id)
-        panier_id = request.POST.get('panier_id')
-        
-        if not panier_id:
-            return JsonResponse({'success': False, 'error': 'ID du panier manquant.'})
-        
-        from commande.models import Panier
-        
-        panier = get_object_or_404(Panier, id=panier_id, commande=commande)
-        quantite_supprimee = panier.quantite
-        
-        # Note: La réincrémentation du stock est maintenant gérée par les opérateurs de préparation
-                        
-        # Supprimer le panier
-        panier.delete()
-                
-                # Recalculer le total de la commande
-        total_commande = commande.paniers.aggregate(
-            total=Sum('sous_total')
-                )['total'] or 0
-        commande.total_cmd = float(total_commande)
-        commande.save()
-            
-        return JsonResponse({
-                'success': True,
-            'message': 'Article supprimé avec succès',
-            'total_commande': float(commande.total_cmd)
-            })
-            
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)})
-
 
 @login_required
 @require_POST
@@ -1885,62 +1629,21 @@ def livraison_partielle(request, commande_id):
                     operateur=operateur
                 )
             
-            # === AJOUT : Récapitulatif du stock de tous les articles de la commande ===
+            # === AJOUT : Récapitulatif des articles de la commande ===
             recap_stock_commande = []
-            # On va construire un mapping article_id -> (stock_avant, stock_apres, statut)
-            # On utilise recap_articles_renvoyes pour les articles renvoyés
-            if recap_articles_renvoyes:  # Seulement si il y a des articles renvoyés
-                recap_renvoi_map = { (a.get('nom',''), a['etat']): a for a in recap_articles_renvoyes }
-                for panier in commande.paniers.all():
-                    try:
-                        article = Article.objects.get(id=panier.article.id)
-                        nom = article.nom
-                        # Chercher si l'article est dans les articles renvoyés
-                        recap_renvoi = None
-                        for r in recap_articles_renvoyes:
-                            if r['nom'] == nom:
-                                recap_renvoi = r
-                                break
-                        if recap_renvoi:
-                            stock_avant = recap_renvoi['stock_avant']
-                            stock_apres = recap_renvoi['stock_apres']
-                            statut = 'Renvoyé en préparation'
-                        else:
-                            # Non renvoyé, donc livré ou inchangé
-                            stock_avant = article.qte_disponible
-                            stock_apres = article.qte_disponible
-                            statut = 'Livré'
-                        recap_stock_commande.append({
-                            'nom': nom,
-                            'stock_avant': stock_avant,
-                            'stock_apres': stock_apres,
-                            'statut': statut
-                        })
-                    except Article.DoesNotExist:
-                        recap_stock_commande.append({
-                            'nom': panier.article.nom,
-                            'stock_avant': None,
-                            'stock_apres': None,
-                            'statut': 'Inconnu'
-                        })
-            else:
-                # Cas où tous les articles sont livrés - pas de réintégration de stock
-                for panier in commande.paniers.all():
-                    try:
-                        article = Article.objects.get(id=panier.article.id)
-                        recap_stock_commande.append({
-                            'nom': article.nom,
-                            'stock_avant': article.qte_disponible,
-                            'stock_apres': article.qte_disponible,
-                            'statut': 'Livré (tous les articles)'
-                        })
-                    except Article.DoesNotExist:
-                        recap_stock_commande.append({
-                            'nom': panier.article.nom,
-                            'stock_avant': None,
-                            'stock_apres': None,
-                            'statut': 'Inconnu'
-                        })
+            # Construire un récapitulatif simple des articles
+            for panier in commande.paniers.all():
+                try:
+                    article = Article.objects.get(id=panier.article.id)
+                    recap_stock_commande.append({
+                        'nom': article.nom,
+                        'statut': 'Livré'
+                    })
+                except Article.DoesNotExist:
+                    recap_stock_commande.append({
+                        'nom': panier.article.nom,
+                        'statut': 'Inconnu'
+                    })
             # === FIN AJOUT ===
             
             if articles_renvoyes:
@@ -1957,7 +1660,7 @@ def livraison_partielle(request, commande_id):
                 'articles_renvoyes': len(articles_renvoyes),
                 'commande_renvoi_id': nouvelle_commande.id if articles_renvoyes else None,
                 'commande_renvoi_num': nouvelle_commande.id_yz if articles_renvoyes else None,
-                'recap_articles_renvoyes': recap_articles_renvoyes,
+                'recap_articles_renvoyes': recap_articles_renvoyes_json,
                 'recap_stock_commande': recap_stock_commande
             })
                 
@@ -2011,39 +1714,3 @@ def api_panier_commande(request, commande_id):
         })
 
 
-@login_required
-def api_verifier_stock_article(request, article_id):
-    """API pour vérifier l'état du stock d'un article."""
-    try:
-        print(f"🔍 [STOCK_CHECK] Vérification stock article ID: {article_id}")
-        
-        article = get_object_or_404(Article, id=article_id)
-        print(f"📦 [STOCK_CHECK] Article trouvé: {article.nom}, Stock: {article.qte_disponible}")
-        
-        return JsonResponse({
-            'success': True,
-            'article': {
-                'id': article.id,
-                'nom': article.nom,
-                'reference': article.reference,
-                'qte_disponible': article.qte_disponible,
-                'prix_unitaire': float(article.prix_unitaire),
-                'actif': article.actif,
-                'categorie': article.categorie,
-                'couleur': article.couleur,
-                'pointure': article.pointure,
-                'phase': article.phase,
-                'isUpsell': article.isUpsell,
-            }
-        })
-        
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': str(e),
-            'article_id': article_id
-        })
-
-
-# Note: La fonction de test de réintégration du stock a été supprimée
-# car la réincrémentation du stock est maintenant gérée par les opérateurs de préparation

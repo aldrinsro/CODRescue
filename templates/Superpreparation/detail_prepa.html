@@ -156,9 +156,13 @@
                                         <div>
                                             <div class="text-sm font-medium text-gray-900">{{ article_data.article.nom }}</div>
                                             <div class="text-xs text-gray-500">
-                                                Réf: {{ article_data.article.reference }} | 
-                                                {{ article_data.article.couleur }} | 
-                                                {{ article_data.article.pointure }}
+                                                Réf: {{ article_data.article.reference }}
+                                                {% if article_data.article.couleur %} | Couleur: {{ article_data.article.couleur }}{% endif %}
+                                                {% if article_data.article.pointure %} | Pointure: {{ article_data.article.pointure }}{% endif %}
+                                                {% if article_data.article.taille %} | Taille: {{ article_data.article.taille }}{% endif %}
+                                                {% if article_data.article.modele %} | Modèle: {{ article_data.article.modele }}{% endif %}
+                                                {% if article_data.article.matiere %} | Matière: {{ article_data.article.matiere }}{% endif %}
+                                                {% if article_data.article.marque %} | Marque: {{ article_data.article.marque }}{% endif %}
                                             </div>
                                         </div>
                                     </div>
@@ -208,7 +212,13 @@
                                                 {% endif %}
                                             </div>
                                             <div class="text-xs text-gray-500 mt-1">
-                                                Réf: {{ article_data.article.reference }} | {{ article_data.article.couleur }} | {{ article_data.article.pointure }}
+                                                Réf: {{ article_data.article.reference }}
+                                                {% if article_data.article.couleur %} | Couleur: {{ article_data.article.couleur }}{% endif %}
+                                                {% if article_data.article.pointure %} | Pointure: {{ article_data.article.pointure }}{% endif %}
+                                                {% if article_data.article.taille %} | Taille: {{ article_data.article.taille }}{% endif %}
+                                                {% if article_data.article.modele %} | Modèle: {{ article_data.article.modele %}{% endif %}
+                                                {% if article_data.article.matiere %} | Matière: {{ article_data.article.matiere }}{% endif %}
+                                                {% if article_data.article.marque %} | Marque: {{ article_data.article.marque }}{% endif %}
                                             </div>
                                         </div>
                                     </div>

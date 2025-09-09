@@ -68,7 +68,10 @@
 
 {% block content %}
 {% csrf_token %}
-<div class="main-content transition-all duration-300" id="mainContent">
+<div class="main-content transition-all duration-300" id="mainContent" 
+     data-commande-id="{{ commande.id }}"
+     data-commande-id-yz="{{ commande.id_yz }}"
+     data-commande-payement="{{ commande.total_cmd }}">
     <!-- En-tête avec navigation -->
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 text-white p-6 rounded-xl shadow-lg" style="background: linear-gradient(to right, var(--logistic-primary), var(--logistic-dark));">
         <div class="flex items-center space-x-4">
@@ -309,12 +312,7 @@
                 <label class="block text-sm font-semibold mb-2 text-purple-600 flex items-center">
                     
                     Frais de livraison :
-                    <button type="button" 
-                            onclick="afficherModalFraisLivraison()" 
-                            class="ml-2 text-purple-600 hover:text-purple-800 transition-colors"
-                            title="Voir le détail des frais de livraison">
-                        <i class="fas fa-info-circle text-sm"></i>
-                    </button>
+                  
                 </label>
                 {% if commande.frais_livraison %}
                 <p class="text-lg font-medium text-purple-800">
@@ -547,99 +545,16 @@
             <div class="flex justify-between items-center">
                     <div class="text-lg font-semibold text-gray-700 flex items-center">
                     <i class="fas fa-calculator mr-2"></i>Total de la commande:
-                        <button type="button" 
-                                onclick="afficherModalCalculs()" 
-                                class="ml-2 text-blue-600 hover:text-blue-800 transition-colors"
-                                title="Voir le détail des calculs">
-                            <i class="fas fa-info-circle"></i>
-                        </button>
                 </div>
-                <div class="text-2xl font-bold" style="color: var(--logistic-primary);" id="total-commande">
-                        
-                    {{ commande.total_cmd|floatformat:2 }} DH
-                       
+                <div class="text-2xl font-bold" style="color: var(--logistic-primary);" id="total-commande" data-frais-livraison="{{ commande.ville.frais_livraison|default:0 }}" data-inclure-frais="{{ commande.frais_livraison|yesno:'true,false' }}" data-articles-count="{{ commande.paniers.count }}">
+                    {{commande.total_cmd|floatformat:2}} DH
                     </div>
                 </div>
                 
-                {% if commande.frais_livraison %}
-                <!-- Détail des frais de livraison -->
-                <div class="flex justify-end items-center text-xs text-gray-600">
-                    <i class="fas fa-truck mr-1"></i>
-                    Inclut frais de livraison: {{ commande.ville.frais_livraison|default:0|floatformat:2 }} DH
-                    <button type="button" 
-                            onclick="afficherModalFraisLivraison()" 
-                            class="ml-1 text-purple-600 hover:text-purple-800 transition-colors"
-                            title="Voir le détail des frais de livraison">
-                        <i class="fas fa-info-circle text-xs"></i>
-                    </button>
-                </div>
-                {% endif %}
+                
             </div>
-         </div>
-    </div>
-
-    <!-- Section SAV - Création de Commande pour Articles Défectueux -->
-    {% if commande.etat_actuel.enum_etat.libelle == 'Retournée' or commande.etat_actuel.enum_etat.libelle == 'Livrée' or commande.etat_actuel.enum_etat.libelle == 'Livrée Partiellement' %}
-    <div class="bg-white rounded-xl shadow-lg border p-6 md:p-8 mb-6" style="border-color: var(--logistic-border);">
-        <h2 class="text-2xl font-bold flex items-center mb-6" style="color: var(--logistic-primary);">
-            <i class="fas fa-tools mr-2"></i>Service Après-Vente - Articles Défectueux
-        </h2>
-        
-        <div class="bg-red-50 border border-red-200 rounded-lg p-6 mb-6">
-            <div class="flex items-center mb-4">
-                <i class="fas fa-exclamation-triangle text-red-600 text-xl mr-3"></i>
-                <h3 class="text-lg font-semibold text-red-800">
-                    {% if commande.etat_actuel.enum_etat.libelle == 'Retournée' %}
-                        Commande Retournée - Articles Défectueux
-                    {% else %}
-                        Service Après-Vente - Articles Défectueux
-                    {% endif %}
-                </h3>
-            </div>
-            <p class="text-red-700 mb-4">
-                {% if commande.etat_actuel.enum_etat.libelle == 'Retournée' %}
-                    Cette commande a été retournée par le client en raison de défauts sur un ou plusieurs articles. 
-                    Créez une nouvelle commande SAV avec des articles neufs en parfait état pour améliorer l'expérience client.
-                {% else %}
-                    Le client a signalé des défauts sur un ou plusieurs articles de cette commande. 
-                    Créez une nouvelle commande SAV avec des articles neufs en parfait état pour améliorer l'expérience client.
-                {% endif %}
-            </p>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- Informations sur la commande -->
-                <div class="bg-white p-4 rounded-lg border border-red-200">
-                    <h4 class="font-semibold text-gray-800 mb-3 flex items-center">
-                        <i class="fas fa-info-circle mr-2 text-blue-600"></i>
-                        Détails de la Commande
-                    </h4>
-                    <div class="space-y-2 text-sm">
-                        <div class="flex justify-between">
-                            <span class="text-gray-600">Commande:</span>
-                            <span class="font-medium">{{ commande.id_yz }}</span>
                         </div>
-                        <div class="flex justify-between">
-                            <span class="text-gray-600">Client:</span>
-                            <span class="font-medium">{{ commande.client.prenom }} {{ commande.client.nom }}</span>
                         </div>
-                        <div class="flex justify-between">
-                            <span class="text-gray-600">Valeur totale:</span>
-                            <span class="font-medium">{{ commande.total_cmd|floatformat:2 }} DH</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-gray-600">Articles:</span>
-                            <span class="font-medium">{{ commande.paniers.count }} article(s)</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-gray-600">État actuel:</span>
-                            <span class="font-medium">{{ commande.etat_actuel.enum_etat.libelle }}</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
     
     <!-- Section Actions de Modification du Panier Client -->
     {% if commande.etat_actuel.enum_etat.libelle == 'En cours de livraison' %}
@@ -685,16 +600,16 @@
             <i class="fas fa-shipping-fast mr-2"></i>Actions de Livraison (SAV)
         </h2>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <button onclick="openSavModal('Reportée')" class="sav-action-btn" style="background-color: #F59E0B;">
+            <button onclick="openSavModal('Reportée'); document.getElementById('nouvel_etat_input').value='Reportée';" class="sav-action-btn" style="background-color: #F59E0B;">
                 <i class="fas fa-clock mr-2"></i>Reporter
             </button>
-            <button onclick="openSavModal('Livrée')" class="sav-action-btn" style="background-color: #10B981;">
+            <button onclick="openSavModal('Livrée'); document.getElementById('nouvel_etat_input').value='Livrée';" class="sav-action-btn" style="background-color: #10B981;">
                 <i class="fas fa-check-circle mr-2"></i>Livrée
             </button>
             <button onclick="ouvrirModalLivraisonPartielle()" class="sav-action-btn" style="background-color: #3B82F6;">
                 <i class="fas fa-box-open mr-2"></i>Livraison Partielle
             </button>
-            <button onclick="openSavModal('Retournée')" class="sav-action-btn" style="background-color: #EF4444;">
+            <button onclick="openSavModal('Retournée'); document.getElementById('nouvel_etat_input').value='Retournée';" class="sav-action-btn" style="background-color: #EF4444;">
                 <i class="fas fa-times-circle mr-2"></i>Retournée
             </button>
         </div>
@@ -736,13 +651,12 @@
                                                 <i class="fas fa-box mr-2"></i>
                                                 {{ panier.article.nom }}
                                                 {% if panier.variante %}
-                                                    {% if panier.variante.couleur and panier.variante.pointure %}
-                                                        - {{ panier.variante.couleur.nom }} ({{ panier.variante.pointure.pointure }})
-                                                    {% elif panier.variante.couleur %}
-                                                        - {{ panier.variante.couleur.nom }}
-                                                    {% elif panier.variante.pointure %}
-                                                        - Pointure {{ panier.variante.pointure.pointure }}
-                                                    {% endif %}
+                                                    -
+                                                    {% if panier.variante.couleur %}{{ panier.variante.couleur.nom }}{% endif %}
+                                                    {% if panier.variante.pointure %}{% if panier.variante.couleur %} / {% endif %}{{ panier.variante.pointure.pointure }}{% endif %}
+                                                    {% if panier.variante.taille %}{% if panier.variante.couleur or panier.variante.pointure %} / {% endif %}{{ panier.variante.taille }}{% endif %}
+                                                    {% if panier.variante.modele %}{% if panier.variante.couleur or panier.variante.pointure or panier.variante.taille %} / {% endif %}{{ panier.variante.modele }}{% endif %}
+                                                    {% if panier.variante.matiere %}{% if panier.variante.couleur or panier.variante.pointure or panier.variante.taille or panier.variante.modele %} / {% endif %}{{ panier.variante.matiere }}{% endif %}
                                                 {% endif %}
                                                 {% if panier.article.reference %}
                                                     <span class="text-xs text-gray-500">(Réf: {{ panier.article.reference }})</span>
@@ -781,11 +695,6 @@
                                     <option value="Adresse de livraison incorrecte">Adresse de livraison incorrecte</option>
                                     <option value="Client absent au moment de la livraison">Client absent au moment de la livraison</option>
                                     <option value="Refus de livraison par le client">Refus de livraison par le client</option>
-                                </optgroup>
-                                <optgroup label="Stock et disponibilité" class="optgroup-stock">
-                                    <option value="Article en rupture de stock">Article en rupture de stock</option>
-                                    <option value="Stock insuffisant pour la commande">Stock insuffisant pour la commande</option>
-                                    <option value="Article indisponible temporairement">Article indisponible temporairement</option>
                                 </optgroup>
                                 <optgroup label="Autres" class="optgroup-autres">
                                     <option value="Demande spéciale du client">Demande spéciale du client</option>
@@ -864,7 +773,8 @@
                                      data-article-id="{{ panier.article.id }}"
                                      data-variante-id="{% if panier.variante %}{{ panier.variante.id }}{% endif %}"
                                      data-article-nom="{{ panier.article.nom }}"
-                                     data-article-prix="{{ panier.prix_actuel_pour_affichage|stringformat:"%.2f" }}"
+                                     data-article-prix="{% if commande.compteur > 0 %}{% if commande.compteur == 1 and panier.article.prix_upsell_1 %}{{ panier.article.prix_upsell_1|stringformat:"%.2f" }}{% elif commande.compteur == 2 and panier.article.prix_upsell_2 %}{{ panier.article.prix_upsell_2|stringformat:"%.2f" }}{% elif commande.compteur == 3 and panier.article.prix_upsell_3 %}{{ panier.article.prix_upsell_3|stringformat:"%.2f" }}{% elif commande.compteur >= 4 and panier.article.prix_upsell_4 %}{{ panier.article.prix_upsell_4|stringformat:"%.2f" }}{% else %}{{ panier.article.prix_unitaire|stringformat:"%.2f" }}{% endif %}{% else %}{{ panier.article.prix_unitaire|stringformat:"%.2f" }}{% endif %}"
+                                     data-sous-total="{{ panier.sous_total|stringformat:"%.2f" }}"
                                      data-quantite-max="{{ panier.quantite }}">
                                     <div class="flex items-start space-x-3">
                                         <input type="checkbox" 
@@ -877,13 +787,12 @@
                                                 <div class="font-medium text-gray-900">
                                                     {{ panier.article.nom }}
                                                     {% if panier.variante %}
-                                                        {% if panier.variante.couleur and panier.variante.pointure %}
-                                                            - {{ panier.variante.couleur.nom }} ({{ panier.variante.pointure.pointure }})
-                                                        {% elif panier.variante.couleur %}
-                                                            - {{ panier.variante.couleur.nom }}
-                                                        {% elif panier.variante.pointure %}
-                                                            - Pointure {{ panier.variante.pointure.pointure }}
-                                                        {% endif %}
+                                                        -
+                                                        {% if panier.variante.couleur %}{{ panier.variante.couleur.nom }}{% endif %}
+                                                        {% if panier.variante.pointure %}{% if panier.variante.couleur %} / {% endif %}{{ panier.variante.pointure.pointure }}{% endif %}
+                                                        {% if panier.variante.taille %}{% if panier.variante.couleur or panier.variante.pointure %} / {% endif %}{{ panier.variante.taille }}{% endif %}
+                                                        {% if panier.variante.modele %}{% if panier.variante.couleur or panier.variante.pointure or panier.variante.taille %} / {% endif %}{{ panier.variante.modele }}{% endif %}
+                                                        {% if panier.variante.matiere %}{% if panier.variante.couleur or panier.variante.pointure or panier.variante.taille or panier.variante.modele %} / {% endif %}{{ panier.variante.matiere }}{% endif %}
                                                     {% endif %}
                                                 </div>
                                                 <div class="text-sm text-gray-500">
@@ -891,11 +800,26 @@
                                                         Réf: {{ panier.article.reference }}<br>
                                                     {% endif %}
                                                     {% if panier.variante %}
-                                                    couleur :{{panier.variante.couleur}}<br>
-                                                    pointure : {{panier.variante.pointure}}<br>
-                                                       
+                                                        {% if panier.variante.couleur %}
+                                                        Couleur: {{ panier.variante.couleur }}<br>
+                                                        {% endif %}
+                                                        {% if panier.variante.pointure %}
+                                                        Pointure: {{ panier.variante.pointure }}<br>
+                                                        {% endif %}
+                                                        {% if panier.variante.taille %}
+                                                        Taille: {{ panier.variante.taille }}<br>
+                                                        {% endif %}
+                                                        {% if panier.variante.modele %}
+                                                        Modèle: {{ panier.variante.modele }}<br>
+                                                        {% endif %}
+                                                        {% if panier.variante.matiere %}
+                                                        Matière: {{ panier.variante.matiere }}<br>
+                                                        {% endif %}
                                                     {% endif %}
-                                                    Prix: {{ panier.article.prix_actuel }} DH
+                                                     <div class="flex justify-between items-center mt-1">
+                                                         <span>Prix unitaire: {% if commande.compteur > 0 %}{% if commande.compteur == 1 and panier.article.prix_upsell_1 %}{{ panier.article.prix_upsell_1|floatformat:2 }}{% elif commande.compteur == 2 and panier.article.prix_upsell_2 %}{{ panier.article.prix_upsell_2|floatformat:2 }}{% elif commande.compteur == 3 and panier.article.prix_upsell_3 %}{{ panier.article.prix_upsell_3|floatformat:2 }}{% elif commande.compteur >= 4 and panier.article.prix_upsell_4 %}{{ panier.article.prix_upsell_4|floatformat:2 }}{% else %}{{ panier.article.prix_unitaire|floatformat:2 }}{% endif %}{% else %}{{ panier.article.prix_unitaire|floatformat:2 }}{% endif %} DH</span>
+                                                         <span class="font-medium text-blue-600">Sous-total: {{ panier.sous_total|floatformat:2 }} DH</span>
+                                                     </div>
                                                 </div>
                                             </label>
                                             <div class="mt-3">
@@ -945,7 +869,7 @@
                             <i class="fas fa-calculator mr-2"></i>
                             Résumé de la Livraison Partielle
                         </h4>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                             <div class="text-center">
                                 <div class="text-2xl font-bold text-green-600" id="totalArticlesLivres">0</div>
                                 <div class="text-sm text-gray-600">Articles à livrer</div>
@@ -958,6 +882,22 @@
                                 <div class="text-2xl font-bold text-blue-600" id="totalValeurLivree">0.00 DH</div>
                                 <div class="text-sm text-gray-600">Valeur livrée</div>
                             </div>
+                            <div class="text-center">
+                                <div class="text-2xl font-bold text-purple-600" 
+                                     id="totalCommandeLivraison" 
+                                     data-total-commande="{{ commande.total_cmd|stringformat:"%.2f" }}">{{ commande.total_cmd|floatformat:2 }} DH</div>
+                                <div class="text-sm text-gray-600">Total commande original</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Pourcentage de livraison -->
+                        <div class="mt-4 text-center">
+                            <div class="text-lg font-medium text-gray-700">
+                                Pourcentage de livraison: <span id="pourcentageLivraison" class="text-blue-600 font-bold">100%</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+                                <div id="barreProgresLivraison" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 100%"></div>
+                            </div>
                         </div>
                     </div>
 
@@ -966,12 +906,38 @@
                         <label for="commentaireLivraisonPartielle" class="block text-sm font-medium text-gray-700 mb-2">
                             Commentaire sur la livraison partielle (obligatoire)
                         </label>
-                        <textarea name="commentaire" 
+                        <select name="commentaire" 
                                   id="commentaireLivraisonPartielle" 
-                                  rows="4" 
                                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                  placeholder="Expliquez pourquoi certains articles ne peuvent pas être livrés (défaut, indisponibilité, changement demandé, etc.)"
-                                  required></textarea>
+                                required>
+                            <option value="">Sélectionner un commentaire...</option>
+                            <optgroup label="Problèmes de qualité">
+                                <option value="Article défectueux détecté">Article défectueux détecté</option>
+                                <option value="Problème de qualité signalé par le client">Problème de qualité signalé par le client</option>
+                                <option value="Article endommagé lors du transport">Article endommagé lors du transport</option>
+                                <option value="Défaut de fabrication constaté">Défaut de fabrication constaté</option>
+                            </optgroup>
+                            <optgroup label="Modifications demandées">
+                                <option value="Échange de taille demandé">Échange de taille demandé</option>
+                                <option value="Échange de couleur demandé">Échange de couleur demandé</option>
+                                <option value="Article non conforme à la commande">Article non conforme à la commande</option>
+                                <option value="Modification de commande demandée">Modification de commande demandée</option>
+                            </optgroup>
+                            <optgroup label="Autres">
+                                <option value="Demande spéciale du client">Demande spéciale du client</option>
+                                <option value="Urgence signalée par le client">Urgence signalée par le client</option>
+                                <option value="Autre motif - voir détails">Autre motif - voir détails</option>
+                            </optgroup>
+                        </select>
+                        <!-- Champ de commentaire personnalisé (masqué par défaut) -->
+                        <div id="commentairePersonnaliseLivraisonPartielle" class="mt-2 hidden">
+                            <label for="commentaireCustomLivraisonPartielle" class="text-sm font-medium text-gray-700">Commentaire personnalisé</label>
+                            <textarea name="commentaireCustom" 
+                                      id="commentaireCustomLivraisonPartielle" 
+                                      rows="3" 
+                                      class="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" 
+                                      placeholder="Décrivez le problème ou la situation..."></textarea>
+                        </div>
                     </div>
 
                     <!-- Boutons d'action -->
@@ -1221,148 +1187,6 @@
         </div>
     </div>
 
-    <!-- Modale SAV - Création de Commande pour Articles Défectueux -->
-    <div id="savDefectueuxModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
-        <div class="relative top-20 mx-auto p-5 border w-full max-w-4xl shadow-lg rounded-md bg-white">
-            <div class="mt-3">
-                <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4 flex items-center">
-                    <i class="fas fa-box-open mr-2 text-green-600"></i>
-                    Créer une Commande SAV avec Articles Neufs
-                </h3>
-                <div class="px-7 py-3">
-                    <form id="savDefectueuxForm" action="{% url 'operatLogistic:creer_commande_sav' commande.id %}" method="POST">
-                        {% csrf_token %}
-                        <input type="hidden" name="articles_defectueux" id="articlesDefectueuxSav" value="[]">
-                        
-                        <!-- Informations de la commande originale -->
-                        <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-6">
-                            <h4 class="font-semibold text-blue-800 mb-3 flex items-center">
-                                <i class="fas fa-info-circle mr-2"></i>
-                                Commande Originale avec Articles Défectueux
-                            </h4>
-                            <div class="grid grid-cols-2 gap-4 text-sm">
-                                <div>
-                                    <span class="text-blue-600">ID:</span>
-                                    <span class="font-medium ml-2">{{ commande.id_yz }}</span>
-                                </div>
-                                <div>
-                                    <span class="text-blue-600">Client:</span>
-                                    <span class="font-medium ml-2">{{ commande.client.prenom }} {{ commande.client.nom }}</span>
-                                </div>
-                                <div>
-                                    <span class="text-blue-600">Ville:</span>
-                                    <span class="font-medium ml-2">{{ commande.ville.nom }}</span>
-                                </div>
-                                <div>
-                                    <span class="text-blue-600">Total:</span>
-                                    <span class="font-medium ml-2">{{ commande.total_cmd|floatformat:2 }} DH</span>
-                                </div>
-                            </div>
-                            <div class="mt-3 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">
-                                <i class="fas fa-exclamation-triangle mr-1"></i>
-                                <strong>Problème détecté :</strong> Articles défectueux signalés par le client
-                            </div>
-                        </div>
-
-                        <!-- Sélection des articles pour la nouvelle commande -->
-                        <div class="mb-6">
-                            <h4 class="font-semibold text-gray-800 mb-4 flex items-center">
-                                <i class="fas fa-star mr-2 text-green-600"></i>
-                                Articles Neufs pour la Commande SAV
-                            </h4>
-                            <p class="text-sm text-gray-600 mb-4">
-                                Sélectionnez les articles défectueux qui seront remplacés par des articles neufs en parfait état pour améliorer l'expérience client.
-                            </p>
-                            
-                            <div id="articlesDefectueuxContainer" class="space-y-3 max-h-64 overflow-y-auto border border-gray-200 rounded-lg p-4">
-                                {% for panier in commande.paniers.all %}
-                                <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                                    <input type="checkbox" 
-                                           id="defectueux_{{ panier.article.id }}" 
-                                           class="article-defectueux-checkbox h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
-                                           data-id="{{ panier.article.id }}" 
-                                           data-max="{{ panier.quantite }}"
-                                           data-nom="{{ panier.article.nom }}"
-                                           data-prix="{{ panier.article.prix_unitaire }}"
-                                           checked>
-                                    <label for="defectueux_{{ panier.article.id }}" class="flex-1 text-sm">
-                                        <div class="font-medium text-gray-900">{{ panier.article.nom }}</div>
-                                        <div class="text-gray-500">
-                                            {% if panier.article.reference %}
-                                                Réf: {{ panier.article.reference }} | 
-                                            {% endif %}
-                                            Quantité: {{ panier.quantite }} | 
-                                            Prix: {{ panier.article.prix_unitaire|floatformat:2 }} DH
-                                        </div>
-                                    </label>
-                                    <input type="number" 
-                                           min="1" 
-                                           max="{{ panier.quantite }}" 
-                                           value="{{ panier.quantite }}" 
-                                           class="quantite-defectueux-input w-20 border-gray-300 rounded text-sm p-1" 
-                                           data-id="{{ panier.article.id }}">
-                                </div>
-                                {% endfor %}
-                            </div>
-                        </div>
-
-                        <!-- Commentaire -->
-                        <div class="mb-6">
-                            <label for="commentaireSav" class="block text-sm font-medium text-gray-700 mb-2">
-                                <i class="fas fa-comment mr-2 text-gray-600"></i>
-                                Commentaire sur les articles neufs
-                            </label>
-                            <textarea name="commentaire" 
-                                      id="commentaireSav" 
-                                      rows="4" 
-                                      class="w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm" 
-                                      placeholder="Décrivez les défauts constatés et les améliorations apportées avec les articles neufs..."></textarea>
-                        </div>
-
-                        <!-- Résumé de la commande SAV -->
-                        <div id="resumeSavCommande" class="bg-green-50 p-4 rounded-lg border border-green-200 mb-6">
-                            <h4 class="font-semibold text-green-800 mb-3 flex items-center">
-                                <i class="fas fa-calculator mr-2"></i>
-                                Résumé de la Commande SAV avec Articles Neufs
-                            </h4>
-                            <div class="space-y-2 text-sm">
-                                <div class="flex justify-between">
-                                    <span class="text-green-600">Articles neufs sélectionnés:</span>
-                                    <span id="nbArticlesSav" class="font-medium">{{ commande.paniers.count }}</span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span class="text-green-600">Total estimé:</span>
-                                    <span id="totalSavCommande" class="font-bold text-lg">{{ commande.total_cmd|floatformat:2 }} DH</span>
-                                </div>
-                                <div class="mt-3 p-2 bg-green-50 border border-green-200 rounded text-xs text-green-700">
-                                    <i class="fas fa-star mr-1"></i>
-                                    <strong>Amélioration de l'expérience client :</strong> Tous les articles seront neufs et en parfait état
-                                </div>
-                                <div class="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-700">
-                                    <i class="fas fa-tools mr-1"></i>
-                                    <strong>Service après-vente premium :</strong> Remplacement complet par des articles neufs pour garantir la satisfaction client
-                                </div>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                    <button type="submit" 
-                            form="savDefectueuxForm"
-                            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:ml-3 sm:w-auto sm:text-sm">
-                        <i class="fas fa-star mr-2"></i>
-                        Créer Commande SAV avec Articles Neufs
-                    </button>
-                    <button type="button" 
-                            onclick="fermerModalSavDefectueux()" 
-                            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
-                        Annuler
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Modale de confirmation livraison partielle -->
     <div id="confirmationLivraisonPartielleModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
         <div class="relative top-32 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
@@ -1385,6 +1209,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'js/OperteurSAV/modals.js' %}"></script>
 <script>
 // Variables globales pour les articles
 let articlesDisponibles = [];
@@ -1420,189 +1245,6 @@ function getPrixUpsell(article, compteur) {
     return prixUnitaire;
 }
 
-// ================== GESTION DU SAV ==================
-
-function openSavModal(etat) {
-    document.getElementById('nouvel_etat_input').value = etat;
-    
-    // Titre et couleur selon l'état
-    let titre = '';
-    let couleur = '';
-    let icone = '';
-    
-    switch(etat) {
-        case 'Reportée':
-            titre = 'Reporter la Livraison';
-            couleur = 'text-yellow-600';
-            icone = 'fa-clock';
-            break;
-        case 'Livrée':
-            titre = 'Marquer comme Livrée';
-            couleur = 'text-green-600';
-            icone = 'fa-check-circle';
-            break;
-        case 'Retournée':
-            titre = 'Retourner la Commande';
-            couleur = 'text-red-600';
-            icone = 'fa-times-circle';
-            break;
-        default:
-            titre = `Mettre à jour vers ${etat}`;
-            couleur = 'text-blue-600';
-            icone = 'fa-edit';
-    }
-    
-    document.getElementById('savModalTitle').innerHTML = `<i class="fas ${icone} mr-2 ${couleur}"></i>${titre}`;
-    
-    // Afficher/masquer les sections selon l'état
-    const dateReportDiv = document.getElementById('dateReportDiv');
-    
-    // Masquer tous les champs spéciaux d'abord
-    dateReportDiv.classList.add('hidden');
-    
-    // Afficher les champs appropriés selon l'état
-    if (etat === 'Reportée') {
-        dateReportDiv.classList.remove('hidden');
-        // Définir la date minimale à aujourd'hui
-        const today = new Date().toISOString().split('T')[0];
-        document.getElementById('date_report').min = today;
-        document.getElementById('date_report').required = true;
-        document.getElementById('date_report').value = '';
-    }
-    
-    // Réinitialiser le formulaire
-    document.getElementById('commentaire').value = '';
-    
-    // Masquer le champ de commentaire personnalisé
-    const commentairePersonnalise = document.getElementById('commentairePersonnalise');
-    if (commentairePersonnalise) {
-        commentairePersonnalise.classList.add('hidden');
-    }
-    
-    // Gérer l'affichage des options de commentaire selon l'état
-    const optgroupLivraison = document.querySelector('.optgroup-livraison');
-    const optgroupProblemes = document.querySelector('.optgroup-problemes');
-    const optgroupRetours = document.querySelector('.optgroup-retours');
-    const optgroupCommunication = document.querySelector('.optgroup-communication');
-    const optgroupStock = document.querySelector('.optgroup-stock');
-    const optgroupAutres = document.querySelector('.optgroup-autres');
-    
-    // Masquer toutes les options d'abord
-    if (optgroupLivraison) optgroupLivraison.style.display = 'none';
-    if (optgroupProblemes) optgroupProblemes.style.display = 'none';
-    if (optgroupRetours) optgroupRetours.style.display = 'none';
-    if (optgroupCommunication) optgroupCommunication.style.display = 'none';
-    if (optgroupStock) optgroupStock.style.display = 'none';
-    if (optgroupAutres) optgroupAutres.style.display = 'none';
-    
-    // Afficher les options appropriées selon l'état
-    switch(etat) {
-        case 'Livrée':
-            if (optgroupLivraison) optgroupLivraison.style.display = 'block';
-            if (optgroupAutres) optgroupAutres.style.display = 'block';
-            break;
-        case 'Retournée':
-            if (optgroupRetours) optgroupRetours.style.display = 'block';
-            if (optgroupProblemes) optgroupProblemes.style.display = 'block';
-            if (optgroupCommunication) optgroupCommunication.style.display = 'block';
-            if (optgroupAutres) optgroupAutres.style.display = 'block';
-            break;
-        case 'Reportée':
-            if (optgroupCommunication) optgroupCommunication.style.display = 'block';
-            if (optgroupStock) optgroupStock.style.display = 'block';
-            if (optgroupAutres) optgroupAutres.style.display = 'block';
-            break;
-        default:
-            // Pour les autres états, afficher toutes les options sauf livraison
-            if (optgroupProblemes) optgroupProblemes.style.display = 'block';
-            if (optgroupRetours) optgroupRetours.style.display = 'block';
-            if (optgroupCommunication) optgroupCommunication.style.display = 'block';
-            if (optgroupStock) optgroupStock.style.display = 'block';
-            if (optgroupAutres) optgroupAutres.style.display = 'block';
-    }
-    
-    // Ouvrir le modal
-    document.getElementById('savModal').classList.remove('hidden');
-}
-
-// ================== GESTION DES ARTICLES ==================
-
-function ajouterNouvelArticle() {
-    isEditingArticle = false;
-    currentArticleId = null;
-    
-        // Réinitialiser le formulaire
-    document.getElementById('articleForm').reset();
-    document.getElementById('articleModalTitle').textContent = 'Ajouter un article';
-    document.getElementById('confirmerArticleBtn').textContent = 'Ajouter';
-    
-    // Afficher le champ de sélection d'article
-    document.getElementById('article-selection-field').classList.remove('hidden');
-    document.getElementById('article-display-field').classList.add('hidden');
-    
-    // Masquer les informations de l'article
-    document.getElementById('article-info').classList.add('hidden');
-    
-    // Charger la liste des articles
-    chargerArticles();
-    
-    // Afficher la modale
-    document.getElementById('addArticleModal').classList.remove('hidden');
-}
-
-function modifierArticle(panierId) {
-    // FONCTION DÉSACTIVÉE - Mode lecture seule
-    console.log('Modification d\'articles désactivée - Mode lecture seule');
-    showNotification('⚠️ Modification désactivée : La section Articles du Panier est en mode lecture seule', 'warning');
-    return false;
-}
-
-function supprimerArticle(panierId) {
-    // FONCTION DÉSACTIVÉE - Mode lecture seule
-    console.log('Suppression d\'articles désactivée - Mode lecture seule');
-    showNotification('⚠️ Suppression désactivée : La section Articles du Panier est en mode lecture seule', 'warning');
-    return false;
-}
-
-function modifierQuantite(panierId, deltaOrMode, newValue) {
-    // FONCTION DÉSACTIVÉE - Mode lecture seule
-    console.log('Modification de quantité désactivée - Mode lecture seule');
-    showNotification('⚠️ Modification désactivée : La section Articles du Panier est en mode lecture seule', 'warning');
-    return false;
-}
-
-function chargerArticles() {
-    // Afficher un indicateur de chargement
-    const select = document.getElementById('articleSelect');
-    if (select) {
-        select.innerHTML = '<option value="">Chargement des articles...</option>';
-    }
-    
-    fetch(`/operateur-logistique/api/articles/`)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.success) {
-                articlesDisponibles = data.articles || [];
-            remplirSelectArticles();
-            } else {
-                throw new Error(data.error || 'Erreur lors du chargement des articles');
-            }
-        })
-        .catch(error => {
-            console.error('Erreur lors du chargement des articles:', error);
-            showNotification('❌ Erreur lors du chargement des articles: ' + error.message, 'error');
-            
-            // Réinitialiser le select en cas d'erreur
-            if (select) {
-                select.innerHTML = '<option value="">Erreur de chargement</option>';
-            }
-        });
-}
 
 function remplirSelectArticles() {
     const select = document.getElementById('articleSelect');
@@ -1932,6 +1574,24 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    // Gestion du select de commentaire pour la livraison partielle
+    const commentaireLivraisonPartielleSelect = document.getElementById('commentaireLivraisonPartielle');
+    const commentairePersonnaliseLivraisonPartielle = document.getElementById('commentairePersonnaliseLivraisonPartielle');
+    const commentaireCustomLivraisonPartielle = document.getElementById('commentaireCustomLivraisonPartielle');
+    
+    if (commentaireLivraisonPartielleSelect && commentairePersonnaliseLivraisonPartielle && commentaireCustomLivraisonPartielle) {
+        commentaireLivraisonPartielleSelect.addEventListener('change', function() {
+            if (this.value === 'Autre motif - voir détails') {
+                commentairePersonnaliseLivraisonPartielle.classList.remove('hidden');
+                commentaireCustomLivraisonPartielle.required = true;
+            } else {
+                commentairePersonnaliseLivraisonPartielle.classList.add('hidden');
+                commentaireCustomLivraisonPartielle.required = false;
+                commentaireCustomLivraisonPartielle.value = '';
+            }
+        });
+    }
+    
     // Vérifier s'il y a un paramètre d'action dans l'URL
     const urlParams = new URLSearchParams(window.location.search);
     const actionParam = urlParams.get('action');
@@ -1994,6 +1654,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         const etat = document.getElementById('nouvel_etat_input').value;
+        if (!etat || etat.trim() === '') {
+            showNotification('❌ Erreur: Nouvel état non spécifié.', 'error');
+            return;
+        }
+        
         if (etat === 'Reportée') {
             const dateReportInput = document.getElementById('date_report');
             if (!dateReportInput.value) {
@@ -2010,6 +1675,11 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Préparer les données du formulaire
             const formData = new FormData(savForm);
+            
+            // Debug: Vérifier la valeur du champ nouvel_etat avant envoi
+            const nouvelEtatInput = document.getElementById('nouvel_etat_input');
+            console.log('🔧 DEBUG avant envoi - nouvel_etat_input value:', nouvelEtatInput ? nouvelEtatInput.value : 'INTROUVABLE');
+            console.log('🔧 DEBUG avant envoi - FormData nouvel_etat:', formData.get('nouvel_etat'));
             
             // Si un commentaire personnalisé est fourni, l'ajouter
             const commentaireCustom = document.getElementById('commentaireCustom');
@@ -2549,74 +2219,6 @@ function showStockNotification(action, articleNom, quantite, isConfirmee = false
     showNotification(message, type);
 }
 
-// Fonction pour modifier la quantité d'un article
-function modifierQuantite(panierId, delta, nouvelleQuantite = null) {
-    const input = document.querySelector(`input[data-panier-id="${panierId}"]`);
-    if (!input) return;
-    
-    let quantite = parseInt(input.value);
-    
-    if (nouvelleQuantite !== null) {
-        quantite = parseInt(nouvelleQuantite);
-    } else {
-        quantite += delta;
-    }
-    
-    // Validation
-    const min = parseInt(input.min);
-    const max = parseInt(input.max);
-    
-    if (quantite < min) quantite = min;
-    if (quantite > max) quantite = max;
-    
-    // Mettre à jour l'affichage
-    input.value = quantite;
-    
-    // Envoyer la modification au serveur
-    const formData = new FormData();
-    formData.append('quantite', quantite);
-    formData.append('panier_id', panierId);
-    
-    fetch(`/operateur-logistique/commande/{{ commande.id }}/modifier-quantite/`, {
-        method: 'POST',
-        body: formData,
-        headers: {
-            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-        }
-    })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-            // Mettre à jour le sous-total de l'article
-            const articleCard = input.closest('.article-card');
-            const sousTotalElement = articleCard.querySelector('.text-lg.font-bold');
-            if (sousTotalElement) {
-                sousTotalElement.textContent = data.sous_total.toFixed(2) + ' DH';
-            }
-            
-            // Mettre à jour le total de la commande
-            const totalElement = document.getElementById('total-commande');
-            if (totalElement) {
-                const fraisLivraison = parseFloat('{{ commande.ville.frais_livraison|default:0 }}') || 0;
-                const totalAvecLivraison = data.total_commande + fraisLivraison;
-                totalElement.textContent = totalAvecLivraison.toFixed(2) + ' DH';
-            }
-            
-            showNotification(`✅ Quantité modifiée pour "${data.article_nom}"`, 'success');
-            } else {
-                showNotification('❌ Erreur: ' + data.error, 'error');
-            // Restaurer l'ancienne valeur en cas d'erreur
-            input.value = data.ancienne_quantite || quantite - delta;
-            }
-        })
-        .catch(error => {
-            console.error('Erreur:', error);
-        showNotification('❌ Erreur de réseau lors de la modification', 'error');
-        // Restaurer l'ancienne valeur en cas d'erreur
-        input.value = quantite - delta;
-    });
-}
-
 
 
 // Fonction pour basculer l'affichage de la timeline
@@ -2659,356 +2261,8 @@ function toggleTimeline() {
     }
 }
 
-// Fonction pour afficher la modale des calculs détaillés
-function afficherModalCalculs() {
-    const modal = document.createElement('div');
-    modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50';
-    modal.id = 'modal-calculs';
-    
-    const totalArticles = parseFloat('{{ commande.total_cmd|floatformat:2 }}') || 0;
-    const fraisLivraison = parseFloat('{{ commande.ville.frais_livraison|default:0|floatformat:2 }}') || 0;
-    const totalFinal = totalArticles + fraisLivraison;
-    
-    modal.innerHTML = `
-        <div class="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
-            <div class="mt-3">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-xl font-bold text-gray-900">
-                        <i class="fas fa-calculator mr-2 text-blue-600"></i>
-                        Détail des Calculs de la Commande
-                    </h3>
-                    <button onclick="fermerModalCalculs()" class="text-gray-400 hover:text-gray-600">
-                        <i class="fas fa-times text-xl"></i>
-                    </button>
-            </div>
-                
-                <div class="space-y-4">
-                    <!-- Calcul des articles -->
-                    <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                        <h4 class="font-semibold text-blue-800 mb-3 flex items-center">
-                            <i class="fas fa-boxes mr-2"></i>
-                            Calcul du Total des Articles
-                        </h4>
-                        <div class="space-y-2 text-sm">
-                            {% for panier in commande.paniers.all %}
-                            <div class="flex justify-between items-center bg-white p-2 rounded border">
-                                <div class="flex-1">
-                                    <div class="font-medium">{{ panier.article.nom }}</div>
-                                    <div class="text-xs text-gray-500">Réf: {{ panier.article.reference }}</div>
-                        </div>
-                                <div class="text-right">
-                                    <div class="font-medium">{{ panier.quantite }} × {{ panier.article.prix_unitaire|floatformat:2 }} DH</div>
-                                    <div class="text-blue-600 font-bold">= {{ panier.sous_total|floatformat:2 }} DH</div>
-                                </div>
-                            </div>
-                            {% endfor %}
-                            <div class="border-t border-blue-200 pt-2 mt-2">
-                                <div class="flex justify-between items-center font-bold text-blue-800">
-                                    <span>Total Articles:</span>
-                                    <span>{{ commande.total_cmd|floatformat:2 }} DH</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Frais de livraison -->
-                    <div class="bg-green-50 p-4 rounded-lg border border-green-200">
-                        <h4 class="font-semibold text-green-800 mb-3 flex items-center">
-                            <i class="fas fa-truck mr-2"></i>
-                            Frais de Livraison
-                        </h4>
-                        <div class="space-y-2 text-sm">
-                            <div class="flex justify-between items-center bg-white p-2 rounded border">
-                                <div>
-                                    <div class="font-medium">Livraison vers {{ commande.ville.nom }}</div>
-                                    <div class="text-xs text-gray-500">
-                                        {% if commande.ville.region %}
-                                            Région: {{ commande.ville.region.nom_region }}
-                                        {% endif %}
-                                </div>
-                                </div>
-                                <div class="text-green-600 font-bold">
-                                    {{ commande.ville.frais_livraison|default:0|floatformat:2 }} DH
-                            </div>
-                                </div>
-                                </div>
-                            </div>
-                    
-                    <!-- Total final -->
-                    <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
-                        <h4 class="font-semibold text-purple-800 mb-3 flex items-center">
-                            <i class="fas fa-calculator mr-2"></i>
-                            Total Final
-                        </h4>
-                        <div class="space-y-2 text-sm">
-                            <div class="flex justify-between items-center bg-white p-2 rounded border">
-                                <span class="font-medium">Total Articles:</span>
-                                <span>{{ commande.total_cmd|floatformat:2 }} DH</span>
-                        </div>
-                            <div class="flex justify-between items-center bg-white p-2 rounded border">
-                                <span class="font-medium">Frais de livraison:</span>
-                                <span>+ {{ commande.ville.frais_livraison|default:0|floatformat:2 }} DH</span>
-                    </div>
-                            <div class="border-t border-purple-200 pt-2 mt-2">
-                                <div class="flex justify-between items-center font-bold text-purple-800 text-lg">
-                                    <span>Total Final:</span>
-                                    <span>' + totalFinal.toFixed(2) + ' DH</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="mt-6 flex justify-end">
-                    <button onclick="fermerModalCalculs()" 
-                            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                        <i class="fas fa-check mr-2"></i>Compris
-                    </button>
-                </div>
-            </div>
-            </div>
-        `;
-    
-    document.body.appendChild(modal);
-}
-
-// Fonction pour fermer la modale des calculs
-function fermerModalCalculs() {
-    const modal = document.getElementById('modal-calculs');
-    if (modal) {
-        modal.remove();
-    }
-}
-
-// Fonction pour afficher la modale de la valeur totale
-function afficherModalValeurTotale() {
-    const modal = document.createElement('div');
-    modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50';
-    modal.id = 'modal-valeur-totale';
-    
-    modal.innerHTML = `
-        <div class="relative top-20 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white">
-            <div class="mt-3">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-bold text-gray-900">
-                        <i class="fas fa-money-bill-wave mr-2 text-orange-600"></i>
-                        Calcul de la Valeur Totale
-                </h3>
-                    <button onclick="fermerModalValeurTotale()" class="text-gray-400 hover:text-gray-600">
-                        <i class="fas fa-times text-xl"></i>
-                    </button>
-                </div>
-                
-                <div class="space-y-3 text-sm">
-                    <p class="text-gray-700">
-                        La <strong>valeur totale</strong> représente la somme de tous les articles de la commande, 
-                        calculée selon les règles suivantes :
-                    </p>
-                    
-                    <div class="bg-orange-50 p-3 rounded-lg border border-orange-200">
-                        <h4 class="font-semibold text-orange-800 mb-2">Règles de calcul :</h4>
-                        <ul class="space-y-1 text-sm text-orange-700">
-                            <li><i class="fas fa-check mr-2"></i>Prix unitaire × Quantité pour chaque article</li>
-                            <li><i class="fas fa-check mr-2"></i>Application des prix upsell si applicable</li>
-                            <li><i class="fas fa-check mr-2"></i>Somme de tous les sous-totaux</li>
-                            <li><i class="fas fa-check mr-2"></i>Exclusion des frais de livraison (ajoutés séparément)</li>
-                        </ul>
-                    </div>
-                    
-                    <div class="bg-gray-50 p-3 rounded-lg">
-                        <div class="font-semibold text-gray-800 mb-2">Valeur actuelle :</div>
-                        <div class="text-2xl font-bold text-orange-600">
-                            {{ commande.total_cmd|floatformat:2 }} DH
-                        </div>
-                        <div class="text-xs text-gray-600 mt-1">
-                            Pour {{ commande.paniers.count }} article(s)
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="mt-6 flex justify-end">
-                    <button onclick="fermerModalValeurTotale()" 
-                            class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors">
-                        <i class="fas fa-check mr-2"></i>Compris
-                    </button>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-}
-
-// Fonction pour fermer la modale de la valeur totale
-function fermerModalValeurTotale() {
-    const modal = document.getElementById('modal-valeur-totale');
-    if (modal) {
-        modal.remove();
-    }
-}
-
-// Fonction pour afficher la modale des frais de livraison
-function afficherModalFraisLivraison() {
-    const modal = document.createElement('div');
-    modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50';
-    modal.id = 'modal-frais-livraison';
-    
-    modal.innerHTML = `
-        <div class="relative top-20 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white">
-            <div class="mt-3">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-bold text-gray-900">
-                        <i class="fas fa-truck mr-2 text-purple-600"></i>
-                        Frais de Livraison
-                    </h3>
-                    <button onclick="fermerModalFraisLivraison()" class="text-gray-400 hover:text-gray-600">
-                        <i class="fas fa-times text-xl"></i>
-                    </button>
-                </div>
-                
-                <div class="space-y-3 text-sm">
-                    <p class="text-gray-700">
-                        Les <strong>frais de livraison</strong> sont calculés selon la destination de livraison :
-                    </p>
-                    
-                    <div class="bg-purple-50 p-3 rounded-lg border border-purple-200">
-                        <h4 class="font-semibold text-purple-800 mb-2">Détails de livraison :</h4>
-                        <div class="space-y-2 text-sm text-purple-700">
-                            <div class="flex justify-between">
-                                <span>Ville de livraison :</span>
-                                <span class="font-medium">{{ commande.ville.nom }}</span>
-                            </div>
-                            {% if commande.ville.region %}
-                            <div class="flex justify-between">
-                                <span>Région :</span>
-                                <span class="font-medium">{{ commande.ville.region.nom_region }}</span>
-                            </div>
-                            {% endif %}
-                            <div class="flex justify-between">
-                                <span>Frais appliqués :</span>
-                                <span class="font-medium">{{ commande.ville.frais_livraison|default:0|floatformat:2 }} DH</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="bg-gray-50 p-3 rounded-lg">
-                        <h4 class="font-semibold text-gray-800 mb-2">Comment ça marche :</h4>
-                        <ul class="space-y-1 text-sm text-gray-700">
-                            <li><i class="fas fa-info-circle mr-2 text-purple-600"></i>Frais fixes par ville/région</li>
-                            <li><i class="fas fa-info-circle mr-2 text-purple-600"></i>Indépendant du nombre d'articles</li>
-                            <li><i class="fas fa-info-circle mr-2 text-purple-600"></i>Ajouté au total de la commande</li>
-                            <li><i class="fas fa-info-circle mr-2 text-purple-600"></i>Peut varier selon la zone géographique</li>
-                        </ul>
-                    </div>
-                </div>
-                
-                <div class="mt-6 flex justify-end">
-                    <button onclick="fermerModalFraisLivraison()" 
-                            class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
-                        <i class="fas fa-check mr-2"></i>Compris
-                    </button>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-}
-
-// Fonction pour fermer la modale des frais de livraison
-function fermerModalFraisLivraison() {
-    const modal = document.getElementById('modal-frais-livraison');
-    if (modal) {
-        modal.remove();
-    }
-}
-
-// Fonction pour valider tous les calculs
-function validerCalculs() {
-    try {
-    const totalArticles = parseFloat('{{ commande.total_cmd|floatformat:2 }}') || 0;
-    const fraisLivraison = parseFloat('{{ commande.ville.frais_livraison|default:0|floatformat:2 }}') || 0;
-    const totalAttendu = totalArticles + fraisLivraison;
-    
-    // Vérifier le total affiché
-    const totalElement = document.getElementById('total-commande');
-    if (totalElement) {
-            const totalText = totalElement.textContent || totalElement.innerText || '';
-            const totalAffiche = parseFloat(totalText.replace(' DH', '').replace(',', '.').trim()) || 0;
-        if (Math.abs(totalAffiche - totalAttendu) > 0.01) {
-            console.warn('⚠️ Incohérence détectée dans les calculs:', {
-                totalArticles: totalArticles,
-                fraisLivraison: fraisLivraison,
-                totalAttendu: totalAttendu,
-                totalAffiche: totalAffiche
-            });
-            // Corriger automatiquement
-            totalElement.textContent = totalAttendu.toFixed(2) + ' DH';
-        }
-    }
-    
-    // Vérifier les sous-totaux des articles
-    const articles = document.querySelectorAll('.article-card');
-    let totalArticlesCalcule = 0;
-    
-    articles.forEach(article => {
-            try {
-        const sousTotalElement = article.querySelector('.text-lg.font-bold'); // Récupère l'élément qui affiche le sous-total du panier
-        
-        if (sousTotalElement) {
-                    const sousTotalText = sousTotalElement.textContent || sousTotalElement.innerText || '';
-                    const sousTotalValeur = parseFloat(sousTotalText.replace(' DH', '').replace(',', '.').trim()) || 0;
-
-                    if (!isNaN(sousTotalValeur) && isFinite(sousTotalValeur)) {
-            totalArticlesCalcule += sousTotalValeur; // Somme directement la valeur du sous-total
-                    }
-                }
-            } catch (articleError) {
-                console.warn('Erreur lors du calcul d\'un article:', articleError);
-        }
-    });
-    
-    // Vérifier la cohérence avec le total des articles
-    if (Math.abs(totalArticlesCalcule - totalArticles) > 0.01) {
-        console.warn('⚠️ Incohérence dans les sous-totaux des articles:', {
-            totalArticlesCalcule: totalArticlesCalcule,
-            totalArticles: totalArticles
-        });
-    }
-    
-    console.log('✅ Validation des calculs terminée:', {
-        totalArticles: totalArticles,
-        fraisLivraison: fraisLivraison,
-        totalFinal: totalAttendu
-    });
-        
-        return {
-            success: true,
-            totalArticles: totalArticles,
-            fraisLivraison: fraisLivraison,
-            totalFinal: totalAttendu
-        };
-        
-    } catch (error) {
-        console.error('❌ Erreur lors de la validation des calculs:', error);
-        return {
-            success: false,
-            error: error.message
-        };
-    }
-}
-
 // ================== GESTION DU RENVOI EN PRÉPARATION ==================
-
-function openRenvoyerModal() {
-    document.getElementById('renvoyerModal').classList.remove('hidden');
-}
-
-function closeRenvoyerModal() {
-    document.getElementById('renvoyerModal').classList.add('hidden');
-    document.getElementById('renvoyerForm').reset();
-}
-
+// Fonctions openRenvoyerModal et closeRenvoyerModal déplacées vers static/js/OperteurSAV/modals.js
 // Gestionnaire pour le bouton de confirmation du renvoi
 document.addEventListener('DOMContentLoaded', function() {
     const confirmRenvoyerBtn = document.getElementById('confirmRenvoyerBtn');
@@ -3082,7 +2336,6 @@ document.addEventListener('DOMContentLoaded', function() {
 // Initialiser les calculs avec frais de livraison et la timeline au chargement
 document.addEventListener('DOMContentLoaded', function() {
     calculerTotalAvecLivraison();
-    validerCalculs(); // Valider tous les calculs
     
     // Initialiser l'état de la timeline (ouverte par défaut)
     const content = document.getElementById('timeline-content');
@@ -3104,37 +2357,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // ================== GESTION DE LA LIVRAISON PARTIELLE ==================
 
-function ouvrirModalLivraisonPartielle() {
-    console.log('DEBUG: Tentative d\'ouverture du modal de livraison partielle');
-    const modal = document.getElementById('livraisonPartielleModal');
-    if (modal) {
-        modal.classList.remove('hidden');
-        initialiserModalLivraisonPartielle();
-        console.log('DEBUG: Modal ouvert avec succès');
-    } else {
-        console.error('DEBUG: Modal non trouvé');
-    }
-}
-
-function fermerModalLivraisonPartielle() {
-    document.getElementById('livraisonPartielleModal').classList.add('hidden');
-    // Réinitialiser le formulaire
-    document.getElementById('livraisonPartielleForm').reset();
-    // Remettre tous les articles cochés et les quantités par défaut
-    document.querySelectorAll('.article-livrer-checkbox').forEach(checkbox => {
-        checkbox.checked = true;
-    });
-    document.querySelectorAll('.quantite-livrer-input').forEach(input => {
-        input.value = input.getAttribute('max');
-    });
-    
-
-    // Masquer la section des articles à renvoyer
-    document.getElementById('aucunArticleRenvoyer').classList.remove('hidden');
-    document.getElementById('articlesARenvoyerContainer').innerHTML = '';
-    // Mettre à jour le résumé
-    mettreAJourResumeLivraisonPartielle();
-}
+// Fonctions ouvrirModalLivraisonPartielle et fermerModalLivraisonPartielle déplacées vers static/js/OperteurSAV/modals.js
 
 function initialiserModalLivraisonPartielle() {
     console.log('DEBUG: Initialisation du modal de livraison partielle');
@@ -3209,8 +2432,17 @@ function mettreAJourResumeLivraisonPartielle() {
         
         // --- DEBUG PRIX START ---
         console.log('DEBUG LP - Raw data-article-prix:', card.dataset.articlePrix); // Log 1: Raw string from DOM
-        const articlePrix = parseFloat(card.dataset.articlePrix);
+        const articlePrix = parseFloat(card.dataset.articlePrix || '0');
         console.log('DEBUG LP - Parsed articlePrix (float):', articlePrix); // Log 2: Result of parseFloat
+        
+        // Si le prix est 0, essayer de le calculer depuis le sous-total
+        let prixUnitaire = articlePrix;
+        if (prixUnitaire === 0) {
+            const sousTotal = parseFloat(card.dataset.sousTotal || '0');
+            const quantiteMax = parseInt(card.dataset.quantiteMax || '1');
+            prixUnitaire = quantiteMax > 0 ? sousTotal / quantiteMax : 0;
+            console.log('DEBUG LP - Prix calculé depuis sous-total:', prixUnitaire);
+        }
         // --- DEBUG PRIX END ---
 
         const quantiteMax = parseInt(card.dataset.quantiteMax);
@@ -3232,10 +2464,10 @@ function mettreAJourResumeLivraisonPartielle() {
                     variante_id: varianteId,
                     quantite: quantiteLivree,
                     nom: nomCompletAvecVariante,
-                    prix_unitaire: articlePrix // This should be a float
+                    prix_unitaire: prixUnitaire // This should be a float
                 });
                 totalArticlesLivres += quantiteLivree;
-                totalValeurLivree += quantiteLivree * articlePrix;
+                totalValeurLivree += quantiteLivree * prixUnitaire;
             }
             
             if (quantiteRenvoyee > 0) {
@@ -3245,7 +2477,7 @@ function mettreAJourResumeLivraisonPartielle() {
                     variante_id: varianteId,
                     quantite: quantiteRenvoyee,
                     nom: nomCompletAvecVariante,
-                    prix_unitaire: articlePrix
+                    prix_unitaire: prixUnitaire
                 });
                 totalArticlesRenvoyes += quantiteRenvoyee;
             }
@@ -3258,7 +2490,7 @@ function mettreAJourResumeLivraisonPartielle() {
                 variante_id: varianteId,
                 quantite: quantiteRenvoyee,
                 nom: nomCompletAvecVariante,
-                prix_unitaire: articlePrix
+                prix_unitaire: prixUnitaire
             });
             totalArticlesRenvoyes += quantiteRenvoyee;
         }
@@ -3286,6 +2518,32 @@ function mettreAJourResumeLivraisonPartielle() {
     document.getElementById('totalArticlesLivres').textContent = totalArticlesLivres;
     document.getElementById('totalArticlesRenvoyes').textContent = totalArticlesRenvoyes;
     document.getElementById('totalValeurLivree').textContent = totalValeurLivree.toFixed(2) + ' DH';
+    
+    // Calculer et afficher le pourcentage de livraison
+    const totalCommandeElement = document.getElementById('totalCommandeLivraison');
+    const totalCommande = parseFloat(totalCommandeElement.dataset.totalCommande) || 0;
+    const pourcentage = totalCommande > 0 ? (totalValeurLivree / totalCommande * 100) : 0;
+    
+    // Mettre à jour le pourcentage et la barre de progression
+    const pourcentageElement = document.getElementById('pourcentageLivraison');
+    const barreProgresElement = document.getElementById('barreProgresLivraison');
+    
+    if (pourcentageElement && barreProgresElement) {
+        pourcentageElement.textContent = pourcentage.toFixed(1) + '%';
+        barreProgresElement.style.width = Math.min(100, pourcentage).toFixed(1) + '%';
+        
+        // Changer la couleur selon le pourcentage
+        if (pourcentage >= 80) {
+            barreProgresElement.className = 'bg-green-600 h-2 rounded-full transition-all duration-300';
+            pourcentageElement.className = 'text-green-600 font-bold';
+        } else if (pourcentage >= 50) {
+            barreProgresElement.className = 'bg-yellow-600 h-2 rounded-full transition-all duration-300';
+            pourcentageElement.className = 'text-yellow-600 font-bold';
+        } else {
+            barreProgresElement.className = 'bg-red-600 h-2 rounded-full transition-all duration-300';
+            pourcentageElement.className = 'text-red-600 font-bold';
+        }
+    }
     
     // Mettre à jour la section des articles à renvoyer
     console.log('DEBUG: Appel de mettreAJourSectionArticlesRenvoyes avec', articlesRenvoyes.length, 'articles');
@@ -3359,8 +2617,24 @@ document.addEventListener('DOMContentLoaded', function() {
         livraisonPartielleForm.addEventListener('submit', function(e) {
             e.preventDefault();
             
-            // Le commentaire est déjà validé via le bouton Confirmer
-            const commentaire = document.getElementById('commentaireLivraisonPartielle').value.trim();
+            // Validation du commentaire
+            const commentaireSelect = document.getElementById('commentaireLivraisonPartielle').value.trim();
+            let commentaire = commentaireSelect;
+            
+            // Si "Autre motif" est sélectionné, utiliser le commentaire personnalisé
+            if (commentaireSelect === 'Autre motif - voir détails') {
+                const commentaireCustom = document.getElementById('commentaireCustomLivraisonPartielle').value.trim();
+                if (!commentaireCustom) {
+                    showNotification('⚠️ Veuillez détailler le motif dans le commentaire personnalisé', 'warning');
+                    return;
+                }
+                commentaire = commentaireCustom;
+            }
+            
+            if (!commentaire) {
+                showNotification('⚠️ Le commentaire est obligatoire', 'warning');
+                return;
+            }
             
             const articlesLivres = JSON.parse(document.getElementById('articlesLivresJsonInput').value);
             const articlesRenvoyes = JSON.parse(document.getElementById('articlesRenvoyesJsonInput').value);
@@ -3414,28 +2688,25 @@ document.addEventListener('DOMContentLoaded', function() {
                     const detailsDiv = document.getElementById('confirmation-livraison-details');
                     if (data.recap_articles_renvoyes && Array.isArray(data.recap_articles_renvoyes) && data.recap_articles_renvoyes.length > 0) {
                         let table = `<table class='min-w-full text-sm text-left border mt-4'>`;
-                        table += `<thead><tr><th class='px-2 py-1 border'>Article</th><th class='px-2 py-1 border'>Qté</th><th class='px-2 py-1 border'>État</th><th class='px-2 py-1 border'>Stock avant</th><th class='px-2 py-1 border'>Stock après</th></tr></thead><tbody>`;
+                        table += `<thead><tr><th class='px-2 py-1 border'>Article</th><th class='px-2 py-1 border'>Qté</th><th class='px-2 py-1 border'>Prix unitaire</th><th class='px-2 py-1 border'>Valeur</th></tr></thead><tbody>`;
                         data.recap_articles_renvoyes.forEach(a => {
                             table += `<tr>` +
                                 `<td class='px-2 py-1 border'>${a.nom || '-'}</td>` +
-                                `<td class='px-2 py-1 border text-center'>${a.quantite}</td>` +
-                                `<td class='px-2 py-1 border text-center'>${a.etat === 'bon' ? 'Bon état' : 'Défectueux'}</td>` +
-                                `<td class='px-2 py-1 border text-center'>${a.stock_avant !== null ? a.stock_avant : '-'}</td>` +
-                                `<td class='px-2 py-1 border text-center'>${a.stock_apres !== null ? a.stock_apres : '-'}</td>` +
+                                `<td class='px-2 py-1 border text-center'>${a.quantite || 0}</td>` +
+                                `<td class='px-2 py-1 border text-center'>${(a.prix_unitaire || 0).toFixed(2)} DH</td>` +
+                                `<td class='px-2 py-1 border text-center'>${((a.quantite || 0) * (a.prix_unitaire || 0)).toFixed(2)} DH</td>` +
                             `</tr>`;
                         });
                         table += `</tbody></table>`;
                         let stockTable = '';
                         if (data.recap_stock_commande && Array.isArray(data.recap_stock_commande) && data.recap_stock_commande.length > 0) {
-                            stockTable = `<div class='mt-6 mb-2 font-semibold text-gray-700'>Stock de tous les articles de la commande :</div>`;
+                            stockTable = `<div class='mt-6 mb-2 font-semibold text-gray-700'>Résumé des articles :</div>`;
                             stockTable += `<table class='min-w-full text-sm text-left border'>`;
-                            stockTable += `<thead><tr><th class='px-2 py-1 border'>Article</th><th class='px-2 py-1 border'>Stock avant</th><th class='px-2 py-1 border'>Stock après</th><th class='px-2 py-1 border'>Statut</th></tr></thead><tbody>`;
+                            stockTable += `<thead><tr><th class='px-2 py-1 border'>Article</th><th class='px-2 py-1 border'>Statut</th></tr></thead><tbody>`;
                             data.recap_stock_commande.forEach(a => {
                                 stockTable += `<tr>` +
                                     `<td class='px-2 py-1 border'>${a.nom || '-'}</td>` +
-                                    `<td class='px-2 py-1 border text-center'>${a.stock_avant !== null ? a.stock_avant : '-'}</td>` +
-                                    `<td class='px-2 py-1 border text-center'>${a.stock_apres !== null ? a.stock_apres : '-'}</td>` +
-                                    `<td class='px-2 py-1 border text-center'>${a.statut || '-'}</td>` +
+                                    `<td class='px-2 py-1 border text-center'>${a.statut || 'Livré'}</td>` +
                                 `</tr>`;
                             });
                             stockTable += `</tbody></table>`;

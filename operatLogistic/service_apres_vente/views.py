@@ -47,14 +47,7 @@ def changer_etat_livraison(request, commande_id):
             # Traitement spécifique selon l'état
             details_supplementaires = ""
             
-            # Récupérer ou créer l'envoi en cours
-            envoi = commande.envois.filter(status='en_attente').first()
-            if not envoi:
-                envoi = Envoi.objects.create(
-                    commande=commande,
-                    date_livraison_prevue=timezone.now().date(),
-                    operateur=operateur
-                )
+          
             
             if nouvel_etat == 'Reportée':
                 # Récupérer et valider la date de report
@@ -86,10 +79,6 @@ def changer_etat_livraison(request, commande_id):
                 envoi.marquer_comme_livre(operateur)
                 details_supplementaires = f"\nLivraison effectuée le : {timezone.now().strftime('%d/%m/%Y à %H:%M')}"
 
-            elif nouvel_etat == 'Annulée (SAV)':
-                # Annuler l'envoi
-                envoi.annuler(operateur, commentaire)
-                
 
 
             # Créer le nouvel état avec le commentaire complet
@@ -285,8 +274,7 @@ def commandes_livrees_partiellement(request):
         # Calculer le nombre d'articles dans la commande
         commande.nombre_articles = commande.paniers.count()
         
-        # Trouver l'envoi associé
-        commande.envoi = commande.envois.filter(status='en_attente').first()
+       
         
         # Analyser les articles pour identifier ceux livrés partiellement
         commande.articles_livres_partiellement = []
@@ -390,10 +378,7 @@ def commandes_livrees_partiellement(request):
             commande.articles_livres_partiellement = []
             commande.articles_renvoyes = []
 
-        # Cette section est supprimée car les articles renvoyés et leurs états sont extraits
-        # directement de la conclusion de l'opération de livraison partielle.
-        # La logique de recherche de `commande_renvoi` n'est pas pertinente pour l'affichage des états
-        # dans la modale de détails des articles de la commande originale.
+  # dans la modale de détails des articles de la commande originale.
 
     return _render_sav_list_custom(request, commandes, 'commandes_livrees_partiellement.html')
 
@@ -650,9 +635,6 @@ def marquer_commande_payee(request, commande_id):
                 conclusion=f"Statut de paiement changé de '{ancien_statut}' vers '{nouveau_statut}'",
                 operateur=operateur
             )
-            
-            messages.success(request, f"Statut de paiement de la commande {commande.id_yz} mis à jour vers '{nouveau_statut}' avec succès.")
-            
             return JsonResponse({
                 'success': True,
                 'message': f'Statut de paiement mis à jour vers {nouveau_statut} avec succès',
