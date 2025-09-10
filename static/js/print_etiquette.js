@@ -619,8 +619,8 @@ class EtiquettePrinter {
         
         @media print {
             @page {
-                size: ${template.format_page === '10x10' ? '10cm 10cm' : 'A4'} !important;
-                margin: ${template.format_page === '10x10' ? '0.3cm' : '1cm'} !important;
+                size: ${template.format_page === '10x10' ? '10.5cm 10.5cm' : 'A4'} !important;
+                margin: ${template.format_page === '10x10' ? '0.2cm' : '1cm'} !important;
             }
             
             * {
@@ -634,8 +634,8 @@ class EtiquettePrinter {
                 margin: 0 !important;
                 background: white !important;
                 font-family: Arial, sans-serif !important;
-                width: ${template.format_page === '10x10' ? '10cm' : '21cm'};
-                height: ${template.format_page === '10x10' ? '10cm' : '29.7cm'};
+                width: ${template.format_page === '10x10' ? '10.1cm' : '21cm'};
+                height: ${template.format_page === '10x10' ? '10.1cm' : '29.7cm'};
             }
             
             .etiquette-preview {
@@ -935,6 +935,10 @@ class EtiquettePrinter {
                         <div class="text-xs flex items-center justify-center">
                             <i class="${template.icone_telephone} mr-1"></i>
                             <span>06 34 21 56 39 / 47</span>
+                        </div>
+                        <div class="text-xs flex items-center justify-center">
+                            <i class="fas fa-map-marker-alt mr-1"></i>
+                            <span>SETTAT</span>
                         </div>
                     </div>
                     ` : ''}

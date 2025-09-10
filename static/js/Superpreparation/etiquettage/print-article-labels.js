@@ -199,17 +199,17 @@ class ArticleLabelsPrinter {
                     display: flex;
                     flex-direction: column;
                     gap: 0;
-                    width: 9.4cm;
-                    height: 9.4cm;
+                    width: 10.1cm;
+                    height: 10.1cm;
                     margin: 0;
                     padding: 0;
                 }
 
                 /* Étiquette individuelle */
                 .article-label {
-                    width: 9.4cm; /* Format 10x10 cm */
-                    height: 9.4cm; /* Format 10x10 cm */
-                    border: 1px solid #ddd; /* Bordure plus subtile */
+                    width: 10.1cm; /* Format 10x10 cm avec marges */
+                    height: 10.1cm; /* Format 10x10 cm avec marges */
+                    border: 1px solid #000000; /* Bordure noire pour l'impression */
                     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Police plus moderne */
                     font-size: 8px; /* Réduire la taille pour s'adapter */
                     display: flex;
@@ -636,6 +636,7 @@ class ArticleLabelsPrinter {
                 '<span class="contact-name">Yoozak</span>' +
                 '<span class="contact-info">' +
                     '<div>06 34 21 56 39</div>' +
+                    '<div>SETTAT</div>' +
                 '</span>' +
             '</div>' +
         '</div>';
