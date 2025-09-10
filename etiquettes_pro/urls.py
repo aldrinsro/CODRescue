@@ -42,4 +42,7 @@ urlpatterns = [
     path('api/etiquettes/<int:etiquette_id>/mark-printed/', views.mark_etiquette_as_printed, name='mark_etiquette_as_printed'),
     path('api/etiquettes/mark-multiple-printed/', views.mark_multiple_etiquettes_as_printed, name='mark_multiple_etiquettes_as_printed'),
     path('api/statistics/', views.get_etiquettes_statistics, name='get_etiquettes_statistics'),
+    
+    # Test: Incrémenter les compteurs
+    path('api/etiquettes/<int:etiquette_id>/test-increment/', views.test_increment_counters, name='test_increment_counters'),
 ]

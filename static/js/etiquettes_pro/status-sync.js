@@ -174,23 +174,19 @@ class EtiquetteStatusSync {
         // Vider le conteneur
         container.innerHTML = '';
         
-        // Ajouter le compteur de tickets si > 0
-        if (compteurTicket > 0) {
-            const ticketCounter = document.createElement('span');
-            ticketCounter.className = 'inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800';
-            ticketCounter.title = 'Tickets imprimés';
-            ticketCounter.innerHTML = `<i class="fas fa-ticket-alt mr-1"></i>${compteurTicket}`;
-            container.appendChild(ticketCounter);
-        }
+        // Ajouter le compteur de tickets (toujours affiché)
+        const ticketCounter = document.createElement('span');
+        ticketCounter.className = `inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium ${compteurTicket > 0 ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-500'}`;
+        ticketCounter.title = 'Tickets imprimés';
+        ticketCounter.innerHTML = `<i class="fas fa-ticket-alt mr-1"></i>${compteurTicket}`;
+        container.appendChild(ticketCounter);
         
-        // Ajouter le compteur de QR si > 0
-        if (compteurQr > 0) {
-            const qrCounter = document.createElement('span');
-            qrCounter.className = 'inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800';
-            qrCounter.title = 'Codes QR imprimés';
-            qrCounter.innerHTML = `<i class="fas fa-qrcode mr-1"></i>${compteurQr}`;
-            container.appendChild(qrCounter);
-        }
+        // Ajouter le compteur de QR (toujours affiché)
+        const qrCounter = document.createElement('span');
+        qrCounter.className = `inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium ${compteurQr > 0 ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-500'}`;
+        qrCounter.title = 'Codes QR imprimés';
+        qrCounter.innerHTML = `<i class="fas fa-qrcode mr-1"></i>${compteurQr}`;
+        container.appendChild(qrCounter);
     }
 
     updatePreviewPageStatus(etiquetteId, newStatus, compteurTicket, compteurQr) {
@@ -226,23 +222,19 @@ class EtiquetteStatusSync {
             const existingCounters = countersContainer.querySelectorAll('.inline-flex.items-center.px-2.py-1.rounded-full');
             existingCounters.forEach(counter => counter.remove());
             
-            // Ajouter le compteur de tickets si > 0
-            if (compteurTicket > 0) {
-                const ticketCounter = document.createElement('span');
-                ticketCounter.className = 'inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800';
-                ticketCounter.title = 'Nombre de fois que le ticket a été imprimé';
-                ticketCounter.innerHTML = `<i class="fas fa-ticket-alt mr-1"></i>${compteurTicket}`;
-                countersContainer.appendChild(ticketCounter);
-            }
+            // Ajouter le compteur de tickets (toujours affiché)
+            const ticketCounter = document.createElement('span');
+            ticketCounter.className = `inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${compteurTicket > 0 ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-500'}`;
+            ticketCounter.title = 'Nombre de fois que le ticket a été imprimé';
+            ticketCounter.innerHTML = `<i class="fas fa-ticket-alt mr-1"></i>${compteurTicket}`;
+            countersContainer.appendChild(ticketCounter);
             
-            // Ajouter le compteur de QR si > 0
-            if (compteurQr > 0) {
-                const qrCounter = document.createElement('span');
-                qrCounter.className = 'inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800';
-                qrCounter.title = 'Nombre de fois que les codes QR ont été imprimés';
-                qrCounter.innerHTML = `<i class="fas fa-qrcode mr-1"></i>${compteurQr}`;
-                countersContainer.appendChild(qrCounter);
-            }
+            // Ajouter le compteur de QR (toujours affiché)
+            const qrCounter = document.createElement('span');
+            qrCounter.className = `inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${compteurQr > 0 ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-500'}`;
+            qrCounter.title = 'Nombre de fois que les codes QR ont été imprimés';
+            qrCounter.innerHTML = `<i class="fas fa-qrcode mr-1"></i>${compteurQr}`;
+            countersContainer.appendChild(qrCounter);
         }
     }
 

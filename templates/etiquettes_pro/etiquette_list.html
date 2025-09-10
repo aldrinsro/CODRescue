@@ -202,20 +202,14 @@
                         {% endif %}
                         
                         <!-- Compteurs d'impressions -->
-                        {% if etiquette.compteur_impression_ticket > 0 or etiquette.compteur_impression_qr > 0 %}
-                            <div class="flex items-center gap-1">
-                                {% if etiquette.compteur_impression_ticket > 0 %}
-                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800" title="Tickets imprimés">
-                                        <i class="fas fa-ticket-alt mr-1"></i>{{ etiquette.compteur_impression_ticket }}
-                                    </span>
-                                {% endif %}
-                                {% if etiquette.compteur_impression_qr > 0 %}
-                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800" title="Codes QR imprimés">
-                                        <i class="fas fa-qrcode mr-1"></i>{{ etiquette.compteur_impression_qr }}
-                                    </span>
-                                {% endif %}
-                            </div>
-                        {% endif %}
+                        <div class="flex items-center gap-1">
+                            <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium {% if etiquette.compteur_impression_ticket > 0 %}bg-blue-100 text-blue-800{% else %}bg-gray-100 text-gray-500{% endif %}" title="Tickets imprimés">
+                                <i class="fas fa-ticket-alt mr-1"></i>{{ etiquette.compteur_impression_ticket }}
+                            </span>
+                            <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium {% if etiquette.compteur_impression_qr > 0 %}bg-purple-100 text-purple-800{% else %}bg-gray-100 text-gray-500{% endif %}" title="Codes QR imprimés">
+                                <i class="fas fa-qrcode mr-1"></i>{{ etiquette.compteur_impression_qr }}
+                            </span>
+                        </div>
                     </div>
                 </div>
                 <p class="etiquette-template text-sm text-gray-600">

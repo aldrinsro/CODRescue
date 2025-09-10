@@ -194,12 +194,12 @@
             
             .qr-item {
                 min-height: 250px;
-                padding: 30px;
+                padding: 20px;
                 page-break-after: always;
                 display: flex;
                 flex-direction: column;
                 align-items: center;
-                justify-content: center;
+                justify-content: space-between;
                 width: 100%;
                 margin-bottom: 0;
             }
@@ -209,18 +209,32 @@
             }
             
             .qr-code img {
-                width: 4.5cm;
-                height: 4.5cm;
-                max-width: 4.5cm;
-                max-height: 4.5cm;
+                width: 4cm;
+                height: 4cm;
+                max-width: 4cm;
+                max-height: 4cm;
             }
             
             .article-name {
-                font-size: 18px;
+                font-size: 16px;
+                margin-bottom: 5px;
+                text-align: center;
             }
             
             .article-details {
-                font-size: 14px;
+                font-size: 12px;
+                line-height: 1.2;
+                text-align: center;
+            }
+            
+            .article-details div {
+                margin-bottom: 2px;
+            }
+            
+            .commande-id {
+                font-size: 11px;
+                margin-top: 3px;
+                word-break: break-all;
             }
         }
     </style>
@@ -271,10 +285,10 @@
                     {% endif %}
                     <div><span class="quantity">Quantité: {{ item.panier.quantite }}</span></div>
                     <div><span class="price">Prix: {{ item.panier.sous_total }} MAD</span></div>
-                    {% if commande.id_yz %}
-                    <div class="commande-id"><strong>Commande:</strong> {{ commande.id_yz }}</div>
-                    {% endif %}
                 </div>
+                {% if commande.id_yz %}
+                <div class="commande-id"><strong>Commande:</strong> {{ commande.id_yz }}</div>
+                {% endif %}
             </div>
         </div>
         {% endfor %}

@@ -1552,6 +1552,36 @@ def get_etiquettes_statistics(request):
 
 
 @superviseur_required
+@require_http_methods(["POST"])
+def test_increment_counters(request, etiquette_id):
+    """Test: Incrémenter les compteurs d'une étiquette"""
+    try:
+        etiquette = get_object_or_404(Etiquette, id=etiquette_id)
+        
+        # Incrémenter les compteurs pour le test
+        etiquette.compteur_impression_ticket += 1
+        etiquette.compteur_impression_qr += 1
+        etiquette.save(update_fields=['compteur_impression_ticket', 'compteur_impression_qr'])
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Compteurs incrémentés pour l\'étiquette {etiquette.reference}',
+            'etiquette': {
+                'id': etiquette.id,
+                'reference': etiquette.reference,
+                'compteur_impression_ticket': etiquette.compteur_impression_ticket,
+                'compteur_impression_qr': etiquette.compteur_impression_qr
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur lors de l\'incrémentation: {str(e)}'
+        }, status=500)
+
+
+@superviseur_required
 @require_http_methods(["DELETE"])
 def delete_etiquette(request, etiquette_id):
     """Supprimer une étiquette"""

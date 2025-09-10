@@ -675,16 +675,12 @@ fetch('{% url "etiquettes_pro:generate_qrcode_image" etiquette.code_data %}')
                             
                             <!-- Compteurs d'impressions -->
                             <div class="flex items-center gap-2">
-                                {% if etiquette.compteur_impression_ticket > 0 %}
-                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800" title="Nombre de fois que le ticket a été imprimé">
-                                        <i class="fas fa-ticket-alt mr-1"></i>{{ etiquette.compteur_impression_ticket }}
-                                    </span>
-                                {% endif %}
-                                {% if etiquette.compteur_impression_qr > 0 %}
-                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800" title="Nombre de fois que les codes QR ont été imprimés">
-                                        <i class="fas fa-qrcode mr-1"></i>{{ etiquette.compteur_impression_qr }}
-                                    </span>
-                                {% endif %}
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium {% if etiquette.compteur_impression_ticket > 0 %}bg-blue-100 text-blue-800{% else %}bg-gray-100 text-gray-500{% endif %}" title="Nombre de fois que le ticket a été imprimé">
+                                    <i class="fas fa-ticket-alt mr-1"></i>{{ etiquette.compteur_impression_ticket }}
+                                </span>
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium {% if etiquette.compteur_impression_qr > 0 %}bg-purple-100 text-purple-800{% else %}bg-gray-100 text-gray-500{% endif %}" title="Nombre de fois que les codes QR ont été imprimés">
+                                    <i class="fas fa-qrcode mr-1"></i>{{ etiquette.compteur_impression_qr }}
+                                </span>
                             </div>
                         </div>
                     </div>
