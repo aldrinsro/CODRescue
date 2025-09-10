@@ -448,6 +448,31 @@ def creer_article(request):
                     # Ignorer les valeurs non numériques
                     pass
             
+            # Gérer le prix remise
+            for i in range(1, 5):
+                prix_remise_str = request.POST.get(f'prix_remise_{i}', '').strip().replace(',', '.')
+                if prix_remise_str:
+                    try:
+                        prix_remise = float(prix_remise_str)
+                        if prix_remise > 0:
+                            setattr(article, f'prix_remise_{i}', prix_remise)
+                    except ValueError:
+                        # Ignorer les valeurs non numériques
+                        pass
+
+            
+            # Gérer les prix de remise
+            for i in range(1, 5):
+                prix_remise_str = request.POST.get(f'prix_remise_{i}', '').strip().replace(',', '.')
+                if prix_remise_str:
+                    try:
+                        prix_remise = float(prix_remise_str)
+                        if prix_remise > 0:
+                            setattr(article, f'prix_remise_{i}', prix_remise)
+                    except ValueError:
+                        # Ignorer les valeurs non numériques
+                        pass
+            
             # Gérer le prix de liquidation
             prix_liquidation_str = request.POST.get('Prix_liquidation', '').strip().replace(',', '.')
             if prix_liquidation_str:
@@ -646,7 +671,7 @@ def modifier_article(request, id):
                     
                     # Message avec info sur l'upsell si désactivé
                     upsell_message = ""
-                    if upsell_was_active and phase in ['LIQUIDATION', 'EN_TEST'] and old_phase != phase:
+                    if upsell_was_active and phase in ['LIQUIDATION'] and old_phase != phase:
                         upsell_message = " L'upsell a été automatiquement désactivé."
                     
                     if phase == 'LIQUIDATION':
@@ -694,6 +719,24 @@ def modifier_article(request, id):
                     article.prix_uspell_final = None
             else:
                 article.prix_upsell_final = None
+            
+            # Gérer les prix de remise
+            # Réinitialiser les prix de remise
+            article.prix_remise_1 = None
+            article.prix_remise_2 = None
+            article.prix_remise_3 = None
+            article.prix_remise_4 = None
+            
+            for i in range(1, 5):
+                prix_remise_str = request.POST.get(f'prix_remise_{i}', '').strip().replace(',', '.')
+                if prix_remise_str:
+                    try:
+                        prix_remise = float(prix_remise_str)
+                        if prix_remise > 0:
+                            setattr(article, f'prix_remise_{i}', prix_remise)
+                    except ValueError:
+                        # Ignorer les valeurs non numériques
+                        pass
             
             # Gérer le prix de liquidation
             prix_liquidation_str = request.POST.get('Prix_liquidation', '').strip().replace(',', '.')
@@ -1387,7 +1430,7 @@ def changer_phase(request, id):
             article.save()
             
             # Message en fonction de la phase avec info sur l'upsell
-            upsell_message = " L'upsell a été automatiquement désactivé." if upsell_was_active and phase in ['LIQUIDATION', 'EN_TEST'] else ""
+            upsell_message = " L'upsell a été automatiquement désactivé." if upsell_was_active and phase in ['LIQUIDATION'] else ""
             
             if phase == 'EN_COURS':
                 promotion_message = " Les promotions actives ont été désactivées." if article.promotions.filter(active=False).exists() else ""

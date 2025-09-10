@@ -208,7 +208,7 @@ class VariantesManager {
     showAlert(message, type = 'info') {
         // Créer une notification toast
         const toast = document.createElement('div');
-        toast.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-300 transform translate-x-full toast-notification`;
+        toast.className = `${bgColor} text-white px-6 py-3 rounded-lg shadow-lg mb-2 max-w-md opacity-0 transform transition-all duration-300 ease-in-out`;
         
         // Couleurs selon le type
         const colors = {

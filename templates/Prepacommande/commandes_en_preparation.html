@@ -147,24 +147,7 @@ function updatePrintButton() {
     }
 }
 
-// Fonctions d'impression
-function imprimerTicket(commandeId) {
-    const url = "{% url 'Prepacommande:imprimer_tickets_preparation' %}?ids=" + commandeId;
-    window.open(url, '_blank');
-}
-
-function imprimerTicketsSelectionnes() {
-    const checkboxes = document.querySelectorAll('.commande-checkbox:checked');
-    const ids = Array.from(checkboxes).map(cb => cb.value);
-    
-    if (ids.length === 0) {
-        alert('Veuillez sélectionner au moins une commande.');
-        return;
-    }
-    
-    const url = "{% url 'Prepacommande:imprimer_tickets_preparation' %}?ids=" + ids.join(',');
-    window.open(url, '_blank');
-}
+// Fonctions d'impression supprimées
 
 
 // Initialiser les boutons au chargement de la page

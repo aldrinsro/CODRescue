@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Codes QR - Commande {{ commande.num_cmd }}</title>
+    <style>
+        @media print {
+            @page {
+                size: 10cm 10cm;
+                margin: 0.3cm;
+            }
+            
+            body {
+                margin: 0;
+                padding: 0;
+                width: 9.4cm;
+                height: 9.4cm;
+                box-sizing: border-box;
+            }
+            
+            .no-print {
+                display: none !important;
+            }
+            
+            .page-break {
+                page-break-before: always;
+            }
+            
+            .qr-item {
+                page-break-inside: avoid;
+            }
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: white;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 20px;
+        }
+        
+        .header h1 {
+            color: #333;
+            margin: 0;
+            font-size: 24px;
+        }
+        
+        .header-info {
+            margin-top: 10px;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .qr-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            margin-top: 20px;
+        }
+        
+        .qr-item {
+            border: 2px solid #333;
+            padding: 15px;
+            page-break-after: always;
+            height: 9.2cm;
+            width: 9.2cm;
+            margin: 0;
+            box-sizing: border-box;
+            background-color: white;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .qr-item:last-child {
+            page-break-after: avoid;
+        }
+        
+        .qr-code {
+            flex-shrink: 0;
+        }
+        
+        .qr-code img {
+            width: 3.5cm;
+            height: 3.5cm;
+            border: 1px solid #ccc;
+        }
+        
+        .article-info {
+            flex-grow: 1;
+        }
+        
+        .article-name {
+            font-weight: bold;
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        
+        .article-details {
+            font-size: 12px;
+            color: #666;
+            line-height: 1.4;
+        }
+        
+        .article-details div {
+            margin-bottom: 3px;
+        }
+        
+        .reference {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .quantity {
+            background-color: #f0f0f0;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+        
+        .price {
+            color: #2e7d32;
+            font-weight: bold;
+        }
+        
+        .commande-id {
+            font-size: 12px;
+            color: #333;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+        
+        .print-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+        
+        .print-button:hover {
+            background-color: #45a049;
+        }
+        
+        .back-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 1000;
+            text-decoration: none;
+        }
+        
+        .back-button:hover {
+            background-color: #5a6268;
+            color: white;
+            text-decoration: none;
+        }
+        
+        @media screen {
+            .qr-item {
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            }
+        }
+        
+        /* Optimisation pour l'impression sur étiquettes 10x10 cm */
+        @media print {
+            .qr-grid {
+                display: flex;
+                flex-direction: column;
+                gap: 0;
+            }
+            
+            .qr-item {
+                min-height: 250px;
+                padding: 20px;
+                page-break-after: always;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: space-between;
+                width: 100%;
+                margin-bottom: 0;
+            }
+            
+            .qr-item:last-child {
+                page-break-after: avoid;
+            }
+            
+            .qr-code img {
+                width: 4cm;
+                height: 4cm;
+                max-width: 4cm;
+                max-height: 4cm;
+            }
+            
+            .article-name {
+                font-size: 16px;
+                margin-bottom: 5px;
+                text-align: center;
+            }
+            
+            .article-details {
+                font-size: 12px;
+                line-height: 1.2;
+                text-align: center;
+            }
+            
+            .article-details div {
+                margin-bottom: 2px;
+            }
+            
+            .commande-id {
+                font-size: 11px;
+                margin-top: 3px;
+                word-break: break-all;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Boutons d'action (masqués à l'impression) -->
+    <button class="print-button no-print" onclick="window.print()">
+        <i class="fas fa-print"></i> Imprimer
+    </button>
+    
+    <a href="javascript:history.back()" class="back-button no-print">
+        <i class="fas fa-arrow-left"></i> Retour
+    </a>
+    
+    <!-- En-tête -->
+    <div class="header">
+        <h1>Codes QR des Articles</h1>
+        <div class="header-info">
+            <strong>Commande:</strong> {{ commande.num_cmd }}<br>
+            {% if commande.id_yz %}<strong>ID YZ:</strong> {{ commande.id_yz }}<br>{% endif %}
+            <strong>Client:</strong> {{ commande.client.nom }}<br>
+            <strong>Date:</strong> {{ commande.date_cmd|date:"d/m/Y" }}<br>
+            <strong>Total articles:</strong> {{ articles_data|length }}
+        </div>
+    </div>
+    
+    <!-- Grille des codes QR -->
+    <div class="qr-grid">
+        {% for item in articles_data %}
+        <div class="qr-item">
+            <div class="qr-code">
+                <img src="{{ item.qr_image }}" alt="QR Code {{ item.qr_content }}">
+            </div>
+            <div class="article-info">
+                <div class="article-name">{{ item.article.nom }}</div>
+                <div class="article-details">
+                    <div><span class="reference">Référence:</span> {{ item.article.reference|default:"N/A" }}</div>
+                    {% if item.variante %}
+                        {% if item.variante.couleur %}
+                        <div><strong>Couleur:</strong> {{ item.variante.couleur.nom }}</div>
+                        {% endif %}
+                        {% if item.variante.pointure %}
+                        <div><strong>Pointure:</strong> {{ item.variante.pointure.pointure }}</div>
+                        {% endif %}
+                        {% if item.variante.reference_variante %}
+                        <div><strong>Ref. Variante:</strong> {{ item.variante.reference_variante }}</div>
+                        {% endif %}
+                    {% endif %}
+                    <div><span class="quantity">Quantité: {{ item.panier.quantite }}</span></div>
+                    <div><span class="price">Prix: {{ item.panier.sous_total }} MAD</span></div>
+                    {% if commande.frais_livraison %}
+                    <div class="text-xs text-blue-600 mt-1">
+                        <i class="fas fa-truck mr-1"></i>Frais livraison inclus
+                    </div>
+                    {% endif %}
+                </div>
+                {% if commande.id_yz %}
+                <div class="commande-id"><strong>Commande:</strong> {{ commande.id_yz }}</div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Script pour l'impression automatique -->
+    <script>
+        // Impression automatique au chargement de la page
+        window.addEventListener('load', function() {
+            // Attendre un peu pour que les images se chargent
+            setTimeout(function() {
+                // Vérifier si on vient d'un clic sur le bouton QR
+                if (document.referrer.includes('etiquettes-pro')) {
+                    window.print();
+                }
+            }, 1000);
+        });
+        
+        // Gestion du retour après impression
+        window.addEventListener('afterprint', function() {
+            // Optionnel: fermer la fenêtre après impression
+            // window.close();
+        });
+    </script>
+</body>
+</html>

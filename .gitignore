@@ -359,3 +359,11 @@ config/settings.py
 # Autres fichiers modifiés localement (ajoutez ici selon vos besoins)
 # local_modifications/
 # personal_config/
+
+# Fichiers de script et configuration locaux
+remove_modal_ajout_articles.py
+setup_tickets_system.py
+test_report.json
+cursor_install.sh
+start_server_network.bat
+start_server_network.ps1

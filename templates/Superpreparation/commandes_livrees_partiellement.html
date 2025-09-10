@@ -3,587 +3,6 @@
 
 {% block title %}{{ page_title }} - YZ-CMD{% endblock %}
 
-{% block extra_css %}
-{{ block.super }}
-<style>
-    /* Variables CSS harmonisées avec le thème de supervision */
-    :root {
-        /* Utilisation des couleurs du thème de base Superpreparation */
-        --preparation-primary: #070F2B; /* Couleur principale navy */
-        --preparation-dark: #050A1F;   /* Plus sombre */
-        --preparation-light: #0E1D3D;  /* Plus clair */
-        --preparation-text-light: #E6F0FF; /* Texte très clair */
-        --preparation-border-accent: #1E3A8A; /* Accent (indigo) */
-        --preparation-hover-bg: #0B1733; /* Arrière-plan au survol */
-        --preparation-success: #10b981;
-        --preparation-warning: #f59e0b;
-        --preparation-error: #ef4444;
-        --preparation-info: #3b82f6;
-    }
-
-    @keyframes slideInUp {
-        from {
-            opacity: 0;
-            transform: translateY(30px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-    
-    @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-    }
-    
-    @keyframes pulse {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.05); }
-    }
-    
-    @keyframes bounce {
-        0%, 20%, 53%, 80%, 100% { transform: translate3d(0,0,0); }
-        40%, 43% { transform: translate3d(0, -30px, 0); }
-        70% { transform: translate3d(0, -15px, 0); }
-        90% { transform: translate3d(0, -4px, 0); }
-    }
-    
-    .animate-slideInUp {
-        animation: slideInUp 0.6s ease-out forwards;
-        opacity: 0;
-    }
-    
-    .animate-fadeIn {
-        animation: fadeIn 0.5s ease-out forwards;
-    }
-    
-    .animate-pulse {
-        animation: pulse 2s infinite;
-    }
-    
-    .animate-bounce {
-        animation: bounce 1s;
-    }
-
-    /* Styles harmonisés avec le thème de supervision */
-    .theme-header {
-        background: linear-gradient(135deg, var(--preparation-primary) 0%, var(--preparation-light) 100%);
-        border: 2px solid var(--preparation-border-accent);
-        box-shadow: 0 4px 15px rgba(7, 15, 43, 0.3);
-        border-radius: 16px;
-        padding: 24px;
-    }
-
-    .theme-card {
-        background: white;
-        border: 2px solid var(--preparation-text-light);
-        border-radius: 16px;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-        padding: 24px;
-    }
-
-    .theme-card:hover {
-        border-color: var(--preparation-border-accent);
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-        transform: translateY(-3px);
-    }
-
-    .theme-button-primary {
-        background: linear-gradient(135deg, var(--preparation-primary) 0%, var(--preparation-light) 100%);
-        border: 2px solid var(--preparation-border-accent);
-        color: white;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 15px rgba(7, 15, 43, 0.2);
-        position: relative;
-        overflow: hidden;
-        font-weight: 600;
-        padding: 12px 24px;
-        border-radius: 12px;
-    }
-
-    .theme-button-primary:hover {
-        background: linear-gradient(135deg, var(--preparation-light) 0%, var(--preparation-primary) 100%);
-        border-color: var(--preparation-border-accent);
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(7, 15, 43, 0.3);
-        color: white;
-    }
-
-    .theme-button-primary:active {
-        transform: translateY(0);
-    }
-
-    .theme-button-primary::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-        transition: left 0.5s;
-    }
-
-    .theme-button-primary:hover::before {
-        left: 100%;
-    }
-
-    .theme-button-secondary {
-        background: white;
-        border: 2px solid var(--preparation-text-light);
-        color: var(--preparation-primary);
-        transition: all 0.3s ease;
-        font-weight: 600;
-        padding: 12px 24px;
-        border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    }
-
-    .theme-button-secondary:hover {
-        background: var(--preparation-hover-bg);
-        border-color: var(--preparation-border-accent);
-        transform: translateY(-2px);
-        color: var(--preparation-primary);
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
-    }
-
-    .theme-input {
-        border: 2px solid var(--preparation-text-light);
-        transition: all 0.3s ease;
-        border-radius: 8px;
-        padding: 8px 12px;
-    }
-
-    .theme-input:focus {
-        border-color: var(--preparation-border-accent);
-        box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
-        outline: none;
-    }
-
-    /* Styles spécifiques pour les cartes de statistiques */
-    .stats-card {
-        background: white;
-        border: 2px solid var(--preparation-text-light);
-        border-radius: 16px;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-        position: relative;
-        overflow: hidden;
-        padding: 24px;
-    }
-
-    .stats-card:hover {
-        border-color: var(--preparation-border-accent);
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-        transform: translateY(-5px);
-    }
-
-    .stats-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 3px;
-        background: linear-gradient(90deg, var(--preparation-primary), var(--preparation-light));
-        transform: scaleX(0);
-        transition: transform 0.3s ease;
-    }
-
-    .stats-card:hover::before {
-        transform: scaleX(1);
-    }
-
-    /* Styles pour les icônes des statistiques */
-    .stats-icon {
-        background: linear-gradient(135deg, var(--preparation-primary) 0%, var(--preparation-light) 100%);
-        color: white;
-        border-radius: 50%;
-        padding: 16px;
-        transition: all 0.3s ease;
-        position: relative;
-        width: 60px;
-        height: 60px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .stats-card:hover .stats-icon {
-        background: linear-gradient(135deg, var(--preparation-light) 0%, var(--preparation-primary) 100%);
-        transform: scale(1.1) rotate(5deg);
-    }
-
-    /* Styles pour les sections d'information */
-    .info-section {
-        background: white;
-        border: 2px solid var(--preparation-text-light);
-        border-radius: 16px;
-        padding: 24px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-        transition: all 0.3s ease;
-    }
-
-    .info-section:hover {
-        border-color: var(--preparation-border-accent);
-        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-    }
-
-    /* Toast notifications */
-    .toast-container {
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        z-index: 9999;
-        pointer-events: none;
-    }
-
-    .toast {
-        background: white;
-        border: 2px solid var(--preparation-border-accent);
-        border-radius: 12px;
-        padding: 16px 20px;
-        margin-bottom: 10px;
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
-        transform: translateX(100%);
-        transition: all 0.3s ease;
-        pointer-events: auto;
-        max-width: 400px;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .toast.show {
-        transform: translateX(0);
-    }
-
-    .toast.success {
-        border-left: 4px solid var(--preparation-success);
-    }
-
-    .toast.error {
-        border-left: 4px solid var(--preparation-error);
-    }
-
-    .toast.info {
-        border-left: 4px solid var(--preparation-info);
-    }
-
-    .toast.warning {
-        border-left: 4px solid var(--preparation-warning);
-    }
-
-    .toast::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 2px;
-        background: linear-gradient(90deg, var(--preparation-primary), var(--preparation-light));
-        transform: scaleX(0);
-        transition: transform 3s linear;
-    }
-
-    .toast.show::before {
-        transform: scaleX(1);
-    }
-
-    /* Loading spinner */
-    .loading-spinner {
-        display: inline-block;
-        width: 20px;
-        height: 20px;
-        border: 3px solid rgba(255,255,255,.3);
-        border-radius: 50%;
-        border-top-color: #fff;
-        animation: spin 1s ease-in-out infinite;
-    }
-
-    @keyframes spin {
-        to { transform: rotate(360deg); }
-    }
-
-    /* Tooltip styles */
-    .tooltip {
-        position: relative;
-        cursor: help;
-    }
-
-    .tooltip::after {
-        content: attr(data-tooltip);
-        position: absolute;
-        bottom: 125%;
-        left: 50%;
-        transform: translateX(-50%);
-        background: rgba(0,0,0,0.8);
-        color: white;
-        padding: 8px 12px;
-        border-radius: 6px;
-        font-size: 12px;
-        white-space: nowrap;
-        opacity: 0;
-        visibility: hidden;
-        transition: all 0.3s ease;
-        z-index: 1000;
-    }
-
-    .tooltip::before {
-        content: '';
-        position: absolute;
-        bottom: 125%;
-        left: 50%;
-        transform: translateX(-50%);
-        border: 5px solid transparent;
-        border-top-color: rgba(0,0,0,0.8);
-        opacity: 0;
-        visibility: hidden;
-        transition: all 0.3s ease;
-        z-index: 1000;
-    }
-
-    .tooltip:hover::after,
-    .tooltip:hover::before {
-        opacity: 1;
-        visibility: visible;
-        bottom: 135%;
-    }
-
-    /* Progress bar for operations */
-    .progress-bar {
-        width: 100%;
-        height: 4px;
-        background: #e5e7eb;
-        border-radius: 2px;
-        overflow: hidden;
-        margin-top: 8px;
-    }
-
-    .progress-fill {
-        height: 100%;
-        background: linear-gradient(90deg, var(--preparation-primary), var(--preparation-light));
-        width: 0%;
-        transition: width 0.3s ease;
-    }
-
-    /* Empty state improvements */
-    .empty-state {
-        text-align: center;
-        padding: 60px 20px;
-        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-        border-radius: 16px;
-        border: 2px dashed var(--preparation-text-light);
-    }
-
-    .empty-state-icon {
-        font-size: 4rem;
-        color: var(--preparation-text-light);
-        margin-bottom: 20px;
-        animation: pulse 2s infinite;
-    }
-
-    /* Responsive improvements */
-    @media (max-width: 768px) {
-        .stats-card {
-            margin-bottom: 16px;
-        }
-        
-        .toast {
-            max-width: calc(100vw - 40px);
-            right: 0;
-        }
-    }
-
-    /* Améliorations spécifiques pour la visibilité */
-    .page-header {
-        background: linear-gradient(135deg, var(--preparation-primary) 0%, var(--preparation-light) 100%);
-        color: white;
-        border: 2px solid var(--preparation-border-accent);
-        border-radius: 16px;
-        padding: 24px;
-        box-shadow: 0 4px 15px rgba(7, 15, 43, 0.3);
-        margin-bottom: 32px;
-    }
-
-    .section-title {
-        color: var(--preparation-primary);
-        font-size: 1.5rem;
-        font-weight: bold;
-        margin-bottom: 16px;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-    }
-
-    .status-badge {
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-size: 0.875rem;
-        font-weight: 600;
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-    }
-
-    .status-badge.en-cours {
-        background: #dcfce7;
-        color: #166534;
-        border: 1px solid #bbf7d0;
-    }
-
-    .status-badge.cloture {
-        background: #f3f4f6;
-        color: #374151;
-        border: 1px solid #d1d5db;
-    }
-
-    .status-badge.disponible {
-        background: #dbeafe;
-        color: #1e40af;
-        border: 1px solid #bfdbfe;
-    }
-
-    .status-badge.existant {
-        background: #fef2f2;
-        color: #dc2626;
-        border: 1px solid #fecaca;
-    }
-
-    .status-badge.livree-partiellement {
-        background: #fef3c7;
-        color: #d97706;
-        border: 1px solid #fde68a;
-    }
-
-    .info-item {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 16px;
-        background: #f8fafc;
-        border-radius: 12px;
-        border: 1px solid #e2e8f0;
-        transition: all 0.3s ease;
-    }
-
-    .info-item:hover {
-        background: #f1f5f9;
-        border-color: var(--preparation-border-accent);
-        transform: translateY(-2px);
-    }
-
-    .info-icon {
-        width: 48px;
-        height: 48px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.25rem;
-        color: white;
-    }
-
-    .info-icon.blue {
-        background: linear-gradient(135deg, var(--preparation-primary) 0%, var(--preparation-light) 100%);
-    }
-
-    .info-icon.green {
-        background: linear-gradient(135deg, #059669 0%, var(--preparation-success) 100%);
-    }
-
-    .info-icon.purple {
-        background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%);
-    }
-
-    .info-icon.orange {
-        background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
-    }
-
-    /* Styles pour le tableau */
-    .table-container {
-        background: white;
-        border: 2px solid var(--preparation-text-light);
-        border-radius: 16px;
-        overflow: hidden;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-        transition: all 0.3s ease;
-    }
-
-    .table-container:hover {
-        border-color: var(--preparation-border-accent);
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-    }
-
-    .table-header {
-        background: linear-gradient(135deg, var(--preparation-primary) 0%, var(--preparation-light) 100%);
-        color: white;
-    }
-
-    .table-row {
-        transition: all 0.3s ease;
-        border-bottom: 1px solid #e5e7eb;
-    }
-
-    .table-row:hover {
-        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-        transform: translateX(4px);
-    }
-
-    .table-cell {
-        padding: 16px;
-        vertical-align: middle;
-    }
-
-    /* Styles pour les boutons d'action */
-    .action-button {
-        background: linear-gradient(135deg, var(--preparation-primary) 0%, var(--preparation-light) 100%);
-        border: 2px solid var(--preparation-border-accent);
-        color: white;
-        transition: all 0.3s ease;
-        font-weight: 600;
-        padding: 8px 16px;
-        border-radius: 8px;
-        font-size: 0.875rem;
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-    }
-
-    .action-button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(7, 15, 43, 0.3);
-        color: white;
-    }
-
-    /* Styles pour les badges d'état */
-    .etat-badge {
-        padding: 6px 12px;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
-    .etat-badge.livree-partiellement {
-        background: #fef3c7;
-        color: #d97706;
-        border: 1px solid #fde68a;
-    }
-
-    .etat-badge.urgente {
-        background: #fee2e2;
-        color: #dc2626;
-        border: 1px solid #fecaca;
-        animation: pulse 2s infinite;
-    }
-</style>
-{% endblock %}
 
 {% block content %}
 {% csrf_token %}
@@ -592,7 +11,7 @@
     <div class="toast-container" id="toastContainer"></div>
 
     <!-- En-tête de la page -->
-    <div class="page-header">
+    <div class="text-white p-6 rounded-xl shadow-lg mb-8" style="background: linear-gradient(135deg, var(--preparation-primary) 0%, var(--preparation-light) 100%); border: 2px solid var(--preparation-border-accent);">
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center">
         <div>
             <h1 class="text-3xl font-bold flex items-center mb-2">
@@ -614,104 +33,210 @@
         </div>
     </div>
 
-    <!-- Statistiques -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <!-- Statistiques rapides -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 lg:mb-8">
         <!-- Total des commandes -->
-        <div class="stats-card animate-slideInUp" style="animation-delay: 0.1s;">
-                <div class="flex items-center">
-                <div class="stats-icon">
-                        <i class="fas fa-truck text-2xl"></i>
+        <div class="group bg-white rounded-xl shadow-lg p-3 sm:p-4 transition-all duration-300 hover:shadow-2xl hover:scale-105 border border-gray-100 h-full flex flex-col" style="border-color: var(--preparation-border-accent);">
+            <div class="flex items-center justify-between flex-grow">
+                <div class="flex items-center flex-grow">
+                    <div class="p-2 sm:p-3 rounded-full bg-gradient-to-r from-orange-100 to-orange-200 text-orange-600 transition-all duration-300 group-hover:from-orange-500 group-hover:to-orange-600 group-hover:text-white group-hover:scale-110 flex-shrink-0">
+                        <i class="fas fa-truck text-lg sm:text-xl"></i>
                     </div>
-                    <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-600">Livrées Partiellement</p>
-                    <p class="text-3xl font-bold text-gray-900">{{ stats.total_commandes|default:0 }}</p>
+                    <div class="ml-2 sm:ml-3 flex-grow">
+                        <p class="text-xs font-medium text-gray-600 group-hover:text-gray-700 transition-colors duration-300">Livrées Partiellement</p>
+                        <p class="text-xl sm:text-2xl font-bold text-gray-900 transition-all duration-300 group-hover:text-orange-600">{{ stats.total_commandes|default:0 }}</p>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- Valeur totale -->
-        <div class="stats-card animate-slideInUp" style="animation-delay: 0.2s;">
-                <div class="flex items-center">
-                <div class="stats-icon">
-                        <i class="fas fa-coins text-2xl"></i>
+        <div class="group bg-white rounded-xl shadow-lg p-3 sm:p-4 transition-all duration-300 hover:shadow-2xl hover:scale-105 border border-gray-100 h-full flex flex-col" style="border-color: var(--preparation-border-accent);">
+            <div class="flex items-center justify-between flex-grow">
+                <div class="flex items-center flex-grow">
+                    <div class="p-2 sm:p-3 rounded-full bg-gradient-to-r from-green-100 to-green-200 text-green-600 transition-all duration-300 group-hover:from-green-500 group-hover:to-green-600 group-hover:text-white group-hover:scale-110 flex-shrink-0">
+                        <i class="fas fa-coins text-lg sm:text-xl"></i>
                     </div>
-                    <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-600">Valeur Totale</p>
-                    <p class="text-3xl font-bold text-gray-900">{{ stats.valeur_totale|floatformat:0|default:0 }} DH</p>
+                    <div class="ml-2 sm:ml-3 flex-grow">
+                        <p class="text-xs font-medium text-gray-600 group-hover:text-gray-700 transition-colors duration-300">Valeur Totale</p>
+                        <p class="text-xl sm:text-2xl font-bold text-gray-900 transition-all duration-300 group-hover:text-green-600">{{ stats.valeur_totale|floatformat:0|default:0 }} DH</p>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- Commandes urgentes -->
-        <div class="stats-card animate-slideInUp" style="animation-delay: 0.3s;">
-                <div class="flex items-center">
-                <div class="stats-icon">
-                        <i class="fas fa-exclamation-triangle text-2xl"></i>
+        <div class="group bg-white rounded-xl shadow-lg p-3 sm:p-4 transition-all duration-300 hover:shadow-2xl hover:scale-105 border border-gray-100 h-full flex flex-col" style="border-color: var(--preparation-border-accent);">
+            <div class="flex items-center justify-between flex-grow">
+                <div class="flex items-center flex-grow">
+                    <div class="p-2 sm:p-3 rounded-full bg-gradient-to-r from-red-100 to-red-200 text-red-600 transition-all duration-300 group-hover:from-red-500 group-hover:to-red-600 group-hover:text-white group-hover:scale-110 flex-shrink-0">
+                        <i class="fas fa-exclamation-triangle text-lg sm:text-xl"></i>
                     </div>
-                    <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-600">Urgentes</p>
-                    <p class="text-3xl font-bold text-gray-900">{{ stats.commandes_urgentes|default:0 }}</p>
+                    <div class="ml-2 sm:ml-3 flex-grow">
+                        <p class="text-xs font-medium text-gray-600 group-hover:text-gray-700 transition-colors duration-300">Urgentes</p>
+                        <p class="text-xl sm:text-2xl font-bold text-gray-900 transition-all duration-300 group-hover:text-red-600">{{ stats.commandes_urgentes|default:0 }}</p>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Section d'informations -->
-    <div class="info-section mb-8">
-        <h2 class="section-title">
-            <i class="fas fa-info-circle text-blue-600"></i>
-            Informations générales
-        </h2>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div class="info-item">
-                <div class="info-icon orange">
-                    <i class="fas fa-truck"></i>
+<!-- Section de recherche -->
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+    <div class="px-4 py-3 border-b border-gray-200">
+        <h3 class="text-lg font-medium text-gray-900">Recherche et Filtres</h3>
+        <p class="text-sm text-gray-500 mt-1">Recherchez et filtrez les commandes livrées partiellement</p>
                 </div>
-                <div>
-                    <h3 class="font-semibold text-gray-900">Livraison partielle</h3>
-                    <p class="text-sm text-gray-600">Commandes dont certains articles n'ont pas été livrés</p>
-                </div>
-            </div>
-            <div class="info-item">
-                <div class="info-icon blue">
-                    <i class="fas fa-eye"></i>
-                </div>
-                <div>
-                    <h3 class="font-semibold text-gray-900">Suivi détaillé</h3>
-                    <p class="text-sm text-gray-600">Accédez au détail de chaque commande pour voir les articles manquants</p>
-                </div>
-            </div>
-            <div class="info-item">
-                <div class="info-icon green">
-                    <i class="fas fa-chart-line"></i>
-                </div>
-                <div>
-                    <h3 class="font-semibold text-gray-900">Statistiques</h3>
-                    <p class="text-sm text-gray-600">Suivez la valeur totale et les commandes urgentes</p>
-                </div>
-            </div>
-        </div>
+    
+    <div class="p-4">
+        {% include 'Superpreparation/includes/smart-search-toolbar.html' %}
     </div>
-
-    <!-- Barre de recherche intelligente -->
-{% include 'Superpreparation/includes/smart-search-toolbar.html' %}
+    
+    <!-- Script de recherche intelligente (chargé tôt pour les boutons) -->
+    <script src="{% static 'js/Superpreparation/Suivi_des_Commandes/suivi-commandes-smart-search.js' %}"></script>
+    
+    <!-- Script de fallback pour les fonctions manquantes -->
+    <script>
+        // Fallback si les fonctions ne sont pas chargées
+        if (typeof window.toggleAdvancedSearch === 'undefined') {
+            window.toggleAdvancedSearch = function() {
+                const advancedSearch = document.getElementById('advancedSearch');
+                if (advancedSearch) {
+                    const isHidden = advancedSearch.style.display === 'none' || advancedSearch.classList.contains('hidden');
+                    if (isHidden) {
+                        advancedSearch.style.display = 'block';
+                        advancedSearch.classList.remove('hidden');
+                    } else {
+                        advancedSearch.style.display = 'none';
+                        advancedSearch.classList.add('hidden');
+                    }
+                }
+            };
+        }
         
-    <!-- Tableau des commandes -->
-    <div class="table-container">
-        <div class="overflow-x-auto">
-            <table class="min-w-full">
-                <thead class="table-header">
-                    <tr>
-                        <th class="table-cell text-left text-xs font-medium text-white uppercase tracking-wider">ID YZ</th>
-                        <th class="table-cell text-left text-xs font-medium text-white uppercase tracking-wider">N° Externe</th>
-                        <th class="table-cell text-left text-xs font-medium text-white uppercase tracking-wider">Client</th>
-                        <th class="table-cell text-left text-xs font-medium text-white uppercase tracking-wider">Téléphone</th>
-                        <th class="table-cell text-left text-xs font-medium text-white uppercase tracking-wider">Ville Client</th>
-                        <th class="table-cell text-left text-xs font-medium text-white uppercase tracking-wider">Ville & Région</th>
-                        <th class="table-cell text-left text-xs font-medium text-white uppercase tracking-wider">Date Début</th>
-                        <th class="table-cell text-left text-xs font-medium text-white uppercase tracking-wider">Total</th>
-                        <th class="table-cell text-left text-xs font-medium text-white uppercase tracking-wider">État</th>
-                        <th class="table-cell text-center text-xs font-medium text-white uppercase tracking-wider">Panier</th>
+        if (typeof window.clearSmartSearch === 'undefined') {
+            window.clearSmartSearch = function() {
+                const searchInput = document.getElementById('smartSearch');
+                if (searchInput) {
+                    searchInput.value = '';
+                }
+                const filterInputs = document.querySelectorAll('#advancedSearch input, #advancedSearch select');
+                filterInputs.forEach(input => {
+                    if (input.type === 'checkbox') {
+                        input.checked = false;
+                    } else {
+                        input.value = '';
+                    }
+                });
+            };
+        }
+        
+        if (typeof window.applyFilters === 'undefined') {
+            window.applyFilters = function() {
+                console.log('🔍 Filtres appliqués (fallback)');
+            };
+        }
+    </script>
+</div>
+
+<!-- Section des données -->
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+    <div class="px-4 py-3 border-b border-gray-200">
+        <h3 class="text-lg font-medium text-gray-900">Commandes Livrées Partiellement</h3>
+        <p class="text-sm text-gray-500 mt-1">Gestion des commandes avec livraison partielle</p>
+    </div>
+    
+    <div class="p-4">
+        <!-- Version mobile/tablette : Cartes -->
+        {% if commandes_livrees_partiellement %}
+        <div class="block lg:hidden space-y-3 mb-4">
+            {% for commande in commandes_livrees_partiellement %}
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-3 hover:shadow-md transition-shadow duration-200">
+                <!-- En-tête de la carte -->
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center space-x-2">
+                        <div class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+                            <span class="text-orange-600 font-bold text-xs">{{ commande.id_yz }}</span>
+                </div>
+                <div>
+                            <h3 class="font-semibold text-gray-900 text-sm">{{ commande.client.prenom }} {{ commande.client.nom }}</h3>
+                            <p class="text-xs text-gray-500">{{ commande.num_cmd|default:"-" }}</p>
+                </div>
+            </div>
+                    <div class="text-right">
+                        <div class="text-sm font-bold text-orange-600">{{ commande.total_cmd|floatformat:2 }} DH</div>
+                        <div class="text-xs text-gray-500">{{ commande.paniers.count }} article{{ commande.paniers.count|pluralize }}</div>
+                </div>
+            </div>
+                
+                <!-- Informations détaillées -->
+                <div class="space-y-2 text-xs text-gray-600">
+                    <div class="flex items-center">
+                        <i class="fas fa-phone w-4 mr-2"></i>
+                        <span>{{ commande.client.numero_tel|default:"Non renseigné" }}</span>
+                    </div>
+                    {% if commande.ville %}
+                    <div class="flex items-center">
+                        <i class="fas fa-map-marker-alt w-4 mr-2"></i>
+                        <span>{{ commande.ville.nom }}, {{ commande.ville.region.nom_region }}</span>
+                    </div>
+                    {% endif %}
+                    {% if commande.etat_actuel %}
+                    <div class="flex items-center">
+                        <i class="fas fa-calendar w-4 mr-2"></i>
+                        <span>Livrée partiellement le {{ commande.etat_actuel.date_debut|date:"d/m/Y H:i" }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Actions -->
+                <div class="flex items-center justify-between mt-3 pt-3 border-t border-gray-200">
+                    <div class="flex items-center space-x-2">
+                        <a href="{% url 'Superpreparation:detail_prepa' commande.pk %}"
+                           class="inline-flex items-center px-2.5 py-1 rounded-md shadow-sm text-white text-xs transition-all hover:shadow-lg"
+                           style="background-color: var(--preparation-primary);"
+                           title="Voir le panier">
+                            <i class="fas fa-shopping-cart mr-1"></i>
+                            Panier
+                        </a>
+                </div>
+                    <div class="flex items-center">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-orange-100 text-orange-800">
+                            <i class="fas fa-truck mr-1"></i>
+                            Livrée partiellement
+                        </span>
+                </div>
+            </div>
+        </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Bouton de sélection des colonnes -->
+        <div class="hidden lg:flex justify-end mb-3">
+            <button id="columnToggle" onclick="toggleColumnVisibility()" 
+                    class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all duration-300"
+                    title="Sélectionner les colonnes">
+                <i class="fas fa-columns mr-2 text-gray-500"></i>
+                Sélectionner les colonnes
+            </button>
+    </div>
+
+        <!-- Version desktop : Tableau -->
+        <div class="hidden lg:block overflow-x-auto rounded-lg shadow-sm border border-gray-200 mb-4">
+        <table id="suivi-prepa-table-partielles" class="w-full divide-y divide-gray-200 table-auto">
+            <thead style="background-color: var(--preparation-primary);">
+                <tr>
+                    <th class="column-id-yz px-2 py-3 text-left text-xs font-medium text-white uppercase tracking-wider" style="width: 8%;">ID YZ</th>
+                    <th class="column-num-ext px-2 py-3 text-left text-xs font-medium text-white uppercase tracking-wider" style="width: 10%;">N° Externe</th>
+                    <th class="column-client px-2 py-3 text-left text-xs font-medium text-white uppercase tracking-wider" style="width: 15%;">Client</th>
+                    <th class="column-telephone px-2 py-3 text-left text-xs font-medium text-white uppercase tracking-wider" style="width: 10%;">Téléphone</th>
+                    <th class="column-ville-client px-2 py-3 text-left text-xs font-medium text-white uppercase tracking-wider" style="width: 10%;">Ville Client</th>
+                    <th class="column-ville-region px-2 py-3 text-left text-xs font-medium text-white uppercase tracking-wider" style="width: 12%;">Ville & Région</th>
+                    <th class="column-date-debut px-2 py-3 text-left text-xs font-medium text-white uppercase tracking-wider" style="width: 10%;">Date Début</th>
+                    <th class="column-total px-2 py-3 text-left text-xs font-medium text-white uppercase tracking-wider" style="width: 8%;">Total</th>
+                    <th class="column-etat px-2 py-3 text-left text-xs font-medium text-white uppercase tracking-wider" style="width: 10%;">État</th>
+                    <th class="column-panier px-2 py-3 text-center text-xs font-medium text-white uppercase tracking-wider" style="width: 8%;">Panier</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
@@ -731,21 +256,26 @@
                             data-etat="Livrée partiellement"
                             data-operateur="{% if commande.etat_actuel.operateur %}{{ commande.etat_actuel.operateur.nom }} {{ commande.etat_actuel.operateur.prenom }}{% endif %}">
                             
-                            <td class="table-cell whitespace-nowrap text-sm font-medium text-gray-900">
-                                {{ commande.id_yz }}
+                            <!-- ID YZ -->
+                            <td class="column-id-yz px-2 py-3 text-sm font-medium text-gray-900 truncate">
+                                <span class="font-bold">{{ commande.id_yz }}</span>
                             </td>
-                            <td class="table-cell whitespace-nowrap text-sm text-gray-500">{{ commande.num_cmd|default:"-" }}</td>
+
+                            <!-- N° Externe -->
+                            <td class="column-num-ext px-2 py-3 text-sm text-gray-500 truncate">
+                                {{ commande.num_cmd|default:"-" }}
+                            </td>
                             
-                            <!-- Colonne Client -->
-                            <td class="table-cell whitespace-nowrap">
+                            <!-- Client -->
+                            <td class="column-client px-2 py-3 truncate">
                                 <div class="text-sm font-medium text-gray-900">{{ commande.client.prenom }} {{ commande.client.nom }}</div>
                                 {% if commande.client.email %}
                                 <div class="text-xs text-gray-500">{{ commande.client.email }}</div>
                                 {% endif %}
                             </td>
                             
-                            <!-- Colonne Téléphone -->
-                            <td class="table-cell whitespace-nowrap">
+                            <!-- Téléphone -->
+                            <td class="column-telephone px-2 py-3 truncate">
                                 {% if commande.client.numero_tel %}
                                 <div class="text-sm text-gray-900 font-medium">
                                     <i class="fas fa-phone mr-1"></i>
@@ -756,17 +286,17 @@
                                 {% endif %}
                             </td>
                             
-                            <!-- Colonne Ville Client -->
-                            <td class="table-cell whitespace-nowrap text-sm">
+                            <!-- Ville Client -->
+                            <td class="column-ville-client px-2 py-3 truncate">
                                 {% if commande.ville_init and commande.ville_init != '' %}
-                                    <div style="color: var(--preparation-primary);" class="font-medium">{{ commande.ville_init }}</div>
+                                    <div class="text-sm font-medium text-gray-900">{{ commande.ville_init }}</div>
                                 {% else %}
-                                    <div style="color: var(--preparation-primary);">Non spécifiée</div>
+                                    <div class="text-sm text-gray-500">Non spécifiée</div>
                                 {% endif %}
                             </td>
                             
-                            <!-- Colonne Ville & Région (ville de livraison) -->
-                            <td class="table-cell whitespace-nowrap">
+                            <!-- Ville & Région -->
+                            <td class="column-ville-region px-2 py-3 truncate">
                                 {% if commande.ville %}
                                     <div class="text-sm text-gray-900">{{ commande.ville.nom }}</div>
                                     <div class="text-xs text-gray-500">{{ commande.ville.region.nom_region }}</div>
@@ -775,7 +305,8 @@
                                 {% endif %}
                             </td>
                             
-                            <td class="table-cell whitespace-nowrap">
+                            <!-- Date Début -->
+                            <td class="column-date-debut px-2 py-3 truncate">
                                 {% with etat_actuel=commande.etat_actuel %}
                                     {% if etat_actuel %}
                                         <div class="text-sm text-gray-900">{{ etat_actuel.date_debut|date:"d/m/Y" }}</div>
@@ -786,23 +317,27 @@
                                 {% endwith %}
                             </td>
                             
-                            <td class="table-cell whitespace-nowrap">
-                                <div class="text-sm font-bold text-green-600">{{ commande.total_cmd|floatformat:2 }} DH</div>
+                            <!-- Total -->
+                            <td class="column-total px-2 py-3 truncate">
+                                <div class="text-sm font-bold text-orange-600">{{ commande.total_cmd|floatformat:2 }} DH</div>
                             </td>
 
-                            <td class="table-cell whitespace-nowrap">
-                                <span class="etat-badge livree-partiellement">
+                            <!-- État -->
+                            <td class="column-etat px-2 py-3 text-sm truncate">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-orange-100 text-orange-800">
                                     <i class="fas fa-truck mr-1"></i>
                                     Livrée partiellement
                                 </span>
                             </td>
                             
-                            <td class="table-cell whitespace-nowrap text-center">
+                            <!-- Panier -->
+                            <td class="column-panier px-2 py-3 text-center">
                                 <a href="{% url 'Superpreparation:detail_prepa' commande.pk %}" 
-                                   class="action-button"
+                                   class="inline-flex items-center px-2.5 py-1 rounded-md shadow-sm text-white transition-all hover:shadow-lg"
+                                   style="background-color: var(--preparation-primary);"
                                    title="Voir le panier de cette commande">
-                                    <i class="fas fa-shopping-cart"></i> 
-                                    {{ commande.paniers.count }} article{{ commande.paniers.count|pluralize }}
+                                    <i class="fas fa-shopping-cart text-sm mr-1"></i>
+                                    <span class="text-xs">{{ commande.paniers.count }}</span>
                                 </a>
                             </td>
                         </tr>
@@ -822,6 +357,7 @@
                     {% endif %}
                 </tbody>
             </table>
+        </div>
         </div>
     </div>
 </div>
@@ -884,14 +420,163 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 });
+
+</script>
+<script src="{% static 'js/common/pagination-table.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.createSmartTablePagination) {
+        window.createSmartTablePagination({
+            tableSelector: '#suivi-prepa-table-partielles',
+            rowSelector: '.commande-row',
+            perPageOptions: [10,12,25,50,100],
+            defaultPerPage: 12
+        });
+    }
+});
 </script>
 
-<!-- Script de recherche intelligente -->
-<script src="{% static 'js/Suivi_des_Commandes/suivi-commandes-smart-search.js' %}"></script>
 <script>
 // Initialiser la recherche intelligente pour cette page
 document.addEventListener('DOMContentLoaded', function() {
-    initSuiviCommandesSearch('livrees_partiellement');
+    if (window.initSuiviCommandesSearch) {
+        window.initSuiviCommandesSearch('livrees_partiellement');
+    }
+});
+</script>
+
+<!-- JavaScript standardisé pour le masquage de colonnes -->
+<script>
+// Fonction pour masquer/afficher les colonnes
+function toggleColumnVisibility() {
+    const button = document.getElementById('columnToggle');
+    
+    // Créer le modal de sélection des colonnes
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+    modal.innerHTML = `
+        <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">Sélectionner les colonnes</h3>
+                <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="space-y-3">
+                <!-- Checkboxes pour chaque colonne -->
+                <label class="flex items-center">
+                    <input type="checkbox" class="column-checkbox" data-column="column-id-yz" checked>
+                    <span class="ml-2 text-sm text-gray-700">ID YZ</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="checkbox" class="column-checkbox" data-column="column-num-ext" checked>
+                    <span class="ml-2 text-sm text-gray-700">N° Externe</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="checkbox" class="column-checkbox" data-column="column-client" checked>
+                    <span class="ml-2 text-sm text-gray-700">Client</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="checkbox" class="column-checkbox" data-column="column-telephone" checked>
+                    <span class="ml-2 text-sm text-gray-700">Téléphone</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="checkbox" class="column-checkbox" data-column="column-ville-client" checked>
+                    <span class="ml-2 text-sm text-gray-700">Ville Client</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="checkbox" class="column-checkbox" data-column="column-ville-region" checked>
+                    <span class="ml-2 text-sm text-gray-700">Ville & Région</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="checkbox" class="column-checkbox" data-column="column-date-debut" checked>
+                    <span class="ml-2 text-sm text-gray-700">Date Début</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="checkbox" class="column-checkbox" data-column="column-total" checked>
+                    <span class="ml-2 text-sm text-gray-700">Total</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="checkbox" class="column-checkbox" data-column="column-etat" checked>
+                    <span class="ml-2 text-sm text-gray-700">État</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="checkbox" class="column-checkbox" data-column="column-panier" checked>
+                    <span class="ml-2 text-sm text-gray-700">Panier</span>
+                </label>
+            </div>
+            <div class="flex justify-end space-x-3 mt-6">
+                <button onclick="this.closest('.fixed').remove()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md">
+                    Annuler
+                </button>
+                <button onclick="applyColumnVisibility(this.closest('.fixed'))" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md">
+                    Appliquer
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    loadColumnVisibility();
+}
+
+// Charger l'état actuel des colonnes
+function loadColumnVisibility() {
+    const hiddenColumns = JSON.parse(localStorage.getItem('hiddenColumns') || '[]');
+    const checkboxes = document.querySelectorAll('.column-checkbox');
+    
+    checkboxes.forEach(checkbox => {
+        const column = checkbox.dataset.column;
+        checkbox.checked = !hiddenColumns.includes(column);
+    });
+}
+
+// Appliquer la visibilité des colonnes
+function applyColumnVisibility(modal) {
+    const checkboxes = modal.querySelectorAll('.column-checkbox');
+    const hiddenColumns = [];
+    
+    checkboxes.forEach(checkbox => {
+        if (!checkbox.checked) {
+            hiddenColumns.push(checkbox.dataset.column);
+        }
+    });
+    
+    // Sauvegarder dans localStorage
+    localStorage.setItem('hiddenColumns', JSON.stringify(hiddenColumns));
+    
+    // Appliquer la visibilité
+    updateColumnVisibility(hiddenColumns);
+    
+    // Fermer le modal
+    modal.remove();
+}
+
+// Mettre à jour la visibilité des colonnes
+function updateColumnVisibility(hiddenColumns) {
+    // Liste des colonnes disponibles pour cette page
+    const columns = [
+        'column-id-yz', 'column-num-ext', 'column-client', 'column-telephone',
+        'column-ville-client', 'column-ville-region', 'column-date-debut',
+        'column-total', 'column-etat', 'column-panier'
+    ];
+    
+    columns.forEach(column => {
+        const elements = document.querySelectorAll(`.${column}`);
+        elements.forEach(element => {
+            if (hiddenColumns.includes(column)) {
+                element.style.display = 'none';
+            } else {
+                element.style.display = '';
+            }
+        });
+    });
+}
+
+// Charger la visibilité des colonnes au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+    const hiddenColumns = JSON.parse(localStorage.getItem('hiddenColumns') || '[]');
+    updateColumnVisibility(hiddenColumns);
 });
 </script>
 

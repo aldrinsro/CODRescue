@@ -233,7 +233,7 @@ def search_articles_supervision(query):
             'title': article.nom,
             'subtitle': f'Réf: {article.reference} - Stock: {article.qte_disponible}',
             'status': 'En stock' if article.qte_disponible > 0 else 'Rupture',
-            'url': reverse('Superpreparation:detail_article', kwargs={'article_id': article.id}),
+            'url': reverse('Superpreparation:detail_article', kwargs={'id': article.id}),
             'icon': 'fas fa-box',
             'priority': 1
         })
@@ -258,7 +258,7 @@ def search_stock_supervision(query):
             'title': f'Stock {article.nom}',
             'subtitle': f'Réf: {article.reference} - Quantité: {article.qte_disponible}',
             'status': 'En stock' if article.qte_disponible > 0 else 'Rupture',
-            'url': reverse('Superpreparation:detail_article', kwargs={'article_id': article.id}),
+            'url': reverse('Superpreparation:detail_article', kwargs={'id': article.id}),
             'icon': 'fas fa-warehouse',
             'priority': 1
         })
@@ -349,7 +349,7 @@ def search_statistiques_supervision(query):
         'preparation': {'title': 'Commandes en Préparation', 'url': reverse('Superpreparation:commandes_en_preparation'), 'icon': 'fas fa-boxes'},
         'confirmee': {'title': 'Commandes Confirmées', 'url': reverse('Superpreparation:liste_prepa'), 'icon': 'fas fa-check-circle'},
         'stock': {'title': 'Gestion du Stock', 'url': reverse('Superpreparation:liste_articles'), 'icon': 'fas fa-warehouse'},
-        'inventaire': {'title': 'Inventaire & Alertes', 'url': reverse('Superpreparation:alertes_stock'), 'icon': 'fas fa-clipboard-list'},
+        'inventaire': {'title': 'Inventaire & Alertes', 'url': reverse('Superpreparation:rupture_stock'), 'icon': 'fas fa-clipboard-list'},
         'statistiques': {'title': 'Tableau de Bord', 'url': reverse('Superpreparation:home'), 'icon': 'fas fa-chart-bar'},
         'supervision': {'title': 'Supervision Générale', 'url': reverse('Superpreparation:home'), 'icon': 'fas fa-eye'},
         'operateurs': {'title': 'Gestion Opérateurs', 'url': '/supervision/operateurs/', 'icon': 'fas fa-users'},
