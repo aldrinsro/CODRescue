@@ -41,7 +41,7 @@ urlpatterns = [
     path('sav/annulees/', views.sav_annulees_sav, name='sav_annulees'),
     path('sav/livrees-avec-changement/', views.sav_livrees_avec_changement, name='sav_livrees_avec_changement'),
     path('sav/livrees/', views.sav_livrees, name='sav_livrees'),
-    path('sav/creer-nouvelle-commande/<int:commande_id>/', views.sav_creer_nouvelle_commande, name='sav_creer_nouvelle_commande'),
+    #path('sav/creer-nouvelle-commande/<int:commande_id>/', views.sav_creer_nouvelle_commande, name='sav_creer_nouvelle_commande'),
     path('sav/renvoyer-preparation/<int:commande_id>/', views.sav_renvoyer_preparation, name='sav_renvoyer_preparation'),
     
     # URLs Dashboard 360
