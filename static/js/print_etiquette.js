@@ -920,6 +920,14 @@ class EtiquettePrinter {
                                 ${commande && commande.total_cmd ? `${commande.total_cmd} DH` : 'Prix non disponible'}
                             </span>
                         </div>
+                        ${commande && commande.frais_livraison ? `
+                        <div class="text-xs flex items-center text-blue-600">
+                            <div class="w-3 h-3 bg-blue-100 rounded-full flex items-center justify-center mr-1">
+                                <i class="fas fa-truck text-blue-600 text-xs"></i>
+                            </div>
+                            <span>Frais livraison inclus</span>
+                        </div>
+                        ` : ''}
                         ` : ''}
                         ${template.print_show_brand !== false ? `
                         <div class="text-sm flex items-center">

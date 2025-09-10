@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('commande', '0013_etiquettetemplate'),
+        ('commande', '0012_alter_commande_payement'),
     ]
 
     operations = [
