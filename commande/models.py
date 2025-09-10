@@ -87,7 +87,7 @@ class Commande(models.Model):
     source = models.CharField(max_length=100, blank=True, null=True, choices=SOURCE_CHOICES)
     compteur = models.IntegerField(default=0, verbose_name="Compteur d'utilisation")  
     payement  = models.CharField(default='Non payé', verbose_name="Payement", choices=PAYER_CHOICES)
-    frais_livraison = models.BooleanField(default=False, verbose_name="Frais de livraison")
+    frais_livraison = models.BooleanField(default=True, verbose_name="Frais de livraison")
 
 
     # Relation avec Envoi pour les exports journaliers  
@@ -307,7 +307,7 @@ class EtatCommande(models.Model):
     date_fin = models.DateTimeField(blank=True, null=True)
     commentaire = models.TextField(blank=True, null=True)
     operateur = models.ForeignKey(Operateur, on_delete=models.CASCADE, related_name='etats_modifies', blank=True, null=True)
-    date_fin_delayed = models.DateTimeField(blank=True, null=True, verbose_name="Date de fin de confirmation décalée")
+    date_fin_delayed = models.DateTimeField(blank=True, null=True, verbose_name="Date reporte de confirmation décalée")
     
     class Meta:
         verbose_name = "État de commande(Suivi de commande)"
@@ -354,13 +354,15 @@ class Operation(models.Model):
         ("Appel 4", "Appel 4"),
         ("Appel 5", "Appel 5"),
         ("Appel 6", "Appel 6"),
-        ("Client intéressé", "Client intéressé"),
         ("Confirmée", "Confirmée"),
         ("Confirmée & Echangée", "Confirmée & Echangée"),
         ("Echangée", "Echangée"),
         ("Abonnement","Abonnement"),
-        ("Reduction","Reduction"),
-        ("Client hésitant", "Client hésitant"),
+        ("Offre","Offre"),
+        ('numero errone',"numéro erroné"),
+        ('boite vocalee',"boite vocalee"),
+        ("indisponible","indisponible"),
+        
 
     ]
     

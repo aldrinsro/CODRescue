@@ -144,7 +144,7 @@ def liste_commandes(request):
     commandes_list = Commande.objects.filter(
         etats__operateur=operateur,
         etats__date_fin__isnull=True,
-        etats__enum_etat__libelle__in=['Affectée', 'En cours de confirmation', 'Retour Confirmation', 'Confirmation décalée']
+        etats__enum_etat__libelle__in=['Affectée', 'En cours de confirmation', 'Report de confirmation']
     ).distinct().select_related(
         'client', 'ville', 'ville__region'
     ).prefetch_related(
@@ -167,38 +167,36 @@ def liste_commandes(request):
     # Statistiques pour l'affichage des onglets/badges
     stats = {
         'en_attente': Commande.objects.filter(
-            etats__operateur=operateur, 
-            etats__date_fin__isnull=True, 
+            etats__operateur=operateur,
+            etats__date_fin__isnull=True,
             etats__enum_etat__libelle='Affectée'
         ).distinct().count(),
-        
+
         'en_cours': Commande.objects.filter(
-        etats__operateur=operateur,
-            etats__date_fin__isnull=True, 
+            etats__operateur=operateur,
+            etats__date_fin__isnull=True,
             etats__enum_etat__libelle='En cours de confirmation'
         ).distinct().count(),
-    
-        'retournees': Commande.objects.filter(
-        etats__operateur=operateur,
-            etats__date_fin__isnull=True, 
-            etats__enum_etat__libelle='Retour Confirmation'
-        ).distinct().count(),
-        
-        'confirmation_decalee': Commande.objects.filter(
+
+        # Reportées de confirmation (avec date_report en date_fin_delayed)
+        'reportees': Commande.objects.filter(
             etats__operateur=operateur,
-            etats__date_fin__isnull=True, 
-            etats__enum_etat__libelle='Confirmation décalée'
-        ).distinct().count()
+            etats__date_fin__isnull=True,
+            etats__enum_etat__libelle='Report de confirmation'
+        ).distinct().count(),
+
+        # Ancien compteur conservé si utilisé ailleurs (retours de préparation)
+      
     }
-    stats['total'] = stats['en_attente'] + stats['en_cours'] + stats['retournees'] + stats['confirmation_decalee']
+    stats['total'] = stats['en_attente'] + stats['en_cours'] + stats['reportees']
 
     # Filtrage par onglet
     tab = request.GET.get('tab', 'toutes')
     tab_map = {
         'en_attente': {'libelle': 'Affectée', 'display': 'En Attente'},
         'en_cours': {'libelle': 'En cours de confirmation', 'display': 'En Cours'},
+        'reportees': {'libelle': 'Report de confirmation', 'display': 'Reportées'},
         'retournees': {'libelle': 'Retour Confirmation', 'display': 'Retournées'},
-        'confirmation_decalee': {'libelle': 'Confirmation décalée', 'display': 'Confirmation Décalée'},
     }
     
     current_tab_display_name = "Toutes"
@@ -211,6 +209,20 @@ def liste_commandes(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
+    # Préparer un mapping des dates de report pour affichage (commande_id -> date_fin_delayed)
+    dates_report = {}
+    try:
+        # Récupérer les états actifs "Reporté de confirmation" pour l'opérateur
+        etats_reportes = EtatCommande.objects.filter(
+            operateur=operateur,
+            date_fin__isnull=True,
+            enum_etat__libelle='Report de confirmation'
+        ).select_related('commande')
+        for etat in etats_reportes:
+            dates_report[etat.commande_id] = etat.date_fin_delayed
+    except Exception:
+        pass
+
     context = {
         'page_title': 'Mes Commandes à Confirmer',
         'page_subtitle': f"Gestion des commandes qui vous sont affectées ou retournées.",
@@ -220,7 +232,8 @@ def liste_commandes(request):
         'operateur': operateur,
         'stats': stats,
         'current_tab': tab,
-        'current_tab_display_name': current_tab_display_name
+        'current_tab_display_name': current_tab_display_name,
+        'dates_report': dates_report,
     }
     
     return render(request, 'operatConfirme/liste_commande.html', context)
@@ -239,8 +252,9 @@ def confirmer_commande_ajax(request, commande_id):
             import json
             data = json.loads(request.body)
             commentaire = data.get('commentaire', '')
-            confirmation_type = data.get('confirmation_type', 'immediate')  # 'immediate' ou 'delayed'
-            date_fin_delayed = data.get('date_fin_delayed', None)
+            # Forcer la confirmation immédiate: ignorer tout type « delayed »
+            confirmation_type = 'immediate'
+            date_fin_delayed = None
         except:
             commentaire = ''
             confirmation_type = 'immediate'
@@ -381,15 +395,9 @@ def confirmer_commande_ajax(request, commande_id):
                     'stock_insuffisant': stock_insuffisant
                 })
             
-            # Déterminer l'état suivant selon le type de confirmation
-            if confirmation_type == 'delayed':
-                # Confirmation décalée : passer à l'état "Confirmation décalée"
-                enum_suivant = EnumEtatCmd.objects.get(libelle='Confirmation décalée')
-                print(f"🕐 DEBUG: Confirmation décalée sélectionnée")
-            else:
-                # Confirmation immédiate : passer à l'état "Confirmée"
-                enum_suivant = EnumEtatCmd.objects.get(libelle='Confirmée')
-                print(f"⚡ DEBUG: Confirmation immédiate sélectionnée")
+            # Déterminer l'état suivant: toujours "Confirmée"
+            enum_suivant = EnumEtatCmd.objects.get(libelle='Confirmée')
+            print(f"⚡ DEBUG: Confirmation immédiate (forcée)")
             
             # Fermer l'état actuel
             etat_actuel.date_fin = timezone.now()
@@ -403,7 +411,7 @@ def confirmer_commande_ajax(request, commande_id):
                 operateur=operateur,
                 date_debut=timezone.now(),
                 commentaire=commentaire,
-                date_fin_delayed=date_fin_delayed if confirmation_type == 'delayed' and date_fin_delayed else None
+                date_fin_delayed=None
             )
             print(f"✅ DEBUG: Nouvel état créé: {enum_suivant.libelle}")
 
@@ -422,10 +430,7 @@ def confirmer_commande_ajax(request, commande_id):
                 print(f"   - {item['article']}: {item['ancien_stock']} → {item['nouveau_stock']} (-{item['quantite_decrémententée']})")
         
         # Message selon le type de confirmation
-        if confirmation_type == 'delayed':
-            message = f'Commande {commande.id_yz} mise en confirmation décalée avec succès.'
-        else:
-            message = f'Commande {commande.id_yz} confirmée immédiatement avec succès.'
+        message = f'Commande {commande.id_yz} confirmée immédiatement avec succès.'
         
         return JsonResponse({
             'success': True, 
@@ -483,8 +488,7 @@ def confirmer_commande(request, commande_id):
                 commentaire=request.POST.get('commentaire', '')
             )
             
-            messages.success(request, f"Commande {commande.id_yz} confirmée avec succès.")
-            
+           
             # Réponse JSON pour AJAX
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({'success': True, 'message': 'Commande confirmée'})
@@ -863,11 +867,19 @@ def confirmation(request):
         messages.error(request, "Profil d'opérateur de confirmation non trouvé.")
         return redirect('login')
     
-    # Récupérer les commandes "Affectées" ET "En cours de confirmation"
+    # Récupérer toutes les commandes affectées à cet opérateur qui peuvent être confirmées
+    # Inclut tous les états de confirmation possibles
+    etats_confirmables = [
+        'Affectée',                    # Nouvellement affectées
+        'En cours de confirmation',     # En cours de traitement
+        'Report de confirmation',       # Report de confirmation (ancien)
+              # Report de confirmation (nouveau)           # Commandes non encore affectées mais visibles
+    ]
+    
     commandes_a_confirmer = Commande.objects.filter(
         etats__operateur=operateur,
         etats__date_fin__isnull=True,  # États actifs (non terminés)
-        etats__enum_etat__libelle__in=['Affectée', 'En cours de confirmation']  # Affectées ET en cours
+        etats__enum_etat__libelle__in=etats_confirmables
     ).select_related(
         'client', 'ville', 'ville__region'
     ).prefetch_related(
@@ -980,6 +992,15 @@ def selectionner_operation(request):
                     'message': 'Données manquantes'
                 })
             
+            # Valider le type d'opération côté serveur
+            from commande.models import Operation
+            allowed_types = {choice[0] for choice in Operation.TYPE_OPERATION_CHOICES}
+            if type_operation not in allowed_types:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Type d\'opération non autorisé'
+                })
+
             # Récupérer l'opérateur
             operateur = Operateur.objects.get(user=request.user, type_operateur='CONFIRMATION')
             
@@ -1069,9 +1090,9 @@ def confirmer_commandes_ajax(request):
             operateur = request.user.operateurconfirme
             confirmed_count = 0
             
-            # État "confirmée"
+            # État "Confirmée"
             try:
-                etat_confirmee = EnumEtatCmd.objects.get(libelle='confirmee')
+                etat_confirmee = EnumEtatCmd.objects.get(libelle='Confirmée')
             except EnumEtatCmd.DoesNotExist:
                 return JsonResponse({
                     'success': False,
@@ -1094,9 +1115,13 @@ def confirmer_commandes_ajax(request):
                     ).first()
                     
                     if etat_actuel:
-                        # Terminer l'état actuel
-                        etat_actuel.date_fin = timezone.now()
-                        etat_actuel.save()
+                        # Autoriser la confirmation depuis Affectée / En cours / Report de confirmation
+                        etat_label = etat_actuel.enum_etat.libelle if etat_actuel and etat_actuel.enum_etat else ''
+                        etats_autorises = ['Affectée', 'En cours de confirmation', 'Report de confirmation', 'Reporté de confirmation', 'Retour Confirmation']
+                        if etat_label not in etats_autorises:
+                            continue
+                        # Terminer tous les états actifs précédents de cette commande (sécurité)
+                        commande.etats.filter(date_fin__isnull=True).update(date_fin=timezone.now())
                         
                         # Créer le nouvel état "confirmée"
                         EtatCommande.objects.create(
@@ -1439,6 +1464,119 @@ def annuler_commande_confirmation(request, commande_id):
         'success': False,
         'message': 'Méthode non autorisée'
     })
+
+@login_required
+def reporter_commande_confirmation(request, commande_id):
+    """Reporter une commande avec une date de report spécifiée (Affectée/En cours -> Reportée)."""
+    if request.method == 'POST':
+        try:
+            import json
+            data = json.loads(request.body) if request.body else request.POST
+            motif = (data.get('motif') or '').strip()
+            date_report_str = (data.get('date_report') or '').strip()
+
+            if not date_report_str:
+                return JsonResponse({
+                    'success': False,
+                    'message': "La date de report est obligatoire"
+                })
+
+            # Parser la date de report (accepte ISO ou 'YYYY-MM-DD HH:MM')
+            from datetime import datetime
+            try:
+                try:
+                    date_report = datetime.fromisoformat(date_report_str)
+                except ValueError:
+                    date_report = datetime.strptime(date_report_str, '%Y-%m-%d %H:%M')
+            except Exception:
+                return JsonResponse({
+                    'success': False,
+                    'message': "Format de date invalide. Utilisez ISO (YYYY-MM-DDTHH:MM) ou 'YYYY-MM-DD HH:MM'"
+                })
+
+            # Récupérer l'opérateur de confirmation
+            try:
+                operateur = Operateur.objects.get(user=request.user, type_operateur='CONFIRMATION')
+            except Operateur.DoesNotExist:
+                return JsonResponse({
+                    'success': False,
+                    'message': "Profil d'opérateur de confirmation non trouvé"
+                })
+
+            # Récupérer la commande
+            try:
+                commande = Commande.objects.get(id=commande_id)
+            except Commande.DoesNotExist:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Commande non trouvée'
+                })
+
+            # Vérifier que la commande est dans un état actif pour cet opérateur
+            etat_actuel = commande.etats.filter(
+                operateur=operateur,
+                date_fin__isnull=True
+            ).first()
+
+            if not etat_actuel:
+                return JsonResponse({
+                    'success': False,
+                    'message': "Cette commande ne vous est pas affectée"
+                })
+
+            # Autoriser depuis Affectée ou En cours de confirmation (et Retour Confirmation)
+            etats_autorises = ['affectée', 'en cours de confirmation', 'retour confirmation']
+            if etat_actuel.enum_etat.libelle.lower() not in etats_autorises:
+                return JsonResponse({
+                    'success': False,
+                    'message': f"Cette commande est en état '{etat_actuel.enum_etat.libelle}' et ne peut pas être reportée depuis cet état"
+                })
+
+            # Créer (ou récupérer) l'état Reportée
+            etat_reportee, _ = EnumEtatCmd.objects.get_or_create(
+                libelle='Report de confirmation',
+                defaults={'ordre':15, 'couleur':'#6B7280'}
+            )
+            
+
+            # Fermer l'état actuel et créer l'état Reportée
+            etat_actuel.date_fin = timezone.now()
+            etat_actuel.save()
+
+            nouvel_etat = EtatCommande.objects.create(
+                commande=commande,
+                enum_etat=etat_reportee,
+                operateur=operateur,
+                date_debut=timezone.now(),
+                commentaire=(motif or 'Commande reportée par l\'opérateur de confirmation'),
+                date_fin_delayed=date_report
+            )
+
+            # Tracer l'opération
+            try:
+                from commande.models import Operation
+                Operation.objects.create(
+                    commande=commande,
+                    type_operation='REPORT',
+                    conclusion=f"Report au {date_report.strftime('%d/%m/%Y %H:%M')} - {motif}",
+                    operateur=operateur
+                )
+            except Exception:
+                pass
+
+            return JsonResponse({
+                'success': True,
+                'message': f"Commande {commande.id_yz} reportée au {date_report.strftime('%d/%m/%Y %H:%M')}",
+                'nouvel_etat': 'Reportée'
+            })
+
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f"Erreur lors du report: {str(e)}"
+            })
+
+    return JsonResponse({'success': False, 'message': 'Méthode non autorisée'})
 
 @login_required
 def modifier_commande(request, commande_id):
@@ -1896,6 +2034,11 @@ def modifier_commande(request, commande_id):
                         print(f"❌ DEBUG: Données manquantes - type: '{type_operation}', commentaire: '{commentaire}'")
                         return JsonResponse({'success': False, 'error': 'Type d\'opération et commentaire requis'})
                     
+                    # Valider le type d'opération
+                    allowed_types = {choice[0] for choice in Operation.TYPE_OPERATION_CHOICES}
+                    if type_operation not in allowed_types:
+                        return JsonResponse({'success': False, 'error': "Type d'opération non autorisé"})
+
                     # Créer la nouvelle opération
                     nouvelle_operation = Operation.objects.create(
                         type_operation=type_operation,
@@ -2815,121 +2958,6 @@ def api_panier_commande(request, commande_id):
     
     return JsonResponse({'error': 'Méthode non autorisée'}, status=405)
 
-def reinitialiser_compteur_commande(request, commande_id):
-    """
-    Fonction pour réinitialiser le compteur d'une commande si nécessaire
-    """
-    try:
-        commande = get_object_or_404(Commande, id=commande_id)
-        
-        # Vérifier et compter les articles upsell dans la commande
-        articles_upsell = commande.paniers.filter(article__isUpsell=True)
-        
-        # Calculer la quantité totale d'articles upsell
-        from django.db.models import Sum
-        total_quantite_upsell = articles_upsell.aggregate(
-            total=Sum('quantite')
-        )['total'] or 0
-        
-        # Déterminer le compteur correct selon la nouvelle logique :
-        # 0-1 unités upsell → compteur = 0
-        # 2+ unités upsell → compteur = total_quantite_upsell - 1
-        if total_quantite_upsell >= 2:
-            compteur_correct = total_quantite_upsell - 1
-        else:
-            compteur_correct = 0
-        
-        if commande.compteur != compteur_correct:
-            print(f"🔧 Correction du compteur: {commande.compteur} -> {compteur_correct}")
-            commande.compteur = compteur_correct
-            commande.save()
-            
-            # Recalculer les totaux
-            commande.recalculer_totaux_upsell()
-            
-            messages.success(request, f"Compteur corrigé: {compteur_correct}")
-        else:
-            messages.info(request, "Compteur déjà correct")
-            
-        return redirect('operatConfirme:modifier_commande', commande_id=commande.id)
-        
-    except Exception as e:
-        messages.error(request, f"Erreur lors de la correction: {str(e)}")
-        return redirect('operatConfirme:confirmation')
-
-def diagnostiquer_compteur_commande(request, commande_id):
-    """
-    Fonction pour diagnostiquer et corriger le compteur d'une commande
-    """
-    try:
-        commande = get_object_or_404(Commande, id=commande_id)
-        
-        # Diagnostiquer la situation actuelle
-        articles_upsell = commande.paniers.filter(article__isUpsell=True)
-        compteur_actuel = commande.compteur
-        
-        # Calculer la quantité totale d'articles upsell
-        from django.db.models import Sum
-        total_quantite_upsell = articles_upsell.aggregate(
-            total=Sum('quantite')
-        )['total'] or 0
-        
-        print(f"🔍 DIAGNOSTIC Commande {commande.id_yz}:")
-        print(f"📊 Compteur actuel: {compteur_actuel}")
-        print(f"📦 Articles upsell trouvés: {articles_upsell.count()}")
-        print(f"🔢 Quantité totale d'articles upsell: {total_quantite_upsell}")
-        
-        if articles_upsell.exists():
-            print("📋 Articles upsell dans la commande:")
-            for panier in articles_upsell:
-                print(f"  - {panier.article.nom} (Qté: {panier.quantite}, ID: {panier.article.id}, isUpsell: {panier.article.isUpsell})")
-        
-        # Déterminer le compteur correct selon la nouvelle logique :
-        # 0-1 unités upsell → compteur = 0
-        # 2+ unités upsell → compteur = total_quantite_upsell - 1
-        if total_quantite_upsell >= 2:
-            compteur_correct = total_quantite_upsell - 1
-        else:
-            compteur_correct = 0
-        
-        print(f"✅ Compteur correct: {compteur_correct}")
-        print("📖 Logique: 0-1 unités upsell → compteur=0 | 2+ unités upsell → compteur=total_quantité-1")
-        
-        # Corriger si nécessaire
-        if compteur_actuel != compteur_correct:
-            print(f"🔧 CORRECTION: {compteur_actuel} -> {compteur_correct}")
-            commande.compteur = compteur_correct
-            commande.save()
-            
-            # Recalculer tous les totaux
-            commande.recalculer_totaux_upsell()
-            
-            messages.success(request, f"Compteur corrigé: {compteur_actuel} -> {compteur_correct}")
-            
-            # Retourner les nouvelles données
-            return JsonResponse({
-                'success': True,
-                'message': f'Compteur corrigé de {compteur_actuel} vers {compteur_correct}',
-                'ancien_compteur': compteur_actuel,
-                'nouveau_compteur': compteur_correct,
-                'total_commande': float(commande.total_cmd),
-                'articles_upsell': articles_upsell.count(),
-                'quantite_totale_upsell': total_quantite_upsell
-            })
-        else:
-            return JsonResponse({
-                'success': True,
-                'message': 'Compteur déjà correct',
-                'compteur': compteur_actuel,
-                'articles_upsell': articles_upsell.count(),
-                'quantite_totale_upsell': total_quantite_upsell
-            })
-            
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': str(e)
-        })
 
 @login_required
 def rafraichir_articles_section(request, commande_id):

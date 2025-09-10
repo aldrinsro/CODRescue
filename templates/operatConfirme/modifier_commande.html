@@ -108,7 +108,7 @@
                     
                     <!-- Bouton de validation pour cette section -->
                     <div class="mt-4 flex justify-end">
-                        <button type="button" onclick="validerSection('informations-client')" 
+                        <button type="button" onclick="validerSection('informations-client', event)" 
                                 class="px-4 py-2 text-white rounded-lg font-medium transition-all flex items-center" 
                                 style="background: linear-gradient(135deg, #4B352A, #6d4b3b); hover:shadow-lg;">
                             <i class="fas fa-user-check mr-2"></i>Valider les infos client
@@ -202,7 +202,7 @@
                     
                     <!-- Bouton de validation pour cette section -->
                     <div class="mt-4 flex justify-end">
-                        <button type="button" onclick="validerSection('informations-livraison')" 
+                        <button type="button" onclick="validerSection('informations-livraison', event)" 
                                 class="px-4 py-2 text-white rounded-lg font-medium transition-all flex items-center" 
                                 style="background: linear-gradient(135deg, #4B352A, #6d4b3b); hover:shadow-lg;">
                             <i class="fas fa-truck mr-2"></i>Valider la livraison
@@ -444,7 +444,13 @@
             <i class="fas fa-check-circle mr-2"></i>
             Confirmer la Commande
                     </button>
-                {% elif commande.etat_actuel.enum_etat.libelle == 'Retour Confirmation' %}
+                    <button type="button" onclick="reporterCommande({{ commande.id }})" data-action="reporter-commande" data-commande-id="{{ commande.id }}" 
+                class="btn-confirm px-6 py-3 rounded-lg font-medium text-white transition-all" 
+                style="background: linear-gradient(135deg, #4B352A, #6d4b3b); hover:shadow-lg;">
+            <i class="fas fa-check-circle mr-2"></i>
+            Reporter la Commande
+                    </button>
+                {% elif commande.etat_actuel.enum_etat.libelle == 'Report de confirmation' %}
                 <button type="button" onclick="annulerCommande()" 
                         class="px-6 py-3 rounded-lg font-medium text-white transition-all" style="background: linear-gradient(135deg, #dc2626, #ef4444);">
                     <i class="fas fa-ban mr-2"></i>
@@ -498,7 +504,6 @@
         </div>
     </div>
 </div>
-
 <!-- Modale pour ajouter/modifier un article -->
 <div id="articleModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50 p-4" style="backdrop-filter: blur(8px); display: none;">
     <div class="bg-white rounded-xl p-4 sm:p-6 w-full max-w-7xl mx-auto shadow-2xl max-h-[95vh] overflow-y-auto">
@@ -698,8 +703,17 @@
     </div>
 </div>
 
+
+
+<script src="{% static 'js/operatConfirme/Confirmation_commande/reporter_commande.js' %}"></script>
 <!-- JavaScript -->
 <script>
+
+// Fonction pour reporter la commande
+
+
+
+
 // Fonction pour charger automatiquement la région, les frais et les délais
 function chargerRegionEtFrais() {
     const villeSelect = document.getElementById('ville-select');
@@ -1134,7 +1148,6 @@ function saveComment() {
     
     closeCommentModal();
 }
-
 // Fonction pour sauvegarder immédiatement une opération existante en base de données
 function sauvegarderOperationExistante(operation, nouveauCommentaire) {
     console.log(`🔄 DEBUG: Sauvegarde immédiate de l'opération ${operation.id} en base de données...`);
@@ -1625,7 +1638,6 @@ document.addEventListener('keydown', function(event) {
         closeCommentModal();
     }
 });
-
 // Vérification et initialisation au chargement de la page
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 Page chargée, initialisation du système...');
@@ -2238,7 +2250,6 @@ function sauvegarderOperationsAvantAction() {
     
     return Promise.resolve(true);
 }
-
 // Fonction pour confirmer la commande
 function confirmerCommande() {
     // Vérifier que les sections essentielles sont remplies
@@ -2282,10 +2293,9 @@ function confirmerCommande() {
         return;
                 }
                 
-    console.log('✅ Toutes les vérifications passées, ouverture du modal de sélection...');
-    
-    // Afficher le modal de sélection du type de confirmation
-    showConfirmationTypeModal();
+    console.log('✅ Toutes les vérifications passées, confirmation immédiate...');
+    // Lancer directement la confirmation immédiate
+    proceedWithConfirmation();
     return;
     
     // Afficher une notification de traitement en cours
@@ -2300,7 +2310,7 @@ function confirmerCommande() {
                 },
                 body: JSON.stringify({
                     'commentaire': 'Commande confirmée après vérification complète',
-                    'confirmation_type': confirmationType
+                    // confirmation immédiate forcée côté backend
                 })
         })
         .then(response => response.json())
@@ -2763,7 +2773,6 @@ function chargerInfosCompletesArticle(reference) {
     
     console.log('⚠️ Informations complètes non trouvées pour:', reference);
 }
-
 // Fonction pour charger les articles disponibles via API
 function chargerArticlesDisponibles() {
     const select = document.getElementById('articleSelect');
@@ -3322,7 +3331,6 @@ function afficherVariantes(variants, article) {
     // Ajouter les event listeners pour les checkboxes
     ajouterEventListenersCheckboxes();
 }
-
 function creerTableauCroise(variants) {
     // Extraire les valeurs uniques pour chaque attribut
     const couleurs = [...new Set(variants.map(v => v.couleur).filter(Boolean))];
@@ -3967,7 +3975,6 @@ function initCustomScrollbar() {
     // Mettre à jour après le chargement des articles
     setTimeout(updateScrollbar, 200);
 }
-
 // Initialiser la barre de navigation quand le modal s'ouvre
 function setupScrollbarObserver() {
     const modal = document.getElementById('articleModal');
@@ -4600,7 +4607,6 @@ function calculerPrixAvecPhaseInfo(article, compteur) {
         couleur_classe: couleur_classe
     };
 }
-
 // Fonction pour calculer le prix upsell avec compteur (version JavaScript)
 function getPrixUpsellAvecCompteur(article, compteur) {
     if (!article.isUpsell) {
@@ -5126,7 +5132,6 @@ function sauvegarderRemplacementArticle(ancienArticleId, nouvelArticle, nouvelle
         showNotification('❌ Erreur de connexion lors du remplacement', 'error');
         });
 }
-
 // Ajouter les événements pour la modale d'articles et les raccourcis clavier
 document.addEventListener('DOMContentLoaded', function() {
     // Événement pour la sélection d'article
@@ -5565,102 +5570,7 @@ document.addEventListener('keydown', function(event) {
     }
 });
 
-// ================== MODAL DE SÉLECTION DU TYPE DE CONFIRMATION ==================
-
-// Fonction pour afficher le modal de sélection du type de confirmation
-function showConfirmationTypeModal() {
-    const modal = document.getElementById('confirmationTypeModal');
-    if (modal) {
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
-    }
-}
-
-// Fonction pour masquer le modal de sélection du type de confirmation
-function hideConfirmationTypeModal() {
-    const modal = document.getElementById('confirmationTypeModal');
-    if (modal) {
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
-    }
-}
-
-// Fonction pour sélectionner le type de confirmation
-function selectConfirmationType(confirmationType) {
-    // Stocker le type de confirmation dans la variable globale
-    currentConfirmationType = confirmationType;
-    
-    // Masquer le modal de sélection
-    hideConfirmationTypeModal();
-    
-    // Afficher le modal de confirmation avec le type sélectionné
-    showConfirmationModal(confirmationType);
-}
-
-// Fonction pour afficher le formulaire de confirmation décalée
-function showDelayedConfirmationForm() {
-    // Masquer le modal de sélection
-    hideConfirmationTypeModal();
-    
-    // Définir la date par défaut (demain à 9h)
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(9, 0, 0, 0);
-    
-    const dateInput = document.getElementById('delayedEndDate');
-    const timeInput = document.getElementById('delayedEndTime');
-    
-    if (dateInput && timeInput) {
-        dateInput.value = tomorrow.toISOString().split('T')[0];
-        timeInput.value = '09:00';
-    }
-    
-    // Afficher le modal de confirmation décalée
-    const modal = document.getElementById('delayedConfirmationModal');
-    if (modal) {
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
-    }
-}
-
-// Fonction pour masquer le modal de confirmation décalée
-function hideDelayedConfirmationModal() {
-    const modal = document.getElementById('delayedConfirmationModal');
-    if (modal) {
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
-    }
-}
-
-// Fonction pour confirmer la confirmation décalée
-function confirmDelayedConfirmation() {
-    const dateInput = document.getElementById('delayedEndDate');
-    const timeInput = document.getElementById('delayedEndTime');
-    
-    if (!dateInput.value || !timeInput.value) {
-        showNotification('⚠️ Veuillez renseigner la date et l\'heure de fin', 'error');
-        return;
-    }
-    
-    // Créer la date de fin
-    const endDateTime = new Date(dateInput.value + 'T' + timeInput.value);
-    const now = new Date();
-    
-    if (endDateTime <= now) {
-        showNotification('⚠️ La date de fin doit être dans le futur', 'error');
-        return;
-    }
-    
-    // Stocker le type de confirmation et la date de fin
-    currentConfirmationType = 'delayed';
-    currentDelayedEndDate = endDateTime.toISOString();
-    
-    // Masquer le modal de confirmation décalée
-    hideDelayedConfirmationModal();
-    
-    // Afficher le modal de confirmation final
-    showConfirmationModal('delayed');
-}
+// ================== CONFIRMATION IMMÉDIATE UNIQUEMENT ==================
 
 // ================== MODAL DE CONFIRMATION ==================
 
@@ -5673,15 +5583,9 @@ function showConfirmationModal(confirmationType = 'immediate') {
         const message = modal.querySelector('h4');
         const icon = modal.querySelector('.fas.fa-check-circle');
         
-        if (confirmationType === 'delayed') {
-            title.textContent = 'Confirmation Décalée';
-            message.textContent = 'Êtes-vous sûr de vouloir mettre cette commande en confirmation décalée ?';
-            icon.className = 'fas fa-clock text-white text-xl';
-        } else {
-            title.textContent = 'Confirmation Immédiate';
+            title.textContent = 'Confirmation commande ';
             message.textContent = 'Êtes-vous sûr de vouloir confirmer immédiatement cette commande ?';
             icon.className = 'fas fa-bolt text-white text-xl';
-        }
         
         modal.classList.remove('hidden');
         modal.classList.add('flex');
@@ -5699,16 +5603,13 @@ function hideConfirmationModal() {
 
 // Variables globales pour stocker le type de confirmation et la date de fin
 let currentConfirmationType = 'immediate';
-let currentDelayedEndDate = null;
 
 // Fonction pour procéder à la confirmation
 function proceedWithConfirmation() {
     hideConfirmationModal();
     
     // Afficher une notification de traitement en cours
-    const message = currentConfirmationType === 'delayed' ? 
-        '⏳ Mise en confirmation décalée... (vérification du stock)' : 
-        '⏳ Confirmation en cours... (vérification du stock)';
+    const message = '⏳ Confirmation en cours... (vérification du stock)';
     showNotification(message, 'info');
     
     // Récupérer les informations de livraison du formulaire
@@ -5733,9 +5634,7 @@ function proceedWithConfirmation() {
                 body: JSON.stringify({
                     'commentaire': 'Commande confirmée après vérification complète',
                     'ville_livraison': villeId,
-                    'adresse_livraison': adresse,
-                    'confirmation_type': currentConfirmationType,
-                    'date_fin_delayed': currentDelayedEndDate
+                    'adresse_livraison': adresse
                 })
         })
         .then(response => response.json())
@@ -5829,19 +5728,19 @@ function hideStockInsuffisantModal() {
 // ================== VALIDATION DES SECTIONS ==================
 
 // Fonction pour valider une section
-function validerSection(sectionId) {
+function validerSection(sectionId, event) {
     const sectionElement = event.target.closest('.verification-item');
     const sectionName = getSectionName(sectionId);
     
     // Traitement spécifique pour les informations de livraison
     if (sectionId === 'informations-livraison') {
-        sauvegarderInformationsLivraison(sectionElement, sectionName);
+        sauvegarderInformationsLivraison(sectionElement, sectionName, event);
         return;
     }
 
     // Traitement spécifique pour les informations client
     if (sectionId === 'informations-client') {
-        sauvegarderInformationsClient(sectionElement, sectionName);
+        sauvegarderInformationsClient(sectionElement, sectionName, event);
         return;
     }
 
@@ -5862,9 +5761,8 @@ function validerSection(sectionId) {
     // Vérifier si toutes les sections sont validées
     checkAllSectionsValidated();
 }
-
 // Nouvelle fonction pour sauvegarder les informations client
-function sauvegarderInformationsClient(sectionElement, sectionName) {
+function sauvegarderInformationsClient(sectionElement, sectionName, event) {
     const button = event.target;
 
     // Récupérer les données des champs
@@ -5935,7 +5833,7 @@ function sauvegarderInformationsClient(sectionElement, sectionName) {
 }
 
 // Fonction pour sauvegarder les informations de livraison
-function sauvegarderInformationsLivraison(sectionElement, sectionName) {
+function sauvegarderInformationsLivraison(sectionElement, sectionName, event) {
     const button = event.target;
     
     // Récupérer les données de livraison
@@ -6488,7 +6386,6 @@ function rafraichirStockArticle(articleId) {
         return null;
     });
 }
-
 function modifierArticle(panierId) {
     console.log('🔧 Modification article demandée pour ID:', panierId);
     
@@ -6572,18 +6469,18 @@ function modifierArticle(panierId) {
 
 </script>
 
-<!-- Modal de Sélection du Type de Confirmation -->
-<div id="confirmationTypeModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50 flex items-center justify-center">
-    <div class="relative p-8 bg-white w-full max-w-lg m-auto flex-col flex rounded-xl shadow-2xl animate-fade-in-down" style="border: 2px solid #f7d9c4;">
+<!-- Modal Livraison -->
+<div id="livraisonModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50 flex items-center justify-center">
+    <div class="relative p-6 sm:p-8 bg-white w-full max-w-lg m-auto flex-col flex rounded-xl shadow-2xl animate-fade-in-down" style="border: 2px solid #f7d9c4;">
         <!-- En-tête du modal -->
         <div class="flex justify-between items-center pb-4 border-b" style="border-color: #f7d9c4;">
             <div class="flex items-center">
-                <div class="w-12 h-12 rounded-full flex items-center justify-center mr-4" style="background: linear-gradient(135deg, #4B352A, #6d4b3b);">
-                    <i class="fas fa-cogs text-white text-xl"></i>
+                <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center mr-3 sm:mr-4" style="background: linear-gradient(135deg, #4B352A, #6d4b3b);">
+                    <i class="fas fa-shipping-fast text-white text-lg sm:text-xl"></i>
                 </div>
-                <h3 class="text-2xl font-bold" style="color: #4B352A;">Type de Confirmation</h3>
+                <h3 class="text-xl sm:text-2xl font-bold" style="color: #4B352A;">Informations de Livraison</h3>
             </div>
-            <button onclick="hideConfirmationTypeModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
+            <button onclick="hideLivraisonModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                 </svg>
@@ -6591,118 +6488,105 @@ function modifierArticle(panierId) {
         </div>
         
         <!-- Contenu du modal -->
-        <div class="py-6">
-            <p class="text-gray-600 mb-6">Choisissez le type de confirmation pour cette commande :</p>
-            
-            <!-- Options de confirmation -->
-            <div class="space-y-4">
-                <!-- Confirmation Immédiate -->
-                <button onclick="selectConfirmationType('immediate')" 
-                        class="w-full p-4 rounded-lg border-2 border-transparent hover:border-green-300 transition-all duration-200 bg-green-50 hover:bg-green-100">
-                    <div class="flex items-center">
-                        <div class="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center mr-4">
-                            <i class="fas fa-bolt text-white text-xl"></i>
+        <div class="py-5 sm:py-6 space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Ville de livraison</label>
+                <select id="livraisonVilleSelect" class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-amber-300 focus:border-amber-300" style="border-color: #f7d9c4;">
+                    <option value="">-- Sélectionnez une ville --</option>
+                    {% for v in villes %}
+                        <option value="{{ v.id }}">{{ v.region.nom_region }} - {{ v.nom }}</option>
+                    {% endfor %}
+                </select>
                         </div>
-                        <div class="text-left">
-                            <h4 class="text-lg font-semibold text-gray-900">Confirmation Immédiate</h4>
-                            <p class="text-gray-600 text-sm">La commande sera confirmée et passera directement à l'état "Confirmée"</p>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Adresse de livraison</label>
+                <textarea id="livraisonAdresseTextarea" rows="3" class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-amber-300 focus:border-amber-300" style="border-color: #f7d9c4;" placeholder="Rue, quartier, repère..."></textarea>
                         </div>
-                    </div>
-                </button>
-                
-                <!-- Confirmation Décalée -->
-                <button onclick="showDelayedConfirmationForm()" 
-                        class="w-full p-4 rounded-lg border-2 border-transparent hover:border-orange-300 transition-all duration-200 bg-orange-50 hover:bg-orange-100">
-                    <div class="flex items-center">
-                        <div class="w-12 h-12 rounded-full bg-orange-500 flex items-center justify-center mr-4">
-                            <i class="fas fa-clock text-white text-xl"></i>
-                        </div>
-                        <div class="text-left">
-                            <h4 class="text-lg font-semibold text-gray-900">Confirmation Décalée</h4>
-                            <p class="text-gray-600 text-sm">La commande sera mise en "Confirmation décalée" avec une date de fin automatique</p>
-                        </div>
-                    </div>
-                </button>
+            <div class="bg-amber-50 p-4 rounded-lg text-sm text-amber-800">
+                <i class="fas fa-info-circle mr-2"></i>
+                Les frais de livraison seront recalculés selon la ville sélectionnée.
             </div>
         </div>
         
         <!-- Boutons du modal -->
         <div class="flex justify-end space-x-3 pt-4 border-t" style="border-color: #f7d9c4;">
-            <button onclick="hideConfirmationTypeModal()" 
-                    class="px-6 py-3 rounded-lg font-medium transition-all duration-200 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-300" 
-                    style="background-color: #f7d9c4; color: #4B352A;">
+            <button onclick="hideLivraisonModal()" class="px-5 py-2.5 rounded-lg font-medium transition-all duration-200 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-300" style="background-color: #f7d9c4; color: #4B352A;">
                 <i class="fas fa-times mr-2"></i>
                 Annuler
             </button>
-        </div>
+            <button onclick="saveLivraisonFromModal()" class="px-5 py-2.5 text-white rounded-lg font-medium transition-all duration-200 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transform hover:-translate-y-0.5" style="background: linear-gradient(135deg, #4B352A, #6d4b3b); focus:ring-color: #4B352A;">
+                <i class="fas fa-save mr-2"></i>
+                Enregistrer
+            </button>
     </div>
 </div>
 
-<!-- Modal de Confirmation Décalée avec Date -->
-<div id="delayedConfirmationModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50 flex items-center justify-center">
-    <div class="relative p-8 bg-white w-full max-w-lg m-auto flex-col flex rounded-xl shadow-2xl animate-fade-in-down" style="border: 2px solid #f7d9c4;">
-        <!-- En-tête du modal -->
-        <div class="flex justify-between items-center pb-4 border-b" style="border-color: #f7d9c4;">
-            <div class="flex items-center">
-                <div class="w-12 h-12 rounded-full flex items-center justify-center mr-4" style="background: linear-gradient(135deg, #F97316, #EA580C);">
-                    <i class="fas fa-clock text-white text-xl"></i>
-                </div>
-                <h3 class="text-2xl font-bold" style="color: #4B352A;">Confirmation Décalée</h3>
-            </div>
-            <button onclick="hideDelayedConfirmationModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-            </button>
         </div>
         
-        <!-- Contenu du modal -->
-        <div class="py-6">
-            <p class="text-gray-600 mb-6">Définissez la date et l'heure de fin de la confirmation décalée :</p>
-            
-            <!-- Formulaire de date -->
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Date de fin</label>
-                    <input type="date" id="delayedEndDate" 
-                           class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-orange-300 focus:border-orange-300" 
-                           style="border-color: #f7d9c4;">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Heure de fin</label>
-                    <input type="time" id="delayedEndTime" 
-                           class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-orange-300 focus:border-orange-300" 
-                           style="border-color: #f7d9c4;">
-                </div>
-                <div class="bg-orange-50 p-4 rounded-lg">
-                    <div class="flex items-start">
-                        <i class="fas fa-info-circle text-orange-500 mt-1 mr-3"></i>
-                        <div class="text-sm text-orange-700">
-                            <p class="font-medium mb-1">Information importante :</p>
-                            <p>À la date et heure définies, la commande passera automatiquement à l'état "Confirmée".</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Boutons du modal -->
-        <div class="flex justify-end space-x-3 pt-4 border-t" style="border-color: #f7d9c4;">
-            <button onclick="hideDelayedConfirmationModal()" 
-                    class="px-6 py-3 rounded-lg font-medium transition-all duration-200 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-300" 
-                    style="background-color: #f7d9c4; color: #4B352A;">
-                <i class="fas fa-times mr-2"></i>
-                Annuler
-            </button>
-            <button onclick="confirmDelayedConfirmation()" 
-                    class="px-6 py-3 text-white rounded-lg font-medium transition-all duration-200 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transform hover:-translate-y-0.5" 
-                    style="background: linear-gradient(135deg, #F97316, #EA580C); focus:ring-color: #F97316;">
-                <i class="fas fa-check mr-2"></i>
-                Confirmer
-            </button>
-        </div>
-    </div>
-</div>
+<script>
+// Modal Livraison: fonctions JS
+function showLivraisonModal() {
+    const modal = document.getElementById('livraisonModal');
+    if (modal) {
+        // Pré-remplir
+        const existingVille = document.getElementById('ville-select');
+        const modalVille = document.getElementById('livraisonVilleSelect');
+        if (existingVille && modalVille) modalVille.value = existingVille.value || '';
+        const existingAdresse = document.querySelector('textarea[name="adresse_livraison"]');
+        const modalAdresse = document.getElementById('livraisonAdresseTextarea');
+        if (existingAdresse && modalAdresse) modalAdresse.value = existingAdresse.value || '';
+
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+}
+function hideLivraisonModal() {
+    const modal = document.getElementById('livraisonModal');
+    if (modal) { modal.classList.add('hidden'); modal.classList.remove('flex'); }
+}
+function saveLivraisonFromModal() {
+    const villeId = document.getElementById('livraisonVilleSelect')?.value || '';
+    const adresse = document.getElementById('livraisonAdresseTextarea')?.value?.trim() || '';
+    if (!villeId) { showNotification('⚠️ Veuillez sélectionner une ville de livraison', 'error'); return; }
+    if (!adresse) { showNotification('⚠️ Veuillez renseigner l\'adresse de livraison', 'error'); return; }
+
+    const url = '{% url "operatConfirme:modifier_commande" commande.id %}';
+    const formData = new FormData();
+    formData.append('action', 'save_livraison');
+    formData.append('ville_livraison', villeId);
+    formData.append('adresse_livraison', adresse);
+    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+    fetch(url, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: formData })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(data.message || 'Informations de livraison sauvegardées', 'success');
+            const existingVille = document.getElementById('ville-select');
+            if (existingVille) existingVille.value = villeId;
+            const existingAdresse = document.querySelector('textarea[name="adresse_livraison"]');
+            if (existingAdresse) existingAdresse.value = adresse;
+            if (typeof data.nouveau_total !== 'undefined') {
+                const totalEl = document.getElementById('total-commande-display');
+                if (totalEl) totalEl.textContent = parseFloat(data.nouveau_total).toFixed(2) + ' DH';
+            }
+            hideLivraisonModal();
+        } else {
+            showNotification(data.error || 'Erreur lors de la sauvegarde de la livraison', 'error');
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        showNotification('Erreur de connexion lors de la sauvegarde de la livraison', 'error');
+    });
+}
+</script>
+
+<!-- Modal de Sélection du Type de Confirmation -->
+<!-- Suppression du modal de type de confirmation -->
+<div id="confirmationTypeModal" class="hidden"></div>
+
+<!-- Modal de Confirmation Décalée supprimé -->
 
 <!-- Modal de Confirmation Tailwind -->
 <div id="confirmationModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50 flex items-center justify-center">
@@ -7092,7 +6976,6 @@ if (articlesScript) {
 } else {
     console.error('❌ Script articles-data non trouvé');
 }
-
 // Fonction pour basculer le statut des frais de livraison
 function toggleFraisLivraison() {
     const button = document.getElementById('toggle-frais-livraison');
