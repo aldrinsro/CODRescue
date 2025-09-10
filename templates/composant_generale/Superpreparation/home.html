@@ -15,9 +15,15 @@
             <i class="{{ alerte.icon }} text-xl mr-3 {% if alerte.type == 'urgent' %}text-red-600{% elif alerte.type == 'warning' %}text-yellow-600{% else %}text-blue-600{% endif %}"></i>
             <span class="font-medium">{{ alerte.message }}</span>
         </div>
+        {% if alerte.url %}
         <a href="{% url alerte.url %}" class="{% if alerte.type == 'urgent' %}bg-red-600 hover:bg-red-700{% elif alerte.type == 'warning' %}bg-yellow-600 hover:bg-yellow-700{% else %}bg-blue-600 hover:bg-blue-700{% endif %} text-white px-3 py-1 rounded text-sm font-medium transition-colors">
             Voir
         </a>
+        {% else %}
+        <span class="{% if alerte.type == 'urgent' %}bg-red-600{% elif alerte.type == 'warning' %}bg-yellow-600{% else %}bg-blue-600{% endif %} text-white px-3 py-1 rounded text-sm font-medium opacity-50 cursor-not-allowed">
+            Voir
+        </span>
+        {% endif %}
     </div>
     {% endfor %}
 </div>

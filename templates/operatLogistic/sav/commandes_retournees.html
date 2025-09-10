@@ -118,19 +118,7 @@
                     </td>
                     <td class="px-4 py-4 whitespace-nowrap">
                         {% if commande.etat_actuel_sav %}
-                            {% if commande.etat_actuel_sav.enum_etat.libelle == 'Reportée' %}
-                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                    <i class="fas fa-clock mr-1"></i>Reportée
-                                </span>
-                            {% elif commande.etat_actuel_sav.enum_etat.libelle == 'Livrée Partiellement' %}
-                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                                    <i class="fas fa-box-open mr-1"></i>Livrée partiellement
-                                </span>
-                            {% elif commande.etat_actuel_sav.enum_etat.libelle == 'Livrée' %}
-                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                    <i class="fas fa-check-circle mr-1"></i>Livrée
-                                </span>
-                            {% elif commande.etat_actuel_sav.enum_etat.libelle == 'Retournée' %}
+                            {% if commande.etat_actuel_sav.enum_etat.libelle == 'Retournée' %}
                                 <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
                                     <i class="fas fa-times-circle mr-1"></i>Retournée
                                 </span>
@@ -167,11 +155,6 @@
                                title="Voir le détail de la commande">
                                 <i class="fas fa-eye"></i>
                             </a>
-                            <button onclick="openSavActionsModal({{ commande.id }}, '{{ commande.id_yz }}')" 
-                                    class="text-orange-600 hover:text-orange-900 transition-colors"
-                                    title="Actions SAV">
-                                <i class="fas fa-tools"></i>
-                            </button>
                         </div>
                     </td>
                 </tr>
@@ -248,63 +231,11 @@
     </div>
 </div>
 
-<!-- Modale des Actions SAV -->
-<div id="savActionsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
-    <div class="relative top-10 mx-auto p-6 border w-full max-w-2xl shadow-lg rounded-lg bg-white">
-        <div class="text-center">
-            <h3 class="text-xl leading-6 font-bold text-gray-900 mb-2">Actions de Livraison (SAV)</h3>
-            <p class="text-sm text-gray-600 mb-6">Commande <span id="commandeIdDisplay" class="font-semibold text-blue-600"></span></p>
-            
-            <!-- Grille des actions SAV -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                <button onclick="selectSavAction('Reportée')" class="sav-action-card bg-orange-50 hover:bg-orange-100 border-2 border-orange-200 hover:border-orange-300 rounded-lg p-4 transition-all duration-200">
-                    <div class="flex flex-col items-center">
-                        <i class="fas fa-clock text-3xl text-orange-500 mb-2"></i>
-                        <span class="font-semibold text-orange-800">Reporter</span>
-                        <span class="text-xs text-orange-600 mt-1">Reprogrammer la livraison</span>
-                    </div>
-                </button>
-                
-                <button onclick="selectSavAction('Livrée')" class="sav-action-card bg-green-50 hover:bg-green-100 border-2 border-green-200 hover:border-green-300 rounded-lg p-4 transition-all duration-200">
-                    <div class="flex flex-col items-center">
-                        <i class="fas fa-check-circle text-3xl text-green-500 mb-2"></i>
-                        <span class="font-semibold text-green-800">Livrée</span>
-                        <span class="text-xs text-green-600 mt-1">Livraison réussie</span>
-                    </div>
-                </button>
-                
-                <button onclick="selectSavAction('Livrée Partiellement')" class="sav-action-card bg-blue-50 hover:bg-blue-100 border-2 border-blue-200 hover:border-blue-300 rounded-lg p-4 transition-all duration-200">
-                    <div class="flex flex-col items-center">
-                        <i class="fas fa-box-open text-3xl text-blue-500 mb-2"></i>
-                        <span class="font-semibold text-blue-800">Livraison Partielle</span>
-                        <span class="text-xs text-blue-600 mt-1">Certains articles livrés</span>
-                    </div>
-                </button>
-                
-                <button onclick="selectSavAction('Retournée (SAV)')" class="sav-action-card bg-red-50 hover:bg-red-100 border-2 border-red-200 hover:border-red-300 rounded-lg p-4 transition-all duration-200">
-                    <div class="flex flex-col items-center">
-                        <i class="fas fa-times-circle text-3xl text-red-500 mb-2"></i>
-                        <span class="font-semibold text-red-800">Retournée (SAV)</span>
-                        <span class="text-xs text-red-600 mt-1">Retourner la commande</span>
-                    </div>
-                </button>
-            </div>
-            
-            <div class="flex justify-center">
-                <button id="cancelSavActionsBtn" class="px-6 py-2 bg-gray-500 text-white text-base font-medium rounded-md shadow-sm hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300 transition-colors">
-                    <i class="fas fa-times mr-2"></i>Fermer
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
 
 {% endblock %}
 
 {% block extra_js %}
 <script>
-let currentCommandeId = null;
-let currentCommandeIdYz = null;
 
 // Fonction pour afficher les détails des articles
 function afficherDetailsArticles(commandeId, commandeNum) {
@@ -607,47 +538,8 @@ function fermerPanierComplet() {
     document.getElementById('panierCompletModal').classList.add('hidden');
 }
 
-function openSavActionsModal(commandeId, commandeIdYz) {
-    currentCommandeId = commandeId;
-    currentCommandeIdYz = commandeIdYz;
-    document.getElementById('commandeIdDisplay').textContent = commandeIdYz;
-    document.getElementById('savActionsModal').classList.remove('hidden');
-}
-
-function selectSavAction(etat) {
-    // Fermer la modale des actions
-    document.getElementById('savActionsModal').classList.add('hidden');
-    
-    // Rediriger vers la page de détail avec l'action appropriée
-    const detailUrl = `/operateur-logistique/commande/${currentCommandeId}/`;
-    
-    // Ajouter un paramètre pour indiquer l'action à effectuer
-    const actionParam = encodeURIComponent(etat);
-    const finalUrl = `${detailUrl}?action=${actionParam}`;
-    
-    // Rediriger vers la page de détail
-    window.location.href = finalUrl;
-}
 
 document.addEventListener('DOMContentLoaded', function() {
-    const actionsModal = document.getElementById('savActionsModal');
-    const cancelActionsBtn = document.getElementById('cancelSavActionsBtn');
-
-    // Fermer la modale des actions
-    cancelActionsBtn.addEventListener('click', function() {
-        actionsModal.classList.add('hidden');
-        currentCommandeId = null;
-        currentCommandeIdYz = null;
-    });
-
-    // Fermer les modales si on clique en dehors
-    actionsModal.addEventListener('click', function(e) {
-        if (e.target === actionsModal) {
-            actionsModal.classList.add('hidden');
-            currentCommandeId = null;
-            currentCommandeIdYz = null;
-        }
-    });
 
     // Gestion de la modale des détails des articles
     const articlesDetailsModal = document.getElementById('articlesDetailsModal');

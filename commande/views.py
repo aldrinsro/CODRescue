@@ -273,6 +273,9 @@ def creer_commande(request):
                 ville_id = request.POST.get('ville_livraison')
                 adresse = request.POST.get('adresse')
                 is_upsell = request.POST.get('is_upsell') == 'on'
+                source = request.POST.get('source')
+                payement = request.POST.get('payement', 'Non payé')
+                frais_livraison_actif = request.POST.get('frais_livraison_actif') == 'true'
                 
                 # Créer la commande
                 commande = Commande.objects.create(
@@ -280,8 +283,10 @@ def creer_commande(request):
                     ville_id=ville_id,
                     adresse=adresse,
                     total_cmd=0,  # Sera calculé après ajout des articles
-                    is_upsell=is_upsell,
-                    origine='ADMIN'  # Définir l'origine comme Administrateur
+                    origine='ADMIN',  # Définir l'origine comme Administrateur
+                    source=source,
+                    payement=payement,
+                    frais_livraison=frais_livraison_actif
                 )
                 
                 # Traiter les articles du panier
@@ -335,6 +340,9 @@ def creer_commande(request):
                 # Mettre à jour le total de la commande
                 commande.total_cmd = total_commande
                 commande.save()
+                
+                # Recalculer le total avec les frais de livraison si activés
+                commande.recalculer_total_avec_frais()
                 
                 # Message de confirmation adapté selon le contenu
                 if total_commande > 0:

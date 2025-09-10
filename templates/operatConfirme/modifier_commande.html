@@ -149,10 +149,43 @@
                                    class="w-full p-3 bg-gray-100 border rounded-lg text-gray-600">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Frais de livraison (Automatique)</label>
-                            <input type="text" id="frais-display" value="{{ commande.ville.frais_livraison|default:0 }} DH" readonly
-                                   class="w-full p-3 bg-gray-100 border rounded-lg text-gray-600">
-                    </div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Frais de livraison</label>
+                            <div class="flex items-center gap-2">
+                                <input type="text" id="frais-display" value="{{ commande.montant_frais_livraison|default:0 }} DH" readonly
+                                       class="flex-1 p-3 bg-gray-100 border rounded-lg text-gray-600">
+                                <div class="flex items-center gap-2">
+                                    {% if commande.frais_livraison %}
+                                        <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                                        <span class="text-sm font-medium text-green-600" id="frais-status-text">Activés</span>
+                                    {% else %}
+                                        <div class="w-3 h-3 rounded-full bg-gray-400"></div>
+                                        <span class="text-sm font-medium text-gray-600" id="frais-status-text">Désactivés</span>
+                                    {% endif %}
+                                </div>
+                                <button type="button" id="toggle-frais-livraison" 
+                                        class="px-3 py-1 text-xs font-medium rounded-lg transition-all duration-200
+                                               {% if commande.frais_livraison %}
+                                                   bg-red-100 text-red-700 hover:bg-red-200 border border-red-300
+                                               {% else %}
+                                                   bg-green-100 text-green-700 hover:bg-green-200 border border-green-300
+                                               {% endif %}"
+                                        onclick="toggleFraisLivraison()">
+                                    {% if commande.frais_livraison %}
+                                        <i class="fas fa-times mr-1"></i>Désactiver
+                                    {% else %}
+                                        <i class="fas fa-check mr-1"></i>Activer
+                                    {% endif %}
+                                </button>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1" id="frais-info-text">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                {% if commande.frais_livraison %}
+                                    Les frais de livraison sont inclus dans le total de la commande
+                                {% else %}
+                                    Les frais de livraison ne sont pas inclus dans le total
+                                {% endif %}
+                            </p>
+                        </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">delai de livraison (Automatique)</label>
                         <input type="text" id="delai-display" value="{{ commande.ville.Delai_livraison_min|default:0 }} - {{ commande.ville.Delai_livraison_max|default:0 }} jours" readonly
@@ -349,7 +382,18 @@
                                 <span id="sous-total-articles" class="font-medium text-gray-800">
                                     {{ commande.total_articles|floatformat:2 }} DH
                                 </span>
+                                
                             </div>
+                            {% if commande.frais_livraison %}
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600">
+                                    <i class="fas fa-shipping-fast mr-2"></i>Frais de livraison:
+                                </span>
+                                <span id="frais-display" class="font-medium text-gray-800">
+                                    {{ commande.montant_frais_livraison|floatformat:2 }} DH
+                                </span>
+                            </div>
+                            {% endif %}
                             <hr class="border-gray-300">
                         </div>
 
@@ -671,7 +715,8 @@ function chargerRegionEtFrais() {
         document.getElementById('frais-display').value = frais + ' DH';
         document.getElementById('delai-display').value = delaiMin + ' - ' + delaiMax + ' jours';
         
-        // Recalculer le total avec les nouveaux frais de livraison
+        // Mettre à jour l'affichage des frais et recalculer le total
+        mettreAJourAffichageFraisResume();
         mettreAJourTotalCommande();
         
         console.log(`🏙️ Ville changée: ${selectedOption.text}, Frais: ${frais} DH, Région: ${region}, Délai: ${delaiMin}-${delaiMax} jours`);
@@ -681,7 +726,8 @@ function chargerRegionEtFrais() {
         document.getElementById('frais-display').value = '';
         document.getElementById('delai-display').value = '';
         
-        // Recalculer le total sans frais de livraison
+        // Mettre à jour l'affichage des frais et recalculer le total
+        mettreAJourAffichageFraisResume();
         mettreAJourTotalCommande();
     }
 }
@@ -2236,10 +2282,10 @@ function confirmerCommande() {
         return;
                 }
                 
-    console.log('✅ Toutes les vérifications passées, confirmation en cours...');
+    console.log('✅ Toutes les vérifications passées, ouverture du modal de sélection...');
     
-    // Afficher le modal de confirmation
-    showConfirmationModal();
+    // Afficher le modal de sélection du type de confirmation
+    showConfirmationTypeModal();
     return;
     
     // Afficher une notification de traitement en cours
@@ -2253,7 +2299,8 @@ function confirmerCommande() {
                     'X-CSRFToken': '{{ csrf_token }}'
                 },
                 body: JSON.stringify({
-                    'commentaire': 'Commande confirmée après vérification complète'
+                    'commentaire': 'Commande confirmée après vérification complète',
+                    'confirmation_type': confirmationType
                 })
         })
         .then(response => response.json())
@@ -4819,6 +4866,38 @@ function getPrixUpsell(article, compteur) {
     return prixUnitaire;
 }
 
+// Fonction utilitaire pour vérifier si les frais de livraison sont activés
+function sontFraisLivraisonActives() {
+    const fraisStatusText = document.getElementById('frais-status-text');
+    return fraisStatusText && fraisStatusText.textContent.trim() === 'Activés';
+}
+
+// Fonction pour mettre à jour l'affichage des frais de livraison dans le résumé
+function mettreAJourAffichageFraisResume() {
+    const fraisResumeElement = document.querySelector('#frais-display.font-medium.text-gray-800');
+    const fraisResumeContainer = fraisResumeElement ? fraisResumeElement.closest('.flex.justify-between.items-center') : null;
+    
+    if (sontFraisLivraisonActives()) {
+        // Afficher la section des frais de livraison
+        if (fraisResumeContainer) {
+            fraisResumeContainer.style.display = 'flex';
+        }
+        
+        // Mettre à jour le montant
+        const fraisElement = document.getElementById('frais-display');
+        if (fraisElement && fraisResumeElement) {
+            const fraisText = fraisElement.value.replace(' DH', '').replace(',', '.');
+            const fraisMontant = parseFloat(fraisText) || 0;
+            fraisResumeElement.textContent = `${fraisMontant.toFixed(2)} DH`;
+        }
+    } else {
+        // Masquer la section des frais de livraison
+        if (fraisResumeContainer) {
+            fraisResumeContainer.style.display = 'none';
+        }
+    }
+}
+
 function mettreAJourTotalCommande() {
     const articlesContainer = document.getElementById('articles-container');
     if (!articlesContainer) {
@@ -4848,19 +4927,24 @@ function mettreAJourTotalCommande() {
         }
     });
     
-    // Récupérer les frais de livraison
-    const fraisElement = document.getElementById('frais-display');
+    // Vérifier si les frais de livraison sont activés et récupérer le montant
     let fraisLivraison = 0;
-    if (fraisElement) {
-        const fraisText = fraisElement.value.replace(' DH', '').replace(',', '.');
-        fraisLivraison = parseFloat(fraisText) || 0;
+    if (sontFraisLivraisonActives()) {
+        const fraisElement = document.getElementById('frais-display');
+        if (fraisElement) {
+            const fraisText = fraisElement.value.replace(' DH', '').replace(',', '.');
+            fraisLivraison = parseFloat(fraisText) || 0;
+        }
     }
     
-    const totalFinal = sousTotal ;
+    const totalFinal = sousTotal + fraisLivraison;
     
     console.log(`📊 Sous-total articles: ${sousTotal.toFixed(2)} DH`);
-    console.log(`🚚 Frais de livraison: ${fraisLivraison.toFixed(2)} DH`);
+    console.log(`🚚 Frais de livraison: ${fraisLivraison.toFixed(2)} DH (${sontFraisLivraisonActives() ? 'activés' : 'désactivés'})`);
     console.log(`💰 Total final calculé: ${totalFinal.toFixed(2)} DH`);
+    
+    // Mettre à jour l'affichage des frais dans le résumé
+    mettreAJourAffichageFraisResume();
     
     const totalElement = document.getElementById('total-commande');
     if (totalElement) {
@@ -5481,12 +5565,124 @@ document.addEventListener('keydown', function(event) {
     }
 });
 
+// ================== MODAL DE SÉLECTION DU TYPE DE CONFIRMATION ==================
+
+// Fonction pour afficher le modal de sélection du type de confirmation
+function showConfirmationTypeModal() {
+    const modal = document.getElementById('confirmationTypeModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+}
+
+// Fonction pour masquer le modal de sélection du type de confirmation
+function hideConfirmationTypeModal() {
+    const modal = document.getElementById('confirmationTypeModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+}
+
+// Fonction pour sélectionner le type de confirmation
+function selectConfirmationType(confirmationType) {
+    // Stocker le type de confirmation dans la variable globale
+    currentConfirmationType = confirmationType;
+    
+    // Masquer le modal de sélection
+    hideConfirmationTypeModal();
+    
+    // Afficher le modal de confirmation avec le type sélectionné
+    showConfirmationModal(confirmationType);
+}
+
+// Fonction pour afficher le formulaire de confirmation décalée
+function showDelayedConfirmationForm() {
+    // Masquer le modal de sélection
+    hideConfirmationTypeModal();
+    
+    // Définir la date par défaut (demain à 9h)
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(9, 0, 0, 0);
+    
+    const dateInput = document.getElementById('delayedEndDate');
+    const timeInput = document.getElementById('delayedEndTime');
+    
+    if (dateInput && timeInput) {
+        dateInput.value = tomorrow.toISOString().split('T')[0];
+        timeInput.value = '09:00';
+    }
+    
+    // Afficher le modal de confirmation décalée
+    const modal = document.getElementById('delayedConfirmationModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+}
+
+// Fonction pour masquer le modal de confirmation décalée
+function hideDelayedConfirmationModal() {
+    const modal = document.getElementById('delayedConfirmationModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+}
+
+// Fonction pour confirmer la confirmation décalée
+function confirmDelayedConfirmation() {
+    const dateInput = document.getElementById('delayedEndDate');
+    const timeInput = document.getElementById('delayedEndTime');
+    
+    if (!dateInput.value || !timeInput.value) {
+        showNotification('⚠️ Veuillez renseigner la date et l\'heure de fin', 'error');
+        return;
+    }
+    
+    // Créer la date de fin
+    const endDateTime = new Date(dateInput.value + 'T' + timeInput.value);
+    const now = new Date();
+    
+    if (endDateTime <= now) {
+        showNotification('⚠️ La date de fin doit être dans le futur', 'error');
+        return;
+    }
+    
+    // Stocker le type de confirmation et la date de fin
+    currentConfirmationType = 'delayed';
+    currentDelayedEndDate = endDateTime.toISOString();
+    
+    // Masquer le modal de confirmation décalée
+    hideDelayedConfirmationModal();
+    
+    // Afficher le modal de confirmation final
+    showConfirmationModal('delayed');
+}
+
 // ================== MODAL DE CONFIRMATION ==================
 
 // Fonction pour afficher le modal de confirmation
-function showConfirmationModal() {
+function showConfirmationModal(confirmationType = 'immediate') {
     const modal = document.getElementById('confirmationModal');
     if (modal) {
+        // Adapter le contenu du modal selon le type de confirmation
+        const title = modal.querySelector('h3');
+        const message = modal.querySelector('h4');
+        const icon = modal.querySelector('.fas.fa-check-circle');
+        
+        if (confirmationType === 'delayed') {
+            title.textContent = 'Confirmation Décalée';
+            message.textContent = 'Êtes-vous sûr de vouloir mettre cette commande en confirmation décalée ?';
+            icon.className = 'fas fa-clock text-white text-xl';
+        } else {
+            title.textContent = 'Confirmation Immédiate';
+            message.textContent = 'Êtes-vous sûr de vouloir confirmer immédiatement cette commande ?';
+            icon.className = 'fas fa-bolt text-white text-xl';
+        }
+        
         modal.classList.remove('hidden');
         modal.classList.add('flex');
     }
@@ -5501,12 +5697,19 @@ function hideConfirmationModal() {
     }
 }
 
+// Variables globales pour stocker le type de confirmation et la date de fin
+let currentConfirmationType = 'immediate';
+let currentDelayedEndDate = null;
+
 // Fonction pour procéder à la confirmation
 function proceedWithConfirmation() {
     hideConfirmationModal();
     
     // Afficher une notification de traitement en cours
-    showNotification('⏳ Confirmation en cours... (vérification du stock)', 'info');
+    const message = currentConfirmationType === 'delayed' ? 
+        '⏳ Mise en confirmation décalée... (vérification du stock)' : 
+        '⏳ Confirmation en cours... (vérification du stock)';
+    showNotification(message, 'info');
     
     // Récupérer les informations de livraison du formulaire
     const villeSelect = document.getElementById('ville-select');
@@ -5530,7 +5733,9 @@ function proceedWithConfirmation() {
                 body: JSON.stringify({
                     'commentaire': 'Commande confirmée après vérification complète',
                     'ville_livraison': villeId,
-                    'adresse_livraison': adresse
+                    'adresse_livraison': adresse,
+                    'confirmation_type': currentConfirmationType,
+                    'date_fin_delayed': currentDelayedEndDate
                 })
         })
         .then(response => response.json())
@@ -6367,6 +6572,138 @@ function modifierArticle(panierId) {
 
 </script>
 
+<!-- Modal de Sélection du Type de Confirmation -->
+<div id="confirmationTypeModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50 flex items-center justify-center">
+    <div class="relative p-8 bg-white w-full max-w-lg m-auto flex-col flex rounded-xl shadow-2xl animate-fade-in-down" style="border: 2px solid #f7d9c4;">
+        <!-- En-tête du modal -->
+        <div class="flex justify-between items-center pb-4 border-b" style="border-color: #f7d9c4;">
+            <div class="flex items-center">
+                <div class="w-12 h-12 rounded-full flex items-center justify-center mr-4" style="background: linear-gradient(135deg, #4B352A, #6d4b3b);">
+                    <i class="fas fa-cogs text-white text-xl"></i>
+                </div>
+                <h3 class="text-2xl font-bold" style="color: #4B352A;">Type de Confirmation</h3>
+            </div>
+            <button onclick="hideConfirmationTypeModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+        
+        <!-- Contenu du modal -->
+        <div class="py-6">
+            <p class="text-gray-600 mb-6">Choisissez le type de confirmation pour cette commande :</p>
+            
+            <!-- Options de confirmation -->
+            <div class="space-y-4">
+                <!-- Confirmation Immédiate -->
+                <button onclick="selectConfirmationType('immediate')" 
+                        class="w-full p-4 rounded-lg border-2 border-transparent hover:border-green-300 transition-all duration-200 bg-green-50 hover:bg-green-100">
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center mr-4">
+                            <i class="fas fa-bolt text-white text-xl"></i>
+                        </div>
+                        <div class="text-left">
+                            <h4 class="text-lg font-semibold text-gray-900">Confirmation Immédiate</h4>
+                            <p class="text-gray-600 text-sm">La commande sera confirmée et passera directement à l'état "Confirmée"</p>
+                        </div>
+                    </div>
+                </button>
+                
+                <!-- Confirmation Décalée -->
+                <button onclick="showDelayedConfirmationForm()" 
+                        class="w-full p-4 rounded-lg border-2 border-transparent hover:border-orange-300 transition-all duration-200 bg-orange-50 hover:bg-orange-100">
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 rounded-full bg-orange-500 flex items-center justify-center mr-4">
+                            <i class="fas fa-clock text-white text-xl"></i>
+                        </div>
+                        <div class="text-left">
+                            <h4 class="text-lg font-semibold text-gray-900">Confirmation Décalée</h4>
+                            <p class="text-gray-600 text-sm">La commande sera mise en "Confirmation décalée" avec une date de fin automatique</p>
+                        </div>
+                    </div>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Boutons du modal -->
+        <div class="flex justify-end space-x-3 pt-4 border-t" style="border-color: #f7d9c4;">
+            <button onclick="hideConfirmationTypeModal()" 
+                    class="px-6 py-3 rounded-lg font-medium transition-all duration-200 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-300" 
+                    style="background-color: #f7d9c4; color: #4B352A;">
+                <i class="fas fa-times mr-2"></i>
+                Annuler
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmation Décalée avec Date -->
+<div id="delayedConfirmationModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50 flex items-center justify-center">
+    <div class="relative p-8 bg-white w-full max-w-lg m-auto flex-col flex rounded-xl shadow-2xl animate-fade-in-down" style="border: 2px solid #f7d9c4;">
+        <!-- En-tête du modal -->
+        <div class="flex justify-between items-center pb-4 border-b" style="border-color: #f7d9c4;">
+            <div class="flex items-center">
+                <div class="w-12 h-12 rounded-full flex items-center justify-center mr-4" style="background: linear-gradient(135deg, #F97316, #EA580C);">
+                    <i class="fas fa-clock text-white text-xl"></i>
+                </div>
+                <h3 class="text-2xl font-bold" style="color: #4B352A;">Confirmation Décalée</h3>
+            </div>
+            <button onclick="hideDelayedConfirmationModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+        
+        <!-- Contenu du modal -->
+        <div class="py-6">
+            <p class="text-gray-600 mb-6">Définissez la date et l'heure de fin de la confirmation décalée :</p>
+            
+            <!-- Formulaire de date -->
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Date de fin</label>
+                    <input type="date" id="delayedEndDate" 
+                           class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-orange-300 focus:border-orange-300" 
+                           style="border-color: #f7d9c4;">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Heure de fin</label>
+                    <input type="time" id="delayedEndTime" 
+                           class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-orange-300 focus:border-orange-300" 
+                           style="border-color: #f7d9c4;">
+                </div>
+                <div class="bg-orange-50 p-4 rounded-lg">
+                    <div class="flex items-start">
+                        <i class="fas fa-info-circle text-orange-500 mt-1 mr-3"></i>
+                        <div class="text-sm text-orange-700">
+                            <p class="font-medium mb-1">Information importante :</p>
+                            <p>À la date et heure définies, la commande passera automatiquement à l'état "Confirmée".</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Boutons du modal -->
+        <div class="flex justify-end space-x-3 pt-4 border-t" style="border-color: #f7d9c4;">
+            <button onclick="hideDelayedConfirmationModal()" 
+                    class="px-6 py-3 rounded-lg font-medium transition-all duration-200 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-300" 
+                    style="background-color: #f7d9c4; color: #4B352A;">
+                <i class="fas fa-times mr-2"></i>
+                Annuler
+            </button>
+            <button onclick="confirmDelayedConfirmation()" 
+                    class="px-6 py-3 text-white rounded-lg font-medium transition-all duration-200 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transform hover:-translate-y-0.5" 
+                    style="background: linear-gradient(135deg, #F97316, #EA580C); focus:ring-color: #F97316;">
+                <i class="fas fa-check mr-2"></i>
+                Confirmer
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- Modal de Confirmation Tailwind -->
 <div id="confirmationModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50 flex items-center justify-center">
     <div class="relative p-8 bg-white w-full max-w-lg m-auto flex-col flex rounded-xl shadow-2xl animate-fade-in-down" style="border: 2px solid #f7d9c4;">
@@ -6609,15 +6946,17 @@ function modifierArticle(panierId) {
                     </div>
                     
                     <!-- Frais livraison -->
+                    {% if commande.frais_livraison %}
                     <div class="flex items-start">
                         <div class="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold mr-3 mt-0.5">3</div>
                         <div class="flex-1">
                             <div class="font-medium text-gray-800">Ajout des frais de livraison</div>
                             <div class="text-sm text-gray-600 mt-1">
-                                Selon la ville sélectionnée: <strong>{% if commande.ville %}{{ commande.ville.nom }} = {{ commande.frais_livraison|floatformat:2 }} DH{% else %}Aucune ville sélectionnée{% endif %}</strong>
+                                Selon la ville sélectionnée: <strong>{% if commande.ville %}{{ commande.ville.nom }} = {{ commande.montant_frais_livraison|floatformat:2 }} DH{% else %}Aucune ville sélectionnée{% endif %}</strong>
                             </div>
                         </div>
                     </div>
+                    {% endif %}
                 </div>
             </div>
             
@@ -6627,6 +6966,7 @@ function modifierArticle(panierId) {
                     <i class="fas fa-equals mr-2"></i>Formule finale
                 </h4>
                 <div class="text-center">
+                    {% if commande.frais_livraison %}
                     <div class="text-lg font-mono bg-white rounded p-3 shadow-sm">
                         <span class="text-green-600 font-bold">Sous-total Articles</span>
                         <span class="text-gray-500 mx-2">+</span>
@@ -6636,9 +6976,21 @@ function modifierArticle(panierId) {
                     </div>
                     <div class="text-sm text-gray-600 mt-2">
                         <span id="calcul-exemple">
-                            {{ commande.sous_total_articles|floatformat:2 }} DH + {{ commande.frais_livraison|floatformat:2 }} DH = {{ commande.total_cmd|floatformat:2 }} DH
+                            {{ commande.sous_total_articles|floatformat:2 }} DH + {{ commande.montant_frais_livraison|floatformat:2 }} DH = {{ commande.total_cmd|floatformat:2 }} DH
                         </span>
                     </div>
+                    {% else %}
+                    <div class="text-lg font-mono bg-white rounded p-3 shadow-sm">
+                        <span class="text-green-600 font-bold">Sous-total Articles</span>
+                        <span class="text-gray-500 mx-2">=</span>
+                        <span class="text-purple-600 font-bold">Total Commande</span>
+                    </div>
+                    <div class="text-sm text-gray-600 mt-2">
+                        <span id="calcul-exemple">
+                            {{ commande.sous_total_articles|floatformat:2 }} DH = {{ commande.total_cmd|floatformat:2 }} DH
+                        </span>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
             
@@ -6739,6 +7091,124 @@ if (articlesScript) {
     }
 } else {
     console.error('❌ Script articles-data non trouvé');
+}
+
+// Fonction pour basculer le statut des frais de livraison
+function toggleFraisLivraison() {
+    const button = document.getElementById('toggle-frais-livraison');
+    const statusText = document.getElementById('frais-status-text');
+    const statusDot = statusText.previousElementSibling;
+    const infoText = document.getElementById('frais-info-text');
+    
+    // Désactiver le bouton pendant la requête
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Chargement...';
+    
+    // Déterminer le nouveau statut (inverser l'actuel)
+    const currentStatus = statusText.textContent.trim() === 'Activés';
+    const nouveauStatut = !currentStatus;
+    
+    // Préparer les données à envoyer
+    const formData = new FormData();
+    formData.append('action', 'toggle_frais_livraison');
+    formData.append('frais_livraison_actif', nouveauStatut.toString());
+    formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+    
+    // Envoyer la requête AJAX
+    fetch(window.location.href, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Mettre à jour l'interface
+            if (data.nouveau_statut) {
+                // Frais activés
+                statusText.textContent = 'Activés';
+                statusText.className = 'text-sm font-medium text-green-600';
+                statusDot.className = 'w-3 h-3 rounded-full bg-green-500';
+                button.innerHTML = '<i class="fas fa-times mr-1"></i>Désactiver';
+                button.className = 'px-3 py-1 text-xs font-medium rounded-lg transition-all duration-200 bg-red-100 text-red-700 hover:bg-red-200 border border-red-300';
+                infoText.innerHTML = '<i class="fas fa-info-circle mr-1"></i>Les frais de livraison sont inclus dans le total de la commande';
+            } else {
+                // Frais désactivés
+                statusText.textContent = 'Désactivés';
+                statusText.className = 'text-sm font-medium text-gray-600';
+                statusDot.className = 'w-3 h-3 rounded-full bg-gray-400';
+                button.innerHTML = '<i class="fas fa-check mr-1"></i>Activer';
+                button.className = 'px-3 py-1 text-xs font-medium rounded-lg transition-all duration-200 bg-green-100 text-green-700 hover:bg-green-200 border border-green-300';
+                infoText.innerHTML = '<i class="fas fa-info-circle mr-1"></i>Les frais de livraison ne sont pas inclus dans le total';
+            }
+            
+            // Mettre à jour l'affichage des frais dans le résumé
+            mettreAJourAffichageFraisResume();
+            
+            // Recalculer le total de la commande
+            mettreAJourTotalCommande();
+            
+            // Mettre à jour le total de la commande si affiché
+            const totalElement = document.querySelector('[data-total-commande]');
+            if (totalElement) {
+                totalElement.textContent = data.total_commande.toFixed(2) + ' DH';
+            }
+            
+            // Afficher le message de succès
+            showNotification(data.message, 'success');
+            
+        } else {
+            // Afficher l'erreur
+            showNotification(data.error || 'Erreur lors du changement du statut', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showNotification('Erreur de connexion', 'error');
+    })
+    .finally(() => {
+        // Réactiver le bouton
+        button.disabled = false;
+    });
+}
+
+// Fonction utilitaire pour afficher les notifications
+function showNotification(message, type = 'info') {
+    // Créer l'élément de notification
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg max-w-sm transition-all duration-300 transform translate-x-full`;
+    
+    if (type === 'success') {
+        notification.className += ' bg-green-100 border border-green-400 text-green-700';
+    } else if (type === 'error') {
+        notification.className += ' bg-red-100 border border-red-400 text-red-700';
+    } else {
+        notification.className += ' bg-blue-100 border border-blue-400 text-blue-700';
+    }
+    
+    notification.innerHTML = `
+        <div class="flex items-center">
+            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'} mr-2"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Animer l'apparition
+    setTimeout(() => {
+        notification.classList.remove('translate-x-full');
+    }, 100);
+    
+    // Supprimer après 3 secondes
+    setTimeout(() => {
+        notification.classList.add('translate-x-full');
+        setTimeout(() => {
+            document.body.removeChild(notification);
+        }, 300);
+    }, 3000);
 }
 </script>
 

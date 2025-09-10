@@ -16,7 +16,9 @@ class Command(BaseCommand):
             {'libelle': 'Non affectée', 'couleur': '#6B7280', 'ordre': 1},
             {'libelle': 'Affectée', 'couleur': '#3B82F6', 'ordre': 2},
             {'libelle': 'En cours de confirmation', 'couleur': '#F59E0B', 'ordre': 3},
-            {'libelle': 'Confirmée', 'couleur': '#10B981', 'ordre': 4},
+            {'libelle': 'Confirmation décalée', 'couleur': '#F97316', 'ordre': 4},
+            {'libelle': 'Confirmée', 'couleur': '#10B981', 'ordre': 5},
+          
             
             # États de préparation
             {'libelle': 'En préparation', 'couleur': '#06B6D4', 'ordre': 5},

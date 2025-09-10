@@ -134,17 +134,19 @@
                                         <span class="text-gray-600">Sous-total articles:</span>
                                         <span class="font-medium">{{ commande.sous_total_articles|floatformat:2 }} DH</span>
                                     </div>
+                                    {% if commande.frais_livraison %}
                                     <div class="flex justify-between">
                                         <span class="text-gray-600">Frais de livraison:</span>
                                         <span class="font-medium text-blue-600">
                                             Appliquer directement sur le prix de la commande DH
                                         </span>
                                     </div>
+                                    {% endif %}
                                     <hr class="border-gray-300">
                                     <div class="flex justify-between">
                                         <span class="font-bold text-gray-900">Total commande:</span>
                                         <span class="font-bold text-lg" style="color: #4B352A;">
-                                            {% with total_final=commande.sous_total_articles%}{{ total_final|floatformat:2 }}{% endwith %} DH
+                                            {% with total_final=commande.total_cmd%}{{ total_final|floatformat:2 }}{% endwith %} DH
                                         </span>
                                     </div>
                                 </div>
@@ -436,20 +438,22 @@
                                     {{ total_articles }} DH
                                 </td>
                             </tr>
+                            {% if commande.frais_livraison %}
                             <tr style="background-color: #e0f2fe;">
                                 <td colspan="3" class="px-4 py-3 text-right font-medium text-blue-800">
                                     Frais de livraison 
                                 </td>
                                 <td class="px-4 py-3 font-bold text-blue-800">
-                                    Appliquer directement sur le prix de la commande DH
+                                    {{ commande.montant_frais_livraison }} DH
                                 </td>
                             </tr>
+                            {% endif %}
                             <tr style="background-color: #4B352A;">
                                 <td colspan="3" class="px-4 py-3 text-right font-bold text-white">
                                     Total commande:
                                 </td>
                                 <td class="px-4 py-3 font-bold text-lg text-white">
-                                    {% with total_final=total_articles %}{{ total_final|floatformat:2 }}{% endwith %} DH
+                                    {% with total_final=commande.total_cmd %}{{ total_final|floatformat:2 }}{% endwith %} DH
                                 </td>
                             </tr>
                         </tfoot>

@@ -119,21 +119,67 @@
                             {% endfor %}
                         </select>
                     </div>
+                    
                     <div>
                         <label for="frais_livraison" class="block text-sm font-medium mb-2" style="color: var(--admin-color);">Frais de livraison (DH)</label>
-                        <input type="text" id="frais_livraison" name="frais_livraison" class="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed" readonly>
+                        <div class="flex gap-2">
+                            <input type="text" id="frais_livraison" name="frais_livraison" class="flex-1 p-3 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed" readonly>
+                            <button type="button" id="toggle_frais_livraison" onclick="toggleFraisLivraison()" class="px-4 py-3 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors">
+                                <i class="fas fa-toggle-off" id="frais_icon"></i>
+                            </button>
+                        </div>
+                        <input type="hidden" name="frais_livraison_actif" id="frais_livraison_actif" value="false">
                     </div>
+                    
                     <div>
-                        <label for="region_livraison" class="block text-sm font-medium mb-2" style="color: var(--admin-color);">Livreur (Automatique)</label>
+                        <label for="region_livraison" class="block text-sm font-medium mb-2" style="color: var(--admin-color);">Région de livraison</label>
                         <input type="text" id="region_livraison" name="region_livraison" class="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed" readonly>
                     </div>
+                    
                     <div>
-                        <label for="delai_livraison" class="block text-sm font-medium mb-2" style="color: var(--admin-color);">Délai de livraison (Automatique)</label>
+                        <label for="delai_livraison" class="block text-sm font-medium mb-2" style="color: var(--admin-color);">Délai de livraison</label>
                         <input type="text" id="delai_livraison" name="delai_livraison" class="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed" readonly>
                     </div>
-                    <div>
+                    
+                    <div class="md:col-span-2">
                         <label for="adresse" class="block text-sm font-medium mb-2" style="color: var(--admin-color);">Adresse complète</label>
                         <textarea name="adresse" id="adresse" rows="3" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--admin-accent-color)] focus:border-transparent transition duration-200" required></textarea>
+                    </div>
+                </div>
+            </div>
+
+
+
+
+            <!-- Section de la commande  -->
+            <div class="mb-8">
+                <h3 class="text-xl font-semibold mb-4 flex items-center" style="color: var(--admin-color);">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    Informations sur la commande
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Source de la commande -->
+                    <div>
+                        <label for="source" class="block text-sm font-medium mb-2" style="color: var(--admin-color);">Source de la commande :</label>
+                        <select name="source" id="source" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--admin-accent-color)] focus:border-transparent transition duration-200">
+                            <option value="">Sélectionner une source...</option>
+                            <option value="Appel">Appel</option>
+                            <option value="Whatsapp">Whatsapp</option>
+                            <option value="SMS">SMS</option>
+                            <option value="Email">Email</option>
+                            <option value="Facebook">Facebook</option>
+                            <option value="Youcan">Youcan</option>
+                            <option value="Shopify">Shopify</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Statut de paiement -->
+                    <div>
+                        <label for="payement" class="block text-sm font-medium mb-2" style="color: var(--admin-color);">Statut de paiement :</label>
+                        <select name="payement" id="payement" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--admin-accent-color)] focus:border-transparent transition duration-200">
+                            <option value="Non payé" selected>Non payé</option>
+                            <option value="Payé">Payé</option>
+                        </select>
                     </div>
                 </div>
             </div>
@@ -1090,12 +1136,68 @@ function chargerRegionEtFrais() {
         document.getElementById('region_livraison').value = region || '';
         document.getElementById('delai_livraison').value = `${delaiMin} - ${delaiMax} jours`;
         
+        // Mettre à jour l'état du toggle des frais de livraison
+        updateFraisLivraisonToggle();
+        
         console.log(`🏙️ Ville changée: ${selectedOption.text}, Frais: ${fraisFormates} DH, Livreur: ${region}, Délai: ${delaiMin}-${delaiMax} jours`);
     } else {
         // Réinitialiser les champs si aucune ville n'est sélectionnée
         document.getElementById('frais_livraison').value = '';
         document.getElementById('region_livraison').value = '';
         document.getElementById('delai_livraison').value = '';
+        updateFraisLivraisonToggle();
+    }
+}
+
+// Fonction pour basculer l'activation des frais de livraison
+function toggleFraisLivraison() {
+    const toggleButton = document.getElementById('toggle_frais_livraison');
+    const fraisIcon = document.getElementById('frais_icon');
+    const fraisActifInput = document.getElementById('frais_livraison_actif');
+    const fraisInput = document.getElementById('frais_livraison');
+    
+    const isActif = fraisActifInput.value === 'true';
+    
+    if (isActif) {
+        // Désactiver les frais de livraison
+        fraisActifInput.value = 'false';
+        toggleButton.className = 'px-4 py-3 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors';
+        fraisIcon.className = 'fas fa-toggle-off';
+        fraisInput.style.backgroundColor = '#f3f4f6';
+        fraisInput.style.color = '#6b7280';
+        
+        console.log('🚫 Frais de livraison désactivés');
+    } else {
+        // Activer les frais de livraison
+        fraisActifInput.value = 'true';
+        toggleButton.className = 'px-4 py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors';
+        fraisIcon.className = 'fas fa-toggle-on';
+        fraisInput.style.backgroundColor = '#dcfce7';
+        fraisInput.style.color = '#166534';
+        
+        console.log('✅ Frais de livraison activés');
+    }
+}
+
+// Fonction pour mettre à jour l'apparence du toggle selon l'état
+function updateFraisLivraisonToggle() {
+    const fraisActifInput = document.getElementById('frais_livraison_actif');
+    const toggleButton = document.getElementById('toggle_frais_livraison');
+    const fraisIcon = document.getElementById('frais_icon');
+    const fraisInput = document.getElementById('frais_livraison');
+    
+    const isActif = fraisActifInput.value === 'true';
+    
+    if (isActif) {
+        toggleButton.className = 'px-4 py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors';
+        fraisIcon.className = 'fas fa-toggle-on';
+        fraisInput.style.backgroundColor = '#dcfce7';
+        fraisInput.style.color = '#166534';
+    } else {
+        toggleButton.className = 'px-4 py-3 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors';
+        fraisIcon.className = 'fas fa-toggle-off';
+        fraisInput.style.backgroundColor = '#f3f4f6';
+        fraisInput.style.color = '#6b7280';
     }
 }
 
