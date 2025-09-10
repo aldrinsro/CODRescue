@@ -79,18 +79,18 @@ class ArticleLabelsPrinter {
                 /* Styles pour l'impression */
                 @media print {
                     @page {
-                        size: A4 portrait;
-                        margin: ${this.pageSettings.margin};
+                        size: 10cm 10cm;
+                        margin: 0.3cm;
                     }
-
+                    
                     body {
                         margin: 0;
                         padding: 0;
                         background: white !important;
                         -webkit-print-color-adjust: exact !important;
                         color-adjust: exact !important;
-                        width: 210mm;
-                        height: 297mm;
+                        width: 10cm;
+                        height: 10cm;
                     }
 
                     .no-print {
@@ -196,28 +196,26 @@ class ArticleLabelsPrinter {
 
                 /* Grille des étiquettes */
                 .labels-grid {
-                    display: grid;
-                    grid-template-columns: repeat(${this.pageSettings.columns}, 1fr);
-                    gap: 4mm;
-                    width: 100%;
-                    max-width: 160mm; /* Ajusté pour les nouvelles dimensions */
-                    margin: 0 auto;
-                    padding: 5mm;
-                    margin-top: 5mm;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0;
+                    width: 9.4cm;
+                    height: 9.4cm;
+                    margin: 0;
+                    padding: 0;
                 }
 
                 /* Étiquette individuelle */
                 .article-label {
-                    width: 100%; /* S'adapte à la grille */
-                    height: 100%; /* S'adapte à la grille */
-                    min-height: 260mm; /* Hauteur minimale de l'étiquette */
+                    width: 9.4cm; /* Format 10x10 cm */
+                    height: 9.4cm; /* Format 10x10 cm */
                     border: 1px solid #ddd; /* Bordure plus subtile */
                     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Police plus moderne */
-                    font-size: 10px;
+                    font-size: 8px; /* Réduire la taille pour s'adapter */
                     display: flex;
                     flex-direction: column;
                     background: linear-gradient(to bottom, #ffffff, #f0f0f0); /* Fond dégradé subtil */
-                    page-break-inside: avoid;
+                    page-break-after: always; /* Saut de page après chaque étiquette */
                     break-inside: avoid;
                     margin: 0;
                     overflow: hidden;
@@ -225,6 +223,11 @@ class ArticleLabelsPrinter {
                     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Ombre plus prononcée */
                     border-radius: 8px; /* Bords arrondis */
                     color: #333; /* Couleur de texte par défaut */
+                    box-sizing: border-box;
+                }
+                
+                .article-label:last-child {
+                    page-break-after: avoid; /* Pas de saut de page pour la dernière étiquette */
                 }
 
                 .article-label * {

@@ -6,9 +6,17 @@
     <title>Codes QR Simples - Commande {{ commande.num_cmd }}</title>
     <style>
         @media print {
+            @page {
+                size: 10cm 10cm;
+                margin: 0.3cm;
+            }
+            
             body {
                 margin: 0;
                 padding: 0;
+                width: 9.4cm;
+                height: 9.4cm;
+                box-sizing: border-box;
             }
             
             .no-print {
@@ -50,22 +58,30 @@
         }
         
         .qr-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
             margin-top: 20px;
         }
         
         .qr-item {
             border: 1px solid #333;
             padding: 10px;
+            page-break-after: always;
+            height: 9.2cm;
+            width: 9.2cm;
+            margin: 0;
+            box-sizing: border-box;
             background-color: white;
             text-align: center;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-height: 140px;
+        }
+        
+        .qr-item:last-child {
+            page-break-after: avoid;
         }
         
         .qr-code {
@@ -73,8 +89,8 @@
         }
         
         .qr-code img {
-            width: 100px;
-            height: 100px;
+            width: 4cm;
+            height: 4cm;
             border: 1px solid #ccc;
         }
         
@@ -84,6 +100,13 @@
             font-weight: bold;
             word-break: break-all;
             max-width: 100px;
+        }
+        
+        .commande-id {
+            font-size: 10px;
+            color: #333;
+            font-weight: bold;
+            margin-top: 5px;
         }
         
         .print-button {
@@ -133,26 +156,44 @@
             }
         }
         
-        /* Optimisation pour l'impression sur étiquettes */
+        /* Optimisation pour l'impression sur étiquettes 10x10 cm */
         @media print {
             .qr-grid {
-                grid-template-columns: repeat(4, 1fr);
-                gap: 5px;
+                display: flex;
+                flex-direction: column;
+                gap: 0;
             }
             
             .qr-item {
-                min-height: 120px;
-                padding: 5px;
+                min-height: 250px;
+                padding: 30px;
+                page-break-after: always;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                width: 100%;
+                margin-bottom: 0;
+            }
+            
+            .qr-item:last-child {
+                page-break-after: avoid;
             }
             
             .qr-code img {
-                width: 80px;
-                height: 80px;
+                width: 6cm;
+                height: 6cm;
+                max-width: 6cm;
+                max-height: 6cm;
             }
             
             .qr-label {
-                font-size: 8px;
-                max-width: 80px;
+                font-size: 10px;
+                max-width: 8cm;
+                margin-top: 0.3cm;
+                text-align: center;
+                word-break: break-all;
+                line-height: 1.2;
             }
         }
     </style>
@@ -172,6 +213,7 @@
         <h1>Codes QR Simples</h1>
         <div class="header-info">
             <strong>Commande:</strong> {{ commande.num_cmd }}<br>
+            {% if commande.id_yz %}<strong>ID YZ:</strong> {{ commande.id_yz }}<br>{% endif %}
             <strong>Client:</strong> {{ commande.client.nom }}<br>
             <strong>Date:</strong> {{ commande.date_cmd|date:"d/m/Y" }}<br>
             <strong>Total codes QR:</strong> {{ articles_data|length }}
@@ -187,6 +229,9 @@
                     <img src="{{ item.qr_image }}" alt="QR Code {{ item.qr_content }}">
                 </div>
                 <div class="qr-label">{{ item.qr_content }}</div>
+                {% if commande.id_yz %}
+                <div class="commande-id">Commande: {{ commande.id_yz }}</div>
+                {% endif %}
             </div>
             {% endfor %}
         {% endfor %}

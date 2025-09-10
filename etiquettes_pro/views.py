@@ -290,6 +290,10 @@ def generate_qr_codes_articles(request, etiquette_id):
             if variante and variante.reference_variante:
                 qr_content = variante.reference_variante
             
+            # Ajouter l'ID de commande au contenu du QR code
+            if commande.id_yz:
+                qr_content = f"{qr_content}|CMD:{commande.id_yz}"
+            
             # Créer le QR code
             qr = qrcode.QRCode(
                 version=1,
@@ -324,6 +328,7 @@ def generate_qr_codes_articles(request, etiquette_id):
             'commande': commande,
             'etiquette': etiquette,
             'articles_data': articles_data,
+            'template': etiquette.template,  # Ajouter le template pour le format
         }
         
         return render(request, 'etiquettes_pro/qr_codes_print.html', context)
@@ -381,6 +386,10 @@ def generate_qr_codes_simple(request, etiquette_id):
             if variante and variante.reference_variante:
                 qr_content = variante.reference_variante
             
+            # Ajouter l'ID de commande au contenu du QR code
+            if commande.id_yz:
+                qr_content = f"{qr_content}|CMD:{commande.id_yz}"
+            
             # Créer le QR code
             qr = qrcode.QRCode(
                 version=1,
@@ -415,6 +424,7 @@ def generate_qr_codes_simple(request, etiquette_id):
             'commande': commande,
             'etiquette': etiquette,
             'articles_data': articles_data,
+            'template': etiquette.template,  # Ajouter le template pour le format
         }
         
         return render(request, 'etiquettes_pro/qr_codes_simple_print.html', context)
@@ -492,6 +502,10 @@ def bulk_print_qr_codes_simple(request):
                 if variante and variante.reference_variante:
                     qr_content = variante.reference_variante
                 
+                # Ajouter l'ID de commande au contenu du QR code
+                if commande.id_yz:
+                    qr_content = f"{qr_content}|CMD:{commande.id_yz}"
+                
                 # Créer le QR code
                 qr = qrcode.QRCode(
                     version=1,
@@ -533,7 +547,8 @@ def bulk_print_qr_codes_simple(request):
         context = {
             'commandes_info': commandes_info,
             'all_articles_data': all_articles_data,
-            'total_qr_codes': len(all_articles_data)
+            'total_qr_codes': len(all_articles_data),
+            'template': EtiquetteTemplate.objects.filter(format_page='10x10').first() or EtiquetteTemplate.objects.first(),  # Template par défaut 10x10
         }
         
         return render(request, 'etiquettes_pro/bulk_qr_codes_simple_print.html', context)
@@ -610,6 +625,10 @@ def bulk_print_qr_codes_details(request):
                 qr_content = f"{article.reference or article.nom}"
                 if variante and variante.reference_variante:
                     qr_content = variante.reference_variante
+                
+                # Ajouter l'ID de commande au contenu du QR code
+                if commande.id_yz:
+                    qr_content = f"{qr_content}|CMD:{commande.id_yz}"
         
                 # Créer le QR code
                 qr = qrcode.QRCode(
@@ -652,7 +671,8 @@ def bulk_print_qr_codes_details(request):
         context = {
             'commandes_info': commandes_info,
             'all_articles_data': all_articles_data,
-            'total_qr_codes': len(all_articles_data)
+            'total_qr_codes': len(all_articles_data),
+            'template': EtiquetteTemplate.objects.filter(format_page='10x10').first() or EtiquetteTemplate.objects.first(),  # Template par défaut 10x10
         }
         
         return render(request, 'etiquettes_pro/bulk_qr_codes_details_print.html', context)

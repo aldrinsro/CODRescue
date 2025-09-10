@@ -82,22 +82,28 @@
         }
         
         .qr-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
             margin-top: 15px;
         }
         
         .qr-item {
             border: 1px solid #333;
-            padding: 15px;
+            padding: 25px;
             background-color: white;
             text-align: center;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-height: 200px;
+            min-height: 300px;
+            page-break-after: always;
+            margin-bottom: 20px;
+        }
+        
+        .qr-item:last-child {
+            page-break-after: avoid;
         }
         
         .qr-code {
@@ -194,35 +200,96 @@
             }
         }
         
-        /* Optimisation pour l'impression */
+        /* Optimisation pour l'impression sur étiquettes 10x10 cm */
         @media print {
+            @page {
+                size: 10cm 10cm;
+                margin: 0.3cm;
+            }
+            
+            body {
+                margin: 0;
+                padding: 0;
+                width: 10cm;
+                height: 10cm;
+            }
+            
             .qr-grid {
-                grid-template-columns: repeat(3, 1fr);
-                gap: 10px;
+                display: flex;
+                flex-direction: column;
+                gap: 0;
             }
             
             .qr-item {
-                min-height: 180px;
-                padding: 10px;
+                width: 9.4cm;
+                height: 9.4cm;
+                padding: 0.3cm;
+                page-break-after: always;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                margin: 0;
+                box-sizing: border-box;
+            }
+            
+            .qr-item:last-child {
+                page-break-after: avoid;
             }
             
             .qr-code img {
-                width: 80px;
-                height: 80px;
+                width: 4.5cm;
+                height: 4.5cm;
+                max-width: 4.5cm;
+                max-height: 4.5cm;
             }
             
             .qr-label {
-                font-size: 10px;
-                max-width: 120px;
+                font-size: 8px;
+                max-width: 8cm;
+                margin-top: 0.2cm;
+                margin-bottom: 0.2cm;
+                text-align: center;
+                word-break: break-all;
+                line-height: 1.1;
+                font-weight: bold;
             }
             
             .article-details {
-                font-size: 9px;
+                font-size: 6px;
+                max-width: 8cm;
+                text-align: center;
+                line-height: 1.2;
+            }
+            
+            .article-details .ref {
+                font-size: 7px;
+                margin-bottom: 0.1cm;
+                font-weight: bold;
+            }
+            
+            .article-details .qty {
+                font-size: 6px;
+                margin-bottom: 0.1cm;
+            }
+            
+            .article-details .details {
+                font-size: 5px;
+                line-height: 1.1;
             }
             
             .command-section {
-                margin-bottom: 20px;
-                padding: 10px;
+                margin: 0;
+                padding: 0;
+                page-break-inside: avoid;
+            }
+            
+            .command-header {
+                display: none;
+            }
+            
+            .header {
+                display: none;
             }
         }
     </style>
@@ -243,7 +310,8 @@
         <div class="header-info">
             <strong>Nombre de commandes:</strong> {{ commandes_info|length }}<br>
             <strong>Total codes QR:</strong> {{ total_qr_codes }}<br>
-            <strong>Date d'impression:</strong> {% now "d/m/Y H:i" %}
+            <strong>Date d'impression:</strong> {% now "d/m/Y H:i" %}<br>
+            <strong>Format:</strong> 10x10 cm - Chaque article sur une page séparée
         </div>
     </div>
     
@@ -254,6 +322,7 @@
             <div class="command-title">Commande {{ cmd_info.commande.num_cmd }}</div>
             <div class="command-details">
                 Client: {{ cmd_info.commande.client.nom }} | 
+                {% if cmd_info.commande.id_yz %}ID YZ: {{ cmd_info.commande.id_yz }} | {% endif %}
                 Date: {{ cmd_info.commande.date_cmd|date:"d/m/Y" }} | 
                 Articles: {{ cmd_info.paniers_count }}
             </div>

@@ -7,9 +7,7 @@ class EtiquetteTemplate(models.Model):
     """Modèle pour les templates d'étiquettes"""
     
     FORMAT_CHOICES = [
-        ('A4', 'A4 (210x297mm)'),
-        ('A5', 'A5 (148x210mm)'),
-        ('A6', 'A6 (105x148mm)'),
+        ('10x10', '10x10 cm (100x100mm)'),
         ('CUSTOM', 'Personnalisé'),
     ]
     
@@ -23,11 +21,11 @@ class EtiquetteTemplate(models.Model):
     nom = models.CharField(max_length=100, verbose_name="Nom du template")
     description = models.TextField(blank=True, verbose_name="Description")
     type_etiquette = models.CharField(max_length=20, choices=TYPE_CHOICES, default='article')
-    format_page = models.CharField(max_length=10, choices=FORMAT_CHOICES, default='A4')
+    format_page = models.CharField(max_length=10, choices=FORMAT_CHOICES, default='10x10')
     
     # Dimensions personnalisées
-    largeur = models.FloatField(default=210, verbose_name="Largeur (mm)")
-    hauteur = models.FloatField(default=297, verbose_name="Hauteur (mm)")
+    largeur = models.FloatField(default=100, verbose_name="Largeur (mm)")
+    hauteur = models.FloatField(default=100, verbose_name="Hauteur (mm)")
     
     # Paramètres du code-barres/QR
     code_type = models.CharField(max_length=20, choices=[

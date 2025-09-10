@@ -159,9 +159,7 @@
                             <i class="fas fa-file-alt text-blue-500"></i> Format de Page *
                         </label>
                         <select class="theme-input" id="format_page" name="format_page" required>
-                            <option value="A4" {% if template and template.format_page == 'A4' %}selected{% endif %}>A4 (210x297mm)</option>
-                            <option value="A5" {% if template and template.format_page == 'A5' %}selected{% endif %}>A5 (148x210mm)</option>
-                            <option value="A6" {% if template and template.format_page == 'A6' %}selected{% endif %}>A6 (105x148mm)</option>
+                            <option value="10x10" {% if template and template.format_page == '10x10' %}selected{% endif %}>10x10 cm (100x100mm) - Format par défaut</option>
                             <option value="CUSTOM" {% if template and template.format_page == 'CUSTOM' %}selected{% endif %}>Personnalisé</option>
                         </select>
                     </div>
@@ -172,14 +170,14 @@
                                 <i class="fas fa-arrows-alt-h text-blue-500"></i> Largeur (mm)
                             </label>
                             <input type="number" class="theme-input" id="largeur" name="largeur" 
-                                   value="{% if template %}{{ template.largeur }}{% else %}210{% endif %}" min="50" max="500">
+                                   value="{% if template %}{{ template.largeur }}{% else %}100{% endif %}" min="50" max="500">
                         </div>
                         <div class="form-group">
                             <label for="hauteur" class="block text-sm font-medium text-gray-700 mb-2">
                                 <i class="fas fa-arrows-alt-v text-blue-500"></i> Hauteur (mm)
                             </label>
                             <input type="number" class="theme-input" id="hauteur" name="hauteur" 
-                                   value="{% if template %}{{ template.hauteur }}{% else %}297{% endif %}" min="50" max="500">
+                                   value="{% if template %}{{ template.hauteur }}{% else %}100{% endif %}" min="50" max="500">
                         </div>
                     </div>
                 </div>
@@ -879,6 +877,17 @@ document.addEventListener('DOMContentLoaded', function() {
             customDimensions.style.display = 'block';
         } else {
             customDimensions.style.display = 'none';
+            
+            // Définir les dimensions par défaut selon le format sélectionné
+            const largeurInput = document.getElementById('largeur');
+            const hauteurInput = document.getElementById('hauteur');
+            
+            switch(formatSelect.value) {
+                case '10x10':
+                    largeurInput.value = 100;
+                    hauteurInput.value = 100;
+                    break;
+            }
         }
     }
     

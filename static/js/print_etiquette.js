@@ -618,6 +618,11 @@ class EtiquettePrinter {
         }
         
         @media print {
+            @page {
+                size: ${template.format_page === '10x10' ? '10cm 10cm' : 'A4'} !important;
+                margin: ${template.format_page === '10x10' ? '0.3cm' : '1cm'} !important;
+            }
+            
             * {
                 -webkit-print-color-adjust: exact !important;
                 color-adjust: exact !important;
@@ -629,6 +634,8 @@ class EtiquettePrinter {
                 margin: 0 !important;
                 background: white !important;
                 font-family: Arial, sans-serif !important;
+                width: ${template.format_page === '10x10' ? '10cm' : '21cm'};
+                height: ${template.format_page === '10x10' ? '10cm' : '29.7cm'};
             }
             
             .etiquette-preview {
@@ -636,12 +643,19 @@ class EtiquettePrinter {
                 border: none !important;
                 margin: 0 !important;
                 padding: 0 !important;
+                width: ${template.format_page === '10x10' ? '9.4cm' : '19cm'};
+                height: ${template.format_page === '10x10' ? '9.4cm' : '27.7cm'};
             }
             
             .etiquette-container {
                 box-shadow: none !important;
                 border: ${template.border_enabled ? template.border_width + 'px solid ' + template.border_color + ' !important' : '1px solid #000 !important'};
                 page-break-inside: avoid !important;
+                width: 9.4cm;
+                height: 9.4cm;
+                padding: 0.2cm !important;
+                margin: 0 !important;
+                box-sizing: border-box;
             }
             
             /* Forcer les couleurs de fond pour l'impression */
@@ -702,6 +716,40 @@ class EtiquettePrinter {
             .etiquette-container,
             .flex {
                 page-break-inside: avoid !important;
+            }
+            
+            /* Optimisation des tailles pour format 10x10 cm */
+            .code-image {
+                max-width: 3cm !important;
+                max-height: 3cm !important;
+                width: auto !important;
+                height: auto !important;
+            }
+            
+            .text-sm {
+                font-size: 8px !important;
+            }
+            
+            .text-xs {
+                font-size: 6px !important;
+            }
+            
+            .p-3 {
+                padding: 0.1cm !important;
+            }
+            
+            .p-2 {
+                padding: 0.05cm !important;
+            }
+            
+            .px-2 {
+                padding-left: 0.1cm !important;
+                padding-right: 0.1cm !important;
+            }
+            
+            .py-2 {
+                padding-top: 0.05cm !important;
+                padding-bottom: 0.05cm !important;
             }
         }
     </style>
