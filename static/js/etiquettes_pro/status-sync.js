@@ -69,10 +69,10 @@ class EtiquetteStatusSync {
     }
 
     handleStatusUpdate(detail) {
-        const { etiquetteId, newStatus } = detail;
+        const { etiquetteId, newStatus, compteurTicket, compteurQr } = detail;
         
         // Mettre à jour l'interface utilisateur
-        this.updateStatusInUI(etiquetteId, newStatus);
+        this.updateStatusInUI(etiquetteId, newStatus, compteurTicket, compteurQr);
         
         // Mettre à jour les statistiques
         this.syncStatistics();
@@ -83,21 +83,23 @@ class EtiquetteStatusSync {
         this.updateStatisticsInUI(statistics);
     }
 
-    updateStatusInUI(etiquetteId, newStatus) {
+    updateStatusInUI(etiquetteId, newStatus, compteurTicket, compteurQr) {
         // Mettre à jour le statut dans le tableau du dashboard
         const statusElement = document.querySelector(`tr[data-etiquette-id="${etiquetteId}"] .etiquette-statut`);
         if (statusElement) {
             this.updateStatusElement(statusElement, newStatus);
+            this.updateCountersInUI(etiquetteId, compteurTicket, compteurQr);
         }
         
         // Mettre à jour le statut dans les cartes mobiles
         const mobileStatusElement = document.querySelector(`[data-etiquette-id="${etiquetteId}"] .etiquette-statut-mobile`);
         if (mobileStatusElement) {
             this.updateStatusElement(mobileStatusElement, newStatus);
+            this.updateCountersInUI(etiquetteId, compteurTicket, compteurQr);
         }
         
         // Mettre à jour le statut dans la page d'aperçu (etiquette_preview.html)
-        this.updatePreviewPageStatus(etiquetteId, newStatus);
+        this.updatePreviewPageStatus(etiquetteId, newStatus, compteurTicket, compteurQr);
     }
 
     updateStatusElement(element, newStatus) {
@@ -117,7 +119,81 @@ class EtiquetteStatusSync {
         }
     }
 
-    updatePreviewPageStatus(etiquetteId, newStatus) {
+    updateCountersInUI(etiquetteId, compteurTicket, compteurQr) {
+        // Mettre à jour les compteurs dans le dashboard
+        const row = document.querySelector(`tr[data-etiquette-id="${etiquetteId}"]`);
+        if (row) {
+            this.updateCountersInRow(row, compteurTicket, compteurQr);
+        }
+        
+        // Mettre à jour les compteurs dans les cartes
+        const card = document.querySelector(`[data-etiquette-id="${etiquetteId}"]`);
+        if (card) {
+            this.updateCountersInCard(card, compteurTicket, compteurQr);
+        }
+    }
+
+    updateCountersInRow(row, compteurTicket, compteurQr) {
+        // Trouver ou créer le conteneur des compteurs
+        let countersContainer = row.querySelector('.counters-container');
+        if (!countersContainer) {
+            const statusCell = row.querySelector('.column-statut');
+            if (statusCell) {
+                const statusDiv = statusCell.querySelector('div');
+                if (statusDiv) {
+                    countersContainer = document.createElement('div');
+                    countersContainer.className = 'flex items-center gap-1 text-xs text-gray-500';
+                    statusDiv.appendChild(countersContainer);
+                }
+            }
+        }
+        
+        if (countersContainer) {
+            this.updateCountersContainer(countersContainer, compteurTicket, compteurQr);
+        }
+    }
+
+    updateCountersInCard(card, compteurTicket, compteurQr) {
+        // Trouver ou créer le conteneur des compteurs dans la carte
+        let countersContainer = card.querySelector('.counters-container');
+        if (!countersContainer) {
+            const statusContainer = card.querySelector('.flex.items-center.gap-2');
+            if (statusContainer) {
+                countersContainer = document.createElement('div');
+                countersContainer.className = 'flex items-center gap-1';
+                statusContainer.appendChild(countersContainer);
+            }
+        }
+        
+        if (countersContainer) {
+            this.updateCountersContainer(countersContainer, compteurTicket, compteurQr);
+        }
+    }
+
+    updateCountersContainer(container, compteurTicket, compteurQr) {
+        // Vider le conteneur
+        container.innerHTML = '';
+        
+        // Ajouter le compteur de tickets si > 0
+        if (compteurTicket > 0) {
+            const ticketCounter = document.createElement('span');
+            ticketCounter.className = 'inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800';
+            ticketCounter.title = 'Tickets imprimés';
+            ticketCounter.innerHTML = `<i class="fas fa-ticket-alt mr-1"></i>${compteurTicket}`;
+            container.appendChild(ticketCounter);
+        }
+        
+        // Ajouter le compteur de QR si > 0
+        if (compteurQr > 0) {
+            const qrCounter = document.createElement('span');
+            qrCounter.className = 'inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800';
+            qrCounter.title = 'Codes QR imprimés';
+            qrCounter.innerHTML = `<i class="fas fa-qrcode mr-1"></i>${compteurQr}`;
+            container.appendChild(qrCounter);
+        }
+    }
+
+    updatePreviewPageStatus(etiquetteId, newStatus, compteurTicket, compteurQr) {
         // Vérifier si nous sommes sur la page d'aperçu
         const isPreviewPage = document.querySelector('.etiquette-preview') !== null;
         if (!isPreviewPage) {
@@ -132,10 +208,41 @@ class EtiquetteStatusSync {
             this.updatePreviewStatusBadge(statusBadge, newStatus);
         }
 
+        // Mettre à jour les compteurs dans la page d'aperçu
+        this.updatePreviewCounters(compteurTicket, compteurQr);
+
         // Mettre à jour le bouton d'impression si nécessaire
         const printButton = document.querySelector('.print-btn-manual');
         if (printButton) {
             this.updatePreviewPrintButton(printButton, newStatus);
+        }
+    }
+
+    updatePreviewCounters(compteurTicket, compteurQr) {
+        // Trouver ou créer le conteneur des compteurs dans la page d'aperçu
+        let countersContainer = document.querySelector('.info-group .flex.items-center.gap-2');
+        if (countersContainer) {
+            // Vider le conteneur des compteurs existants
+            const existingCounters = countersContainer.querySelectorAll('.inline-flex.items-center.px-2.py-1.rounded-full');
+            existingCounters.forEach(counter => counter.remove());
+            
+            // Ajouter le compteur de tickets si > 0
+            if (compteurTicket > 0) {
+                const ticketCounter = document.createElement('span');
+                ticketCounter.className = 'inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800';
+                ticketCounter.title = 'Nombre de fois que le ticket a été imprimé';
+                ticketCounter.innerHTML = `<i class="fas fa-ticket-alt mr-1"></i>${compteurTicket}`;
+                countersContainer.appendChild(ticketCounter);
+            }
+            
+            // Ajouter le compteur de QR si > 0
+            if (compteurQr > 0) {
+                const qrCounter = document.createElement('span');
+                qrCounter.className = 'inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800';
+                qrCounter.title = 'Nombre de fois que les codes QR ont été imprimés';
+                qrCounter.innerHTML = `<i class="fas fa-qrcode mr-1"></i>${compteurQr}`;
+                countersContainer.appendChild(qrCounter);
+            }
         }
     }
 

@@ -7,7 +7,7 @@ from django.views.decorators.http import require_http_methods
 from django.utils.decorators import method_decorator
 from django.views.generic import ListView, DetailView
 from django.core.paginator import Paginator
-from django.db.models import Q
+from django.db.models import Q, Sum
 import json
 import io
 import base64
@@ -1390,11 +1390,22 @@ def mark_etiquette_as_printed(request, etiquette_id):
     try:
         etiquette = get_object_or_404(Etiquette, id=etiquette_id)
         
+        # Récupérer le type d'impression depuis les données POST
+        data = json.loads(request.body) if request.body else {}
+        print_type = data.get('print_type', 'ticket')  # 'ticket' ou 'qr'
+        
         # Mettre à jour le statut et la date d'impression
         from django.utils import timezone
         etiquette.statut = 'printed'
         etiquette.date_impression = timezone.now()
-        etiquette.save(update_fields=['statut', 'date_impression'])
+        
+        # Incrémenter le compteur approprié
+        if print_type == 'qr':
+            etiquette.compteur_impression_qr += 1
+        else:  # ticket
+            etiquette.compteur_impression_ticket += 1
+        
+        etiquette.save(update_fields=['statut', 'date_impression', 'compteur_impression_ticket', 'compteur_impression_qr'])
         
         return JsonResponse({
             'success': True,
@@ -1403,7 +1414,9 @@ def mark_etiquette_as_printed(request, etiquette_id):
                 'id': etiquette.id,
                 'reference': etiquette.reference,
                 'statut': etiquette.statut,
-                'date_impression': etiquette.date_impression.isoformat() if etiquette.date_impression else None
+                'date_impression': etiquette.date_impression.isoformat() if etiquette.date_impression else None,
+                'compteur_impression_ticket': etiquette.compteur_impression_ticket,
+                'compteur_impression_qr': etiquette.compteur_impression_qr
             }
         })
         
@@ -1421,6 +1434,7 @@ def mark_multiple_etiquettes_as_printed(request):
     try:
         data = json.loads(request.body)
         etiquette_ids = data.get('etiquette_ids', [])
+        print_type = data.get('print_type', 'ticket')  # 'ticket' ou 'qr'
         
         if not etiquette_ids:
             return JsonResponse({
@@ -1436,7 +1450,14 @@ def mark_multiple_etiquettes_as_printed(request):
                 etiquette = Etiquette.objects.get(id=etiquette_id)
                 etiquette.statut = 'printed'
                 etiquette.date_impression = timezone.now()
-                etiquette.save(update_fields=['statut', 'date_impression'])
+                
+                # Incrémenter le compteur approprié
+                if print_type == 'qr':
+                    etiquette.compteur_impression_qr += 1
+                else:  # ticket
+                    etiquette.compteur_impression_ticket += 1
+                
+                etiquette.save(update_fields=['statut', 'date_impression', 'compteur_impression_ticket', 'compteur_impression_qr'])
                 updated_count += 1
             except Etiquette.DoesNotExist:
                 continue
@@ -1482,6 +1503,24 @@ def get_etiquettes_statistics(request):
         confirmees_ready = etiquettes_confirmees.filter(statut='ready').count()
         confirmees_printed = etiquettes_confirmees.filter(statut='printed').count()
         
+        # Calculer les totaux des compteurs d'impressions
+        total_ticket_prints = Etiquette.objects.aggregate(
+            total=Sum('compteur_impression_ticket')
+        )['total'] or 0
+        
+        total_qr_prints = Etiquette.objects.aggregate(
+            total=Sum('compteur_impression_qr')
+        )['total'] or 0
+        
+        # Compteurs pour les commandes confirmées
+        confirmees_ticket_prints = etiquettes_confirmees.aggregate(
+            total=Sum('compteur_impression_ticket')
+        )['total'] or 0
+        
+        confirmees_qr_prints = etiquettes_confirmees.aggregate(
+            total=Sum('compteur_impression_qr')
+        )['total'] or 0
+
         return JsonResponse({
             'success': True,
             'statistics': {
@@ -1490,13 +1529,17 @@ def get_etiquettes_statistics(request):
                     'draft': draft_count,
                     'ready': ready_count,
                     'printed': printed_count,
-                    'archived': archived_count
+                    'archived': archived_count,
+                    'total_ticket_prints': total_ticket_prints,
+                    'total_qr_prints': total_qr_prints
                 },
                 'confirmed_orders': {
                     'total': confirmees_total,
                     'draft': confirmees_draft,
                     'ready': confirmees_ready,
-                    'printed': confirmees_printed
+                    'printed': confirmees_printed,
+                    'total_ticket_prints': confirmees_ticket_prints,
+                    'total_qr_prints': confirmees_qr_prints
                 }
             }
         })

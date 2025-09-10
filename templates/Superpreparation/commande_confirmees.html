@@ -1456,9 +1456,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Fonction pour mettre à jour le statut d'une étiquette après impression
-    async function updateEtiquetteStatusAfterPrint(etiquetteId) {
+    async function updateEtiquetteStatusAfterPrint(etiquetteId, printType = 'ticket') {
         try {
-            console.log(`🖨️ [COMMANDES CONFIRMEES] Marquage de l'étiquette ${etiquetteId} comme imprimée`);
+            console.log(`🖨️ [COMMANDES CONFIRMEES] Marquage de l'étiquette ${etiquetteId} comme imprimée (type: ${printType})`);
             
             const response = await fetch(`/etiquettes-pro/api/etiquettes/${etiquetteId}/mark-printed/`, {
                 method: 'POST',
@@ -1466,7 +1466,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': getCSRFToken(),
                     'X-Requested-With': 'XMLHttpRequest'
-                }
+                },
+                body: JSON.stringify({
+                    print_type: printType
+                })
             });
 
             if (!response.ok) {
@@ -1481,8 +1484,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Mettre à jour les statistiques
                 await updateEtiquettesStatistics();
                 
-                // Déclencher l'événement de synchronisation
-                dispatchStatusUpdate(etiquetteId, 'printed');
+                // Déclencher l'événement de synchronisation avec les compteurs
+                dispatchStatusUpdate(etiquetteId, 'printed', data.etiquette.compteur_impression_ticket, data.etiquette.compteur_impression_qr);
                 
             } else {
                 console.warn('⚠️ [COMMANDES CONFIRMEES] Erreur lors du marquage:', data.error);
@@ -1561,9 +1564,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Fonction pour marquer plusieurs étiquettes comme imprimées
-    async function markMultipleEtiquettesAsPrinted(etiquetteIds) {
+    async function markMultipleEtiquettesAsPrinted(etiquetteIds, printType = 'ticket') {
         try {
-            console.log(`🖨️ [COMMANDES CONFIRMEES] Marquage de ${etiquetteIds.length} étiquettes comme imprimées`);
+            console.log(`🖨️ [COMMANDES CONFIRMEES] Marquage de ${etiquetteIds.length} étiquettes comme imprimées (type: ${printType})`);
             
             const response = await fetch('/etiquettes-pro/api/etiquettes/mark-multiple-printed/', {
                 method: 'POST',
@@ -1573,7 +1576,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     'X-Requested-With': 'XMLHttpRequest'
                 },
                 body: JSON.stringify({
-                    etiquette_ids: etiquetteIds
+                    etiquette_ids: etiquetteIds,
+                    print_type: printType
                 })
             });
 
@@ -1590,8 +1594,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 await updateEtiquettesStatistics();
                 
                 // Déclencher l'événement de synchronisation pour chaque étiquette
+                // Note: Pour l'impression multiple, nous n'avons pas les compteurs individuels
+                // donc nous utilisons des valeurs par défaut
                 etiquetteIds.forEach(id => {
-                    dispatchStatusUpdate(id, 'printed');
+                    dispatchStatusUpdate(id, 'printed', 0, 0);
                 });
                 
             } else {
@@ -1604,13 +1610,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Fonction pour déclencher les événements de synchronisation
-    function dispatchStatusUpdate(etiquetteId, newStatus) {
+    function dispatchStatusUpdate(etiquetteId, newStatus, compteurTicket = 0, compteurQr = 0) {
         // Déclencher l'événement personnalisé pour la synchronisation
         const event = new CustomEvent('etiquetteStatusUpdated', {
-            detail: { etiquetteId, newStatus }
+            detail: { etiquetteId, newStatus, compteurTicket, compteurQr }
         });
         document.dispatchEvent(event);
-        console.log('🔄 [COMMANDES CONFIRMEES] Événement de mise à jour de statut déclenché:', { etiquetteId, newStatus });
+        console.log('🔄 [COMMANDES CONFIRMEES] Événement de mise à jour de statut déclenché:', { etiquetteId, newStatus, compteurTicket, compteurQr });
     }
     
     // Fonction pour sélectionner toutes les commandes

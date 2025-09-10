@@ -155,6 +155,10 @@ class Etiquette(models.Model):
     date_creation = models.DateTimeField(auto_now_add=True)
     date_impression = models.DateTimeField(null=True, blank=True)
     
+    # Compteurs d'impressions
+    compteur_impression_ticket = models.PositiveIntegerField(default=0, verbose_name="Compteur impression ticket")
+    compteur_impression_qr = models.PositiveIntegerField(default=0, verbose_name="Compteur impression QR")
+    
     # Fichier PDF généré
     fichier_pdf = models.FileField(upload_to='etiquettes_pdf/', null=True, blank=True)
     

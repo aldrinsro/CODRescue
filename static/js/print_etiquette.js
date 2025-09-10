@@ -1102,9 +1102,9 @@ class EtiquettePrinter {
         return csrfToken;
     }
 
-    async markEtiquetteAsPrinted(etiquetteId) {
+    async markEtiquetteAsPrinted(etiquetteId, printType = 'ticket') {
         try {
-            console.log(`🖨️ [PRINT] Marquage de l'étiquette ${etiquetteId} comme imprimée`);
+            console.log(`🖨️ [PRINT] Marquage de l'étiquette ${etiquetteId} comme imprimée (type: ${printType})`);
             
             const response = await fetch(`/etiquettes-pro/api/etiquettes/${etiquetteId}/mark-printed/`, {
                 method: 'POST',
@@ -1112,7 +1112,10 @@ class EtiquettePrinter {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': this.getCSRFToken(),
                     'X-Requested-With': 'XMLHttpRequest'
-                }
+                },
+                body: JSON.stringify({
+                    print_type: printType
+                })
             });
 
             if (!response.ok) {
@@ -1130,8 +1133,8 @@ class EtiquettePrinter {
                 // Mettre à jour les statistiques
                 this.updateStatistics();
                 
-                // Déclencher l'événement de synchronisation
-                this.dispatchStatusUpdate(etiquetteId, 'printed');
+                // Déclencher l'événement de synchronisation avec les compteurs
+                this.dispatchStatusUpdate(etiquetteId, 'printed', data.etiquette.compteur_impression_ticket, data.etiquette.compteur_impression_qr);
                 
             } else {
                 console.warn('⚠️ [PRINT] Erreur lors du marquage:', data.error);
@@ -1234,13 +1237,13 @@ class EtiquettePrinter {
         }
     }
 
-    dispatchStatusUpdate(etiquetteId, newStatus) {
+    dispatchStatusUpdate(etiquetteId, newStatus, compteurTicket = 0, compteurQr = 0) {
         // Déclencher l'événement personnalisé pour la synchronisation
         const event = new CustomEvent('etiquetteStatusUpdated', {
-            detail: { etiquetteId, newStatus }
+            detail: { etiquetteId, newStatus, compteurTicket, compteurQr }
         });
         document.dispatchEvent(event);
-        console.log('🔄 [PRINT] Événement de mise à jour de statut déclenché:', { etiquetteId, newStatus });
+        console.log('🔄 [PRINT] Événement de mise à jour de statut déclenché:', { etiquetteId, newStatus, compteurTicket, compteurQr });
     }
 
     formatDate(date) {
