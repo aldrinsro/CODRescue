@@ -1238,12 +1238,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     const data = await response.json();
                     
                     if (data.success && data.template && data.etiquette) {
-                        console.log(`✅ [COMMANDES CONFIRMEES] Données récupérées pour l'étiquette ${etiquetteId}`);
+                        console.log(`✅ [COMMANDES CONFIRMEES] Données récupérées pour l'étiquette ${etiquetteId} (${data.total_articles || 0} articles)`);
                         return {
                             etiquetteId: etiquetteId,
                             template: data.template,
                             etiquette: data.etiquette,
-                            commande: data.commande
+                            commande: data.commande,
+                            total_articles: data.total_articles || 0
                         };
                 } else {
                         console.warn(`⚠️ [COMMANDES CONFIRMEES] Données incomplètes pour l'étiquette ${etiquetteId}`);
@@ -1348,8 +1349,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Fonction de fallback si le script print_etiquette.js n'est pas disponible
     function generateFallbackEtiquetteHTML(data) {
-        const { template, etiquette, commande } = data;
-        const totalArticles = etiquette.cart_items ? etiquette.cart_items.reduce((sum, item) => sum + (item.quantite || 0), 0) : 0;
+        const { template, etiquette, commande, total_articles } = data;
+        const totalArticles = total_articles || (etiquette.cart_items ? etiquette.cart_items.reduce((sum, item) => sum + (item.quantite || 0), 0) : 0);
         
         return `
         <div class="etiquette-preview">
@@ -1423,6 +1424,26 @@ document.addEventListener('DOMContentLoaded', function() {
                                     ${etiquette.code_data || 'CODE'}
     </div>
 </div>
+                            
+                            <!-- Section entreprise avec tailles agrandies -->
+                            <div class="text-white p-3 text-center" style="background-color: ${template.couleur_principale || '#2563eb'}; margin-top: 10px;">
+                                <div class="text-lg font-bold flex items-center justify-center mb-2">
+                                    <i class="fas fa-building mr-2"></i>
+                                    <span>YOOZAK</span>
+                                </div>
+                                <div class="text-base flex items-center justify-center mb-1">
+                                    <i class="fas fa-globe mr-2"></i>
+                                    <span>www.yoozak.com</span>
+                                </div>
+                                <div class="text-base flex items-center justify-center mb-1">
+                                    <i class="fas fa-phone mr-2"></i>
+                                    <span>06 34 21 56 39 / 47</span>
+                                </div>
+                                <div class="text-base flex items-center justify-center">
+                                    <i class="fas fa-map-marker-alt mr-2"></i>
+                                    <span>SETTAT</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

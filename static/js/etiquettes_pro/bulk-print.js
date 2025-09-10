@@ -176,9 +176,10 @@ class BulkEtiquettePrinter {
                         etiquetteId: etiquetteId,
                         template: data.template,
                         etiquette: data.etiquette,
-                        commande: data.commande
+                        commande: data.commande,
+                        total_articles: data.total_articles || 0
                     });
-                    console.log(`✅ [BULK-PRINT] Données récupérées pour l'étiquette ${etiquetteId}`);
+                    console.log(`✅ [BULK-PRINT] Données récupérées pour l'étiquette ${etiquetteId} (${data.total_articles || 0} articles)`);
                 } else {
                     console.warn(`⚠️ [BULK-PRINT] Données incomplètes pour l'étiquette ${etiquetteId}`);
                 }

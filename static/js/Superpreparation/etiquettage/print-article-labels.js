@@ -366,7 +366,7 @@ class ArticleLabelsPrinter {
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
-                    font-size: 10px;
+                    font-size: 12px;
                     border-top: 1px solid #bdc3c7; /* Bordure plus douce */
                     flex-shrink: 0;
                     min-height: 8mm;
@@ -378,14 +378,14 @@ class ArticleLabelsPrinter {
                 .contact-name {
                     font-weight: bold;
                     color: #2c3e50; /* Couleur de texte plus foncée */
-                    font-size: 12px;
+                    font-size: 14px;
                 }
 
                 .contact-info {
                     text-align: right;
                     color: #555; /* Couleur de texte plus douce */
                     font-weight: normal;
-                    font-size: 11px;
+                    font-size: 13px;
                 }
 
                 .contact-info div {

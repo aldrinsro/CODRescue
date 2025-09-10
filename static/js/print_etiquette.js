@@ -940,19 +940,19 @@ class EtiquettePrinter {
                     </div>
                     ${template.print_show_contact_info !== false ? `
                     <div class="text-white p-3 text-center section-with-border contact-info-section" style="background-color: ${template.couleur_principale}; width: ${template.print_contact_width || 250}px;">
-                        <div class="text-sm font-bold flex items-center justify-center">
+                        <div class="text-lg font-bold flex items-center justify-center">
                             <i class="${template.icone_ville} mr-1"></i>
                             <span>${commande && commande.ville ? commande.ville.nom : 'VILLE NON DÉFINIE'}</span>
                         </div>
-                        <div class="text-xs flex items-center justify-center">
+                        <div class="text-base flex items-center justify-center">
                             <i class="${template.icone_website} mr-1"></i>
                             <span>www.yoozak.com</span>
                         </div>
-                        <div class="text-xs flex items-center justify-center">
+                        <div class="text-base flex items-center justify-center">
                             <i class="${template.icone_telephone} mr-1"></i>
                             <span>06 34 21 56 39 / 47</span>
                         </div>
-                        <div class="text-xs flex items-center justify-center">
+                        <div class="text-base flex items-center justify-center">
                             <i class="fas fa-map-marker-alt mr-1"></i>
                             <span>SETTAT</span>
                         </div>
