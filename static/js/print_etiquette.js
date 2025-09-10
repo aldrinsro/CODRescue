@@ -279,6 +279,10 @@ class EtiquettePrinter {
                         // Même en cas d'erreur, imprimer
                         setTimeout(() => {
                             printWindow.print();
+                            
+                            // Marquer l'étiquette comme imprimée après l'impression
+                            this.markEtiquetteAsPrinted(data.etiquette.id);
+                            
                             printWindow.close();
                         }, 500);
                     }
@@ -289,6 +293,10 @@ class EtiquettePrinter {
             setTimeout(() => {
                 console.log('🔍 [PRINT] Timeout de sécurité atteint, impression forcée');
                 printWindow.print();
+                
+                // Marquer l'étiquette comme imprimée après l'impression
+                this.markEtiquetteAsPrinted(data.etiquette.id);
+                
                 printWindow.close();
             }, 5000);
         };
@@ -1092,6 +1100,147 @@ class EtiquettePrinter {
                          '';
         console.log('🔍 [PRINT] Token CSRF récupéré:', csrfToken ? 'Oui' : 'Non');
         return csrfToken;
+    }
+
+    async markEtiquetteAsPrinted(etiquetteId) {
+        try {
+            console.log(`🖨️ [PRINT] Marquage de l'étiquette ${etiquetteId} comme imprimée`);
+            
+            const response = await fetch(`/etiquettes-pro/api/etiquettes/${etiquetteId}/mark-printed/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.getCSRFToken(),
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`Erreur HTTP: ${response.status}`);
+            }
+
+            const data = await response.json();
+            
+            if (data.success) {
+                console.log('✅ [PRINT] Étiquette marquée comme imprimée:', data.message);
+                
+                // Mettre à jour l'interface utilisateur
+                this.updateEtiquetteStatusInUI(etiquetteId, 'printed');
+                
+                // Mettre à jour les statistiques
+                this.updateStatistics();
+                
+                // Déclencher l'événement de synchronisation
+                this.dispatchStatusUpdate(etiquetteId, 'printed');
+                
+            } else {
+                console.warn('⚠️ [PRINT] Erreur lors du marquage:', data.error);
+            }
+            
+        } catch (error) {
+            console.error('❌ [PRINT] Erreur lors du marquage de l\'étiquette comme imprimée:', error);
+        }
+    }
+
+    updateEtiquetteStatusInUI(etiquetteId, newStatus) {
+        // Mettre à jour le statut dans le tableau du dashboard
+        const statusElement = document.querySelector(`tr[data-etiquette-id="${etiquetteId}"] .etiquette-statut`);
+        if (statusElement) {
+            // Supprimer les classes existantes
+            statusElement.className = 'etiquette-statut px-2 inline-flex text-xs leading-5 font-semibold rounded-full';
+            
+            // Ajouter la nouvelle classe selon le statut
+            if (newStatus === 'printed') {
+                statusElement.classList.add('bg-blue-100', 'text-blue-800');
+                statusElement.textContent = 'Imprimée';
+            } else if (newStatus === 'ready') {
+                statusElement.classList.add('bg-green-100', 'text-green-800');
+                statusElement.textContent = 'Prête';
+            } else if (newStatus === 'draft') {
+                statusElement.classList.add('bg-yellow-100', 'text-yellow-800');
+                statusElement.textContent = 'Brouillon';
+            }
+        }
+        
+        // Mettre à jour le statut dans les cartes mobiles
+        const mobileStatusElement = document.querySelector(`[data-etiquette-id="${etiquetteId}"] .etiquette-statut-mobile`);
+        if (mobileStatusElement) {
+            if (newStatus === 'printed') {
+                mobileStatusElement.className = 'px-1.5 py-0.5 text-xs font-semibold rounded-full bg-blue-100 text-blue-800';
+                mobileStatusElement.innerHTML = '<i class="fas fa-print mr-1"></i>Imprimée';
+            }
+        }
+    }
+
+    async updateStatistics() {
+        try {
+            const response = await fetch('/etiquettes-pro/api/statistics/', {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.getCSRFToken()
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`Erreur HTTP: ${response.status}`);
+            }
+
+            const data = await response.json();
+            
+            if (data.success) {
+                // Mettre à jour les statistiques dans le dashboard
+                this.updateStatisticsInUI(data.statistics);
+            }
+            
+        } catch (error) {
+            console.error('❌ [PRINT] Erreur lors de la mise à jour des statistiques:', error);
+        }
+    }
+
+    updateStatisticsInUI(statistics) {
+        // Mettre à jour les statistiques des commandes confirmées
+        if (statistics.confirmed_orders) {
+            const stats = statistics.confirmed_orders;
+            
+            // Mettre à jour le compteur total
+            const totalElement = document.querySelector('#etiquettes-count');
+            if (totalElement) {
+                totalElement.textContent = stats.total || 0;
+            }
+            
+            // Mettre à jour les cartes de statistiques
+            const readyElement = document.querySelector('.group .text-xl.sm\\:text-2xl.font-bold.text-gray-900');
+            if (readyElement && readyElement.textContent.includes('Prêtes')) {
+                // Trouver l'élément parent et mettre à jour le nombre
+                const parentCard = readyElement.closest('.group');
+                if (parentCard) {
+                    const numberElement = parentCard.querySelector('.text-xl.sm\\:text-2xl.font-bold');
+                    if (numberElement) {
+                        numberElement.textContent = stats.ready || 0;
+                    }
+                }
+            }
+            
+            // Mettre à jour les étiquettes imprimées
+            const printedElements = document.querySelectorAll('.text-xl.sm\\:text-2xl.font-bold');
+            printedElements.forEach(element => {
+                const parentCard = element.closest('.group');
+                if (parentCard && parentCard.textContent.includes('Imprimées')) {
+                    element.textContent = stats.printed || 0;
+                }
+            });
+        }
+    }
+
+    dispatchStatusUpdate(etiquetteId, newStatus) {
+        // Déclencher l'événement personnalisé pour la synchronisation
+        const event = new CustomEvent('etiquetteStatusUpdated', {
+            detail: { etiquetteId, newStatus }
+        });
+        document.dispatchEvent(event);
+        console.log('🔄 [PRINT] Événement de mise à jour de statut déclenché:', { etiquetteId, newStatus });
     }
 
     formatDate(date) {

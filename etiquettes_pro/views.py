@@ -1383,6 +1383,130 @@ def update_template_print_settings(request, template_id):
         })
 
 
+@superviseur_required
+@require_http_methods(["POST"])
+def mark_etiquette_as_printed(request, etiquette_id):
+    """Marquer une étiquette comme imprimée"""
+    try:
+        etiquette = get_object_or_404(Etiquette, id=etiquette_id)
+        
+        # Mettre à jour le statut et la date d'impression
+        from django.utils import timezone
+        etiquette.statut = 'printed'
+        etiquette.date_impression = timezone.now()
+        etiquette.save(update_fields=['statut', 'date_impression'])
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Étiquette {etiquette.reference} marquée comme imprimée',
+            'etiquette': {
+                'id': etiquette.id,
+                'reference': etiquette.reference,
+                'statut': etiquette.statut,
+                'date_impression': etiquette.date_impression.isoformat() if etiquette.date_impression else None
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur lors de la mise à jour: {str(e)}'
+        }, status=500)
+
+
+@superviseur_required
+@require_http_methods(["POST"])
+def mark_multiple_etiquettes_as_printed(request):
+    """Marquer plusieurs étiquettes comme imprimées"""
+    try:
+        data = json.loads(request.body)
+        etiquette_ids = data.get('etiquette_ids', [])
+        
+        if not etiquette_ids:
+            return JsonResponse({
+                'success': False,
+                'error': 'Aucune étiquette spécifiée'
+            }, status=400)
+        
+        from django.utils import timezone
+        updated_count = 0
+        
+        for etiquette_id in etiquette_ids:
+            try:
+                etiquette = Etiquette.objects.get(id=etiquette_id)
+                etiquette.statut = 'printed'
+                etiquette.date_impression = timezone.now()
+                etiquette.save(update_fields=['statut', 'date_impression'])
+                updated_count += 1
+            except Etiquette.DoesNotExist:
+                continue
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'{updated_count} étiquette(s) marquée(s) comme imprimée(s)',
+            'updated_count': updated_count
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur lors de la mise à jour: {str(e)}'
+        }, status=500)
+
+
+@superviseur_required
+@require_http_methods(["GET"])
+def get_etiquettes_statistics(request):
+    """Récupérer les statistiques des étiquettes"""
+    try:
+        # Statistiques générales
+        total_count = Etiquette.objects.count()
+        draft_count = Etiquette.objects.filter(statut='draft').count()
+        ready_count = Etiquette.objects.filter(statut='ready').count()
+        printed_count = Etiquette.objects.filter(statut='printed').count()
+        archived_count = Etiquette.objects.filter(statut='archived').count()
+        
+        # Statistiques pour les commandes confirmées uniquement
+        from commande.models import Commande
+        commandes_confirmees_avec_paniers = Commande.objects.filter(
+            paniers__isnull=False,
+            etats__enum_etat__libelle='Confirmée',
+            etats__date_fin__isnull=True
+        ).distinct()
+        
+        commandes_ids = [cmd.id for cmd in commandes_confirmees_avec_paniers]
+        etiquettes_confirmees = Etiquette.objects.filter(commande_id__in=commandes_ids)
+        
+        confirmees_total = etiquettes_confirmees.count()
+        confirmees_draft = etiquettes_confirmees.filter(statut='draft').count()
+        confirmees_ready = etiquettes_confirmees.filter(statut='ready').count()
+        confirmees_printed = etiquettes_confirmees.filter(statut='printed').count()
+        
+        return JsonResponse({
+            'success': True,
+            'statistics': {
+                'general': {
+                    'total': total_count,
+                    'draft': draft_count,
+                    'ready': ready_count,
+                    'printed': printed_count,
+                    'archived': archived_count
+                },
+                'confirmed_orders': {
+                    'total': confirmees_total,
+                    'draft': confirmees_draft,
+                    'ready': confirmees_ready,
+                    'printed': confirmees_printed
+                }
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur lors de la récupération des statistiques: {str(e)}'
+        }, status=500)
+
 
 @superviseur_required
 @require_http_methods(["DELETE"])

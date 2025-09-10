@@ -37,4 +37,9 @@ urlpatterns = [
     path('api/etiquettes/', views.api_etiquette_list, name='api_etiquette_list'),
     path('api/commandes-with-paniers/', views.get_commandes_with_paniers, name='get_commandes_with_paniers'),
     path('generate-etiquettes-manually/', views.generate_etiquettes_manually, name='generate_etiquettes_manually'),
+    
+    # API pour la gestion des statuts d'impression
+    path('api/etiquettes/<int:etiquette_id>/mark-printed/', views.mark_etiquette_as_printed, name='mark_etiquette_as_printed'),
+    path('api/etiquettes/mark-multiple-printed/', views.mark_multiple_etiquettes_as_printed, name='mark_multiple_etiquettes_as_printed'),
+    path('api/statistics/', views.get_etiquettes_statistics, name='get_etiquettes_statistics'),
 ]

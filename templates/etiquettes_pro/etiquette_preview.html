@@ -987,6 +987,8 @@ fetch('{% url "etiquettes_pro:generate_qrcode_image" etiquette.code_data %}')
 
 <!-- Script d'impression -->
 <script src="{% static 'js/print_etiquette.js' %}"></script>
+<!-- Script de synchronisation des statuts -->
+<script src="{% static 'js/etiquettes_pro/status-sync.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Logging côté client pour le débogage

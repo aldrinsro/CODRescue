@@ -163,16 +163,16 @@
                 </div>
                     <div class="flex items-center space-x-2">
                         <button id="bulk-print-btn" class="theme-button-primary">
-                            <i class="fas fa-print mr-2"></i>Imprimer sélection
+                            <i class="fas fa-print mr-2"></i>Impression multiple
                         </button>
-                        <button id="bulk-qr-details-btn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-2">
-                            <i class="fas fa-qrcode mr-2"></i>Codes QR avec détails
+                        <button id="bulk-qr-details-btn" class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-2">
+                            <i class="fas fa-qrcode mr-2"></i>QR Articles Détails
                         </button>
-                        <button id="bulk-qr-simple-btn" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-2">
-                            <i class="fas fa-qrcode mr-2"></i>Codes QR simples
+                        <button id="bulk-qr-simple-btn" class="bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-2">
+                            <i class="fas fa-qrcode mr-2"></i>QR Articles Simples
                         </button>
                         <button id="bulk-delete-btn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-2">
-                            <i class="fas fa-trash mr-2"></i>Supprimer sélection
+                            <i class="fas fa-trash mr-2"></i>Supprimer multiple
                         </button>
                 </div>
             </div>
@@ -286,9 +286,9 @@
                         <th class="column-selection px-2 py-3 text-left text-xs font-medium text-white uppercase tracking-wider" style="width: 5%;">
                             <input type="checkbox" id="select-all-checkbox" class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" data-target="select-all-btn">
                         </th>
-                        <th class="column-reference px-2 py-3 text-left text-xs font-medium text-white uppercase tracking-wider" style="width: 15%;">Référence</th>
+                        <th class="column-reference px-2 py-3 text-left text-xs font-medium text-white uppercase tracking-wider" style="width: 15%;">ID Commande(Id_YZ)</th>
                         <th class="column-template px-2 py-3 text-left text-xs font-medium text-white uppercase tracking-wider" style="width: 15%;">Template</th>
-                        <th class="column-commande px-2 py-3 text-left text-xs font-medium text-white uppercase tracking-wider" style="width: 15%;">Commande</th>
+                        <th class="column-commande px-2 py-3 text-left text-xs font-medium text-white uppercase tracking-wider" style="width: 15%;">Num Ext Commande</th>
                         <th class="column-statut px-2 py-3 text-left text-xs font-medium text-white uppercase tracking-wider" style="width: 10%;">Statut</th>
                         <th class="column-etat px-2 py-3 text-left text-xs font-medium text-white uppercase tracking-wider" style="width: 12%;">État Commande</th>
                         <th class="column-date px-2 py-3 text-left text-xs font-medium text-white uppercase tracking-wider" style="width: 10%;">Date</th>
@@ -342,10 +342,10 @@
                                 <a href="{% url 'etiquettes_pro:etiquette_preview' item.etiquette.id %}" class="text-indigo-600 hover:text-indigo-900 transition-colors duration-200" title="Aperçu">
                                         <i class="fas fa-eye"></i>
                                     </a>
-                                <a href="{% url 'etiquettes_pro:generate_qr_codes_articles' item.etiquette.id %}" class="text-green-600 hover:text-green-900 transition-colors duration-200" title="Codes QR avec détails">
+                                <a href="{% url 'etiquettes_pro:generate_qr_codes_articles' item.etiquette.id %}" class="text-green-600 hover:text-green-900 transition-colors duration-200" title="QR Articles Détails">
                                     <i class="fas fa-qrcode"></i>
                                 </a>
-                                <a href="{% url 'etiquettes_pro:generate_qr_codes_simple' item.etiquette.id %}" class="text-gray-600 hover:text-gray-900 transition-colors duration-200" title="Codes QR simples">
+                                <a href="{% url 'etiquettes_pro:generate_qr_codes_simple' item.etiquette.id %}" class="text-gray-600 hover:text-gray-900 transition-colors duration-200" title="QR Articles Simples">
                                     <i class="fas fa-qrcode"></i>
                                 </a>
                                 <button class="print-btn text-blue-600 hover:text-blue-900 transition-colors duration-200" data-etiquette-id="{{ item.etiquette.id }}" title="Imprimer">
@@ -390,6 +390,8 @@
     <script src="{% static 'js/etiquettes_pro/bulk-qr-details.js' %}"></script>
     <!-- Script d'impression individuelle -->
     <script src="{% static 'js/print_etiquette.js' %}"></script>
+    <!-- Script de synchronisation des statuts -->
+    <script src="{% static 'js/etiquettes_pro/status-sync.js' %}"></script>
 
     <!-- Repositionner Accès rapide après la Recherche Intelligente -->
     <script>

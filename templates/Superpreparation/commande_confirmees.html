@@ -213,15 +213,15 @@
             
             <!-- Boutons d'impression et codes QR -->
             <button id="bulk-print-btn" class="theme-button-primary">
-                <i class="fas fa-print mr-2"></i>Imprimer sélection
+                <i class="fas fa-print mr-2"></i>Impression multiple
             </button>
             
-            <button id="bulk-qr-details-btn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-2">
-                <i class="fas fa-qrcode mr-2"></i>Codes QR avec détails
+            <button id="bulk-qr-details-btn" class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-2">
+                <i class="fas fa-qrcode mr-2"></i>QR Articles Détails
             </button>
             
-            <button id="bulk-qr-simple-btn" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-2">
-                <i class="fas fa-qrcode mr-2"></i>Codes QR simples
+            <button id="bulk-qr-simple-btn" class="bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-2">
+                <i class="fas fa-qrcode mr-2"></i>QR Articles Simples
             </button>
             
             <!-- Boutons de sélection -->
@@ -1090,6 +1090,8 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- <script src="{% static 'js/etiquettes_pro/bulk-qr-simple.js' %}"></script> -->
 <!-- <script src="{% static 'js/etiquettes_pro/bulk-qr-details.js' %}"></script> -->
 <script src="{% static 'js/print_etiquette.js' %}"></script>
+<!-- Script de synchronisation des statuts -->
+<script src="{% static 'js/etiquettes_pro/status-sync.js' %}"></script>
 
 <!-- Script personnalisé pour la gestion des commandes confirmées -->
 <script>
@@ -1178,6 +1180,9 @@ document.addEventListener('DOMContentLoaded', function() {
             if (window.EtiquettePrinter) {
                 const printer = new window.EtiquettePrinter();
                 await printer.printEtiquette(etiquetteId);
+                
+                // Mettre à jour le statut après impression
+                await updateEtiquetteStatusAfterPrint(etiquetteId);
             } else {
                 // Fallback: créer un bouton temporaire et déclencher le clic
                 const tempButton = document.createElement('button');
@@ -1282,6 +1287,9 @@ document.addEventListener('DOMContentLoaded', function() {
             printWindow.focus();
             setTimeout(() => {
                 printWindow.print();
+                
+                // Marquer toutes les étiquettes comme imprimées
+                markMultipleEtiquettesAsPrinted(printData.map(data => data.etiquetteId));
             }, 500);
             
             console.log(`✅ [COMMANDES CONFIRMEES] Impression multiple lancée avec ${printData.length} étiquettes`);
@@ -1445,6 +1453,164 @@ document.addEventListener('DOMContentLoaded', function() {
     function getCSRFToken() {
         const token = document.querySelector('[name=csrfmiddlewaretoken]');
         return token ? token.value : '';
+    }
+
+    // Fonction pour mettre à jour le statut d'une étiquette après impression
+    async function updateEtiquetteStatusAfterPrint(etiquetteId) {
+        try {
+            console.log(`🖨️ [COMMANDES CONFIRMEES] Marquage de l'étiquette ${etiquetteId} comme imprimée`);
+            
+            const response = await fetch(`/etiquettes-pro/api/etiquettes/${etiquetteId}/mark-printed/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken(),
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`Erreur HTTP: ${response.status}`);
+            }
+
+            const data = await response.json();
+            
+            if (data.success) {
+                console.log('✅ [COMMANDES CONFIRMEES] Étiquette marquée comme imprimée:', data.message);
+                
+                // Mettre à jour les statistiques
+                await updateEtiquettesStatistics();
+                
+                // Déclencher l'événement de synchronisation
+                dispatchStatusUpdate(etiquetteId, 'printed');
+                
+            } else {
+                console.warn('⚠️ [COMMANDES CONFIRMEES] Erreur lors du marquage:', data.error);
+            }
+            
+        } catch (error) {
+            console.error('❌ [COMMANDES CONFIRMEES] Erreur lors du marquage de l\'étiquette comme imprimée:', error);
+        }
+    }
+
+    // Fonction pour mettre à jour les statistiques des étiquettes
+    async function updateEtiquettesStatistics() {
+        try {
+            const response = await fetch('/etiquettes-pro/api/statistics/', {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`Erreur HTTP: ${response.status}`);
+            }
+
+            const data = await response.json();
+            
+            if (data.success) {
+                // Mettre à jour les statistiques dans l'interface
+                updateStatisticsInUI(data.statistics);
+            }
+            
+        } catch (error) {
+            console.error('❌ [COMMANDES CONFIRMEES] Erreur lors de la mise à jour des statistiques:', error);
+        }
+    }
+
+    // Fonction pour mettre à jour l'interface avec les nouvelles statistiques
+    function updateStatisticsInUI(statistics) {
+        // Mettre à jour les statistiques des commandes confirmées
+        if (statistics.confirmed_orders) {
+            const stats = statistics.confirmed_orders;
+            
+            // Mettre à jour le compteur total dans l'en-tête
+            const totalElement = document.querySelector('.text-3xl.font-bold.text-white');
+            if (totalElement && totalElement.textContent.includes('Total confirmées')) {
+                // Trouver l'élément parent et mettre à jour
+                const parentDiv = totalElement.closest('.text-center');
+                if (parentDiv) {
+                    const numberElement = parentDiv.querySelector('.text-3xl.font-bold');
+                    if (numberElement) {
+                        numberElement.textContent = stats.total || 0;
+                    }
+                }
+            }
+            
+            // Mettre à jour les cartes de statistiques
+            const statsCards = document.querySelectorAll('#stats-cards .group');
+            statsCards.forEach(card => {
+                const textElement = card.querySelector('.text-xl.sm\\:text-2xl.font-bold');
+                if (textElement) {
+                    const cardText = card.textContent;
+                    if (cardText.includes('Aujourd\'hui')) {
+                        // Mettre à jour les statistiques d'aujourd'hui si nécessaire
+                    } else if (cardText.includes('Cette semaine')) {
+                        // Mettre à jour les statistiques de la semaine si nécessaire
+                    } else if (cardText.includes('Ce mois')) {
+                        // Mettre à jour les statistiques du mois si nécessaire
+                    } else if (cardText.includes('Total Confirmées')) {
+                        textElement.textContent = stats.total || 0;
+                    }
+                }
+            });
+        }
+    }
+
+    // Fonction pour marquer plusieurs étiquettes comme imprimées
+    async function markMultipleEtiquettesAsPrinted(etiquetteIds) {
+        try {
+            console.log(`🖨️ [COMMANDES CONFIRMEES] Marquage de ${etiquetteIds.length} étiquettes comme imprimées`);
+            
+            const response = await fetch('/etiquettes-pro/api/etiquettes/mark-multiple-printed/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken(),
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    etiquette_ids: etiquetteIds
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Erreur HTTP: ${response.status}`);
+            }
+
+            const data = await response.json();
+            
+            if (data.success) {
+                console.log('✅ [COMMANDES CONFIRMEES] Étiquettes marquées comme imprimées:', data.message);
+                
+                // Mettre à jour les statistiques
+                await updateEtiquettesStatistics();
+                
+                // Déclencher l'événement de synchronisation pour chaque étiquette
+                etiquetteIds.forEach(id => {
+                    dispatchStatusUpdate(id, 'printed');
+                });
+                
+            } else {
+                console.warn('⚠️ [COMMANDES CONFIRMEES] Erreur lors du marquage multiple:', data.error);
+            }
+            
+        } catch (error) {
+            console.error('❌ [COMMANDES CONFIRMEES] Erreur lors du marquage multiple des étiquettes:', error);
+        }
+    }
+
+    // Fonction pour déclencher les événements de synchronisation
+    function dispatchStatusUpdate(etiquetteId, newStatus) {
+        // Déclencher l'événement personnalisé pour la synchronisation
+        const event = new CustomEvent('etiquetteStatusUpdated', {
+            detail: { etiquetteId, newStatus }
+        });
+        document.dispatchEvent(event);
+        console.log('🔄 [COMMANDES CONFIRMEES] Événement de mise à jour de statut déclenché:', { etiquetteId, newStatus });
     }
     
     // Fonction pour sélectionner toutes les commandes

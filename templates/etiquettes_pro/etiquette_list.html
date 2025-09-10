@@ -157,16 +157,16 @@
             </div>
             <div class="flex items-center space-x-2">
                 <button id="bulk-print-btn" class="theme-button-primary">
-                    <i class="fas fa-print mr-2"></i>Imprimer sélection
+                    <i class="fas fa-print mr-2"></i>Impression multiple
                 </button>
-                <button id="bulk-qr-details-btn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-2">
-                    <i class="fas fa-qrcode mr-2"></i>Codes QR avec détails
+                <button id="bulk-qr-details-btn" class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-2">
+                    <i class="fas fa-qrcode mr-2"></i>QR Articles Détails
                 </button>
-                <button id="bulk-qr-simple-btn" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-2">
-                    <i class="fas fa-qrcode mr-2"></i>Codes QR simples
+                <button id="bulk-qr-simple-btn" class="bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-2">
+                    <i class="fas fa-qrcode mr-2"></i>QR Articles Simples
                 </button>
                 <button id="bulk-delete-btn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-2">
-                    <i class="fas fa-trash mr-2"></i>Supprimer sélection
+                    <i class="fas fa-trash mr-2"></i>Supprimer multiple
                 </button>
             </div>
         </div>
@@ -284,11 +284,11 @@
                             <i class="fas fa-eye"></i>
                         </a>
                         <a href="{% url 'etiquettes_pro:generate_qr_codes_articles' etiquette.id %}" 
-                           class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg transition-colors duration-200" title="Codes QR avec détails">
+                           class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg transition-colors duration-200" title="QR Articles Détails">
                             <i class="fas fa-qrcode"></i>
                         </a>
                         <a href="{% url 'etiquettes_pro:generate_qr_codes_simple' etiquette.id %}" 
-                           class="bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded-lg transition-colors duration-200" title="Codes QR simples">
+                           class="bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded-lg transition-colors duration-200" title="QR Articles Simples">
                             <i class="fas fa-qrcode"></i>
                         </a>
                         {% if etiquette.statut == 'draft' %}
