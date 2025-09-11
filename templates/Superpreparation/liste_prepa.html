@@ -142,61 +142,6 @@
 
         <!-- Barre d'outils avec recherche intelligente -->
         <div class="mb-6 flex flex-wrap gap-2 bg-gray-50 p-3 rounded-lg border border-gray-200">
-            <!-- Sélecteur éléments par page -->
-            <form method="GET" class="flex items-center">
-                {% if search_query %}
-                    <input type="hidden" name="search" value="{{ search_query }}">
-                {% endif %}
-                {% if filter_type != 'all' %}
-                    <input type="hidden" name="filter" value="{{ filter_type }}">
-                {% endif %}
-                
-                <!-- Container moderne pour le sélecteur -->
-                <div class="flex items-center bg-white rounded-xl shadow-sm border border-gray-200 px-4 py-2 hover:shadow-md transition-all duration-300 group">
-                    <!-- Icône -->
-                    <div class="mr-3 p-1.5 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 group-hover:from-blue-100 group-hover:to-indigo-100 transition-all duration-300">
-                        <i class="fas fa-list-ol text-blue-600 text-sm"></i>
-                    </div>
-                    
-                    <!-- Label stylisé -->
-                    <label for="itemsPerPage" class="mr-3 text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors duration-300">
-                        Éléments/page
-                    </label>
-                    
-                    <!-- Séparateur -->
-                    <div class="w-px h-6 bg-gray-300 mx-2"></div>
-                    
-                    <!-- Select stylisé (caché) -->
-                    <select id="itemsPerPage" name="items_per_page" onchange="this.form.submit()" 
-                            class="hidden">
-                        <option value="10" {% if items_per_page|default:10 == 10 %}selected{% endif %}>10</option>
-                        <option value="25" {% if items_per_page == 25 %}selected{% endif %}>25</option>
-                        <option value="50" {% if items_per_page == 50 %}selected{% endif %}>50</option>
-                        <option value="100" {% if items_per_page == 100 %}selected{% endif %}>100</option>
-                    </select>
-                    
-                    <!-- Dropdown personnalisé -->
-                    <div id="customDropdown" class="relative">
-                        <!-- Bouton d'affichage avec crochet intégré -->
-                        <button type="button" id="dropdownButton" 
-                                class="px-3 py-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors duration-300 cursor-pointer flex items-center gap-2 hover:bg-blue-50 rounded-lg px-3 py-2 transition-all duration-300">
-                            <span id="selectedValue">10</span>
-                            <i class="fas fa-chevron-down text-xs transition-transform duration-300"></i>
-                        </button>
-                        
-                        <!-- Liste des options -->
-                        <div id="dropdownOptions" class="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible transform scale-95 -translate-y-2 transition-all duration-200 z-50 min-w-[80px]">
-                            <div class="py-1">
-                                <div class="option-item px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm text-gray-700 hover:text-blue-700 transition-colors duration-150" data-value="10">10</div>
-                                <div class="option-item px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm text-gray-700 hover:text-blue-700 transition-colors duration-150" data-value="25">25</div>
-                                <div class="option-item px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm text-gray-700 hover:text-blue-700 transition-colors duration-150" data-value="50">50</div>
-                                <div class="option-item px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm text-gray-700 hover:text-blue-700 transition-colors duration-150" data-value="100">100</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </form>
-
             <!-- Barre de recherche intelligente -->
             <div class="relative ml-auto">
                 <div class="mb-3">
@@ -941,61 +886,15 @@
             </table>
         </div>
 
-        <!-- Pagination -->
-        {% if commandes_affectees.has_other_pages %}
-        <div class="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6 mt-4">
-            <div class="flex flex-1 justify-between sm:hidden">
-                {% if commandes_affectees.has_previous %}
-                    <a href="?page={{ commandes_affectees.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if items_per_page %}&items_per_page={{ items_per_page }}{% endif %}" class="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Précédent</a>
-                {% endif %}
-                {% if commandes_affectees.has_next %}
-                    <a href="?page={{ commandes_affectees.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if items_per_page %}&items_per_page={{ items_per_page }}{% endif %}" class="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Suivant</a>
-                {% endif %}
-            </div>
-            <div class="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
-                <div>
-                    <p class="text-sm text-gray-700">
-                        Affichage de
-                        <span class="font-medium">{{ commandes_affectees.start_index }}</span>
-                        à
-                        <span class="font-medium">{{ commandes_affectees.end_index }}</span>
-                        sur
-                        <span class="font-medium">{{ commandes_affectees.paginator.count }}</span>
-                        résultats
-                    </p>
-                </div>
-                <div>
-                    <nav class="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
-                        {% if commandes_affectees.has_previous %}
-                            <a href="?page={{ commandes_affectees.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if items_per_page %}&items_per_page={{ items_per_page }}{% endif %}" class="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20">
-                                <span class="sr-only">Précédent</span>
-                                <i class="fas fa-chevron-left"></i>
-                            </a>
-                        {% endif %}
-                        {% for p in commandes_affectees.paginator.page_range %}
-                            {% if p == commandes_affectees.number %}
-                                <span class="relative z-10 inline-flex items-center bg-blue-600 px-4 py-2 text-sm font-semibold text-white focus:z-20">{{ p }}</span>
-                            {% else %}
-                                <a href="?page={{ p }}{% if search_query %}&search={{ search_query }}{% endif %}{% if items_per_page %}&items_per_page={{ items_per_page }}{% endif %}" class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20">{{ p }}</a>
-                            {% endif %}
-                        {% endfor %}
-                        {% if commandes_affectees.has_next %}
-                            <a href="?page={{ commandes_affectees.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if items_per_page %}&items_per_page={{ items_per_page }}{% endif %}" class="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20">
-                                <span class="sr-only">Suivant</span>
-                                <i class="fas fa-chevron-right"></i>
-                            </a>
-                        {% endif %}
-                    </nav>
-                </div>
-            </div>
-        </div>
-        {% endif %}
+        <!-- Pagination (client) -->
+        <div data-superprep-pagination data-items-selector="tbody tr" data-container-selector="table" data-per-page="10"></div>
     </div>
 </div>
 
 {% endblock %}
 
 {% block extra_js %}
+{{ block.super }}
 <script src="{% static 'js/Suivi_des_Commandes/liste-prepra-smart-search.js' %}"></script>
 
 <script>

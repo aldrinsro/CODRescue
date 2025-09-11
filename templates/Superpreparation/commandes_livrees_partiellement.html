@@ -847,6 +847,9 @@
             </table>
         </div>
     </div>
+
+    <!-- Pagination (client) -->
+    <div data-superprep-pagination data-items-selector="tbody tr" data-container-selector="table" data-per-page="25"></div>
 </div>
 
 <script>
@@ -909,13 +912,17 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
 <!-- Script de recherche intelligente -->
 <script src="{% static 'js/Superpreparation/Suivi_des_Commandes/suivi-commandes-smart-search.js' %}"></script>
 <script>
-// Initialiser la recherche intelligente pour cette page
 document.addEventListener('DOMContentLoaded', function() {
-    initSuiviCommandesSearch('livrees_partiellement');
+    if (typeof initSuiviCommandesSearch === 'function') {
+        initSuiviCommandesSearch('livrees_partiellement');
+    }
 });
 </script>
-
 {% endblock %}

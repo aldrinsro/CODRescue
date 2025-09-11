@@ -765,7 +765,7 @@
                 </div>
             </div>
         </div>
-    </div>
+        </div>
 
     {% include 'Superpreparation/includes/smart-search-toolbar.html' %}
     <div class="flex justify-end mt-2">
@@ -773,8 +773,8 @@
                 class="inline-flex items-center px-3 py-2 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium rounded transition-colors h-10" title="Sélectionner les colonnes">
             <i class="fas fa-columns mr-2 text-gray-500"></i>
             Sélectionner les colonnes
-        </button>
-    </div>
+                    </button>
+                </div>
 
         <!-- Indicateur de résultats -->
         <div id="searchResults" class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md hidden">
@@ -1005,14 +1005,9 @@
             </tbody>
         </table>
     </div>
-    {% else %}
-    <div class="empty-state">
-        <div class="empty-state-icon">
-            <i class="fas fa-inbox"></i>
-        </div>
-        <h3 class="text-lg font-medium text-gray-600 mb-2">Aucune commande en préparation</h3>
-        <p class="text-gray-500">Aucune commande n'est actuellement en cours de préparation.</p>
-    </div>
+
+    <!-- Pagination (client) -->
+    <div data-superprep-pagination data-items-selector="tbody tr" data-container-selector="table" data-per-page="25"></div>
     {% endif %}
 </div>
 
@@ -1099,18 +1094,9 @@
         showToast('Recherche effacée', 'info');
     }
 
-    // Script de gestion de la sidebar
+    // Script de gestion du redimensionnement (sidebar gérée par base.html)
     document.addEventListener('DOMContentLoaded', function() {
-        const menuToggle = document.getElementById('menu-toggle');
         const body = document.body;
-        
-        if (menuToggle) {
-            menuToggle.addEventListener('click', function() {
-                body.classList.toggle('sidebar-open');
-                body.classList.toggle('sidebar-collapsed');
-                menuToggle.classList.toggle('hamburger-active');
-            });
-        }
         
         // Gestion du redimensionnement
         window.addEventListener('resize', () => {
@@ -1151,6 +1137,10 @@
     });
 </script>
 
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
 <!-- Script de recherche intelligente (standardisé) -->
 <script src="{% static 'js/Superpreparation/Suivi_des_Commandes/suivi-commandes-smart-search.js' %}"></script>
 <script>
@@ -1161,5 +1151,4 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
-
 {% endblock %}

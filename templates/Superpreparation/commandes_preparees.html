@@ -699,95 +699,95 @@
     </div>
 
     <!-- Barre d'outils avec recherche intelligente (placée hors de la carte du tableau) -->
-    <div class="mb-6 flex flex-wrap gap-2 bg-gray-50 p-3 rounded-lg border border-gray-200">
-        <!-- Sélecteur éléments par page -->
-        <form method="GET" class="flex items-center">
-            {% if search_query %}
-                <input type="hidden" name="search" value="{{ search_query }}">
-            {% endif %}
-            
-            <!-- Container moderne pour le sélecteur -->
-            <div class="flex items-center bg-white rounded-xl shadow-sm border border-gray-200 px-4 py-2 hover:shadow-md transition-all duration-300 group">
-                <!-- Icône -->
-                <div class="mr-3 p-1.5 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 group-hover:from-blue-100 group-hover:to-indigo-100 transition-all duration-300">
-                    <i class="fas fa-list-ol text-blue-600 text-sm"></i>
-                </div>
+        <div class="mb-6 flex flex-wrap gap-2 bg-gray-50 p-3 rounded-lg border border-gray-200">
+            <!-- Sélecteur éléments par page -->
+            <form method="GET" class="flex items-center">
+                {% if search_query %}
+                    <input type="hidden" name="search" value="{{ search_query }}">
+                {% endif %}
                 
-                <!-- Label stylisé -->
-                <label for="itemsPerPage" class="mr-3 text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors duration-300">
-                    Éléments/page
-                </label>
-                
-                <!-- Séparateur -->
-                <div class="w-px h-6 bg-gray-300 mx-2"></div>
-                
-                <!-- Select stylisé -->
-                <select id="itemsPerPage" name="items_per_page" onchange="this.form.submit()" 
-                        class="px-3 py-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors duration-300 cursor-pointer border-none bg-transparent focus:outline-none">
-                    <option value="10" {% if items_per_page|default:10 == 10 %}selected{% endif %}>10</option>
-                    <option value="25" {% if items_per_page == 25 %}selected{% endif %}>25</option>
-                    <option value="50" {% if items_per_page == 50 %}selected{% endif %}>50</option>
-                    <option value="100" {% if items_per_page == 100 %}selected{% endif %}>100</option>
-                </select>
-            </div>
-        </form>
-
-        <!-- Barre de recherche intelligente -->
-        <div class="relative ml-auto">
-            <div class="mb-3">
-                <p class="text-gray-700 text-sm">
-                    Recherche intelligente et filtres avancés pour optimiser votre suivi des commandes.
-                </p>
-            </div>
-            <div class="flex items-center space-x-2">
-                <div class="relative">
-                    <input type="text" id="smartSearch" 
-                           placeholder="Rechercher par Numéro Commande, client, téléphone..." 
-                           class="block px-4 py-2 pr-10 border border-gray-300 rounded shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm w-64 h-10"
-                           autocomplete="off">
-                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
-                        <i class="fas fa-search text-gray-400"></i>
+                <!-- Container moderne pour le sélecteur -->
+                <div class="flex items-center bg-white rounded-xl shadow-sm border border-gray-200 px-4 py-2 hover:shadow-md transition-all duration-300 group">
+                    <!-- Icône -->
+                    <div class="mr-3 p-1.5 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 group-hover:from-blue-100 group-hover:to-indigo-100 transition-all duration-300">
+                        <i class="fas fa-list-ol text-blue-600 text-sm"></i>
                     </div>
+                    
+                    <!-- Label stylisé -->
+                    <label for="itemsPerPage" class="mr-3 text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors duration-300">
+                        Éléments/page
+                    </label>
+                    
+                    <!-- Séparateur -->
+                    <div class="w-px h-6 bg-gray-300 mx-2"></div>
+                    
+                    <!-- Select stylisé -->
+                    <select id="itemsPerPage" name="items_per_page" onchange="this.form.submit()" 
+                            class="px-3 py-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors duration-300 cursor-pointer border-none bg-transparent focus:outline-none">
+                        <option value="10" {% if items_per_page|default:10 == 10 %}selected{% endif %}>10</option>
+                        <option value="25" {% if items_per_page == 25 %}selected{% endif %}>25</option>
+                        <option value="50" {% if items_per_page == 50 %}selected{% endif %}>50</option>
+                        <option value="100" {% if items_per_page == 100 %}selected{% endif %}>100</option>
+                    </select>
                 </div>
-                <button onclick="clearSmartSearch()" 
-                        class="inline-flex items-center px-3 py-2 bg-gray-500 hover:bg-gray-600 text-white text-sm font-medium rounded transition-colors h-10">
-                    <i class="fas fa-times"></i>
-                </button>
-                <button onclick="toggleAdvancedSearch()" 
-                        class="inline-flex items-center px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded transition-colors h-10">
-                    <i class="fas fa-filter mr-2"></i>
-                    Filtres
-                </button>
+            </form>
+
+            <!-- Barre de recherche intelligente -->
+            <div class="relative ml-auto">
+                <div class="mb-3">
+                    <p class="text-gray-700 text-sm">
+                        Recherche intelligente et filtres avancés pour optimiser votre suivi des commandes.
+                    </p>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <div class="relative">
+                        <input type="text" id="smartSearch" 
+                           placeholder="Rechercher par Numéro Commande, client, téléphone..." 
+                               class="block px-4 py-2 pr-10 border border-gray-300 rounded shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm w-64 h-10"
+                               autocomplete="off">
+                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                            <i class="fas fa-search text-gray-400"></i>
+                        </div>
+                    </div>
+                    <button onclick="clearSmartSearch()" 
+                            class="inline-flex items-center px-3 py-2 bg-gray-500 hover:bg-gray-600 text-white text-sm font-medium rounded transition-colors h-10">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    <button onclick="toggleAdvancedSearch()" 
+                            class="inline-flex items-center px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded transition-colors h-10">
+                        <i class="fas fa-filter mr-2"></i>
+                        Filtres
+                    </button>
                 <button id="columnToggle" onclick="toggleColumnVisibility()" 
                         class="inline-flex items-center px-3 py-2 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium rounded transition-colors h-10" title="Sélectionner les colonnes">
                     <i class="fas fa-columns mr-2 text-gray-500"></i>
                     Sélectionner les colonnes
-                </button>
-            </div>
-            
-            <!-- Filtres avancés -->
-            <div id="advancedSearch" class="hidden absolute top-full left-0 mt-2 bg-white border border-gray-300 rounded-md shadow-lg p-4 z-50 min-w-96">
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
+                    </button>
+                </div>
+                
+                <!-- Filtres avancés -->
+                <div id="advancedSearch" class="hidden absolute top-full left-0 mt-2 bg-white border border-gray-300 rounded-md shadow-lg p-4 z-50 min-w-96">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Numéro Commande</label>
                         <input type="text" id="filterIdYz" placeholder="Ex: 212268" 
-                               class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">N° Externe</label>
+                                   class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">N° Externe</label>
                         <input type="text" id="filterNumCmd" placeholder="Ex: YCN-000290" 
-                               class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Client</label>
-                        <input type="text" id="filterClient" placeholder="Nom ou prénom..." 
-                               class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Téléphone</label>
-                        <input type="text" id="filterPhone" placeholder="Numéro..." 
-                               class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
-                    </div>
+                                   class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Client</label>
+                            <input type="text" id="filterClient" placeholder="Nom ou prénom..." 
+                                   class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Téléphone</label>
+                            <input type="text" id="filterPhone" placeholder="Numéro..." 
+                                   class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
+                        </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Adresse</label>
                         <input type="text" id="filterAdresse" placeholder="Adresse client..." 
@@ -806,383 +806,336 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Ville & Région</label>
                         <input type="text" id="filterVilleRegion" placeholder="Ville/région..." 
-                               class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
+                                   class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Date Préparation</label>
+                            <input type="date" id="filterDatePreparation" 
+                                   class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Total Min</label>
+                            <input type="number" id="filterTotalMin" placeholder="0" 
+                                   class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Total Max</label>
+                            <input type="number" id="filterTotalMax" placeholder="1000" 
+                                   class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Opérateur</label>
+                            <input type="text" id="filterOperateur" placeholder="Opérateur..." 
+                                   class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Date Préparation</label>
-                        <input type="date" id="filterDatePreparation" 
-                               class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Total Min</label>
-                        <input type="number" id="filterTotalMin" placeholder="0" 
-                               class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Total Max</label>
-                        <input type="number" id="filterTotalMax" placeholder="1000" 
-                               class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Opérateur</label>
-                        <input type="text" id="filterOperateur" placeholder="Opérateur..." 
-                               class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
-                    </div>
-                </div>
-                <div class="mt-4 flex justify-between">
-                    <button onclick="applyFilters()" 
+                    <div class="mt-4 flex justify-between">
+                        <button onclick="applyFilters()" 
                             class="inline-flex items-center px-4 py-2 text-white text-sm font-medium rounded transition-colors h-10"
                             style="background-color: var(--preparation-primary);">
-                        <i class="fas fa-check mr-2"></i>
-                        Appliquer
-                    </button>
-                    <button onclick="clearFilters()" 
-                            class="inline-flex items-center px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white text-sm font-medium rounded transition-colors h-10">
-                        <i class="fas fa-eraser mr-2"></i>
-                        Effacer
-                    </button>
+                            <i class="fas fa-check mr-2"></i>
+                            Appliquer
+                        </button>
+                        <button onclick="clearFilters()" 
+                                class="inline-flex items-center px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white text-sm font-medium rounded transition-colors h-10">
+                            <i class="fas fa-eraser mr-2"></i>
+                            Effacer
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Indicateur de résultats -->
-    <div id="searchResults" class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md hidden">
-        <div class="flex items-center justify-between">
-            <div class="flex items-center">
-                <i class="fas fa-search text-blue-600 mr-2"></i>
-                <span class="text-blue-800">
-                    <span id="resultCount">0</span> résultat(s) trouvé(s)
-                </span>
-            </div>
-            <button onclick="clearAllSearch()" class="text-blue-600 hover:text-blue-800 text-sm">
-                <i class="fas fa-times mr-1"></i>Effacer tout
-            </button>
-        </div>
-    </div>
-
-    <!-- Message si aucun résultat -->
-    {% if not commandes_preparees %}
-    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-3 mb-4">
-        <div class="flex">
-            <div class="flex-shrink-0">
-                <i class="fas fa-exclamation-triangle text-yellow-400"></i>
-            </div>
-            <div class="ml-3">
-                <p class="text-sm text-yellow-700">
-                    {% if search_query %}
-                        Aucune commande préparée trouvée pour la recherche "{{ search_query }}".
-                    {% else %}
-                        Aucune commande préparée pour le moment.
-                    {% endif %}
-                </p>
+        <!-- Indicateur de résultats -->
+        <div id="searchResults" class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md hidden">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <i class="fas fa-search text-blue-600 mr-2"></i>
+                    <span class="text-blue-800">
+                        <span id="resultCount">0</span> résultat(s) trouvé(s)
+                    </span>
+                </div>
+                <button onclick="clearAllSearch()" class="text-blue-600 hover:text-blue-800 text-sm">
+                    <i class="fas fa-times mr-1"></i>Effacer tout
+                </button>
             </div>
         </div>
-    </div>
-    {% endif %}
 
-    <!-- Tableau des commandes préparées -->
-    {% if commandes_preparees %}
+        <!-- Message si aucun résultat -->
+        {% if not commandes_preparees %}
+        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-3 mb-4">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-exclamation-triangle text-yellow-400"></i>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm text-yellow-700">
+                        {% if search_query %}
+                            Aucune commande préparée trouvée pour la recherche "{{ search_query }}".
+                        {% else %}
+                            Aucune commande préparée pour le moment.
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Tableau des commandes préparées -->
+        {% if commandes_preparees %}
     <div class="table-responsive mb-6 overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0" id="tableScrollContainer">
         <table id="cmdTable" class="min-w-full divide-y divide-gray-200 text-xs sm:text-sm min-w-[1000px] lg:min-w-[1200px] xl:min-w-[1400px]" style="table-layout:auto;">
             <thead class="sticky top-0 z-10" style="background-color: var(--preparation-primary);">
-                <tr>
-                    <th class="px-3 py-2 text-left">
-                        <input type="checkbox" id="selectAll" class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500">
-                    </th>
+                    <tr>
+                        <th class="px-3 py-2 text-left">
+                            <input type="checkbox" id="selectAll" class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500">
+                        </th>
                     <th class="px-3 py-2 text-left text-xs font-medium text-white uppercase tracking-wider">Numéro</th>
                     <th class="px-3 py-2 text-left text-xs font-medium text-white uppercase tracking-wider">N° Ext.</th>
-                    <th class="px-3 py-2 text-left text-xs font-medium text-white uppercase tracking-wider">Client</th>
-                    <th class="px-3 py-2 text-left text-xs font-medium text-white uppercase tracking-wider">Téléphone</th>
-                    <th class="px-3 py-2 text-left text-xs font-medium text-white uppercase tracking-wider">Ville & Région</th>
-                    <th class="px-3 py-2 text-left text-xs font-medium text-white uppercase tracking-wider">Total</th>
-                    <th class="px-3 py-2 text-left text-xs font-medium text-white uppercase tracking-wider">Date Préparation</th>
-                    <th class="px-3 py-2 text-left text-xs font-medium text-white uppercase tracking-wider">Préparée par</th>
-                    <th class="px-3 py-2 text-left text-xs font-medium text-white uppercase tracking-wider">État</th>
-                    <th class="px-3 py-2 text-center text-xs font-medium text-white uppercase tracking-wider">Articles</th>
-                    <th class="px-3 py-2 text-center text-xs font-medium text-white uppercase tracking-wider">Actions</th>
-                </tr>
-            </thead>
-            <tbody id="commandTableBody" class="bg-white divide-y divide-gray-200">
-                {% for commande in commandes_preparees %}
-                <tr class="hover:bg-gray-50 transition-colors border-b border-gray-200 commande-row" 
-                    data-id-yz="{{ commande.id_yz }}"
-                    data-num-cmd="{{ commande.num_cmd|default:'' }}"
-                    data-client="{{ commande.client.nom }} {{ commande.client.prenom }}"
-                    data-phone="{{ commande.client.numero_tel|default:'' }}"
-                    data-email="{{ commande.client.email|default:'' }}"
-                    data-ville-client="{{ commande.ville_init|default:'' }}"
-                    data-ville-region="{% if commande.ville %}{{ commande.ville.nom }} {{ commande.ville.region.nom }}{% endif %}"
-                    data-adresse="{% if commande.client.adresse %}{{ commande.client.adresse }}{% endif %}"
-                    data-date-preparation="{% for etat in commande.etats.all %}{% if etat.enum_etat.libelle == 'Préparée' and not etat.date_fin %}{{ etat.date_debut|date:'d/m/Y' }}{% endif %}{% endfor %}"
-                    data-total="{{ commande.total_cmd }}"
-                    data-etat="Préparée"
-                    data-operateur="{% for etat in commande.etats.all %}{% if etat.enum_etat.libelle == 'Préparée' and not etat.date_fin %}{{ etat.operateur.prenom }} {{ etat.operateur.nom }}{% endif %}{% endfor %}">
+                        <th class="px-3 py-2 text-left text-xs font-medium text-white uppercase tracking-wider">Client</th>
+                        <th class="px-3 py-2 text-left text-xs font-medium text-white uppercase tracking-wider">Téléphone</th>
+                        <th class="px-3 py-2 text-left text-xs font-medium text-white uppercase tracking-wider">Ville & Région</th>
+                        <th class="px-3 py-2 text-left text-xs font-medium text-white uppercase tracking-wider">Total</th>
+                        <th class="px-3 py-2 text-left text-xs font-medium text-white uppercase tracking-wider">Date Préparation</th>
+                        <th class="px-3 py-2 text-left text-xs font-medium text-white uppercase tracking-wider">Préparée par</th>
+                        <th class="px-3 py-2 text-left text-xs font-medium text-white uppercase tracking-wider">État</th>
+                        <th class="px-3 py-2 text-center text-xs font-medium text-white uppercase tracking-wider">Articles</th>
+                        <th class="px-3 py-2 text-center text-xs font-medium text-white uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="commandTableBody" class="bg-white divide-y divide-gray-200">
+                    {% for commande in commandes_preparees %}
+                    <tr class="hover:bg-gray-50 transition-colors border-b border-gray-200 commande-row" 
+                        data-id-yz="{{ commande.id_yz }}"
+                        data-num-cmd="{{ commande.num_cmd|default:'' }}"
+                        data-client="{{ commande.client.nom }} {{ commande.client.prenom }}"
+                        data-phone="{{ commande.client.numero_tel|default:'' }}"
+                        data-email="{{ commande.client.email|default:'' }}"
+                        data-ville-client="{{ commande.ville_init|default:'' }}"
+                        data-ville-region="{% if commande.ville %}{{ commande.ville.nom }} {{ commande.ville.region.nom }}{% endif %}"
+                        data-adresse="{% if commande.client.adresse %}{{ commande.client.adresse }}{% endif %}"
+                        data-date-preparation="{% for etat in commande.etats.all %}{% if etat.enum_etat.libelle == 'Préparée' and not etat.date_fin %}{{ etat.date_debut|date:'d/m/Y' }}{% endif %}{% endfor %}"
+                        data-total="{{ commande.total_cmd }}"
+                        data-etat="Préparée"
+                        data-operateur="{% for etat in commande.etats.all %}{% if etat.enum_etat.libelle == 'Préparée' and not etat.date_fin %}{{ etat.operateur.prenom }} {{ etat.operateur.nom }}{% endif %}{% endfor %}">
 
-                    <!-- Checkbox de sélection -->
-                    <td class="px-4 py-4 whitespace-nowrap text-center">
-                        <input type="checkbox" class="commande-checkbox form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" data-commande-id="{{ commande.id }}">
-                    </td>
+                        <!-- Checkbox de sélection -->
+                        <td class="px-4 py-4 whitespace-nowrap text-center">
+                            <input type="checkbox" class="commande-checkbox form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" data-commande-id="{{ commande.id }}">
+                        </td>
 
-                    <!-- ID YZ -->
-                    <td class="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900 border-r" style="border-color: #F5DEB3;">
-                        <span class="font-bold" style="color: #2e1b22;">{{ commande.id_yz }}</span>
-                    </td>
+                        <!-- ID YZ -->
+                        <td class="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900 border-r" style="border-color: #F5DEB3;">
+                            <span class="font-bold" style="color: #2e1b22;">{{ commande.id_yz }}</span>
+                        </td>
 
-                    <!-- N° Externe -->
-                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-600 border-r" style="border-color: #F5DEB3;">
-                        {{ commande.num_cmd|default:"-" }}
-                    </td>
+                        <!-- N° Externe -->
+                        <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-600 border-r" style="border-color: #F5DEB3;">
+                            {{ commande.num_cmd|default:"-" }}
+                        </td>
 
-                    <!-- Client -->
-                    <td class="px-4 py-4 whitespace-nowrap text-sm border-r" style="border-color: #F5DEB3;">
-                        <div class="text-sm font-medium text-gray-900">{{ commande.client.prenom }} {{ commande.client.nom }}</div>
-                        {% if commande.client.email %}
-                        <div class="text-xs text-gray-500">{{ commande.client.email }}</div>
-                        {% endif %}
-                    </td>
-
-                    <!-- Téléphone -->
-                    <td class="px-4 py-4 whitespace-nowrap text-sm border-r" style="border-color: #F5DEB3;">
-                        {% if commande.client.numero_tel %}
-                        <div class="text-sm text-gray-900 font-medium">
-                            <i class="fas fa-phone mr-1"></i>
-                            {{ commande.client.numero_tel }}
-                        </div>
-                        {% else %}
-                        <div class="text-sm text-gray-500">Non renseigné</div>
-                        {% endif %}
-                    </td>
-
-                    <!-- Ville & Région -->
-                    <td class="px-4 py-4 whitespace-nowrap text-sm border-r" style="border-color: #F5DEB3;">
-                        {% if commande.ville %}
-                            <div class="text-sm text-gray-900">{{ commande.ville.nom }}</div>
-                            <div class="text-xs text-gray-500">{{ commande.ville.region.nom_region }}</div>
-                        {% else %}
-                            <div class="text-sm text-gray-500">Non définie</div>
-                        {% endif %}
-                    </td>
-
-                    <!-- Total -->
-                    <td class="px-4 py-4 whitespace-nowrap text-sm border-r" style="border-color: #F5DEB3;">
-                        <div class="text-sm font-bold text-green-600">{{ commande.total_cmd|floatformat:2 }} DH</div>
-                    </td>
-
-                    <!-- Date Préparation -->
-                    <td class="px-4 py-4 whitespace-nowrap text-sm border-r" style="border-color: #F5DEB3;">
-                        {% for etat in commande.etats.all %}
-                            {% if etat.enum_etat.libelle == 'Préparée' and not etat.date_fin %}
-                                <div class="text-sm text-gray-900">{{ etat.date_debut|date:"d/m/Y" }}</div>
-                                <div class="text-xs text-gray-500">{{ etat.date_debut|date:"H:i" }}</div>
+                        <!-- Client -->
+                        <td class="px-4 py-4 whitespace-nowrap text-sm border-r" style="border-color: #F5DEB3;">
+                            <div class="text-sm font-medium text-gray-900">{{ commande.client.prenom }} {{ commande.client.nom }}</div>
+                            {% if commande.client.email %}
+                            <div class="text-xs text-gray-500">{{ commande.client.email }}</div>
                             {% endif %}
-                        {% endfor %}
-                    </td>
+                        </td>
 
-                    <!-- Préparée par -->
-                    <td class="px-4 py-4 whitespace-nowrap text-sm border-r" style="border-color: #F5DEB3;">
-                        {% for etat in commande.etats.all %}
-                            {% if etat.enum_etat.libelle == 'Préparée' and not etat.date_fin %}
-                                <div class="text-sm font-medium text-gray-900">{{ etat.operateur.prenom }} {{ etat.operateur.nom }}</div>
+                        <!-- Téléphone -->
+                        <td class="px-4 py-4 whitespace-nowrap text-sm border-r" style="border-color: #F5DEB3;">
+                            {% if commande.client.numero_tel %}
+                            <div class="text-sm text-gray-900 font-medium">
+                                <i class="fas fa-phone mr-1"></i>
+                                {{ commande.client.numero_tel }}
+                            </div>
+                            {% else %}
+                            <div class="text-sm text-gray-500">Non renseigné</div>
                             {% endif %}
-                        {% endfor %}
-                    </td>
+                        </td>
 
-                    <!-- État -->
-                    <td class="px-4 py-4 whitespace-nowrap text-sm border-r" style="border-color: #F5DEB3;">
-                        <div class="flex flex-col space-y-1">
-                            <!-- État actuel avec icône d'information -->
-                            <div class="flex items-center">
-                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                    <i class="fas fa-check-circle mr-1"></i>
-                                    Préparée
-                                </span>
+                        <!-- Ville & Région -->
+                        <td class="px-4 py-4 whitespace-nowrap text-sm border-r" style="border-color: #F5DEB3;">
+                            {% if commande.ville %}
+                                <div class="text-sm text-gray-900">{{ commande.ville.nom }}</div>
+                                <div class="text-xs text-gray-500">{{ commande.ville.region.nom_region }}</div>
+                            {% else %}
+                                <div class="text-sm text-gray-500">Non définie</div>
+                            {% endif %}
+                        </td>
+
+                        <!-- Total -->
+                        <td class="px-4 py-4 whitespace-nowrap text-sm border-r" style="border-color: #F5DEB3;">
+                            <div class="text-sm font-bold text-green-600">{{ commande.total_cmd|floatformat:2 }} DH</div>
+                        </td>
+
+                        <!-- Date Préparation -->
+                        <td class="px-4 py-4 whitespace-nowrap text-sm border-r" style="border-color: #F5DEB3;">
+                            {% for etat in commande.etats.all %}
+                                {% if etat.enum_etat.libelle == 'Préparée' and not etat.date_fin %}
+                                    <div class="text-sm text-gray-900">{{ etat.date_debut|date:"d/m/Y" }}</div>
+                                    <div class="text-xs text-gray-500">{{ etat.date_debut|date:"H:i" }}</div>
+                                {% endif %}
+                            {% endfor %}
+                        </td>
+
+                        <!-- Préparée par -->
+                        <td class="px-4 py-4 whitespace-nowrap text-sm border-r" style="border-color: #F5DEB3;">
+                            {% for etat in commande.etats.all %}
+                                {% if etat.enum_etat.libelle == 'Préparée' and not etat.date_fin %}
+                                    <div class="text-sm font-medium text-gray-900">{{ etat.operateur.prenom }} {{ etat.operateur.nom }}</div>
+                                {% endif %}
+                            {% endfor %}
+                        </td>
+
+                        <!-- État -->
+                        <td class="px-4 py-4 whitespace-nowrap text-sm border-r" style="border-color: #F5DEB3;">
+                            <div class="flex flex-col space-y-1">
+                                <!-- État actuel avec icône d'information -->
+                                <div class="flex items-center">
+                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                        <i class="fas fa-check-circle mr-1"></i>
+                                        Préparée
+                                    </span>
+                                    
+                                    <!-- Bouton pour afficher/masquer les détails d'état -->
+                                    <button onclick="toggleEtatDetails('{{ commande.id }}')" 
+                                            class="ml-2 w-6 h-6 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-all duration-300 transform hover:scale-110"
+                                            title="Afficher/masquer les détails d'état">
+                                        <i class="fas fa-info text-gray-600 text-xs"></i>
+                                    </button>
+                                </div>
                                 
-                                <!-- Bouton pour afficher/masquer les détails d'état -->
-                                <button onclick="toggleEtatDetails('{{ commande.id }}')" 
-                                        class="ml-2 w-6 h-6 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-all duration-300 transform hover:scale-110"
-                                        title="Afficher/masquer les détails d'état">
-                                    <i class="fas fa-info text-gray-600 text-xs"></i>
+                                <!-- Détails d'état (masqués par défaut) -->
+                                <div id="etat-details-{{ commande.id }}" class="hidden mt-2 space-y-1">
+                                    <!-- Affichage des étapes de préparation -->
+                                    <div class="mt-2 pt-2 border-t border-gray-200">
+                                        <div class="text-xs font-medium text-gray-700 mb-1">Étapes de préparation :</div>
+                                        
+                                        <!-- Étape 1: En préparation -->
+                                        <div class="flex items-center mb-1">
+                                            <span class="w-3 h-3 rounded-full bg-green-500 flex items-center justify-center mr-2">
+                                                <i class="fas fa-check text-white text-xs"></i>
+                                            </span>
+                                            <span class="text-xs text-green-600">En préparation</span>
+                                            <span class="text-xs text-green-500 ml-2">
+                                                <i class="fas fa-check mr-1"></i>Terminé
+                                            </span>
+                                        </div>
+                                        
+                                        <!-- Étape 2: Collectée -->
+                                        <div class="flex items-center mb-1">
+                                            <span class="w-3 h-3 rounded-full bg-green-500 flex items-center justify-center mr-2">
+                                                <i class="fas fa-check text-white text-xs"></i>
+                                            </span>
+                                            <span class="text-xs text-green-600">Collectée</span>
+                                            <span class="text-xs text-green-500 ml-2">
+                                                <i class="fas fa-check mr-1"></i>Terminé
+                                            </span>
+                                        </div>
+                                        
+                                        <!-- Étape 3: Emballée -->
+                                        <div class="flex items-center mb-1">
+                                            <span class="w-3 h-3 rounded-full bg-green-500 flex items-center justify-center mr-2">
+                                                <i class="fas fa-check text-white text-xs"></i>
+                                            </span>
+                                            <span class="text-xs text-green-600">Emballée</span>
+                                            <span class="text-xs text-green-500 ml-2">
+                                                <i class="fas fa-check mr-1"></i>Terminé
+                                            </span>
+                                        </div>
+                                        
+                                        <!-- Étape 4: Préparée (finalisée par superviseur) -->
+                                        <div class="flex items-center">
+                                            <span class="w-3 h-3 rounded-full bg-green-500 flex items-center justify-center mr-2">
+                                                <i class="fas fa-check text-white text-xs"></i>
+                                            </span>
+                                            <span class="text-xs text-green-600">Préparée</span>
+                                            <span class="text-xs text-green-500 ml-2">
+                                                <i class="fas fa-check mr-1"></i>Terminé
+                                            </span>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Affichage des affectations -->
+                                    <div class="mt-2 pt-2 border-t border-gray-200">
+                                        <div class="text-xs font-medium text-gray-700 mb-1">Affectations :</div>
+                                        {% for etat in commande.etats.all %}
+                                            {% if etat.enum_etat.libelle == 'Préparée' and not etat.date_fin %}
+                                                <div class="text-xs text-gray-600">
+                                                    <i class="fas fa-user-check mr-1"></i>
+                                                    Finalisée par {{ etat.operateur.prenom }} {{ etat.operateur.nom }}
+                                                    <span class="text-gray-500">({{ etat.date_debut|date:"d/m/Y H:i" }})</span>
+                                                </div>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                    
+                                    <!-- Affichage des changements d'état -->
+                                    <div class="mt-2 pt-2 border-t border-gray-200">
+                                        <div class="text-xs font-medium text-gray-700 mb-1">Changements d'état :</div>
+                                        {% for etat in commande.etats.all %}
+                                            {% if etat.enum_etat.libelle in 'En préparation,Collectée,Emballée,Préparée' %}
+                                                <div class="text-xs text-gray-600">
+                                                    <i class="fas fa-arrow-right mr-1"></i>
+                                                    {{ etat.enum_etat.libelle }}
+                                                    {% if etat.operateur %}
+                                                        par {{ etat.operateur.prenom }} {{ etat.operateur.nom }}
+                                                    {% endif %}
+                                                    <span class="text-gray-500">({{ etat.date_debut|date:"d/m/Y H:i" }})</span>
+                                                </div>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- Articles -->
+                        <td class="px-4 py-4 whitespace-nowrap text-center" style="min-width: 96px;">
+                            <div class="flex items-center justify-center space-x-2">
+                                <!-- Panier (icône + compteur) -->
+                                <button type="button"
+                                   onclick="openPanierModal({{ commande.id }})"
+                                   class="inline-flex items-center px-2.5 py-1 rounded-md shadow-sm text-white transition-all hover:shadow-lg"
+                                   style="background-color: var(--preparation-primary); hover:background-color: var(--preparation-dark);"
+                                   title="Voir le panier">
+                                    <i class="fas fa-shopping-cart text-sm mr-1"></i>
+                                    <span class="text-xs">{{ commande.paniers.count }}</span>
                                 </button>
                             </div>
-                            
-                            <!-- Détails d'état (masqués par défaut) -->
-                            <div id="etat-details-{{ commande.id }}" class="hidden mt-2 space-y-1">
-                                <!-- Affichage des étapes de préparation -->
-                                <div class="mt-2 pt-2 border-t border-gray-200">
-                                    <div class="text-xs font-medium text-gray-700 mb-1">Étapes de préparation :</div>
-                                    
-                                    <!-- Étape 1: En préparation -->
-                                    <div class="flex items-center mb-1">
-                                        <span class="w-3 h-3 rounded-full bg-green-500 flex items-center justify-center mr-2">
-                                            <i class="fas fa-check text-white text-xs"></i>
-                                        </span>
-                                        <span class="text-xs text-green-600">En préparation</span>
-                                        <span class="text-xs text-green-500 ml-2">
-                                            <i class="fas fa-check mr-1"></i>Terminé
-                                        </span>
-                                    </div>
-                                    
-                                    <!-- Étape 2: Collectée -->
-                                    <div class="flex items-center mb-1">
-                                        <span class="w-3 h-3 rounded-full bg-green-500 flex items-center justify-center mr-2">
-                                            <i class="fas fa-check text-white text-xs"></i>
-                                        </span>
-                                        <span class="text-xs text-green-600">Collectée</span>
-                                        <span class="text-xs text-green-500 ml-2">
-                                            <i class="fas fa-check mr-1"></i>Terminé
-                                        </span>
-                                    </div>
-                                    
-                                    <!-- Étape 3: Emballée -->
-                                    <div class="flex items-center mb-1">
-                                        <span class="w-3 h-3 rounded-full bg-green-500 flex items-center justify-center mr-2">
-                                            <i class="fas fa-check text-white text-xs"></i>
-                                        </span>
-                                        <span class="text-xs text-green-600">Emballée</span>
-                                        <span class="text-xs text-green-500 ml-2">
-                                            <i class="fas fa-check mr-1"></i>Terminé
-                                        </span>
-                                    </div>
-                                    
-                                    <!-- Étape 4: Préparée (finalisée par superviseur) -->
-                                    <div class="flex items-center">
-                                        <span class="w-3 h-3 rounded-full bg-green-500 flex items-center justify-center mr-2">
-                                            <i class="fas fa-check text-white text-xs"></i>
-                                        </span>
-                                        <span class="text-xs text-green-600">Préparée</span>
-                                        <span class="text-xs text-green-500 ml-2">
-                                            <i class="fas fa-check mr-1"></i>Terminé
-                                        </span>
-                                    </div>
-                                </div>
+                        </td>
+
+                        <!-- Actions -->
+                        <td class="px-4 py-4 whitespace-nowrap text-center" style="min-width: 120px;">
+                            <div class="flex items-center justify-center space-x-2">
+                                <!-- Détails -->
+                                <a href="{% url 'Superpreparation:detail_prepa' commande.pk %}"
+                                   class="inline-flex items-center justify-center w-9 h-9 rounded-md shadow-sm text-white transition-all hover:shadow-lg"
+                                   style="background-color: var(--preparation-primary); hover:background-color: var(--preparation-dark);"
+                                   title="Voir la commande" aria-label="Détails">
+                                    <i class="fas fa-eye text-sm"></i>
+                                </a>
                                 
-                                <!-- Affichage des affectations -->
-                                <div class="mt-2 pt-2 border-t border-gray-200">
-                                    <div class="text-xs font-medium text-gray-700 mb-1">Affectations :</div>
-                                    {% for etat in commande.etats.all %}
-                                        {% if etat.enum_etat.libelle == 'Préparée' and not etat.date_fin %}
-                                            <div class="text-xs text-gray-600">
-                                                <i class="fas fa-user-check mr-1"></i>
-                                                Finalisée par {{ etat.operateur.prenom }} {{ etat.operateur.nom }}
-                                                <span class="text-gray-500">({{ etat.date_debut|date:"d/m/Y H:i" }})</span>
-                                            </div>
-                                        {% endif %}
-                                    {% endfor %}
-                                </div>
-                                
-                                <!-- Affichage des changements d'état -->
-                                <div class="mt-2 pt-2 border-t border-gray-200">
-                                    <div class="text-xs font-medium text-gray-700 mb-1">Changements d'état :</div>
-                                    {% for etat in commande.etats.all %}
-                                        {% if etat.enum_etat.libelle in 'En préparation,Collectée,Emballée,Préparée' %}
-                                            <div class="text-xs text-gray-600">
-                                                <i class="fas fa-arrow-right mr-1"></i>
-                                                {{ etat.enum_etat.libelle }}
-                                                {% if etat.operateur %}
-                                                    par {{ etat.operateur.prenom }} {{ etat.operateur.nom }}
-                                                {% endif %}
-                                                <span class="text-gray-500">({{ etat.date_debut|date:"d/m/Y H:i" }})</span>
-                                            </div>
-                                        {% endif %}
-                                    {% endfor %}
-                                </div>
+                                <!-- Modifier -->
+                                <a href="{% url 'Superpreparation:modifier_commande_superviseur' commande.pk %}"
+                                   class="inline-flex items-center justify-center w-9 h-9 rounded-md shadow-sm text-white transition-all hover:shadow-lg"
+                                   style="background-color: #d97706; hover:background-color: #b45309;"
+                                   title="Modifier la commande" aria-label="Modifier">
+                                    <i class="fas fa-edit text-sm"></i>
+                                </a>
                             </div>
-                        </div>
-                    </td>
-
-                    <!-- Articles -->
-                    <td class="px-4 py-4 whitespace-nowrap text-center" style="min-width: 96px;">
-                        <div class="flex items-center justify-center space-x-2">
-                            <!-- Panier (icône + compteur) -->
-                            <button type="button"
-                               onclick="openPanierModal({{ commande.id }})"
-                               class="inline-flex items-center px-2.5 py-1 rounded-md shadow-sm text-white transition-all hover:shadow-lg"
-                               style="background-color: var(--preparation-primary); hover:background-color: var(--preparation-dark);"
-                               title="Voir le panier">
-                                <i class="fas fa-shopping-cart text-sm mr-1"></i>
-                                <span class="text-xs">{{ commande.paniers.count }}</span>
-                            </button>
-                        </div>
-                    </td>
-
-                    <!-- Actions -->
-                    <td class="px-4 py-4 whitespace-nowrap text-center" style="min-width: 120px;">
-                        <div class="flex items-center justify-center space-x-2">
-                            <!-- Détails -->
-                            <a href="{% url 'Superpreparation:detail_prepa' commande.pk %}"
-                               class="inline-flex items-center justify-center w-9 h-9 rounded-md shadow-sm text-white transition-all hover:shadow-lg"
-                               style="background-color: var(--preparation-primary); hover:background-color: var(--preparation-dark);"
-                               title="Voir la commande" aria-label="Détails">
-                                <i class="fas fa-eye text-sm"></i>
-                            </a>
-                            
-                            <!-- Modifier -->
-                            <a href="{% url 'Superpreparation:modifier_commande_superviseur' commande.pk %}"
-                               class="inline-flex items-center justify-center w-9 h-9 rounded-md shadow-sm text-white transition-all hover:shadow-lg"
-                               style="background-color: #d97706; hover:background-color: #b45309;"
-                               title="Modifier la commande" aria-label="Modifier">
-                                <i class="fas fa-edit text-sm"></i>
-                            </a>
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% endif %}
-
-    <!-- Pagination -->
-    {% if commandes_preparees.has_other_pages %}
-    <div class="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6 mt-4">
-        <div class="flex flex-1 justify-between sm:hidden">
-            {% if commandes_preparees.has_previous %}
-                <a href="?page={{ commandes_preparees.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if items_per_page %}&items_per_page={{ items_per_page }}{% endif %}" class="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Précédent</a>
-            {% endif %}
-            {% if commandes_preparees.has_next %}
-                <a href="?page={{ commandes_preparees.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if items_per_page %}&items_per_page={{ items_per_page }}{% endif %}" class="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Suivant</a>
-            {% endif %}
-        </div>
-        <div class="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
-            <div>
-                <p class="text-sm text-gray-700">
-                    Affichage de
-                    <span class="font-medium">{{ commandes_preparees.start_index }}</span>
-                    à
-                    <span class="font-medium">{{ commandes_preparees.end_index }}</span>
-                    sur
-                    <span class="font-medium">{{ commandes_preparees.paginator.count }}</span>
-                    résultats
-                </p>
-            </div>
-            <div>
-                <nav class="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
-                    {% if commandes_preparees.has_previous %}
-                        <a href="?page={{ commandes_preparees.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if items_per_page %}&items_per_page={{ items_per_page }}{% endif %}" class="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20">
-                            <span class="sr-only">Précédent</span>
-                            <i class="fas fa-chevron-left"></i>
-                        </a>
-                    {% endif %}
-                    {% for p in commandes_preparees.paginator.page_range %}
-                        {% if p == commandes_preparees.number %}
-                            <span class="relative z-10 inline-flex items-center bg-blue-600 px-4 py-2 text-sm font-semibold text-white focus:z-20">{{ p }}</span>
-                        {% else %}
-                            <a href="?page={{ p }}{% if search_query %}&search={{ search_query }}{% endif %}{% if items_per_page %}&items_per_page={{ items_per_page }}{% endif %}" class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20">{{ p }}</a>
-                        {% endif %}
+                        </td>
+                    </tr>
                     {% endfor %}
-                    {% if commandes_preparees.has_next %}
-                        <a href="?page={{ commandes_preparees.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if items_per_page %}&items_per_page={{ items_per_page }}{% endif %}" class="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20">
-                            <span class="sr-only">Suivant</span>
-                            <i class="fas fa-chevron-right"></i>
-                        </a>
-                    {% endif %}
-                </nav>
-            </div>
+                </tbody>
+            </table>
         </div>
+
+    <!-- Pagination (client) -->
+    <div data-superprep-pagination data-items-selector="tbody tr" data-container-selector="table" data-per-page="25"></div>
+        {% endif %}
     </div>
-    {% endif %}
-</div>
 </div>
 
 <!-- Modal Panier -->
@@ -1219,6 +1172,7 @@
 {% endblock %}
 
 {% block extra_js %}
+{{ block.super }}
 <script>
     // Variables globales
     let searchTimeout;
@@ -1760,6 +1714,17 @@
         
         document.body.appendChild(form);
         form.submit();
+    });
+</script>
+
+<!-- Scripts -->
+<script src="{% static 'js/Superpreparation/Suivi_des_Commandes/suivi-commandes-smart-search.js' %}"></script>
+<script>
+// Initialiser la recherche intelligente
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof initSuiviCommandesSearch === 'function') {
+        initSuiviCommandesSearch('generic');
+    }
     });
 </script>
 {% endblock %}

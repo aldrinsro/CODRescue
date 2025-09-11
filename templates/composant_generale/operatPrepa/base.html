@@ -210,8 +210,10 @@
         // Initialisation de l'état de la sidebar
         if (window.innerWidth <= 1023) {
             body.classList.add('sidebar-collapsed');
+            body.classList.remove('sidebar-open');
         } else {
             body.classList.add('sidebar-open');
+            body.classList.remove('sidebar-collapsed');
         }
         
         // Gestion du bouton sidebar-toggle (si il existe)

@@ -292,6 +292,9 @@
             </tbody>
         </table>
     </div>
+
+    <!-- Pagination (client) -->
+    <div data-superprep-pagination data-items-selector="tbody tr" data-container-selector="table" data-per-page="25"></div>
 </div>
 </div>
 
@@ -470,6 +473,7 @@
 {% endblock %}
 
 {% block extra_js %}
+{{ block.super }}
 <!-- Styles pour les notifications -->
 <style>
 .notification {
@@ -577,4 +581,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <!-- Script pour les commandes retournées -->
 <script src="{% static 'js/Superpreparation/Retournée/Commande_retournée.js' %}"></script>
+<script>
+// Initialiser la recherche intelligente si disponible
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof initSuiviCommandesSearch === 'function') {
+        initSuiviCommandesSearch('retournées');
+    }
+});
+</script>
 {% endblock %}

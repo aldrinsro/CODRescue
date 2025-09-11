@@ -47,6 +47,8 @@
             body.sidebar-collapsed #sidebar { 
                 width: 0; 
                 transform: translateX(-100%);
+                position: absolute; /* sortir du flux pour libérer l'espace */
+                pointer-events: none; /* éviter de bloquer les clics */
             }
         }
 
@@ -146,10 +148,13 @@
     <script src="{% static 'vendor/sweetalert2.min.js' %}"></script>
     <!-- Global columns toggle controller -->
     <script src="{% static 'js/Superpreparation/global-columns-toggle.js' %}"></script>
+    <!-- Smart pagination (Superpreparation) -->
+    <script src="{% static 'js/Superpreparation/smart-pagination.js' %}"></script>
 
     {% block extra_js %}
     <script>
     document.addEventListener('DOMContentLoaded', function() {
+        console.log('[Base] DOMContentLoaded - init sidebar controls');
         // Afficher les messages Django avec SweetAlert2
         {% if messages %}
             {% for message in messages %}
@@ -176,11 +181,39 @@
         const menuToggle = document.getElementById('menu-toggle');
         const sidebarToggle = document.getElementById('sidebar-toggle');
         const contentOverlay = document.getElementById('content-overlay');
+        console.log('[Base] Elements presence', {
+            hasMenuToggle: !!menuToggle,
+            hasSidebarToggle: !!sidebarToggle,
+            hasOverlay: !!contentOverlay
+        });
         
-        function toggleSidebar() {
-            body.classList.toggle('sidebar-open');
-            body.classList.toggle('sidebar-collapsed');
-        }
+        // Exposer des helpers robustes au scope global pour éviter les doubles toggles
+        window.toggleSidebar = function() {
+            const before = {
+                open: body.classList.contains('sidebar-open'),
+                collapsed: body.classList.contains('sidebar-collapsed')
+            };
+            console.log('[Base] toggleSidebar called. Before:', before);
+            const isOpen = before.open;
+            const menuToggle = document.getElementById('menu-toggle');
+            
+            if (isOpen) {
+                body.classList.remove('sidebar-open');
+                body.classList.add('sidebar-collapsed');
+                if (menuToggle) menuToggle.classList.remove('hamburger-active');
+                console.log('[Base] Sidebar -> collapsed');
+            } else {
+                body.classList.add('sidebar-open');
+                body.classList.remove('sidebar-collapsed');
+                if (menuToggle) menuToggle.classList.add('hamburger-active');
+                console.log('[Base] Sidebar -> open');
+            }
+            const after = {
+                open: body.classList.contains('sidebar-open'),
+                collapsed: body.classList.contains('sidebar-collapsed')
+            };
+            console.log('[Base] toggleSidebar done. After:', after);
+        };
 
         function closeSidebarMobile() {
             if (window.innerWidth <= 1023) {
@@ -193,13 +226,29 @@
         if (window.innerWidth <= 1023) {
             body.classList.add('sidebar-collapsed');
             body.classList.remove('sidebar-open');
+            console.log('[Base] init state -> mobile (collapsed)');
         } else {
             body.classList.add('sidebar-open');
             body.classList.remove('sidebar-collapsed');
+            console.log('[Base] init state -> desktop (open)');
         }
+        console.log('[Base] init classes:', body.className);
 
+        const toggles = document.querySelectorAll('#menu-toggle');
+        console.log('[Base] #menu-toggle found:', toggles.length);
         if (menuToggle) {
-            menuToggle.addEventListener('click', toggleSidebar);
+            if (!menuToggle.dataset.sidebarBound) {
+                console.log('[Base] Attaching click handler to menuToggle');
+                menuToggle.addEventListener('click', function(){
+                    console.log('[Base] menuToggle click');
+                    if (typeof window.toggleSidebar === 'function') window.toggleSidebar();
+                });
+                menuToggle.dataset.sidebarBound = '1';
+            } else {
+                console.warn('[Base] menuToggle already bound, skipping duplicate binding');
+            }
+        } else {
+            console.error('[Base] menuToggle not found in DOM');
         }
         if (sidebarToggle) {
             sidebarToggle.addEventListener('click', closeSidebarMobile);
@@ -222,14 +271,47 @@
         });
 
         window.addEventListener('resize', () => {
+            console.log('[Base] resize', window.innerWidth);
             if (window.innerWidth > 1023) {
                 body.classList.add('sidebar-open');
                 body.classList.remove('sidebar-collapsed');
+                console.log('[Base] resize -> desktop state applied (open)');
             } else {
                 body.classList.add('sidebar-collapsed');
                 body.classList.remove('sidebar-open');
+                console.log('[Base] resize -> mobile state applied (collapsed)');
+            }
+            console.log('[Base] classes after resize:', body.className);
+        });
+
+        // Observer les changements de classes pour diagnostiquer des scripts concurrents
+        const classObserver = new MutationObserver((mutations) => {
+            for (const m of mutations) {
+                if (m.type === 'attributes' && m.attributeName === 'class') {
+                    console.log('[Base] body class mutation ->', body.className);
+                }
             }
         });
+        try {
+            classObserver.observe(body, { attributes: true });
+            console.log('[Base] class observer attached');
+        } catch (e) {
+            console.warn('[Base] class observer failed', e);
+        }
+
+        // Overlay: fermer sur mobile avec logs
+        if (contentOverlay) {
+            contentOverlay.addEventListener('click', () => {
+                console.log('[Base] overlay click');
+                if (window.innerWidth <= 1023) {
+                    body.classList.add('sidebar-collapsed');
+                    body.classList.remove('sidebar-open');
+                    const mt = document.getElementById('menu-toggle');
+                    if (mt) mt.classList.remove('hamburger-active');
+                    console.log('[Base] overlay -> collapsed');
+                }
+            });
+        }
     });
     </script>
     {% endblock %}

@@ -108,10 +108,10 @@
         const sidebarToggle = document.getElementById('sidebar-toggle');
         const contentOverlay = document.getElementById('content-overlay');
         
-        function toggleSidebar() {
+        function legacyToggleSidebar() {
             body.classList.toggle('sidebar-open');
             body.classList.toggle('sidebar-collapsed');
-            }
+        }
 
         function closeSidebarMobile() {
             if (window.innerWidth <= 1023) {
@@ -127,7 +127,15 @@
             body.classList.add('sidebar-open');
         }
 
-        if (menuToggle) menuToggle.addEventListener('click', toggleSidebar);
+        if (menuToggle) menuToggle.addEventListener('click', function(){
+            if (typeof window.toggleSidebar === 'function') {
+                console.log('[Admin] Delegating to global toggleSidebar');
+                window.toggleSidebar();
+            } else {
+                console.log('[Admin] Using legacyToggleSidebar (no global handler)');
+                legacyToggleSidebar();
+            }
+        });
         if (sidebarToggle) sidebarToggle.addEventListener('click', closeSidebarMobile);
         if (contentOverlay) contentOverlay.addEventListener('click', closeSidebarMobile);
 

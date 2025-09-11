@@ -280,7 +280,8 @@
         {% endfor %}
     </div>
 </div>
-
+{% block extra_js %}
+{{ block.super }}
 <!-- Auto-refresh et animations -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -359,9 +360,9 @@ document.addEventListener('DOMContentLoaded', function() {
     } catch (e) {}
 
     menuToggle.addEventListener('click', function() {
-        body.classList.toggle('sidebar-open');
-        body.classList.toggle('sidebar-collapsed');
-        menuToggle.classList.toggle('hamburger-active');
+        if (typeof window.toggleSidebar === 'function') {
+            window.toggleSidebar();
+        }
         setTimeout(persistSidebarState, 10);
     });
 });
@@ -459,4 +460,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 }
 </style>
+{% endblock %}
+
 {% endblock %}
