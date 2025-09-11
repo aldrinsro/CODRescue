@@ -99,8 +99,28 @@ class UserTypeValidationMiddleware:
            request.path in self.universal_allowed_exact_paths:
             return self.get_response(request)
 
+        # Accès au dashboard Django: réservé uniquement aux superusers
         if request.path.startswith('/admin/'):
-            return self.get_response(request)
+            if request.user.is_superuser:
+                return self.get_response(request)
+            # Utilisateur non superuser: rediriger proprement vers son espace sans message intrusif
+            try:
+                profil = request.user.profil_operateur
+                user_type = profil.type_operateur if profil and profil.actif else None
+            except Exception:
+                user_type = None
+
+            redirect_urls = {
+                'CONFIRMATION': 'operatConfirme:home',
+                'LOGISTIQUE': 'operatLogistic:home',
+                'PREPARATION': 'Prepacommande:home',
+                'SUPERVISEUR_PREPARATION': 'Superpreparation:home',
+                'ADMIN': 'app_admin:home'
+            }
+            target = redirect_urls.get(user_type)
+            if target:
+                return redirect(reverse(target))
+            return redirect(settings.LOGIN_URL)
 
         try:
             profil = request.user.profil_operateur

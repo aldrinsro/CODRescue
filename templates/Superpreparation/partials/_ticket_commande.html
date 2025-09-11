@@ -1,67 +1,101 @@
-<!-- Template optimisé pour l'impression de tickets de commande -->
+<!-- Template optimisé et amélioré pour l'impression de tickets -->
+{% load static %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
 <div class="ticket-commande">
-    <!-- Contenu principal du ticket -->
     <div class="ticket-content">
-        <!-- Header avec code-barres et date sur la même ligne -->
+        <!-- HEADER -->
         <div class="ticket-header">
-            <!-- Code-barres à gauche -->
-            <div class="barcode-left">
-                {% if commande.barcode_image %}
-                <img src="data:image/png;base64,{{ commande.barcode_image }}" 
-                     alt="Code-barres {{ commande.id_yz }}" 
-                     class="barcode-image">
-                <div class="barcode-text">{{ commande.id_yz }}</div>
-                {% else %}
-                <div class="barcode-placeholder">
-                    <i class="fas fa-barcode"></i>
-                    <span>Code-barres</span>
-                </div>
-                {% endif %}
+            <!-- Logo -->
+            <div class="logo-left">
+                <img src="{% static 'logo-tiicket/image.svg' %}" alt="Logo" class="header-logo" />
             </div>
             
-            <!-- Date de confirmation à droite -->
-            <div class="ticket-date">
-                <i class="fas fa-calendar-check"></i>
-                {{ commande.date_confirmation|date:"d/m/Y" }}
+            <!-- Informations de commande et Code QR -->
+            <div class="header-right">
+                <div class="order-info">
+                    <div class="ticket-date">
+                        <i class="fas fa-calendar-check"></i>
+                        Edité le: {{ commande.date_confirmation|date:"d/m/Y" }}
+                    </div>
+                </div>
+                
+                <!-- Code QR avec numéro de commande en dessous -->
+                <div class="barcode-right">
+                    {% if commande.qr_image %}
+                    <div class="barcode-wrap">
+                        <img src="{{ commande.qr_image }}" 
+                             onerror="this.onerror=null; this.src='data:image/png;base64,{{ commande.qr_image }}'" 
+                             alt="QR {{ commande.id_yz }}" 
+                             class="barcode-image">
+                    </div>
+                    {% elif commande.qr_base64 %}
+                    <div class="barcode-wrap">
+                        <img src="data:image/png;base64,{{ commande.qr_base64 }}" 
+                             alt="QR {{ commande.id_yz }}" 
+                             class="barcode-image">
+                    </div>
+                    {% elif commande.qr_code_base64 %}
+                    <div class="barcode-wrap">
+                        <img src="data:image/png;base64,{{ commande.qr_code_base64 }}" 
+                             alt="QR {{ commande.id_yz }}" 
+                             class="barcode-image">
+                    </div>
+                    {% elif commande.qr_svg %}
+                    <div class="barcode-wrap">
+                        <img src="data:image/svg+xml;base64,{{ commande.qr_svg }}" 
+                             alt="QR {{ commande.id_yz }}" 
+                             class="barcode-image">
+                    </div>
+                    {% elif commande.qr_url %}
+                    <div class="barcode-wrap">
+                        <img src="{{ commande.qr_url }}" 
+                             alt="QR {{ commande.id_yz }}" 
+                             class="barcode-image">
+                    </div>
+                    {% else %}
+                    <div class="barcode-placeholder">
+                        <i class="fas fa-qrcode"></i>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Numéro de commande séparé du code QR -->
+                    <div class="order-number-below-qr">
+                        #CMD {{ commande.num_cmd|default:commande.id_yz }}#
+                    </div>
+                </div>
             </div>
         </div>
         
-
-        <!-- Corps du ticket avec informations client et articles -->
+        <!-- INFOS CLIENT -->
         <div class="ticket-body">
-            <!-- Informations client compactes -->
             <div class="client-info">
-                <div class="client-name">
-                    <i class="fas fa-user-circle"></i>
-                    {{ commande.client_nom|truncatechars:25 }}
-                </div>
-                <div class="client-details">
-                    <div class="contact-line">
-                        <i class="fas fa-phone-alt"></i>
-                        {{ commande.client_telephone|default:"Tél. non défini" }}
+                <div class="client-info-left">
+                    <div class="client-line">
+                        <i class="fas fa-user-circle"></i> <strong>Client:</strong> {{ commande.client_nom|truncatechars:20 }}
                     </div>
-                    <div class="address-line">
-                        <i class="fas fa-home"></i>
-                        {{ commande.client_adresse|default:"Adresse non définie"|truncatechars:30 }}
+                    <div class="client-line">
+                        <i class="fas fa-phone-alt"></i> <strong>Tél:</strong> {{ commande.client_telephone|default:"Non défini" }}
                     </div>
-                    <div class="location-line">
-                        <i class="fas fa-map-marker-alt"></i>
-                        {{ commande.ville_client }}
+                    <div class="client-line">
+                        <i class="fas fa-home"></i> <strong>Adresse:</strong> {{ commande.client_adresse|default:"Non définie"|truncatechars:25 }}
+                    </div>
+                    <div class="client-line">
+                        <i class="fas fa-map-marker-alt"></i> <strong>Ville:</strong> {{ commande.ville_client|default:"Non définie" }}
                     </div>
                 </div>
             </div>
             
-            <!-- Section articles -->
+            <!-- ARTICLES -->
             <div class="articles-section">
                 <div class="articles-title">
-                    <i class="fas fa-shopping-bag"></i>
-                    Articles
+                    <i class="fas fa-shopping-bag"></i> Articles: (<span class="articles-total-inline">{{ commande.total_articles|default:0 }}</span>)
                 </div>
                 <div class="articles-list">
                     {% for variante in commande.variantes %}
+                        {% if forloop.counter <= 8 %}
                     <div class="article-item">
-                        <i class="fas fa-exclamation-triangle"></i>
+                             <!-- <i class="fas fa-exclamation-triangle"></i> -->
                         <div class="article-details">
                             <div class="article-ref">{{ variante.article.reference }}</div>
                             <div class="article-color">{{ variante.couleur }}</div>
@@ -69,579 +103,421 @@
                             <div class="article-qty">x{{ variante.quantite }}</div>
                         </div>
                     </div>
+                        {% endif %}
                     {% endfor %}
+                    {% if commande.variantes|length > 8 %}
+                    <div class="article-item">
+                        <div class="article-details">
+                            <div class="article-ref" style="font-weight:700; color:#111;">+ {{ commande.variantes|length|add:"-8" }} autres…</div>
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
         
-        <!-- Pied de page avec prix total -->
+        <!-- FOOTER -->
         <div class="ticket-footer">
             <div class="ticket-price">
-                <i class="fas fa-coins"></i>
-                <span class="price-amount">{{ commande.total }} DH</span>
+                <div class="price-line">
+                    <i class="fas fa-coins"></i>
+                    <span class="price-amount">{{ commande.total }} DH</span>
+                </div>
             </div>
-            <div class="ticket-city">
-                <i class="fas fa-shipping-fast"></i>
-                {{ commande.ville_client }}
+            <div class="footer-company">
+                <div><i class="fas fa-globe"></i> www.yoozak.com</div>
+                <div><i class="fas fa-phone"></i> 06 34 21 56 39 / 47</div>
+                <div><i class="fas fa-map-marker-alt"></i> {{ commande.region|default:"SETTAT" }}</div>
             </div>
         </div>
         
-        <!-- Contact et informations de l'entreprise -->
-        <div class="ticket-contact">
-            <div class="contact-name">
-                <i class="fas fa-store-alt"></i>
-                YOOZAK
-            </div>
-            <div class="contact-info">
-                <div><i class="fas fa-globe"></i> www.yoozak.com</div>
-                <div><i class="fas fa-phone"></i> 06 34 21 56 39 / 47</div>
-            </div>
-        </div>
     </div>
 </div>
 
+<!-- STYLES -->
 <style>
-/* Styles pour l'affichage et l'impression */
+    /* STRUCTURE GLOBALE */
 .ticket-commande {
-    width: 75mm;
-    height: 74mm;
-    border: 1px solid #000000;
-    font-family: 'Arial', sans-serif;
-    font-size: 8px;
-    background: white;
-    margin: 2mm;
-    display: flex;
-    flex-direction: column;
-    position: relative;
-    overflow: hidden;
+         width: 100mm;
+         height: 100mm; /* Format fixe 100x100 mm */
+         border: 1px solid #000;
+         font-family: Arial, sans-serif;
+         font-size: 9.5px; /* Base font size */
+         background: #fff;
+         margin: 0 auto;
+     display: flex;
+     flex-direction: column;
+         overflow: hidden; /* rester dans la bordure du ticket */
+        /* Dimensions de référence */
+        --barcode-max-w: 50mm; /* largeur max du code-barres (ajustée au format) */
+        --barcode-max-h: 16mm; /* hauteur max du code-barres */
+        --ticket-logo-width: calc(var(--barcode-max-w) * 0.55); /* logo proportionnel au code-barres */
+        --articles-height: 42mm; /* hauteur fixe de la section articles (ajustée) */
+        /* Variables d'espacement (optimisées pour 100x100mm) */
+        --section-pad-y: 1.5mm;
+        --section-pad-x: 1.5mm;
+        --gap-sm: 0.5mm;
+        --gap-md: 0.8mm;
+        --gap-lg: 1mm;
+        /* Tailles de police (agrandies) */
+        --articles-font: 8.5px;
+        --article-ref-font: 10px;
+        --article-meta-font: 8.5px;
 }
 
 .ticket-content {
     display: flex;
     flex-direction: column;
     height: 100%;
+        justify-content: space-between; /* Distribuer l'espace */
 }
 
-/* Header avec code-barres et date */
+    /* HEADER (Sans bande noire) */
 .ticket-header {
-    background-color: #000000 !important;
-    color: #ffffff !important;
-    padding: 1.5mm;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-weight: bold;
-    font-size: 7px;
-    -webkit-print-color-adjust: exact !important;
-    color-adjust: exact !important;
-    print-color-adjust: exact !important;
+        background: #fff; /* Fond blanc */
+        color: #000; /* Texte noir */
+        padding: var(--section-pad-y) var(--section-pad-x);
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: var(--gap-md);
+        font-size: 12px;
+        font-weight: 800;
+        height: 25mm; /* Hauteur fixe pour le header */
+        border-bottom: 1px solid #eee; /* Ligne de séparation légère */
 }
 
-.barcode-left {
+.logo-left {
+        text-align: center; 
     display: flex;
     flex-direction: column;
     align-items: center;
+        justify-content: center; 
+    }
+
+.header-right {
+        display: flex;
+        flex-direction: row;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: var(--gap-md);
+        width: 100%;
 }
 
-.barcode-left .barcode-image {
-    max-width: 15mm;
-    max-height: 4mm;
-    object-fit: contain;
-    background: white;
-    padding: 0.3mm;
-    border-radius: 1mm;
+.order-info {
+        display: flex;
+        flex-direction: column;
+        gap: 1mm;
+        flex: 1;
+}
+
+.header-logo {
+        width: 34mm;
+        height: auto;
+        max-height: 18mm;
+        object-fit: contain;
+        filter: none;
+        background: transparent;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+ 
+    .barcode-image { 
+        max-width: 25mm;
+        max-height: 25mm;
+        width: 25mm;
+        height: 25mm;
+        filter: contrast(500%) brightness(500%); /* contraste élevé pour scan */
+        image-rendering: pixelated;
+        display: block;
+        object-fit: contain;
 }
 
 .barcode-text {
-    font-size: 6px;
-    color: #ffffff;
+        font-size: 9px; 
     margin-top: 1mm;
+        color: #000; /* noir sur blanc */
+        letter-spacing: 0.4px; 
+        font-weight: 700;
+        text-align: center;
 }
 
 .ticket-date {
+        font-size: 11px;
+        font-weight: 600;
+        color: #000; /* Noir pour la date */
     display: flex;
     align-items: center;
-    gap: 1mm;
-    font-size: 8px;
+        gap: 1mm; 
+        letter-spacing: 0.2px;
+        text-transform: none;
+    }
+    .ticket-date i { 
+        font-size: 10px; 
+        color: #000; /* Icône en noir aussi */
+    }
+
+.barcode-right {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        width: 30mm;
+        flex-shrink: 0;
+        overflow: visible;
+        min-height: auto;
 }
 
-.ticket-date i {
-    font-size: 8px;
-    color: #ffffff;
+.order-number-below-qr {
+        font-size: 10px;
+        font-weight: 700;
+        color: #000 !important; /* Force la couleur noire */
+        text-align: center;
+        margin-top: 1mm;
+        letter-spacing: 0.2px;
 }
 
-/* Section numéro de commande */
-.command-section {
-    background: #f8f9fa;
-    padding: 2mm;
-    border-bottom: 1px solid #e0e0e0;
-}
-
-.ticket-number {
-    display: flex;
-    align-items: center;
-    gap: 2mm;
-    justify-content: center;
-}
-
-.ticket-number i {
-    font-size: 10px;
-    color: #7c3aed;
-}
-
-.command-id {
-    font-size: 10px;
-    font-weight: bold;
-    color: #000;
-}
-
-.articles-count-badge {
+    /* Total articles (cercle central) */
+    .articles-badge {
     display: inline-flex;
-    background: white;
-    color: #000;
-    border-radius: 50%;
-    width: 20px;
-    height: 20px;
     align-items: center;
     justify-content: center;
-    font-size: 10px;
-    font-weight: bold;
-    border: 1px solid #000;
-}
+        width: 16mm; /* Taille du cercle */
+        height: 16mm;
+        border-radius: 50%;
+        background: #000; /* Cercle plein noir */
+        color: #fff; /* Chiffre blanc */
+        font-size: 14px; /* Taille du chiffre */
+        font-weight: 900;
+        border: 1px solid #fff; /* Bordure blanche pour contraste */
+    }
 
-.count-number {
-    font-size: 10px;
+    .articles-total-inline {
+        font-size: 9px; /* Taille plus petite pour le chiffre entre parenthèses */
     font-weight: bold;
-    line-height: 1;
+        color: #333; /* Couleur du texte */
+        margin-left: 1mm; /* Espacement avec le titre */
 }
 
 .ticket-date {
-    font-size: 8px;
+        font-size: 10px; 
+        font-weight: 600;
+        color: #fff;
     display: flex;
     align-items: center;
-    gap: 1mm;
-}
+        gap: 1.5mm; 
+    }
+    .ticket-date i {
+        font-size: 9px;
+        color: #fff;
+    }
 
-.barcode-placeholder {
-    padding: 2mm;
-    color: #ffffff;
-    font-style: italic;
-    text-align: center;
-    font-size: 6px;
-}
-
-/* Corps du ticket */
+    /* BODY (Section principale blanche) */
 .ticket-body {
-    padding: 1.5mm;
-    flex-grow: 1;
+        padding: var(--section-pad-y) var(--section-pad-x);
+        flex: 1; 
     display: flex;
     flex-direction: column;
-    gap: 1.5mm;
+        gap: var(--gap-md);
 }
 
 /* Informations client */
 .client-info {
-    border-bottom: 1px solid #e0e0e0;
-    padding-bottom: 2mm;
+        border-bottom: 1px solid #eee; 
+        padding-bottom: var(--gap-lg);
+        display: flex;
+        flex-direction: column;
+        gap: var(--gap-md);
+        align-items: flex-start;
+        height: 20mm; /* Hauteur fixe pour la section client */
+        overflow: hidden;
 }
 
-.client-name {
-    font-size: 9px;
-    font-weight: bold;
-    margin-bottom: 1mm;
+.client-info-left {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: var(--gap-sm);
+}
+
+    .client-line {
     display: flex;
     align-items: center;
-    gap: 2mm;
-    color: #000;
-}
-
-.client-name i {
-    font-size: 10px;
-    color: #2563eb;
-}
-
-.client-details {
-    font-size: 7px;
+    gap: var(--gap-sm);
+        font-size: 11px;
+        color: #222;
+        font-weight: 600;
+    }
+    .client-line i {
+        font-size: 10px;
     color: #666;
-    line-height: 1.4;
-}
-
-.contact-line, .address-line, .location-line {
-    display: flex;
-    align-items: center;
-    gap: 2mm;
-    margin-bottom: 0.5mm;
-}
-
-.contact-line i {
-    font-size: 8px;
-    color: #10b981;
-    width: 8px;
+        width: 10px; /* Aligner les icônes */
     text-align: center;
 }
+    .client-line strong {
+        font-weight: 700;
+        margin-right: 0.5mm;
+    }
 
-.address-line i {
-    font-size: 8px;
-    color: #f59e0b;
-    width: 8px;
-    text-align: center;
-}
-
-.location-line i {
-    font-size: 8px;
-    color: #ef4444;
-    width: 8px;
-    text-align: center;
-}
-
-/* Informations articles */
+    /* Articles du panier */
 .articles-section {
-    flex-grow: 1;
-    background: #f9fafb;
-    padding: 2mm;
-    border-top: 1px solid #e5e7eb;
-}
-
+        background: #fdfdfd; /* Fond très léger */
+        padding: var(--section-pad-y) var(--section-pad-x);
+        border-top: 1px solid #eee;
+        height: 50mm; /* hauteur ajustée pour le format 100x100mm */
+        overflow: hidden; /* pas de scroll à l'impression */
+        flex: 1; /* Prendre l'espace restant */
+    }
 .articles-title {
-    font-size: 8px;
-    font-weight: bold;
-    margin-bottom: 1mm;
+        font-size: 12px; 
+        font-weight: 800; 
+        margin-bottom: var(--gap-md);
     display: flex;
     align-items: center;
-    gap: 2mm;
+    gap: var(--gap-md);
     color: #333;
+        padding-bottom: var(--gap-sm);
+        border-bottom: 1px dashed #ddd; /* Ligne sous le titre */
 }
-
 .articles-title i {
-    font-size: 9px;
-    color: #f59e0b;
+        font-size: 10px;
+        color: #888;
 }
-
 .articles-list {
-    font-size: 7px;
-    color: #666;
-    line-height: 1.3;
+        font-size: 8.5px;
+        color: #444; 
+        line-height: 1.2; 
     word-break: break-word;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr)); /* grille 2 colonnes pour jusqu'à 6-8 items */
+        gap: var(--gap-sm) var(--gap-md);
+        align-items: start;
+        grid-auto-rows: minmax(6mm, auto); /* hauteurs cohérentes réduites */
+        height: calc(100% - 8mm); /* Prendre l'espace disponible moins le titre */
+        overflow: hidden;
 }
-
 .article-item {
     margin-bottom: 0.5mm;
-    padding-left: 1mm;
-    border-left: 0.3px solid #d1d5db;
+        padding-left: var(--gap-sm);
+        border-left: 0.4px solid #ccc; /* Ligne de séparation légère */
     display: flex;
-    align-items: center;
-    gap: 1mm;
-}
-
-.article-item i {
-    color: #6b7280;
-    font-size: 6px;
-}
-
+        align-items: flex-start; /* Aligner au début en cas de texte long */
+        gap: var(--gap-sm);
+        break-inside: avoid; /* éviter les coupures entre colonnes */
+    }
 .article-details {
-    flex: 1;
     display: flex;
-    flex-direction: row;
-    gap: 1mm;
-    align-items: center;
-}
-
+        flex-wrap: wrap; /* Permettre le retour à la ligne */
+        gap: var(--gap-sm) var(--gap-md);
+        font-weight: 500;
+    }
 .article-ref {
-    font-weight: 600;
-    color: #374151;
-    font-size: 7px;
-}
-
-.article-color {
-    color: #6b7280;
-    font-size: 6px;
-}
-
-.article-size {
-    color: #9ca3af;
-    font-size: 6px;
-}
-
+        font-weight: 700; 
+        color: #111; 
+        font-size: 10px;
+    }
+    .article-color, .article-size { 
+        color: #555; 
+        font-size: 9px; 
+    }
 .article-qty {
-    font-weight: bold;
+        font-weight: 800; 
     color: #059669;
-    font-size: 7px;
+        font-size: 9px;
 }
 
-/* Pied de page avec prix */
+    /* FOOTER (Sans bande noire, section prix) */
 .ticket-footer {
-    background-color: #000000 !important;
-    color: #ffffff !important;
-    padding: 1.5mm;
+        background: #fff; /* Fond blanc */
+        color: #000; /* Texte noir */
+        padding: var(--section-pad-y) var(--section-pad-x);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-weight: bold;
-    font-size: 7px;
-    -webkit-print-color-adjust: exact !important;
-    color-adjust: exact !important;
-    print-color-adjust: exact !important;
-}
-
+        gap: var(--gap-sm);
+        font-size: 11px;
+        font-weight: 600;
+        border-top: 1px solid #eee; /* Ligne de séparation légère */
+    }
 .ticket-price {
     display: flex;
-    align-items: center;
-    gap: 2mm;
+    flex-direction: row; /* prix seulement */
+    align-items: center; /* centrer pour un alignement visuel */
+    gap: var(--gap-sm);
+    white-space: nowrap;
 }
-
-.ticket-price i {
-    font-size: 10px;
-    color: #fbbf24;
-}
-
-.price-amount {
-    font-size: 9px;
-    font-weight: bold;
-}
-
-.ticket-city {
+    .price-line { display: flex; align-items: center; gap: var(--gap-sm); }
+    .footer-company {
+    display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: var(--gap-sm);
+        font-size: 9px;
+        line-height: 1.2;
+        max-width: 55mm; /* reste dans la bande */
+    }
+    .footer-company div {
     display: flex;
     align-items: center;
-    gap: 2mm;
-    font-size: 8px;
-}
-
-.ticket-city i {
-    font-size: 9px;
-    color: #10b981;
-}
-
-/* Contact entreprise */
-.ticket-contact {
-    background: #f8f8f8 !important;
-    padding: 1.5mm;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 5px;
-    border-top: 1px solid #000000;
-    -webkit-print-color-adjust: exact !important;
-    color-adjust: exact !important;
-    print-color-adjust: exact !important;
-}
-
-.contact-name {
-    font-size: 8px;
-    font-weight: bold;
-    color: #000000;
-    display: flex;
-    align-items: center;
-    gap: 2mm;
-}
-
-.contact-name i {
-    font-size: 9px;
-    color: #7c3aed;
-}
-
-.contact-info {
-    text-align: right;
-    color: #000000;
-    font-weight: bold;
-    font-size: 6px;
-    line-height: 1.4;
-}
-
-.contact-info div {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 1mm;
-    margin-bottom: 0.5mm;
-}
-
-.contact-info i {
-    font-size: 6px;
-    color: #6b7280;
-}
-
-/* Masquer checkbox à l'impression */
-.ticket-checkbox {
-    display: none !important;
-}
+        gap: 1.2mm;
+    }
+    .footer-company i { font-size: 8px; color: #9aa0a6; }
 
 /* Styles spécifiques pour l'impression */
 @media print {
+    @page {
+        size: 100mm 100mm;
+        margin: 0;
+    }
     .ticket-commande {
-        width: 75mm !important;
-        height: 74mm !important;
-        border: 1px solid black !important;
-        font-family: Arial, sans-serif !important;
-        font-size: 7px !important;
-        background: white !important;
-        page-break-inside: avoid !important;
-        page-break-after: always !important;
-        margin: 0 auto 0 auto !important;
-        overflow: hidden;
-        display: flex !important;
-        flex-direction: column !important;
-    }
-    
+            width: 100mm !important; 
+            height: 100mm !important; /* hauteur fixe */
+            margin: 0 auto !important; 
+            page-break-after: always; /* S'assurer qu'un nouveau ticket commence sur une nouvelle page */
+            overflow: hidden !important; /* rester dans le cadre */
+        }
+    /* Ajustements pour l'impression */
+    .ticket-header { height: 25mm !important; overflow: hidden !important; }
+    .client-info { height: 20mm !important; overflow: hidden !important; }
+    .articles-section { height: 50mm !important; overflow: hidden !important; }
+    .ticket-footer { height: 15mm !important; }
     .ticket-commande:last-child {
-        page-break-after: auto !important;
-    }
-    
-    .ticket-commande-container {
-        display: block !important;
-        width: 100% !important;
-        margin: 0 auto !important;
-        padding: 0 !important;
-    }
-    
-    .ticket-commande * {
-        -webkit-print-color-adjust: exact !important;
-        color-adjust: exact !important;
-        print-color-adjust: exact !important;
-    }
-    
-    /* Assurer l'affichage des icônes Font Awesome lors de l'impression */
-    .fas, .far, .fab {
-        font-family: "Font Awesome 6 Free" !important;
-        font-weight: 900 !important;
-        -webkit-print-color-adjust: exact !important;
-        color-adjust: exact !important;
-        print-color-adjust: exact !important;
-    }
-    
-    .ticket-header {
-        background-color: #000000 !important;
-        color: #ffffff !important;
-        padding: 1.5mm !important;
-        font-size: 7px !important;
-        font-weight: bold !important;
-        display: flex !important;
-        justify-content: space-between !important;
-        align-items: center !important;
-    }
-    
-    .barcode-left .barcode-image {
-        max-width: 15mm !important;
-        max-height: 4mm !important;
-        object-fit: contain !important;
-        background: white !important;
-        padding: 0.3mm !important;
-        border-radius: 1mm !important;
-    }
-    
-    .command-section {
-        background: #f8f9fa !important;
-        padding: 2mm !important;
-        border-bottom: 1px solid #e0e0e0 !important;
-        -webkit-print-color-adjust: exact !important;
-        color-adjust: exact !important;
-        print-color-adjust: exact !important;
-    }
-    
-    .ticket-footer {
-        background-color: #000000 !important;
-        color: #ffffff !important;
-        padding: 1.5mm !important;
-        display: flex !important;
-        justify-content: space-between !important;
-        align-items: center !important;
-        font-weight: bold !important;
-        font-size: 7px !important;
-    }
-    
-    .ticket-contact {
-        background: #f8f8f8 !important;
-        padding: 1.5mm !important;
-        display: flex !important;
-        justify-content: space-between !important;
-        align-items: center !important;
-        font-size: 5px !important;
-        border-top: 1px solid #000000 !important;
-        color: #000000 !important;
-    }
-    
-    
-    .articles-count-badge {
-        background: white !important;
+            page-break-after: auto; 
+        }
+        /* Ajustements pour les couleurs d'impression */
+        .ticket-header, .ticket-footer {
+        background: #fff !important;
         color: #000 !important;
-        border: 1px solid #000 !important;
-        border-radius: 50% !important;
-        width: 20px !important;
-        height: 20px !important;
-        display: inline-flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        font-size: 10px !important;
-        font-weight: bold !important;
+        -webkit-print-color-adjust: exact !important;
+        color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+        body {
+        -webkit-print-color-adjust: exact !important;
+        color-adjust: exact !important;
+        print-color-adjust: exact !important;
     }
     
-    .articles-section {
-        background: #f9fafb !important;
-        padding: 2mm !important;
-        border-top: 1px solid #e5e7eb !important;
-    }
-    
-    .articles-title {
-        font-size: 8px !important;
-        font-weight: bold !important;
-        color: #374151 !important;
-        margin-bottom: 1mm !important;
-        display: flex !important;
-        align-items: center !important;
-    }
-    
-    .articles-title i {
-        margin-right: 1mm !important;
-        color: #6b7280 !important;
-    }
-    
-    .articles-list {
-        font-size: 7px !important;
-        color: #4b5563 !important;
-        line-height: 1.3 !important;
-    }
-    
-    .article-item {
-        margin-bottom: 0.5mm !important;
-        padding-left: 1mm !important;
-        border-left: 0.3px solid #d1d5db !important;
-        display: flex !important;
-        align-items: center !important;
-        gap: 1mm !important;
-    }
-    
-    .article-item i {
-        color: #6b7280 !important;
-        font-size: 6px !important;
-    }
-    
-    .article-details {
-        flex: 1 !important;
-        display: flex !important;
-        flex-direction: row !important;
-        gap: 1mm !important;
-        align-items: center !important;
-    }
-    
-    .article-ref {
-        font-weight: 600 !important;
-        color: #374151 !important;
-        font-size: 7px !important;
-    }
-    
-    .article-color {
-        color: #6b7280 !important;
-        font-size: 6px !important;
-    }
-    
-    .article-size {
-        color: #9ca3af !important;
-        font-size: 6px !important;
-    }
-    
-    .article-qty {
-        font-weight: bold !important;
-        color: #059669 !important;
-        font-size: 7px !important;
-    }
+        /* Polices en impression (optimisées pour 100x100mm) */
+        .ticket-commande { font-size: 9px !important; }
+        .ticket-header { font-size: 10px !important; }
+        .header-logo { width: 25mm !important; max-height: 15mm !important; }
+        .barcode-image { max-width: 22mm !important; max-height: 22mm !important; width: 22mm !important; height: 22mm !important; }
+        .barcode-text { font-size: 8px !important; color: #000 !important; }
+        .ticket-date { font-size: 9px !important; color: #000 !important; }
+        .ticket-date i { color: #000 !important; }
+        .order-number-below-qr { font-size: 8px !important; color: #000 !important; }
+        .client-line { font-size: 8px !important; }
+        .articles-title { font-size: 10px !important; }
+        .articles-list { font-size: 7px !important; }
+        .article-ref { font-size: 8px !important; }
+        .article-color, .article-size { font-size: 7px !important; }
+        .article-qty { font-size: 7px !important; }
+        .ticket-footer { font-size: 8px !important; }
+        .price-amount { font-size: 10px !important; }
+        .footer-company { font-size: 7px !important; }
+        .footer-company div { font-size: 7px !important; }
+        .footer-company i { font-size: 6px !important; }
 }
 </style>

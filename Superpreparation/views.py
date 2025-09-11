@@ -18,6 +18,7 @@ import barcode
 from barcode.writer import ImageWriter
 from io import BytesIO
 import base64
+import qrcode
 import csv
 from article.models import Article, MouvementStock, VarianteArticle
 from commande.models import Envoi
@@ -763,7 +764,6 @@ def commandes_livrees_partiellement(request):
         'is_tracking_page': True
     }
     return render(request, 'Superpreparation/commandes_livrees_partiellement.html', context)
-
 @superviseur_preparation_required
 def commandes_retournees(request):
     """Page de suivi (lecture seule) des commandes retournées"""
@@ -1557,7 +1557,6 @@ def api_commandes_confirmees(request):
             'success': False,
             'error': str(e)
         }, status=500)
-
 @superviseur_preparation_required
 def api_articles_commande(request, commande_id):
     """API pour récupérer les articles d'une commande avec leurs codes-barres"""
@@ -1606,6 +1605,7 @@ def api_articles_commande(request, commande_id):
             'success': False,
             'error': str(e)
         }, status=500)
+
 
 @superviseur_preparation_required
 def api_commande_produits(request, commande_id):
@@ -2717,55 +2717,104 @@ def modifier_commande_superviseur(request, commande_id):
                             
 
                             if total_quantite_upsell >= 2:
+
                                 commande.compteur = total_quantite_upsell - 1
+
                             else:
+
                                 commande.compteur = 0
                             
+                            
+                            
                             commande.save()
+
                             commande.recalculer_totaux_upsell()
+
                         else:
+
                             from commande.templatetags.commande_filters import get_prix_upsell_avec_compteur
+
                             prix_unitaire = get_prix_upsell_avec_compteur(article, commande.compteur)
+
                             sous_total = prix_unitaire * panier.quantite
+
                             panier.sous_total = float(sous_total)
+
                             panier.save()
+                        
+                        
                         
                         message = f'Quantité de {article.nom} mise à jour: {nouvelle_quantite}'
                     
+                    
+                    
                     # Recalculer le total de la commande
+
                     total_articles = commande.paniers.aggregate(
+
                         total=Sum('sous_total')
+
                     )['total'] or 0
+
                     frais_livraison = commande.ville.frais_livraison if commande.ville else 0
+
                     commande.total_cmd = float(total_articles) #+ float(frais_livraison)
+
                     commande.save()
+
+                    
                     
                     return JsonResponse({
+
                         'success': True,
+
                         'message': message,
+
                         'sous_total': float(panier.sous_total) if nouvelle_quantite > 0 else 0,
+
                         'compteur_upsell': commande.compteur,
+
                         'total_commande': float(commande.total_cmd),
+
                         'frais_livraison': float(frais_livraison),
+
                         'total_final': float(commande.total_cmd) + float(frais_livraison)
+
                     })
                     
                 except Panier.DoesNotExist:
+
                     return JsonResponse({'success': False, 'message': 'Article non trouvé dans la commande'})
+
                 except Exception as e:
+
                     print(f"❌ Erreur lors de la modification de quantité: {e}")
+
                     return JsonResponse({'success': False, 'message': f'Erreur: {str(e)}'})
             
+            
+
             elif action == 'delete_article':
+
                 # Supprimer un article de la commande
+
                 from commande.models import Panier
+
+                
                 
                 panier_id = request.POST.get('panier_id')
+
+                
                 
                 try:
+
                     panier = Panier.objects.get(id=panier_id, commande=commande)
+
                     article_nom = panier.article.nom
+
                     etait_upsell = panier.article.isUpsell  # Sauvegarder avant suppression
+
+
 
                     panier.delete()
 
@@ -3042,8 +3091,6 @@ def modifier_commande_superviseur(request, commande_id):
     }
 
     return render(request, 'Superpreparation/modifier_commande_superviseur.html', context)
-
-@superviseur_preparation_required
 def api_articles_disponibles_prepa(request):
 
     """API pour récupérer les articles disponibles pour les opérateurs de préparation"""
@@ -3436,6 +3483,7 @@ def api_articles_disponibles_prepa(request):
 
         }, status=500)
 
+
 @superviseur_preparation_required
 def api_panier_commande_prepa(request, commande_id):
     """API pour récupérer le panier d'une commande pour les opérateurs de préparation"""
@@ -3569,6 +3617,7 @@ def api_finaliser_commande(request, commande_id):
             'message': f'Erreur lors de la finalisation: {str(e)}'
         }, status=500)
 
+
 @superviseur_preparation_required
 def api_panier_commande(request, commande_id):
     """API pour récupérer le contenu du panier d'une commande (pour le modal)"""
@@ -3695,6 +3744,7 @@ def api_panier_commande(request, commande_id):
             'message': f'Erreur lors du chargement du panier: {str(e)}'
         }, status=500)
 
+
 @superviseur_preparation_required
 def imprimer_tickets_preparation(request):
     """
@@ -3801,8 +3851,6 @@ def export_envois(request):
     }
     
     return render(request, 'Superpreparation/export_envois.html', context)
-
-@superviseur_preparation_required
 def details_region_view(request):
     """Vue détaillée pour afficher les commandes par région - Service de préparation"""
     try:
@@ -4079,6 +4127,7 @@ def commandes_envoi(request, envoi_id):
             'error': f'Erreur lors de la récupération des commandes: {str(e)}'
         }, status=500)
 
+
 @superviseur_preparation_required
 def commandes_envoi_historique(request, envoi_id):
     """Récupérer les commandes d'un envoi clôturé pour l'historique"""
@@ -4194,6 +4243,7 @@ def commandes_envoi_historique(request, envoi_id):
             'success': False,
             'error': f'Erreur lors de la récupération des commandes: {str(e)}'
         }, status=500)
+
 
 @csrf_exempt
 @login_required
@@ -4566,8 +4616,6 @@ def cloturer_envoi(request):
         return JsonResponse({'success': False, 'message': 'Envoi non trouvé'}, status=404)
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
-
-@superviseur_preparation_required
 def rafraichir_articles_commande_prepa(request, commande_id):
     """Rafraîchir la section des articles de la commande en préparation"""
     print(f"🔄 Rafraîchissement des articles pour la commande {commande_id}")
@@ -5319,8 +5367,6 @@ def api_articles_commande_livree_partiellement(request, commande_id):
             'success': False, 
             'message': f'Erreur lors de la génération de la réponse: {str(e)}'
         })
-
-@superviseur_preparation_required
 def api_prix_upsell_articles(request, commande_id):
     """API pour récupérer les prix upsell mis à jour des articles"""
     print(f"🔄 Récupération des prix upsell pour la commande {commande_id}")
@@ -5671,6 +5717,7 @@ def get_article_variants(request, article_id):
             'error': 'Erreur lors de la récupération des variantes'
         }, status=500)
 
+
 def generate_barcode_for_commande(commande_id_yz):
     """Fonction utilitaire pour générer le code-barres d'une commande"""
     try:
@@ -5697,476 +5744,225 @@ def generate_barcode_for_commande(commande_id_yz):
             print(f"❌ Erreur lors de la génération du code-barres: {str(barcode_error)}")
     return ""
 
+def generate_qr_code_for_commande(commande_id_yz):
+    """Fonction utilitaire pour générer le code QR d'une commande"""
+    try:
+        import qrcode
+        qr_data = str(commande_id_yz)
+        print(f"📊 Génération du code QR: {qr_data}")
+        
+        # Créer un code QR avec des paramètres optimisés pour l'impression
+        qr = qrcode.QRCode(
+            version=1,  # Version 1 (21x21 modules)
+            error_correction=qrcode.constants.ERROR_CORRECT_L,  # Niveau de correction d'erreur bas
+            box_size=10,  # Taille de chaque module (pixel)
+            border=4,  # Bordure autour du QR code
+        )
+        
+        # Ajouter les données
+        qr.add_data(qr_data)
+        qr.make(fit=True)
+        
+        # Créer l'image
+        qr_image = qr.make_image(fill_color="black", back_color="white")
+        
+        # Créer un buffer pour l'image
+        buffer = BytesIO()
+        qr_image.save(buffer, format='PNG')
+        
+        # Convertir en base64
+        qr_base64 = base64.b64encode(buffer.getvalue()).decode()
+        print(f"✅ Code QR généré avec succès")
+        return qr_base64
+        
+    except ImportError:
+        print("❌ Erreur: La bibliothèque qrcode n'est pas installée")
+        return ""
+    except Exception as qr_error:
+        print(f"❌ Erreur lors de la génération du code QR: {str(qr_error)}")
+        return ""
 
 @superviseur_preparation_required
-def api_ticket_commande(request):
-    """API pour récupérer le contenu HTML du ticket de commande"""
+def api_ticket_commande_new(request):
+    """API pour récupérer le contenu HTML du nouveau ticket de commande (format 10x10)"""
     try:
-        ids = request.GET.get('ids')
-        if not ids:
-            return JsonResponse({'error': 'IDs des commandes requis'}, status=400)
+        commande_id = request.GET.get('id')
+        if not commande_id:
+            return JsonResponse({'error': 'ID de la commande requis'}, status=400)
         
-        # Supporter plusieurs IDs séparés par des virgules
-        id_list = [id.strip() for id in ids.split(',') if id.strip()]
+        print(f"🔍 Génération du ticket pour la commande: {commande_id}")
         
-        print(f"🔍 Recherche des commandes avec id_yz: {id_list} pour ticket")
+        # Récupérer la commande
+        try:
+            commande = Commande.objects.filter(
+                id_yz=commande_id,
+                etats__enum_etat__libelle='Confirmée'
+            ).distinct().first()
+            
+            if not commande:
+                print(f"❌ Commande {commande_id} non trouvée ou non confirmée")
+                return JsonResponse({'error': f'Commande {commande_id} non trouvée ou non confirmée'}, status=404)
+            
+            print(f"✅ Commande trouvée: {commande.id_yz}")
+        except Exception as e:
+            print(f"❌ Erreur lors de la recherche de la commande {commande_id}: {str(e)}")
+            return JsonResponse({'error': f'Erreur lors de la recherche de la commande {commande_id}'}, status=500)
         
-        all_tickets_html = []
-        commandes_data = []
+        # Générer le code QR
+        qr_base64 = generate_qr_code_for_commande(commande.id_yz)
         
-        for commande_id in id_list:
-            try:
-                print(f"🔍 Traitement de la commande ID: {commande_id}")
-                commande = Commande.objects.filter(
-                    id_yz=commande_id,
-                    etats__enum_etat__libelle='Confirmée',
-                    paniers__isnull=False
-                ).distinct().first()
-                
-                if not commande:
-                    print(f"❌ Commande {commande_id} non trouvée ou non confirmée ou sans articles")
-                    continue
-                
-                print(f"✅ Commande confirmée trouvée: {commande.id_yz}")
-                
-                # Préparer la description des articles
-                articles_description = ""
-                total_articles = 0
-                paniers = commande.paniers.all().select_related('article', 'variante')
-                for panier in paniers:
-                    article = panier.article
-                    variante = panier.variante
-                    total_articles += panier.quantite  # Ajouter la quantité au total
-                    if articles_description:
-                        articles_description += " + "
-                    articles_description += f"{article.nom} {variante.couleur if variante else ''} , P{panier.quantite}"
-                
-                # Générer le code-barres en réutilisant la logique existante
-                barcode_base64 = generate_barcode_for_commande(commande.id_yz)
-                
-                # Récupérer toutes les variantes de la commande
-                variantes = []
-                print(f"🔍 Traitement de {len(paniers)} paniers pour la commande {commande.id_yz}")
-                for i, panier in enumerate(paniers):
-                    try:
-                        print(f"  Panier {i+1}: variante={panier.variante}, article={panier.article}")
-                        print(f"    🔗 Relation variante->article: {panier.variante.article if panier.variante else 'Pas de variante'}")
-                        print(f"    🔗 Relation panier->article: {panier.article}")
-                        
-                        # Vérifier que la variante existe et qu'elle est bien liée à un article
-                        if panier.variante and panier.variante.article:
-                            print(f"    ✅ Variante {panier.variante.id} liée à l'article {panier.variante.article.id}")
-                            
-                            # Vérifier si cette variante n'est pas déjà ajoutée
-                            variante_exists = any(v['id'] == panier.variante.id for v in variantes)
-                            if not variante_exists:
-                                variante_data = {
-                                    'id': panier.variante.id,
-                                    'article': {
-                                        'id': panier.variante.article.id,
-                                        'nom': panier.variante.article.nom or "Article sans nom",
-                                        'reference': panier.variante.article.reference or ""
-                                    },
-                                    'couleur': panier.variante.couleur.nom if panier.variante.couleur else "",
-                                    'pointure': panier.variante.pointure.pointure if panier.variante.pointure else "",
-                                    'quantite': panier.quantite or 0
-                                }
-                                variantes.append(variante_data)
-                                print(f"    ✅ Variante ajoutée: {variante_data['article']['nom']} (ID: {variante_data['id']})")
-                            else:
-                                print(f"    ⚠️ Variante déjà ajoutée: {panier.variante.id}")
-                        elif panier.variante and not panier.variante.article:
-                            print(f"    ❌ Variante {panier.variante.id} sans article associé")
-                        elif not panier.variante and panier.article:
-                            print(f"    ❌ Panier avec article {panier.article.id} mais sans variante")
-                        else:
-                            print(f"    ❌ Panier sans variante ni article")
-                    except Exception as e:
-                        print(f"    ❌ Erreur lors du traitement du panier {i+1}: {str(e)}")
-                        continue
-                
-                print(f"📋 Total variantes récupérées: {len(variantes)}")
-                
-                # Préparer les données de la commande
-                commande_data = {
-                    'id_yz': commande.id_yz,
-                    'num_cmd': commande.num_cmd,
-                    'client_nom': f"{commande.client.nom} {commande.client.prenom}" if commande.client else "Client non défini",
-                    'client_telephone': commande.client.numero_tel if commande.client else "",
-                    'client_adresse': commande.adresse,
-                    'ville_client': commande.ville.nom if commande.ville else "",
-                    'total': commande.total_cmd,
-                    'date_confirmation': commande.date_creation,
-                    'articles_description': articles_description,
-                    'total_articles': total_articles,
-                    'barcode_image': barcode_base64,
-                    'variantes': variantes
-                }
-                
-                # Rendre le template HTML pour cette commande
-                ticket_html = render_to_string('Superpreparation/partials/_ticket_commande.html', {
-                    'commande': commande_data
-                })
-                
-                all_tickets_html.append(ticket_html)
-                commandes_data.append(commande_data)
-                
-            except Exception as e:
-                import traceback
-                print(f"❌ Erreur lors du traitement de la commande {commande_id}: {str(e)}")
-                print(traceback.format_exc())
-                continue
+        # Préparer les articles
+        articles_data = []
+        paniers = commande.paniers.all().select_related('article', 'variante__couleur', 'variante__pointure')
         
-        if not all_tickets_html:
-            return JsonResponse({'error': 'Aucune commande valide trouvée'}, status=404)
+        for panier in paniers:
+            article = panier.article
+            variante = panier.variante
+            
+            # Calculer le prix unitaire
+            prix_unitaire = panier.sous_total / panier.quantite if panier.quantite > 0 else 0
+            
+            article_data = {
+                'nom': article.nom or "Article sans nom",
+                'couleur': variante.couleur.nom if variante and variante.couleur else "Standard",
+                'pointure': variante.pointure.pointure if variante and variante.pointure else "Standard",
+                'quantite': panier.quantite,
+                'prix': f"{prix_unitaire:.2f}"
+            }
+            articles_data.append(article_data)
         
-        # Combiner tous les tickets avec un conteneur en bloc pour l'impression individuelle
-        combined_html = f'''
-        <div class="ticket-commande-container" style="display: block; width: 100%; margin: 0 auto; padding: 0; -webkit-print-color-adjust: exact !important; color-adjust: exact !important; print-color-adjust: exact !important;">
-            {''.join(all_tickets_html)}
-        </div>
-        '''
+        # Préparer les données de la commande
+        commande_data = {
+            'id_yz': commande.id_yz,
+            'client_nom': f"{commande.client.nom} {commande.client.prenom}" if commande.client else "Client non défini",
+            'client_telephone': commande.client.numero_tel if commande.client else "",
+            'client_adresse': commande.adresse or "",
+            'ville_client': commande.ville.nom if commande.ville else commande.ville_init or "",
+            'total': f"{commande.total_cmd:.2f}",
+            'frais_livraison': commande.frais_livraison,
+            'date_commande': commande.date_creation,
+            'qr_code': qr_base64,
+            'articles': articles_data
+        }
+        
+        # Rendre le template HTML
+        ticket_html = render_to_string(
+            'Superpreparation/partials/_ticket_commande_new.html',
+            {'commande': commande_data}
+        )
         
         return JsonResponse({
             'success': True,
-            'html': combined_html,
-            'commandes': commandes_data
+            'html': ticket_html,
+            'commande': commande_data
         })
         
     except Exception as e:
         import traceback
-        print(f"Erreur dans api_ticket_commande: {str(e)}")
+        print(f"❌ Erreur dans api_ticket_commande_new: {str(e)}")
         print(traceback.format_exc())
         return JsonResponse({
             'success': False,
             'error': f'Erreur lors de la génération du ticket: {str(e)}'
         }, status=500)
 
-@superviseur_preparation_required
-def api_etiquettes_articles(request):
-    """API pour récupérer le contenu HTML des étiquettes des articles"""
+def api_qr_codes_articles(request):
+    """API pour récupérer les QR codes des articles d'une commande (format 10x10)"""
     try:
-        ids = request.GET.get('ids')
-        format_type = request.GET.get('format', 'qr')  # 'qr' ou 'barcode'
+        commande_id = request.GET.get('id')
+        if not commande_id:
+            return JsonResponse({'error': 'ID de la commande requis'}, status=400)
         
-        if not ids:
-            return JsonResponse({'error': 'IDs des commandes requis'}, status=400)
+        print(f"🔍 Génération des QR codes pour la commande: {commande_id}")
         
-        print(f"🔍 Recherche de la commande avec id_yz: {ids} pour format: {format_type}")
-        
-        # Récupérer la commande confirmée avec des articles
+        # Récupérer la commande
         try:
             commande = Commande.objects.filter(
-                id_yz=ids,
-                etats__enum_etat__libelle='Confirmée',
-                paniers__isnull=False
+                id_yz=commande_id,
+                etats__enum_etat__libelle='Confirmée'
             ).distinct().first()
             
             if not commande:
-                print(f"❌ Commande {ids} non trouvée ou non confirmée ou sans articles")
-                return JsonResponse({'error': f'Commande {ids} non confirmée ou sans articles'}, status=404)
+                print(f"❌ Commande {commande_id} non trouvée ou non confirmée")
+                return JsonResponse({'error': f'Commande {commande_id} non trouvée ou non confirmée'}, status=404)
             
-            print(f"✅ Commande confirmée trouvée: {commande.id_yz}")
+            print(f"✅ Commande trouvée: {commande.id_yz}")
         except Exception as e:
-            print(f"❌ Erreur lors de la recherche de la commande {ids}: {str(e)}")
-            return JsonResponse({'error': f'Erreur lors de la recherche de la commande {ids}'}, status=500)
+            print(f"❌ Erreur lors de la recherche de la commande {commande_id}: {str(e)}")
+            return JsonResponse({'error': f'Erreur lors de la recherche de la commande {commande_id}'}, status=500)
         
-        articles = commande.paniers.all().select_related('article', 'variante')
+        # Récupérer les articles du panier
+        paniers = commande.paniers.all().select_related('article', 'variante__couleur', 'variante__pointure')
         
-        articles_data = []
-        for panier in articles:
+        if not paniers.exists():
+            return JsonResponse({'error': 'Aucun article trouvé dans cette commande'}, status=404)
+        
+        # Générer les QR codes pour chaque article
+        qr_codes_html = []
+        
+        for panier in paniers:
             article = panier.article
             variante = panier.variante
             
-            # Générer le QR code pour l'article
-            try:
-                import qrcode
-                qr_data = f"ART{article.id}_{variante.id if variante else 'NO_VAR'}"
-                qr = qrcode.QRCode(version=1, box_size=10, border=5)
-                qr.add_data(qr_data)
-                qr.make(fit=True)
-                qr_img = qr.make_image(fill_color="black", back_color="white")
+            # Créer le texte du QR code : référence_article|CMD-numéro_commande
+            qr_text = f"{article.reference}|CMD-{commande.id_yz}"
+            
+            # Générer le QR code
+            qr = qrcode.QRCode(
+                version=1,
+                error_correction=qrcode.constants.ERROR_CORRECT_L,
+                box_size=10,
+                border=4,
+            )
+            qr.add_data(qr_text)
+            qr.make(fit=True)
+            
+            # Créer l'image du QR code
+            qr_image = qr.make_image(fill_color="black", back_color="white")
                 
                 # Convertir en base64
-                buffer = BytesIO()
-                qr_img.save(buffer, format='PNG')
-                qr_base64 = base64.b64encode(buffer.getvalue()).decode()
-            except ImportError:
-                # Fallback si qrcode n'est pas installé
-                qr_base64 = ""
-                print("Warning: qrcode library not installed, QR codes will not be generated")
-            
-            # Générer le code-barres pour l'article
-            barcode_data = f"ART{article.reference}_{variante.reference_variante if variante else 'NO_VAR'}"
-            code128 = barcode.get_barcode_class("code128")
-            barcode_image = code128(barcode_data, writer=ImageWriter())
             buffer = BytesIO()
-            barcode_image.write(buffer)
-            barcode_base64 = base64.b64encode(buffer.getvalue()).decode()
+            qr_image.save(buffer, format='PNG')
+            qr_base64 = base64.b64encode(buffer.getvalue()).decode()
             
-            # Calculer le prix unitaire à partir du sous_total et de la quantité
-            prix_unitaire = panier.sous_total / panier.quantite if panier.quantite > 0 else 0
-            
-            article_data = {
-                'id': article.id,
-                'nom': article.nom,
-                'reference': article.reference,
-                'prix': float(prix_unitaire),
-                'quantite': panier.quantite,
-                'couleur': variante.couleur.nom if variante and variante.couleur else "Standard",
-                'pointure': variante.pointure.pointure if variante and variante.pointure else "Standard",
-                'qr_image': qr_base64,
-                'barcode_image': barcode_base64,
-                'commande_id': commande.id_yz
-            }
-            articles_data.append(article_data)
+            # Créer le HTML pour ce QR code
+            qr_html = f'''
+            <div class="qr-code-container">
+                <img src="data:image/png;base64,{qr_base64}" alt="QR Code" class="qr-code">
+                <div class="article-info">
+                    <div class="article-ref">{article.reference}</div>
+                    <div class="commande-ref">CMD-{commande.id_yz}</div>
+                </div>
+            </div>
+            '''
+            qr_codes_html.append(qr_html)
         
-        # Rendre le template HTML avec le format spécifié
-        html_content = render_to_string('Superpreparation/partials/_etiquettes_articles.html', {
-            'articles': articles_data,
-            'commande': {
-                'id_yz': commande.id_yz,
-                'client_nom': f"{commande.client.nom} {commande.client.prenom}" if commande.client else "Client non défini"
-            },
-            'format_type': format_type
-        })
+        # Combiner tous les QR codes
+        all_qr_codes_html = ''.join(qr_codes_html)
         
         return JsonResponse({
             'success': True,
-            'html': html_content,
-            'articles': articles_data,
-            'format_type': format_type
+            'html': all_qr_codes_html,
+            'count': len(qr_codes_html)
         })
         
     except Exception as e:
         import traceback
-        print(f"Erreur dans api_etiquettes_articles: {str(e)}")
+        print(f"❌ Erreur dans api_qr_codes_articles: {str(e)}")
         print(traceback.format_exc())
         return JsonResponse({
             'success': False,
-            'error': f'Erreur lors de la génération des étiquettes: {str(e)}'
+            'error': f'Erreur lors de la génération des QR codes: {str(e)}'
         }, status=500)
 
-@superviseur_preparation_required
-def api_etiquettes_articles_multiple(request):
-    """
-    API pour récupérer le contenu HTML des étiquettes de tous les articles de toutes les commandes confirmées
-    Supporte la sélection de commandes spécifiques ou toutes les commandes
-    """
-    try:
-        format_type = request.GET.get('format', 'qr')  # 'qr' ou 'barcode'
-        selected_ids = request.GET.get('selected_ids', '')
-        print(f"🔍 Récupération des articles pour étiquettes multiples, format: {format_type}")
-        base_filter = {
-            'etats__enum_etat__libelle': 'Confirmée',
-            'paniers__isnull': False
-        }
-        # Si des IDs sont spécifiés, filtrer par ces IDs
-        if selected_ids:
-            try:
-                # Convertir la chaîne d'IDs en liste d'entiers
-                commande_ids = [int(id.strip()) for id in selected_ids.split(',') if id.strip().isdigit()]
-                if commande_ids:
-                    base_filter['id__in'] = commande_ids
-                    print(f"🔍 Filtrage par {len(commande_ids)} commandes sélectionnées: {commande_ids}")
-                else:
-                    print("⚠️ Aucun ID valide trouvé dans selected_ids")
-            except (ValueError, AttributeError) as e:
-                print(f"❌ Erreur lors du parsing des IDs: {e}")
-        else:
-            print("🔍 Aucune sélection spécifique - impression de tous les articles des commandes confirmées")
-        commandes = Commande.objects.filter(**base_filter).distinct().prefetch_related('paniers__article', 'paniers__variante__couleur', 'paniers__variante__pointure')
-        print(f"📊 Nombre de commandes confirmées avec paniers: {commandes.count()}")
-        all_articles_data = []
 
+# Fonction api_ticket_commande supprimée - en attente de nouvelles instructions
 
-        for commande in commandes:
-            print(f"📋 Traitement de la commande: {commande.id_yz}")
-            articles = commande.paniers.all()
-            print(f"  📦 Nombre de paniers: {articles.count()}")
+# Fonction api_etiquettes_articles supprimée - en attente de nouvelles instructions
 
-            if articles.count() == 0:
-                print(f"  ⚠️ Aucun panier trouvé pour la commande {commande.id_yz}")
-                continue
+# Fonction api_etiquettes_articles_multiple supprimée - en attente de nouvelles instructions
 
-            for panier in articles:
-                article = panier.article
-                variante = panier.variante
-
-                try:
-                    import qrcode
-                    qr_data = f"ART{article.id}_{variante.id if variante else 'NO_VAR'}"
-                    qr = qrcode.QRCode(version=1, box_size=10, border=5)
-                    qr.add_data(qr_data)
-                    qr.make(fit=True)
-                    qr_img = qr.make_image(fill_color="black", back_color="white")
-                    buffer = BytesIO()
-                    qr_img.save(buffer, format='PNG')
-                    qr_base64 = base64.b64encode(buffer.getvalue()).decode()
-                except ImportError:
-                    # Fallback si qrcode n'est pas install
-                    qr_base64 = ""
-                    print("Warning: qrcode library not installed, QR codes will not be generated")
-                barcode_data = f"ART{article.reference}_{variante.reference_variante if variante else 'NO_VAR'}"
-                code128 = barcode.get_barcode_class("code128")
-                barcode_image = code128(barcode_data, writer=ImageWriter())
-                buffer = BytesIO()
-                barcode_image.write(buffer)
-                barcode_base64 = base64.b64encode(buffer.getvalue()).decode()
-
-                prix_unitaire = panier.sous_total / panier.quantite if panier.quantite > 0 else 0
-                article_data = {
-                    'id': article.id,
-                    'nom': article.nom,
-                    'reference': article.reference,
-                    'prix': float(prix_unitaire),
-                    'quantite': panier.quantite,
-                    'couleur': variante.couleur.nom if variante and variante.couleur else "Standard",
-                    'pointure': variante.pointure.pointure if variante and variante.pointure else "Standard",
-                    'qr_image': qr_base64,
-                    'barcode_image': barcode_base64,
-                    'commande_id': commande.id_yz
-                }
-                all_articles_data.append(article_data)
-        print(f"📦 Nombre total d'articles: {len(all_articles_data)}")
-        if not all_articles_data:
-            return JsonResponse({'error': 'Aucun article trouvé dans les commandes confirmées'}, status=404)
-        html_content = render_to_string('Superpreparation/partials/_etiquettes_articles.html', {
-            'articles': all_articles_data,
-            'commande': {
-                'id_yz': 'MULTIPLE',
-                'client_nom': 'Toutes les commandes confirmées'
-            },
-            'format_type': format_type
-        })
-
-        return JsonResponse({
-            'success': True,
-            'html': html_content,
-            'articles': all_articles_data,
-            'format_type': format_type,
-            'total_articles': len(all_articles_data)
-        })
-    except Exception as e:
-        import traceback
-        print(f"Erreur dans api_etiquettes_articles_multiple: {str(e)}")
-        print(traceback.format_exc())
-        return JsonResponse({
-            'success': False,
-            'error': f'Erreur lors de la génération des étiquettes multiples: {str(e)}'
-        }, status=500)
-
-@superviseur_preparation_required
-def api_ticket_commande_multiple(request):
-    """
-    API pour récupérer le contenu HTML des tickets de commande multiples
-    Utilise la fonction api_ticket_commande existante pour éviter la duplication de code
-    """
-    print("🚀 === API TICKET COMMANDE MULTIPLE DÉMARRÉE ===")
-    print(f"📡 Méthode HTTP: {request.method}")
-    print(f"📡 URL: {request.path}")
-    print(f"📡 Paramètres GET: {dict(request.GET)}")
-
-    try:
-     # Vérifier si c'est pour l'impression directe
-        direct_print = request.GET.get('direct_print', 'false').lower() == 'true'
-        print(f"🖨️ Impression directe: {direct_print}")
-        
-        # Récupérer les IDs des commandes sélectionnées
-        selected_ids = request.GET.get('selected_ids', '')
-        print(f"📋 Paramètre selected_ids reçu: '{selected_ids}' (type: {type(selected_ids)})")
-        
-        # Construire le filtre de base
-        base_filter = {
-            'etats__enum_etat__libelle': 'Confirmée',
-            'paniers__isnull': False
-        }
-        print(f"🔧 Filtre de base: {base_filter}")
-        
-        if selected_ids:
-            print(f"🔍 Traitement de la sélection: '{selected_ids}'")
-            try:
-                commande_ids = [int(id.strip()) for id in selected_ids.split(',') if id.strip().isdigit()]
-                print(f"🔍 IDs parsés: {commande_ids}")
-                if commande_ids:
-                    base_filter['id__in'] = commande_ids
-                    print(f"✅ Filtrage par {len(commande_ids)} commandes sélectionnées: {commande_ids}")
-                else:
-                    print("⚠️ Aucun ID valide trouvé dans selected_ids")
-            except (ValueError, AttributeError) as e:
-                print(f"❌ Erreur lors du parsing des IDs: {e}")
-                import traceback
-                print(f"❌ Traceback: {traceback.format_exc()}")
-        else:
-            print("🔍 Aucune sélection spécifique - impression de toutes les commandes confirmées")
-        
-        print(f"🔍 Filtre final appliqué: {base_filter}")
-        print("🔍 Exécution de la requête de base de données...")
-
-        # Récupérer les commandes selon le filtre
-        commandes = Commande.objects.filter(**base_filter).distinct()
-        print(f"📊 Nombre de commandes confirmées avec paniers: {commandes.count()}")
-
-        if not commandes.exists():
-            return JsonResponse({'error': 'Aucune commande confirmée trouvée'}, status=404)
-
-        # Extraire les IDs YZ des commandes
-        commande_ids_yz = [str(commande.id_yz) for commande in commandes]
-        print(f"🔍 IDs YZ des commandes: {commande_ids_yz}")
-
-        # Créer une nouvelle requête simulée pour api_ticket_commande
-        class MockRequest:
-            def __init__(self, ids_string, user):
-                self.GET = {'ids': ids_string}
-                self.user = user
-        
-        # Appeler la fonction api_ticket_commande existante
-        mock_request = MockRequest(','.join(commande_ids_yz), request.user)
-        print(f"🔄 Appel de api_ticket_commande avec IDs: {','.join(commande_ids_yz)}")
-        
-        response = api_ticket_commande(mock_request)
-        
-        # Vérifier si la réponse est un JsonResponse
-        if hasattr(response, 'content'):
-            import json
-            data = json.loads(response.content.decode('utf-8'))
-            
-            if data.get('success'):
-                print(f"✅ {len(commande_ids_yz)} tickets générés avec succès via api_ticket_commande")
-                
-                # Modifier le HTML si c'est pour l'impression directe
-                if direct_print:
-                    import re
-                    html_content = data['html']
-                    # Supprimer les checkboxes
-                    html_content = re.sub(r'<input[^>]*class="[^"]*ticket-checkbox[^"]*"[^>]*>', '', html_content)
-                    # Ajuster l'affichage des badges
-                    html_content = html_content.replace('class="articles-count-badge"', 'class="articles-count-badge" style="display: inline-block !important;"')
-                    data['html'] = html_content
-                
-                return JsonResponse({
-                    'success': True,
-                    'html': data['html'],
-                    'commandes': data['commandes']
-                })
-            else:
-                print(f"❌ Erreur dans api_ticket_commande: {data.get('error')}")
-                return JsonResponse({
-                    'success': False,
-                    'error': f"Erreur lors de la génération des tickets: {data.get('error')}"
-                }, status=500)
-        else:
-            # Si ce n'est pas un JsonResponse, retourner directement
-            return response
-            
-    except Exception as e:
-        print(f"❌ Erreur dans api_ticket_commande_multiple: {str(e)}")
-        import traceback
-        print(traceback.format_exc())
-        return JsonResponse({
-            'success': False,
-            'error': f"Erreur lors de la génération des tickets multiples: {str(e)}"
-        }, status=500)
+# Fonction api_ticket_commande_multiple supprimée - utilise directement api_ticket_commande
 
 @superviseur_preparation_required
 @transaction.atomic
@@ -6248,7 +6044,6 @@ def api_finaliser_preparation(request, commande_id):
             'success': False, 
             'error': f'Erreur lors de la finalisation: {str(e)}'
         }, status=500)
-
 @csrf_exempt
 @login_required
 def export_commandes_envoi_excel(request, envoi_id):
@@ -6420,6 +6215,7 @@ def export_commandes_envoi_excel(request, envoi_id):
             'error': f'Erreur lors de la génération du fichier Excel: {str(e)}'
         }, status=500)
 
+
 @superviseur_preparation_required
 def api_commande_info(request, commande_id):
     """API pour récupérer les informations détaillées d'une commande pour la modale"""
@@ -6471,6 +6267,7 @@ def api_commande_info(request, commande_id):
             'success': False,
             'error': f'Erreur lors du chargement des informations: {str(e)}'
         }, status=500)
+
 
 """"
 Views pour la gestion des stocks
@@ -6681,6 +6478,95 @@ def liste_articles(request):
                 'error': f'Erreur dans la génération des templates: {str(e)}'
             }, status=500)
 
+def api_qr_codes_articles(request):
+    """API pour récupérer les QR codes des articles d'une commande (format 10x10)"""
+    try:
+        commande_id = request.GET.get('id')
+        if not commande_id:
+            return JsonResponse({'error': 'ID de la commande requis'}, status=400)
+        
+        print(f"🔍 Génération des QR codes pour la commande: {commande_id}")
+        
+        # Récupérer la commande
+        try:
+            commande = Commande.objects.filter(
+                id_yz=commande_id,
+                etats__enum_etat__libelle='Confirmée'
+            ).distinct().first()
+            
+            if not commande:
+                print(f"❌ Commande {commande_id} non trouvée ou non confirmée")
+                return JsonResponse({'error': f'Commande {commande_id} non trouvée ou non confirmée'}, status=404)
+            
+            print(f"✅ Commande trouvée: {commande.id_yz}")
+        except Exception as e:
+            print(f"❌ Erreur lors de la recherche de la commande {commande_id}: {str(e)}")
+            return JsonResponse({'error': f'Erreur lors de la recherche de la commande {commande_id}'}, status=500)
+        
+        # Récupérer les articles du panier
+        paniers = commande.paniers.all().select_related('article', 'variante__couleur', 'variante__pointure')
+        
+        if not paniers.exists():
+            return JsonResponse({'error': 'Aucun article trouvé dans cette commande'}, status=404)
+        
+        # Générer les QR codes pour chaque article
+        qr_codes_html = []
+        
+        for panier in paniers:
+            article = panier.article
+            variante = panier.variante
+            
+            # Créer le texte du QR code : référence_article|CMD-numéro_commande
+            qr_text = f"{article.reference}|CMD-{commande.id_yz}"
+            
+            # Générer le QR code
+            qr = qrcode.QRCode(
+                version=1,
+                error_correction=qrcode.constants.ERROR_CORRECT_L,
+                box_size=10,
+                border=4,
+            )
+            qr.add_data(qr_text)
+            qr.make(fit=True)
+            
+            # Créer l'image du QR code
+            qr_image = qr.make_image(fill_color="black", back_color="white")
+            
+            # Convertir en base64
+            buffer = BytesIO()
+            qr_image.save(buffer, format='PNG')
+            qr_base64 = base64.b64encode(buffer.getvalue()).decode()
+            
+            # Créer le HTML pour ce QR code
+            qr_html = f'''
+            <div class="qr-code-container">
+                <img src="data:image/png;base64,{qr_base64}" alt="QR Code" class="qr-code">
+                <div class="article-info">
+                    <div class="article-ref">{article.reference}</div>
+                    <div class="commande-ref">CMD-{commande.id_yz}</div>
+                </div>
+            </div>
+            '''
+            qr_codes_html.append(qr_html)
+        
+        # Combiner tous les QR codes
+        all_qr_codes_html = ''.join(qr_codes_html)
+        
+        return JsonResponse({
+            'success': True,
+            'html': all_qr_codes_html,
+            'count': len(qr_codes_html)
+        })
+        
+    except Exception as e:
+        import traceback
+        print(f"❌ Erreur dans api_qr_codes_articles: {str(e)}")
+        print(traceback.format_exc())
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur lors de la génération des QR codes: {str(e)}'
+            }, status=500)
+
     context = {
         'page_obj': page_obj,
         'search': search,
@@ -6748,7 +6634,6 @@ def detail_article(request, id):
         'couleurs_uniques': couleurs_uniques,
     }
     return render(request, 'Superpreparation/Detail_article.html', context)
-
 @superviseur_preparation_required
 def creer_article(request):
     """Créer un nouvel article"""
@@ -7540,7 +7425,6 @@ def rupture_stock(request):
         'total_articles': articles.count(),
     }
     return render(request, 'Superpreparation/rupture_stock.html', context)
-
 @superviseur_preparation_required
 def liste_promotions(request):
     """Liste des promotions avec recherche et filtres"""
@@ -8261,8 +8145,6 @@ def liste_variantes(request):
         'end_range': end_range,
     }
     return render(request, 'Superpreparation/Liste_variante_article.html', context)
-
-@superviseur_preparation_required
 def creer_variantes_ajax(request):
     """Créer des variantes via AJAX"""
     if request.method != 'POST':
@@ -8792,6 +8674,7 @@ def diagnostiquer_compteur(request, commande_id):
             'error': f'Erreur lors du diagnostic: {str(e)}'
         }, status=500)
 
+
 @superviseur_preparation_required
 @require_POST
 def modifier_couleur(request, couleur_id):
@@ -8893,6 +8776,7 @@ def diagnostiquer_compteur(request, commande_id):
             'error': f'Erreur lors du diagnostic: {str(e)}'
         }, status=500)
 
+
 @superviseur_preparation_required
 def supprimer_couleur(request, couleur_id):
     """Supprimer une couleur"""
@@ -8985,6 +8869,91 @@ def diagnostiquer_compteur(request, commande_id):
             'success': False,
             'error': f'Erreur lors du diagnostic: {str(e)}'
         }, status=500)
-
-
-
+def api_qr_codes_articles(request):
+    """API pour récupérer les QR codes des articles d'une commande (format 10x10)"""
+    try:
+        commande_id = request.GET.get('id')
+        if not commande_id:
+            return JsonResponse({'error': 'ID de la commande requis'}, status=400)
+        
+        print(f"🔍 Génération des QR codes pour la commande: {commande_id}")
+        
+        # Récupérer la commande
+        try:
+            commande = Commande.objects.filter(
+                id_yz=commande_id,
+                etats__enum_etat__libelle='Confirmée'
+            ).distinct().first()
+            
+            if not commande:
+                print(f"❌ Commande {commande_id} non trouvée ou non confirmée")
+                return JsonResponse({'error': f'Commande {commande_id} non trouvée ou non confirmée'}, status=404)
+            
+            print(f"✅ Commande trouvée: {commande.id_yz}")
+        except Exception as e:
+            print(f"❌ Erreur lors de la recherche de la commande {commande_id}: {str(e)}")
+            return JsonResponse({'error': f'Erreur lors de la recherche de la commande {commande_id}'}, status=500)
+        
+        # Récupérer les articles du panier
+        paniers = commande.paniers.all().select_related('article', 'variante__couleur', 'variante__pointure')
+        
+        if not paniers.exists():
+            return JsonResponse({'error': 'Aucun article trouvé dans cette commande'}, status=404)
+        
+        # Générer les QR codes pour chaque article
+        qr_codes_html = []
+        
+        for panier in paniers:
+            article = panier.article
+            variante = panier.variante
+            
+            # Créer le texte du QR code : référence_article|CMD-numéro_commande
+            qr_text = f"{article.reference}|CMD-{commande.id_yz}"
+            
+            # Générer le QR code
+            qr = qrcode.QRCode(
+                version=1,
+                error_correction=qrcode.constants.ERROR_CORRECT_L,
+                box_size=10,
+                border=4,
+            )
+            qr.add_data(qr_text)
+            qr.make(fit=True)
+            
+            # Créer l'image du QR code
+            qr_image = qr.make_image(fill_color="black", back_color="white")
+            
+            # Convertir en base64
+            buffer = BytesIO()
+            qr_image.save(buffer, format='PNG')
+            qr_base64 = base64.b64encode(buffer.getvalue()).decode()
+            
+            # Créer le HTML pour ce QR code
+            qr_html = f'''
+            <div class="qr-code-container">
+                <img src="data:image/png;base64,{qr_base64}" alt="QR Code" class="qr-code">
+                <div class="article-info">
+                    <div class="article-ref">{article.reference}</div>
+                    <div class="commande-ref">CMD-{commande.id_yz}</div>
+                </div>
+            </div>
+            '''
+            qr_codes_html.append(qr_html)
+        
+        # Combiner tous les QR codes
+        all_qr_codes_html = ''.join(qr_codes_html)
+        
+        return JsonResponse({
+            'success': True,
+            'html': all_qr_codes_html,
+            'count': len(qr_codes_html)
+        })
+        
+    except Exception as e:
+        import traceback
+        print(f"❌ Erreur dans api_qr_codes_articles: {str(e)}")
+        print(traceback.format_exc())
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur lors de la génération des QR codes: {str(e)}'
+        }, status=500)
