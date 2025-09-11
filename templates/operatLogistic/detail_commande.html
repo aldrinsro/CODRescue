@@ -789,7 +789,16 @@
                                 {% for panier in commande.paniers.all %}
 <!-- Panier {{ panier.id }}: {{ panier.article.nom }} - Prix: {{ panier.prix_actuel_pour_affichage|default:panier.article.prix_unitaire }} DH -->
                                 <div class="article-livraison-card bg-white rounded-lg border border-green-300 p-4 hover:border-green-400 transition-colors"
-                                     data-panier-id="{{ panier.id }}">
+                                     data-panier-id="{{ panier.id }}"
+                                     data-article-id="{{ panier.article.id }}"
+                                     data-variante-id="{% if panier.variante %}{{ panier.variante.id }}{% endif %}"
+                                     data-article-nom="{{ panier.article.nom }}"
+                                     data-is-upsell="{{ panier.article.isUpsell|yesno:'true,false' }}"
+                                     data-compteur="{{ commande.compteur }}"
+                                     data-prix-unitaire="{{ panier.article.prix_unitaire }}"
+                                     data-prix-actuel="{{ panier.prix_actuel_pour_affichage|default:panier.article.prix_unitaire }}"
+                                     data-quantite-max="{{ panier.quantite }}"
+                                     data-sous-total="{{ panier.sous_total }}">
                                     <div class="flex items-start space-x-3">
                                         <input type="checkbox" 
                                                id="livrer_{{ panier.id }}" 
@@ -2434,7 +2443,9 @@ function mettreAJourResumeLivraisonPartielle() {
                     variante_id: varianteId,
                     quantite: quantiteLivree,
                     nom: nomCompletAvecVariante,
-                    prix_unitaire: prixUnitaire // This should be a float
+                    prix_unitaire: prixUnitaire, // This should be a float
+                    is_upsell: isUpsell,
+                    compteur: compteur
                 });
                 totalArticlesLivres += quantiteLivree;
                 totalValeurLivree += quantiteLivree * prixUnitaire;
@@ -2595,85 +2606,7 @@ function mettreAJourResumeLivraisonPartielle() {
 }
 
 
-// Fonction qui gère l'affichage des articles à renvoyer dans la section dédiée
-function mettreAJourSectionArticlesRevoyes(articlesRenvoyes) {
-    console.log('DEBUG: mettreAJourSectionArticlesRenvoyes appelée avec', articlesRenvoyes.length, 'articles');
-    console.log('DEBUG: Articles à renvoyer:', articlesRenvoyes);
-    
-    const container = document.getElementById('articlesARenvoyerContainer');
-    const aucunArticleDiv = document.getElementById('aucunArticleRenvoyer');
-    
-    console.log('DEBUG: Container trouvé:', !!container);
-    console.log('DEBUG: aucunArticleDiv trouvé:', !!aucunArticleDiv);
-
-    container.innerHTML = '';
-
-    if (articlesRenvoyes.length === 0) {
-        console.log('DEBUG: Aucun article à renvoyer, affichage du message');
-        aucunArticleDiv.classList.remove('hidden');
-        return;
-    }
-
-    console.log('DEBUG: Articles à renvoyer trouvés, masquage du message et création des cartes');
-    aucunArticleDiv.classList.add('hidden');
-
-    articlesRenvoyes.forEach(article => {
-        // Utiliser directement le prix qui vient du backend (déjà calculé)
-        const prixAff = parseFloat(article.prix_actuel) || parseFloat(article.prix_unitaire) || 0;
-        console.log(`DEBUG: Article ${article.nom}, prix_actuel: ${article.prix_actuel}, prix_unitaire: ${article.prix_unitaire}, prix utilisé: ${prixAff}`);
-        const articleCard = document.createElement('div');
-        articleCard.className = 'article-renvoi-card bg-white rounded-lg border border-orange-300 p-4';
-        articleCard.dataset.articleId = article.article_id;
-        articleCard.dataset.varianteId = article.variante_id || '';
-        articleCard.dataset.panierId = article.panier_id;
-        articleCard.innerHTML = `
-            <div class="flex items-start space-x-3">
-                <div class="flex-shrink-0">
-                    <i class="fas fa-undo text-orange-600 text-lg mt-1"></i>
-                </div>
-                <div class="flex-1">
-                    <div class="font-medium text-gray-900">
-                        ${article.nom}
-                        ${article.is_upsell && article.compteur > 0 ? 
-                            `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-700 ml-2">
-                                <i class="fas fa-arrow-up mr-1"></i>Upsell Niv.${article.compteur}
-                            </span>` : ''}
-                    </div>
-                    ${article.variante_id ? `<div class="text-xs text-gray-500 mt-1">Variante: ${article.variante_id}</div>` : ''}
-                    <div class="text-sm text-gray-500 mt-2">
-                        <div class="flex justify-between items-center mb-1">
-                            <span>Quantité à renvoyer:</span>
-                            <span class="font-semibold text-orange-600">${article.quantite}</span>
-                        </div>
-                        <div class="flex justify-between items-center mb-1">
-                            <span>Prix unitaire:</span>
-                            <span class="font-medium text-gray-900">
-                                ${prixAff.toFixed(2)} DH
-                                ${article.is_upsell && article.compteur > 0 ? 
-                                    `<small class="text-green-600 ml-1">(Prix upsell)</small>` : ''}
-                                ${prixAff === 0 ? 
-                                    `<small class="text-red-600 ml-1">⚠️ ERREUR: Prix = 0</small>` : ''}
-                            </span>
-                        </div>
-                        <div class="flex justify-between items-center pt-1 border-t border-orange-200">
-                            <span class="font-medium">Valeur totale renvoyée:</span>
-                            <span class="font-bold text-orange-700 text-lg">${(Number(article.quantite || 0) * prixAff).toFixed(2)} DH</span>
-                        </div>
-                    </div>
-                    <div class="mt-2 text-xs text-orange-600 bg-orange-100 px-2 py-1 rounded-md">
-                        <i class="fas fa-info-circle mr-1"></i>
-                        Article renvoyé aux opérateurs de préparation
-                        ${article.is_upsell && article.compteur > 0 ? 
-                            ` • Prix upsell niveau ${article.compteur} appliqué` : ''}
-                    </div>
-                </div>
-            </div>
-        `;
-        container.appendChild(articleCard);
-
-    });
-
-}
+// Cette fonction est maintenant gérée par modals.js avec les données du backend
 
 // ================== Ancien Gestionnaire de Soumission de Formulaire ==================
 // Ce bloc est maintenant simplifié et doit utiliser les hidden inputs JSON

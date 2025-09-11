@@ -908,21 +908,17 @@ function mettreAJourResumeLivraisonPartielle() {
     document.querySelectorAll('.article-livraison-card').forEach(card => {
         const panierId = parseInt(card.dataset.panierId);
         
-        // Récupérer les données depuis le cache global ou les data stockés lors du chargement
-        const panierData = window.currentPaniersData?.find(p => p.id === panierId);
+        // Récupérer les données directement depuis les attributs data-* du DOM
+        const nom = card.dataset.articleNom || '';
+        const articleId = parseInt(card.dataset.articleId) || 0;
+        const varianteId = card.dataset.varianteId ? parseInt(card.dataset.varianteId) : null;
+        const prixUnitaire = parseFloat(card.dataset.prixUnitaire) || 0;
+        const prixActuel = parseFloat(card.dataset.prixActuel) || prixUnitaire;
+        const quantiteMax = parseInt(card.dataset.quantiteMax) || 0;
+        const isUpsell = card.dataset.isUpsell === 'true';
+        const compteur = parseInt(card.dataset.compteur) || 0;
         
-        if (!panierData) {
-            console.warn(`Données manquantes pour le panier ${panierId}`);
-            return;
-        }
-        
-        const nom = panierData.nom;
-        const articleId = panierData.article_id;
-        const varianteId = null; // À implémenter si nécessaire
-        const prix = parseFloat(panierData.prix_actuel);
-        const quantiteMax = parseInt(panierData.quantite);
-        
-        console.log(`🔧 DEBUG: Panier ${panierId}, Article: ${nom}, Prix actuel: ${prix}`);
+        console.log(`🔧 DEBUG: Panier ${panierId}, Article: ${nom}, Prix unitaire: ${prixUnitaire}, Prix actuel: ${prixActuel}`);
         
         const checkbox = card.querySelector('.article-livrer-checkbox');
         const input = card.querySelector('.quantite-livrer-input');
@@ -936,11 +932,13 @@ function mettreAJourResumeLivraisonPartielle() {
                 variante_id: varianteId, 
                 quantite: quantiteLivree, 
                 nom: nom, 
-                prix_unitaire: prix, 
-                prix_actuel: prix 
+                prix_unitaire: prixUnitaire, 
+                prix_actuel: prixActuel,
+                is_upsell: isUpsell,
+                compteur: compteur
             });
             totalLivres += quantiteLivree;
-            totalValeurLivree += quantiteLivree * prix;
+            totalValeurLivree += quantiteLivree * prixActuel;
         }
         
         if (quantiteRenvoyee > 0) {
@@ -950,8 +948,10 @@ function mettreAJourResumeLivraisonPartielle() {
                 variante_id: varianteId, 
                 quantite: quantiteRenvoyee, 
                 nom: nom, 
-                prix_unitaire: prix, 
-                prix_actuel: prix 
+                prix_unitaire: prixUnitaire, 
+                prix_actuel: prixActuel,
+                is_upsell: isUpsell,
+                compteur: compteur
             });
             totalRenvoyes += quantiteRenvoyee;
         }
@@ -990,6 +990,12 @@ function mettreAJourSectionArticlesRenvoyes(articlesRenvoyes = []) {
     if (aucunArticleDiv) aucunArticleDiv.classList.add('hidden');
 
     articlesRenvoyes.forEach(article => {
+        // Utiliser directement le prix actuel calculé
+        const prixAff = parseFloat(article.prix_actuel) || parseFloat(article.prix_unitaire) || 0;
+        const valeurTotale = (parseFloat(article.quantite || 0) * prixAff);
+        
+        console.log(`🔧 DEBUG Article renvoyé: ${article.nom}, prix_actuel: ${article.prix_actuel}, prix_unitaire: ${article.prix_unitaire}, prix utilisé: ${prixAff}`);
+        
         const articleCard = document.createElement('div');
         articleCard.className = 'article-renvoi-card bg-white rounded-lg border border-orange-300 p-4';
         articleCard.dataset.articleId = article.article_id;
@@ -1001,12 +1007,39 @@ function mettreAJourSectionArticlesRenvoyes(articlesRenvoyes = []) {
                     <i class="fas fa-undo text-orange-600 text-lg mt-1"></i>
                 </div>
                 <div class="flex-1">
-                    <div class="font-medium text-gray-900">${article.nom || ''}</div>
+                    <div class="font-medium text-gray-900">
+                        ${article.nom || ''}
+                        ${article.is_upsell && article.compteur > 0 ? 
+                            `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-700 ml-2">
+                                <i class="fas fa-arrow-up mr-1"></i>Upsell Niv.${article.compteur}
+                            </span>` : ''}
+                    </div>
                     ${article.variante_id ? `<div class="text-xs text-gray-500 mt-1">Variante ID: ${article.variante_id}</div>` : ''}
-                    <div class="text-sm text-gray-500">
-                        Quantité à renvoyer: <span class="font-semibold text-orange-600">${article.quantite || 0}</span><br>
-                        Prix unitaire: ${(article.prix_actuel || article.prix_unitaire || 0).toFixed(2)} DH<br>
-                        Valeur: <span class="font-semibold text-orange-600">${(((article.quantite || 0) * (article.prix_actuel || article.prix_unitaire || 0))).toFixed(2)} DH</span>
+                    <div class="text-sm text-gray-500 mt-2">
+                        <div class="flex justify-between items-center mb-1">
+                            <span>Quantité à renvoyer:</span>
+                            <span class="font-semibold text-orange-600">${article.quantite || 0}</span>
+                        </div>
+                        <div class="flex justify-between items-center mb-1">
+                            <span>Prix unitaire:</span>
+                            <span class="font-medium text-gray-900">
+                                ${prixAff.toFixed(2)} DH
+                                ${article.is_upsell && article.compteur > 0 ? 
+                                    `<small class="text-green-600 ml-1">(Prix upsell)</small>` : ''}
+                                ${prixAff === 0 ? 
+                                    `<small class="text-red-600 ml-1">⚠️ ERREUR: Prix = 0</small>` : ''}
+                            </span>
+                        </div>
+                        <div class="flex justify-between items-center pt-1 border-t border-orange-200">
+                            <span class="font-medium">Valeur totale renvoyée:</span>
+                            <span class="font-bold text-orange-700 text-lg">${valeurTotale.toFixed(2)} DH</span>
+                        </div>
+                    </div>
+                    <div class="mt-2 text-xs text-orange-600 bg-orange-100 px-2 py-1 rounded-md">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Article renvoyé aux opérateurs de préparation
+                        ${article.is_upsell && article.compteur > 0 ? 
+                            ` • Prix upsell niveau ${article.compteur} appliqué` : ''}
                     </div>
                 </div>
             </div>`;

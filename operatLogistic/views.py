@@ -805,6 +805,10 @@ def livraison_partielle(request, commande_id):
                                         nom_article = f"{nom_article} - {' / '.join(details)}"
                                 except Exception:
                                     pass
+                        except Exception:
+                            # En cas d'erreur, fallback sûr
+                            article_obj = None
+                            prix_unitaire_calc = 0.0
                             recap_articles_renvoyes.append({
                                 'article_id': article_id,
                                 'variante_id': variante_id,
