@@ -8,16 +8,70 @@
 {{ block.super }}
 <!-- CSS externe pour les styles Superpreparation -->
 <link rel="stylesheet" href="{% static 'css/Superpreparation/page_cmd_confim.css' %}">
+<style>
+/* Responsive admin-like: masquer/afficher des colonnes par breakpoint */
+#cmdTable.compact-initialized th, #cmdTable.compact-initialized td { padding: 6px 8px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
+.compact-page #cmdTable { font-size: 12px; }
+.compact-page #cmdTable th:nth-child(1), .compact-page #cmdTable td:nth-child(1) { width: 36px; min-width: 36px; }  /* Select */
+.compact-page #cmdTable th:nth-child(2), .compact-page #cmdTable td:nth-child(2) { width: 90px; min-width: 90px; }   /* Numéro */
+.compact-page #cmdTable th:nth-child(3), .compact-page #cmdTable td:nth-child(3) { width: 100px; min-width: 100px; } /* N° Ext. */
+.compact-page #cmdTable th:nth-child(4), .compact-page #cmdTable td:nth-child(4) { width: 160px; min-width: 160px; } /* Client */
+.compact-page #cmdTable th:nth-child(5), .compact-page #cmdTable td:nth-child(5) { width: 110px; min-width: 110px; } /* Téléphone */
+.compact-page #cmdTable th:nth-child(6), .compact-page #cmdTable td:nth-child(6) { width: 140px; min-width: 140px; } /* Ville & Région */
+.compact-page #cmdTable th:nth-child(7), .compact-page #cmdTable td:nth-child(7) { width: 90px; min-width: 90px; }  /* Total */
+.compact-page #cmdTable th:nth-child(8), .compact-page #cmdTable td:nth-child(8) { width: 110px; min-width: 110px; } /* Date conf. */
+.compact-page #cmdTable th:nth-child(9), .compact-page #cmdTable td:nth-child(9) { width: 120px; min-width: 120px; } /* Op. Conf. */
+.compact-page #cmdTable th:nth-child(10), .compact-page #cmdTable td:nth-child(10) { width: 100px; min-width: 100px; } /* Prépa */
+.compact-page #cmdTable th:nth-child(11), .compact-page #cmdTable td:nth-child(11) { width: 110px; min-width: 110px; } /* Actions */
+#cmdTable thead tr > th:nth-child(3),
+#cmdTable thead tr > th:nth-child(5),
+#cmdTable thead tr > th:nth-child(6),
+#cmdTable thead tr > th:nth-child(8),
+#cmdTable thead tr > th:nth-child(9),
+#cmdTable thead tr > th:nth-child(10),
+#cmdTable tbody tr > td:nth-child(3),
+#cmdTable tbody tr > td:nth-child(5),
+#cmdTable tbody tr > td:nth-child(6),
+#cmdTable tbody tr > td:nth-child(8),
+#cmdTable tbody tr > td:nth-child(9),
+#cmdTable tbody tr > td:nth-child(10) {
+    display: none;
+}
+@media (min-width: 768px) { /* md */
+    #cmdTable thead tr > th:nth-child(3),
+    #cmdTable thead tr > th:nth-child(5),
+    #cmdTable tbody tr > td:nth-child(3),
+    #cmdTable tbody tr > td:nth-child(5) {
+        display: table-cell;
+    }
+}
+@media (min-width: 1024px) { /* lg */
+    #cmdTable thead tr > th:nth-child(6),
+    #cmdTable tbody tr > td:nth-child(6) {
+        display: table-cell;
+    }
+}
+@media (min-width: 1280px) { /* xl */
+    #cmdTable thead tr > th:nth-child(8),
+    #cmdTable thead tr > th:nth-child(9),
+    #cmdTable thead tr > th:nth-child(10),
+    #cmdTable tbody tr > td:nth-child(8),
+    #cmdTable tbody tr > td:nth-child(9),
+    #cmdTable tbody tr > td:nth-child(10) {
+        display: table-cell;
+    }
+}
+</style>
 {% endblock %}
 
 {% block content %}
 {% csrf_token %}
-<div class="main-content transition-all duration-300" id="mainContent">
+<div class="main-content transition-all duration-300 max-w-screen-2xl xl:max-w-[1440px] mx-auto px-3 sm:px-4 lg:px-6 compact-page" id="mainContent">
     <!-- Toast notifications container -->
     <div class="toast-container" id="toastContainer"></div>
 
     <!-- En-tête de la page -->
-    <div class="page-header">
+    <div class="page-header py-4 transition-all duration-300" id="pageHeader">
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center">
             <div>
                 <h1 class="text-3xl font-bold flex items-center mb-2">
@@ -40,7 +94,7 @@
     </div>
 
     <!-- Statistiques -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
         <!-- Aujourd'hui -->
         <div class="stats-card group rounded-xl shadow-lg p-4 transition-all duration-300 hover:shadow-2xl border animate-slideInUp" style="animation-delay: 0.1s;">
                 <div class="flex items-center">
@@ -93,11 +147,14 @@
 
         <!-- Section d'informations -->
     <div class="info-section mb-4">
-        <h2 class="section-title">
-            <i class="fas fa-info-circle text-blue-600"></i>
-            Informations générales
+        <h2 class="section-title flex items-center justify-between cursor-pointer select-none" id="infoSectionToggle" aria-expanded="true">
+            <span class="flex items-center">
+                <i class="fas fa-info-circle text-blue-600"></i>
+                <span class="ml-2">Informations générales</span>
+            </span>
+            <i class="fas fa-chevron-up text-gray-500 transition-transform duration-200" id="infoSectionChevron"></i>
         </h2>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="infoSectionBody">
             <div class="info-item">
                 <div class="info-icon green">
                     <i class="fas fa-check-circle"></i>
@@ -128,12 +185,21 @@
         </div>
     </div>
 
-    {% include 'Superpreparation/includes/smart-search-toolbar.html' %}
+    <div class="overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
+        {% include 'Superpreparation/includes/smart-search-toolbar.html' %}
+        <!-- Emplacement standard du bouton colonnes (aligné à droite, comme avant) -->
+        <div id="columnsButtonContainer" class="flex justify-end mt-2"></div>
+    </div>
+
+    
+
+    <!-- Include JS: gestion des colonnes -->
+    <script src="{% static 'js/Superpreparation/responsive-pages/page_cmd_confim.js' %}"></script>
 
     <!-- Actions en masse -->
     <div class="flex flex-col gap-3 action-buttons">
         <!-- Ligne des boutons -->
-        <div class="flex gap-2">
+        <div class="flex gap-2 items-center flex-wrap">
             <button id="bulkAffectBtn" class="px-3 py-1.5 rounded-lg font-medium transition-all shadow-sm opacity-50 cursor-not-allowed bg-[var(--preparation-primary)] text-white flex items-center gap-2 text-sm" disabled>
                 <i class="fas fa-users-cog"></i> Affecter sélection
             </button>
@@ -142,6 +208,14 @@
                 <i class="fas fa-print"></i> Imprimer tickets
             </button>
             
+            <button id="bulkPrintQrBtn" class="px-3 py-1.5 rounded-lg font-medium transition-all shadow-sm opacity-50 cursor-not-allowed bg-[var(--preparation-primary)] text-white flex items-center gap-2 text-sm" disabled>
+                <i class="fas fa-qrcode"></i> Imprimer QR articles
+            </button>
+
+
+            <span id="selectionCountBadge" class="hidden ml-2 text-xs font-semibold px-2 py-1 rounded-full bg-blue-100 text-blue-700">
+                0 sélectionnée(s)
+            </span>
 
         </div>
         
@@ -170,25 +244,25 @@
 
     <!-- Tableau des commandes confirmées -->
     {% if page_obj.object_list %}
-    <div class="table-responsive mb-6 theme-card rounded-xl shadow-lg">
-        <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-[var(--preparation-primary)] border-b-[3px] border-[var(--preparation-primary)] text-white">
+    <div class="table-responsive mb-6 theme-card rounded-xl shadow-lg overflow-x-auto" id="tableScrollContainer">
+        <table id="cmdTable" class="min-w-full divide-y divide-gray-200 min-w-[1000px] lg:min-w-[1200px] xl:min-w-[1400px] text-xs sm:text-sm">
+            <thead class="bg-[var(--preparation-primary)] border-b-[3px] border-[var(--preparation-primary)] text-white sticky top-0 z-10">
                 <tr>
-                    <th class="px-3 py-2 text-left">
+                    <th class="px-3 py-2 text-left column-select">
                         <input type="checkbox" id="selectAll" class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500">
-                </th>
-                    <th class="px-3 py-2 text-left text-sm font-medium text-white uppercase tracking-wider">ID YZ</th>
-                    <th class="px-3 py-2 text-left text-sm font-medium text-white uppercase tracking-wider">N° Externe</th>
-                    <th class="px-3 py-2 text-left text-sm font-medium text-white uppercase tracking-wider">Client</th>
-                    <th class="px-3 py-2 text-left text-sm font-medium text-white uppercase tracking-wider">Téléphone</th>
-                    <th class="px-3 py-2 text-left text-sm font-medium text-white uppercase tracking-wider">Ville & Région</th>
-                    <th class="px-3 py-2 text-left text-sm font-medium text-white uppercase tracking-wider">Total</th>
-                    <th class="px-3 py-2 text-left text-sm font-medium text-white uppercase tracking-wider">Date Confirmation</th>
-                    <th class="px-3 py-2 text-left text-sm font-medium text-white uppercase tracking-wider">Opérateur Conf.</th>
-                    <th class="px-3 py-2 text-left text-sm font-medium text-white uppercase tracking-wider">État Préparation</th>
-                    <th class="px-3 py-2 text-center text-sm font-medium text-white uppercase tracking-wider">Actions</th>
-                    </tr>
-                </thead>
+                    </th>
+                    <th class="px-3 py-2 text-left text-sm font-medium text-white uppercase tracking-wider column-idyz">Numéro</th>
+                    <th class="px-3 py-2 text-left text-sm font-medium text-white uppercase tracking-wider column-numext">N° Ext.</th>
+                    <th class="px-3 py-2 text-left text-sm font-medium text-white uppercase tracking-wider column-client">Client</th>
+                    <th class="px-3 py-2 text-left text-sm font-medium text-white uppercase tracking-wider column-phone">Téléphone</th>
+                    <th class="px-3 py-2 text-left text-sm font-medium text-white uppercase tracking-wider column-ville">Ville & Région</th>
+                    <th class="px-3 py-2 text-left text-sm font-medium text-white uppercase tracking-wider column-total">Total</th>
+                    <th class="px-3 py-2 text-left text-sm font-medium text-white uppercase tracking-wider column-dateconf">Date conf.</th>
+                    <th class="px-3 py-2 text-left text-sm font-medium text-white uppercase tracking-wider column-operateur">Op. Conf.</th>
+                    <th class="px-3 py-2 text-left text-sm font-medium text-white uppercase tracking-wider column-etat">Prépa</th>
+                    <th class="px-3 py-2 text-center text-sm font-medium text-white uppercase tracking-wider column-actions">Actions</th>
+                </tr>
+            </thead>
             <tbody id="commandTableBody" class="bg-white divide-y divide-gray-200">
                 {% include 'Superpreparation/partials/_confirmees_table_body.html' with page_obj=page_obj %}
             </tbody>
@@ -233,7 +307,7 @@
                                class="theme-input px-2 py-1 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-16 text-center bg-white shadow-sm transition-all duration-200 hover:border-gray-300 focus:shadow-md text-sm">
                     </div>
                     <div class="flex items-center space-x-1">
-                        <button id="applyRangeBtn" class="px-3 py-1 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-md hover:from-green-600 hover:to-green-700 transition-all duration-200 transform hover:scale-105 shadow-sm hover:shadow-md text-xs font-medium">
+                        <button id="applyRangeBtn" class="px-3 py-1 text-white rounded-md transition-all duration-200 transform hover:scale-105 shadow-sm hover:shadow-md text-xs font-medium bg-[var(--preparation-primary)] border border-[var(--preparation-primary)] hover:brightness-95">
                             <i class="fas fa-check mr-1"></i>Appliquer
                         </button>
                         <button id="clearRangeBtn" class="px-3 py-1 bg-gradient-to-r from-red-400 to-red-500 text-white rounded-md hover:from-red-500 hover:to-red-600 transition-all duration-200 transform hover:scale-105 shadow-sm hover:shadow-md text-xs font-medium">
@@ -609,9 +683,15 @@
 
         // Ajouter l'événement click pour le bouton d'impression multiple
         const bulkPrintBtn = document.getElementById('bulkPrintBtn');
+        const bulkPrintQrBtn = document.getElementById('bulkPrintQrBtn');
         if (bulkPrintBtn) {
             bulkPrintBtn.addEventListener('click', () => {
                 imprimerTicketsMultiples();
+            });
+        }
+        if (bulkPrintQrBtn) {
+            bulkPrintQrBtn.addEventListener('click', () => {
+                imprimerQRCodesArticlesMultiples();
             });
         }
 
@@ -804,6 +884,8 @@
 document.addEventListener('DOMContentLoaded', function() {
     const menuToggle = document.getElementById('menu-toggle');
     const body = document.body;
+    const sidebar = document.getElementById('sidebar');
+    const tableScroll = document.getElementById('tableScrollContainer');
     
     // Fonction pour adapter le tableau selon l'état de la sidebar
     function adaptTableToSidebar() {
@@ -835,6 +917,25 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    // Observer les changements de classes du body pour détecter tout changement de la sidebar (via autres scripts)
+    const bodyClassObserver = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                setTimeout(adaptTableToSidebar, 50);
+            }
+        }
+    });
+    bodyClassObserver.observe(body, { attributes: true });
+
+    // Écouter la fin de transition de la sidebar (largeur/transform) pour recalculer
+    if (sidebar) {
+        sidebar.addEventListener('transitionend', (e) => {
+            if (e.propertyName === 'width' || e.propertyName === 'transform' || e.propertyName === 'left') {
+                setTimeout(adaptTableToSidebar, 50);
+            }
+        });
+    }
+    
     // Gestion du redimensionnement
     window.addEventListener('resize', () => {
         console.log('📐 Redimensionnement détecté:', window.innerWidth);
@@ -858,6 +959,156 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('✅ Script de sidebar initialisé pour commandes-confirmees avec adaptation du tableau');
     
     // Code d'impression multiple supprimé - système d'impression unifié
+});
+
+// Ombres directionnelles lors du scroll horizontal (UX dashboard)
+document.addEventListener('DOMContentLoaded', function() {
+    const container = document.getElementById('tableScrollContainer');
+    if (!container) return;
+
+    function updateScrollShadows() {
+        const atStart = container.scrollLeft <= 0;
+        const atEnd = Math.ceil(container.scrollLeft + container.clientWidth) >= container.scrollWidth;
+        // Utiliser box-shadow internes pour indiquer le scroll
+        let shadows = [];
+        if (!atStart) shadows.push('inset 12px 0 10px -10px rgba(0,0,0,0.2)');
+        if (!atEnd) shadows.push('inset -12px 0 10px -10px rgba(0,0,0,0.2)');
+        container.style.boxShadow = shadows.join(', ');
+    }
+
+    container.addEventListener('scroll', updateScrollShadows, { passive: true });
+    window.addEventListener('resize', debounce(updateScrollShadows, 100));
+    setTimeout(updateScrollShadows, 50);
+});
+
+// Persistance de l'état de la sidebar (open/collapsed) dans localStorage
+document.addEventListener('DOMContentLoaded', function() {
+    const body = document.body;
+    const toggle = document.getElementById('menu-toggle');
+    const STORAGE_KEY = 'yz.sidebar.state';
+
+    // Restaurer l'état
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved === 'open') {
+        body.classList.add('sidebar-open');
+        body.classList.remove('sidebar-collapsed');
+    } else if (saved === 'collapsed') {
+        body.classList.add('sidebar-collapsed');
+        body.classList.remove('sidebar-open');
+    }
+
+    function persist() {
+        const state = body.classList.contains('sidebar-collapsed') ? 'collapsed' : 'open';
+        localStorage.setItem(STORAGE_KEY, state);
+    }
+
+    if (toggle) {
+        toggle.addEventListener('click', () => {
+            setTimeout(persist, 10);
+        });
+    }
+
+    // Observer changements de classes
+    const observer = new MutationObserver((mutations) => {
+        for (const m of mutations) {
+            if (m.type === 'attributes' && m.attributeName === 'class') {
+                persist();
+            }
+        }
+    });
+    observer.observe(body, { attributes: true });
+});
+
+// Utilitaire debounce
+function debounce(fn, delay = 150) {
+    let t;
+    return function(...args) {
+        clearTimeout(t);
+        t = setTimeout(() => fn.apply(this, args), delay);
+    };
+}
+
+// Persistance du select "Éléments par page"
+document.addEventListener('DOMContentLoaded', function() {
+    const select = document.getElementById('itemsPerPageSelect');
+    const STORAGE_KEY = 'yz.itemsPerPage';
+    if (!select) return;
+
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved && select.querySelector(`option[value="${saved}"]`)) {
+        select.value = saved;
+    }
+
+    select.addEventListener('change', () => {
+        localStorage.setItem(STORAGE_KEY, select.value);
+    });
+});
+
+// Compactage de l'en-tête au scroll
+document.addEventListener('DOMContentLoaded', function() {
+    const header = document.getElementById('pageHeader');
+    if (!header) return;
+    let last = 0;
+    window.addEventListener('scroll', () => {
+        const y = window.scrollY || document.documentElement.scrollTop;
+        if (y > 24 && last <= 24) {
+            header.classList.add('py-2');
+            header.classList.remove('py-4');
+        } else if (y <= 24 && last > 24) {
+            header.classList.add('py-4');
+            header.classList.remove('py-2');
+        }
+        last = y;
+    }, { passive: true });
+});
+
+// Info section repliable avec persistance
+document.addEventListener('DOMContentLoaded', function() {
+    const toggle = document.getElementById('infoSectionToggle');
+    const body = document.getElementById('infoSectionBody');
+    const chevron = document.getElementById('infoSectionChevron');
+    const STORAGE_KEY = 'yz.infoSection.open';
+    if (!toggle || !body || !chevron) return;
+
+    function setOpen(open) {
+        if (open) {
+            body.classList.remove('hidden');
+            toggle.setAttribute('aria-expanded', 'true');
+            chevron.style.transform = 'rotate(0deg)';
+            localStorage.setItem(STORAGE_KEY, '1');
+        } else {
+            body.classList.add('hidden');
+            toggle.setAttribute('aria-expanded', 'false');
+            chevron.style.transform = 'rotate(180deg)';
+            localStorage.setItem(STORAGE_KEY, '0');
+        }
+    }
+
+    const saved = localStorage.getItem(STORAGE_KEY);
+    setOpen(saved !== '0');
+
+    toggle.addEventListener('click', () => {
+        const isOpen = toggle.getAttribute('aria-expanded') === 'true';
+        setOpen(!isOpen);
+    });
+});
+
+// Compteur de sélection visible et réactif
+document.addEventListener('DOMContentLoaded', function() {
+    const badge = document.getElementById('selectionCountBadge');
+    if (!badge) return;
+    function updateBadge() {
+        const count = document.querySelectorAll('.commande-checkbox:checked').length;
+        badge.textContent = `${count} sélectionnée(s)`;
+        badge.classList.toggle('hidden', count === 0);
+    }
+    document.addEventListener('change', (e) => {
+        if (e.target && e.target.classList && e.target.classList.contains('commande-checkbox')) {
+            updateBadge();
+        }
+    });
+    // init
+    updateBadge();
 });
 
 // Fonctions d'impression supprimées - en attente de nouvelles instructions
@@ -939,7 +1190,7 @@ window.imprimerTicketCommande = function(commandeId, commandeIdYz, clientName) {
                 
                 // Attendre que le contenu soit chargé puis imprimer
                 printWindow.onload = function() {
-                            setTimeout(() => {
+            setTimeout(() => {
                         printWindow.print();
                         printWindow.close();
                             }, 500);
@@ -996,16 +1247,16 @@ window.imprimerTicketsMultiples = function() {
     const ticketPromises = commandeIds.map(commandeIdYz => {
         console.log(`🖨️ Récupération du ticket: ${commandeIdYz}`);
         return fetch(`/Superpreparation/api/ticket-commande-new/?id=${commandeIdYz}`)
-            .then(response => response.json())
-            .then(data => {
+                    .then(response => response.json())
+                    .then(data => {
                 if (data.success) {
                     return { success: true, html: data.html, commandeId: commandeIdYz };
-                } else {
+                        } else {
                     console.error(`❌ Erreur lors de la génération du ticket ${commandeIdYz}:`, data.error);
                     return { success: false, error: data.error, commandeId: commandeIdYz };
-                }
-            })
-            .catch(error => {
+                        }
+                    })
+                    .catch(error => {
                 console.error(`❌ Erreur lors de la récupération du ticket ${commandeIdYz}:`, error);
                 return { success: false, error: error.message, commandeId: commandeIdYz };
             });
@@ -1095,6 +1346,183 @@ window.imprimerTicketsMultiples = function() {
             printBtn.innerHTML = originalText;
             printBtn.disabled = false;
         });
+};
+
+// Fonction pour imprimer les QR codes des articles
+window.imprimerQRCodesArticles = function(commandeId, commandeIdYz, clientName) {
+    console.log(`🖨️ Impression des QR codes pour la commande: ${commandeIdYz}`);
+    
+    // Afficher un indicateur de chargement
+    const printBtn = event.target;
+    const originalText = printBtn.innerHTML;
+    printBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Génération...';
+    printBtn.disabled = true;
+    
+    // Récupérer les QR codes des articles via AJAX
+    fetch(`/Superpreparation/api/qr-codes-articles/?id=${commandeIdYz}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Créer une nouvelle fenêtre pour l'impression
+                const printWindow = window.open('', '_blank', 'width=800,height=600');
+                
+                // Écrire le contenu HTML dans la fenêtre
+                printWindow.document.write(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <title>QR Codes Articles - Commande ${commandeIdYz}</title>
+                        <style>
+                            @page { 
+                                size: 100mm 100mm; 
+                                margin: 0; 
+                            }
+                            body, html {
+                                margin: 0; 
+                                padding: 0; 
+                                background: white !important;
+                            }
+                            .qr-code-container {
+                                width: 100mm !important; 
+                                height: 100mm !important;
+                                margin: 0 !important; 
+                                padding: 2mm !important;
+                                page-break-after: always !important;
+                                display: flex !important;
+                                flex-direction: column !important;
+                                align-items: center !important;
+                                justify-content: center !important;
+                                border: 2px solid #000 !important;
+                                box-sizing: border-box !important;
+                            }
+                            .qr-code-container:last-child { 
+                                page-break-after: auto !important; 
+                            }
+                            .qr-code {
+                                width: 60mm !important;
+                                height: 60mm !important;
+                                object-fit: contain !important;
+                                margin-bottom: 5mm !important;
+                            }
+                            .article-info {
+                                text-align: center !important;
+                                font-family: Arial, sans-serif !important;
+                                font-size: 12pt !important;
+                                font-weight: bold !important;
+                                color: #000 !important;
+                                line-height: 1.2 !important;
+                            }
+                            .article-ref {
+                                font-size: 14pt !important;
+                                margin-bottom: 2mm !important;
+                            }
+                            .commande-ref {
+                                font-size: 10pt !important;
+                                color: #666 !important;
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        ${data.html}
+                    </body>
+                    </html>
+                `);
+                
+                printWindow.document.close();
+                
+                // Attendre que le contenu soit chargé puis imprimer
+                printWindow.onload = function() {
+                    setTimeout(() => {
+                        printWindow.print();
+                        printWindow.close();
+                    }, 500);
+                };
+                
+                console.log('✅ QR codes générés et envoyés à l\'impression');
+            } else {
+                console.error('❌ Erreur lors de la génération des QR codes:', data.error);
+                alert('Erreur lors de la génération des QR codes: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('❌ Erreur lors de la récupération des QR codes:', error);
+            alert('Erreur lors de la récupération des QR codes: ' + error.message);
+        })
+        .finally(() => {
+            // Restaurer le bouton
+            printBtn.innerHTML = originalText;
+            printBtn.disabled = false;
+        });
+};
+
+// Impression multiple des QR codes des articles (un seul PDF, pages 10x10)
+window.imprimerQRCodesArticlesMultiples = function() {
+    const checkedCheckboxes = document.querySelectorAll('.commande-checkbox:checked');
+    if (checkedCheckboxes.length === 0) {
+        alert('Veuillez sélectionner au moins une commande.');
+        return;
+    }
+
+    // Récupérer les IDs YZ
+    const commandeIdsYz = Array.from(checkedCheckboxes).map(cb => cb.closest('tr').getAttribute('data-id-yz')).filter(Boolean);
+
+    const btn = document.getElementById('bulkPrintQrBtn');
+    const original = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Génération...';
+    btn.disabled = true;
+
+    // Récupérer en parallèle les pages HTML de QR (chaque article = 1 page 10x10)
+    const promises = commandeIdsYz.map(idYz => fetch(`/Superpreparation/api/qr-codes-articles/?id=${idYz}`).then(r=>r.json()).then(d=>({idYz, d})).catch(e=>({idYz, error: e.message})));
+
+    Promise.all(promises).then(results => {
+        const pages = [];
+        const errors = [];
+        results.forEach(({idYz, d, error}) => {
+            if (error || !d || !d.success) {
+                errors.push(`CMD-${idYz}: ${error || (d && d.error) || 'erreur inconnue'}`);
+            } else {
+                pages.push(d.html);
+            }
+        });
+
+        if (pages.length === 0) {
+            alert('Aucune page QR générée.\n' + (errors.join('\n') || ''));
+            return;
+        }
+
+        const printWindow = window.open('', '_blank', 'width=800,height=600');
+        const allHTML = pages.join('');
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>QR Articles (${pages.length} pages)</title>
+                <style>
+                    @page { size: 100mm 100mm; margin: 0; }
+                    body, html { margin:0; padding:0; background:#fff; }
+                    .qr-code-container { width:100mm!important; height:100mm!important; page-break-after:always!important; display:flex!important; align-items:center!important; justify-content:center!important; flex-direction:column!important; padding:2mm!important; box-sizing:border-box!important; border: 2px solid #000 !important; }
+                    .qr-code-container:last-child { page-break-after:auto!important; }
+                    .qr-code { width:60mm!important; height:60mm!important; object-fit:contain!important; margin-bottom:5mm!important; }
+                    .article-info { text-align:center!important; font-family: Arial, sans-serif!important; font-size:12pt!important; font-weight:bold!important; color:#000!important; line-height:1.2!important; }
+                    .article-ref { font-size:14pt!important; margin-bottom:2mm!important; }
+                    .commande-ref { font-size:10pt!important; color:#666!important; }
+                </style>
+            </head>
+            <body>${allHTML}</body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.onload = function() {
+            setTimeout(()=>{ printWindow.print(); printWindow.close(); }, 800);
+        };
+
+        if (errors.length) console.warn('Certaines commandes ont échoué:', errors);
+    }).catch(err => {
+        alert('Erreur lors de la génération: ' + err.message);
+    }).finally(()=>{
+        btn.innerHTML = original;
+        btn.disabled = false;
+    });
 };
 
 // Fonction pour charger les informations de la commande
@@ -1317,6 +1745,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Mettre à jour les boutons d'action
         const bulkAffectBtn = document.getElementById('bulkAffectBtn');
         const bulkPrintBtn = document.getElementById('bulkPrintBtn');
+        const bulkPrintQrBtn = document.getElementById('bulkPrintQrBtn');
         
         if (checkedCount > 0) {
             if (bulkAffectBtn) {
@@ -1329,6 +1758,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 bulkPrintBtn.classList.remove('opacity-50', 'cursor-not-allowed');
                 bulkPrintBtn.classList.add('opacity-100', 'cursor-pointer');
             }
+            if (bulkPrintQrBtn) {
+                bulkPrintQrBtn.disabled = false;
+                bulkPrintQrBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                bulkPrintQrBtn.classList.add('opacity-100', 'cursor-pointer');
+            }
         } else {
             if (bulkAffectBtn) {
                 bulkAffectBtn.disabled = true;
@@ -1339,6 +1773,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 bulkPrintBtn.disabled = true;
                 bulkPrintBtn.classList.add('opacity-50', 'cursor-not-allowed');
                 bulkPrintBtn.classList.remove('opacity-100', 'cursor-pointer');
+            }
+            if (bulkPrintQrBtn) {
+                bulkPrintQrBtn.disabled = true;
+                bulkPrintQrBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                bulkPrintQrBtn.classList.remove('opacity-100', 'cursor-pointer');
             }
         }
     }
@@ -1430,14 +1869,51 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-<!-- Script de recherche intelligente -->
-<script src="{% static 'js/Suivi_des_Commandes/suivi-commandes-smart-search.js' %}"></script>
+<!-- Fallback: charger le contrôleur global des colonnes si absent -->
 <script>
-// Initialiser la recherche intelligente pour cette page
 document.addEventListener('DOMContentLoaded', function() {
-    initSuiviCommandesSearch('confirmees');
+    try {
+        if (typeof toggleColumnVisibility !== 'function') {
+            var s = document.createElement('script');
+            s.src = "{% static 'js/Superpreparation/global-columns-toggle.js' %}";
+            document.body.appendChild(s);
+        }
+    } catch (e) {}
 });
 </script>
+
+<!-- Injection du bouton "Sélectionner les colonnes" après "Imprimer QR articles" (fallbacks: conteneur aligné à droite, puis à côté de Filtres) -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    try {
+        if (document.getElementById('columnToggleInline')) return;
+        var container = document.getElementById('columnsButtonContainer');
+        var filtersBtn = document.querySelector('button[onclick="toggleAdvancedSearch()"]');
+        var qrBtn = document.getElementById('bulkPrintQrBtn');
+        if (!container && !filtersBtn && !qrBtn) return;
+        var btn = document.createElement('button');
+        btn.id = 'columnToggleInline';
+        btn.type = 'button';
+        btn.className = 'inline-flex items-center px-3 py-2 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium rounded transition-colors h-10 ml-2';
+        btn.title = 'Sélectionner les colonnes';
+        btn.innerHTML = '<i class="fas fa-columns mr-2 text-gray-500"></i>Sélectionner les colonnes';
+        btn.addEventListener('click', function() {
+            if (typeof toggleColumnVisibility === 'function') {
+                toggleColumnVisibility();
+            }
+        });
+        if (qrBtn && qrBtn.parentNode) {
+            qrBtn.parentNode.insertBefore(btn, qrBtn.nextSibling);
+        } else if (container) {
+            container.appendChild(btn);
+        } else if (filtersBtn) {
+            filtersBtn.parentNode.insertBefore(btn, filtersBtn.nextSibling);
+        }
+    } catch (e) {}
+});
+</script>
+
+<!-- (Nettoyé) Pas de doublon: la recherche intelligente est déjà incluse plus haut et initialisée avec 'confirmées' -->
 
 <!-- Modale d'informations détaillées -->
 <div id="infoModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50 flex items-center justify-center">
@@ -1486,3 +1962,5 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- Modale d'impression supprimée - en attente de nouvelles instructions -->
 
 {% endblock %} 
+
+<script src="{% static 'js/Superpreparation/responsive-pages/page_cmd_confim.js' %}"></script>

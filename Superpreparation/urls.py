@@ -67,6 +67,7 @@ urlpatterns = [
 
     # URLs pour les modales d'impression
     path('api/ticket-commande-new/', views.api_ticket_commande_new, name='api_ticket_commande_new'),
+    path('api/qr-codes-articles/', views.api_qr_codes_articles, name='api_qr_codes_articles'),
     path('api/finaliser-preparation/<int:commande_id>/', views.api_finaliser_preparation, name='api_finaliser_preparation'),
 
 
@@ -136,6 +137,8 @@ urlpatterns = [
     # Gestion du stock
     path('gestion-articles/stock-faible/', views.stock_faible, name='stock_faible'),
     path('gestion-articles/rupture-stock/', views.rupture_stock, name='rupture_stock'),
+    # Alias pour compatibilité avec anciens liens
+    path('gestion-articles/alertes-stock/', views.stock_faible, name='alertes_stock'),
     
     # Gestion des phases
     path('gestion-articles/changer-phase/<int:id>/', views.changer_phase, name='changer_phase'),
