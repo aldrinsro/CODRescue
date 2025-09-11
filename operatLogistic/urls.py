@@ -14,28 +14,18 @@ urlpatterns = [
     path('parametre/', views.parametre, name='parametre'),
     path('profile/', views.profile_logistique, name='profile'),
     path('profile/modifier/', views.modifier_profile_logistique, name='modifier_profile'),
-    path('commande/<int:commande_id>/livrer/', views.marquer_livree, name='marquer_livree'),
     path('commande/<int:commande_id>/probleme/', views.signaler_probleme, name='signaler_probleme'),
-
     # URL pour le SAV
     path('commande/<int:commande_id>/changer-etat-sav/', views.changer_etat_sav, name='changer_etat_sav'),
-    
-
     path('commande/<int:commande_id>/rafraichir-articles/', views.rafraichir_articles, name='rafraichir_articles'),
- 
     # URLs pour les opérations sur les articles
     path('commande/<int:commande_id>/ajouter-article/', views.ajouter_article, name='ajouter_article'),
     path('commande/<int:commande_id>/modifier-quantite/', views.modifier_quantite_article, name='modifier_quantite_article'),
-  
     # URL pour renvoyer en préparation
-    path('commande/<int:commande_id>/renvoyer-preparation/', views.renvoyer_en_preparation, name='renvoyer_preparation'),
-    
+    path('commande/<int:commande_id>/renvoyer-preparation/', views.renvoyer_en_preparation, name='renvoyer_preparation'), 
     # URL pour la livraison partielle
     path('commande/<int:commande_id>/livraison-partielle/', views.livraison_partielle, name='livraison_partielle'),
-    
     # URL pour voir les commandes renvoyées en préparation
-    path('commandes-renvoyees-preparation/', views.commandes_renvoyees_preparation, name='commandes_renvoyees_preparation'),
-    
     # API pour les articles
     path('api/articles/', views.api_articles, name='api_articles'),
     path('api/commande/<int:commande_id>/panier/', views.api_panier_commande, name='api_panier_commande'),

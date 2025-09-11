@@ -627,14 +627,6 @@ def marquer_commande_payee(request, commande_id):
             ancien_statut = commande.payement
             commande.payement = nouveau_statut
             commande.save()
-            
-            # Créer une opération pour tracer l'action
-            Operation.objects.create(
-                commande=commande,
-                type_operation='CHANGEMENT_STATUT_PAIEMENT',
-                conclusion=f"Statut de paiement changé de '{ancien_statut}' vers '{nouveau_statut}'",
-                operateur=operateur
-            )
             return JsonResponse({
                 'success': True,
                 'message': f'Statut de paiement mis à jour vers {nouveau_statut} avec succès',

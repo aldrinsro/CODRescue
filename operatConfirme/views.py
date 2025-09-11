@@ -1552,18 +1552,6 @@ def reporter_commande_confirmation(request, commande_id):
                 date_fin_delayed=date_report
             )
 
-            # Tracer l'opération
-            try:
-                from commande.models import Operation
-                Operation.objects.create(
-                    commande=commande,
-                    type_operation='REPORT',
-                    conclusion=f"Report au {date_report.strftime('%d/%m/%Y %H:%M')} - {motif}",
-                    operateur=operateur
-                )
-            except Exception:
-                pass
-
             return JsonResponse({
                 'success': True,
                 'message': f"Commande {commande.id_yz} reportée au {date_report.strftime('%d/%m/%Y %H:%M')}",

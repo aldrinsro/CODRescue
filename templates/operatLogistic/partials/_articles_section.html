@@ -1,20 +1,46 @@
 {% load commande_filters %}
 
+<!-- Section des articles livrés (ceux qui restent dans le panier) -->
+{% if commande.etat_actuel.enum_etat.libelle == 'Livrée Partiellement' %}
+<div class="mb-6">
+    <h4 class="text-lg font-semibold text-green-700 mb-4 flex items-center">
+        <i class="fas fa-check-circle mr-2"></i>
+        Articles Livrés au Client
+        <span class="ml-2 inline-flex items-center px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+            {{ commande.paniers.count }} article{{ commande.paniers.count|pluralize }}
+        </span>
+    </h4>
+    <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+        <div class="space-y-4">
+{% endif %}
+
 {% for panier in commande.paniers.all %}
-<div class="article-card p-4 {% if commande.etat_actuel.enum_etat.libelle == 'Livrée Partiellement' %}bg-green-50 border-green-300{% else %}bg-white border-gray-200{% endif %} rounded-lg border hover:border-gray-300 transition-all shadow-sm" 
+<div class="article-card p-4 {% if commande.etat_actuel.enum_etat.libelle == 'Livrée Partiellement' %}bg-white border-green-300 shadow-sm{% else %}bg-white border-gray-200{% endif %} rounded-lg border hover:border-gray-300 transition-all" 
     data-article-id="{{ panier.id }}"
     data-article='{"id": {{ panier.article.id }}, "nom": "{{ panier.article.nom }}", "reference": "{{ panier.article.reference }}", "prix_actuel": {{ panier.article.prix_actuel|default:0 }}, "prix_unitaire": {{ panier.article.prix_unitaire|default:0 }}, "prix_upsell_1": {{ panier.article.prix_upsell_1|default:0 }}, "prix_upsell_2": {{ panier.article.prix_upsell_2|default:0 }}, "prix_upsell_3": {{ panier.article.prix_upsell_3|default:0 }}, "prix_upsell_4": {{ panier.article.prix_upsell_4|default:0 }}, "isUpsell": {{ panier.article.isUpsell|yesno:"true,false" }}, "pointure": "{{ panier.article.pointure|default:'' }}", "couleur": "{{ panier.article.couleur|default:'' }}", "categorie": "{{ panier.article.categorie|default:'' }}", "qte_disponible": {{ panier.article.qte_disponible|default:0 }}, "phase": "{{ panier.article.phase|default:'' }}", "has_promo_active": {{ panier.article.has_promo_active|yesno:"true,false" }}}'>
     
-    <!-- Indicateur de livraison partielle -->
+    <!-- Indicateur de statut de livraison -->
     {% if commande.etat_actuel.enum_etat.libelle == 'Livrée Partiellement' %}
-    <div class="mb-3 p-2 bg-green-100 border border-green-300 rounded-lg">
-        <div class="flex items-center">
-            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-600 text-white mr-2">
-                <i class="fas fa-check-circle mr-1"></i>Livré Partiellement
-            </span>
-            <span class="text-sm text-green-800">
-                Cet article a été livré partiellement au client. La quantité affichée correspond à la quantité livrée.
-            </span>
+    <div class="mb-3 p-2 bg-green-100 border-l-4 border-green-500 rounded-r-lg">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-600 text-white mr-2">
+                    <i class="fas fa-truck mr-1"></i>LIVRÉ
+                </span>
+                <span class="text-sm font-medium text-green-800">
+                    Quantité livrée au client : {{ panier.quantite }}
+                </span>
+            </div>
+            <div class="text-xs text-green-600">
+                <i class="fas fa-calendar-check mr-1"></i>
+                {% with commande.etats.all as etats %}
+                    {% for etat in etats %}
+                        {% if etat.enum_etat.libelle == 'Livrée Partiellement' %}
+                            {{ etat.date_debut|date:"d/m/Y H:i" }}
+                        {% endif %}
+                    {% endfor %}
+                {% endwith %}
+            </div>
         </div>
     </div>
     {% endif %}
@@ -84,36 +110,48 @@
                 <div class="text-center min-w-0">
                     <div class="text-sm text-gray-500">
                         {% if commande.etat_actuel.enum_etat.libelle == 'Livrée Partiellement' %}
-                            <span class="text-green-600 font-medium">Quantité Livrée</span>
+                            <span class="text-green-600 font-medium">
+                                <i class="fas fa-truck mr-1"></i>Quantité Livrée
+                            </span>
                         {% else %}
                             Quantité
                         {% endif %}
                     </div>
                     <div class="flex items-center justify-center space-x-2">
-                        <button type="button" 
-                                class="w-8 h-8 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center cursor-not-allowed"
-                                disabled
-                                title="Modification désactivée - Lecture seule">
-                            <i class="fas fa-minus text-xs"></i>
-                        </button>
-                        <input type="number" 
-                               value="{{ panier.quantite }}" 
-                               readonly
-                               class="w-16 text-center border border-gray-300 rounded px-2 py-1 text-sm font-medium bg-gray-50 cursor-not-allowed {% if commande.etat_actuel.enum_etat.libelle == 'Livrée Partiellement' %}bg-green-50 border-green-300{% endif %}"
-                               data-panier-id="{{ panier.id }}"
-                               title="Mode lecture seule">
-                        <button type="button" 
-                                class="w-8 h-8 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center cursor-not-allowed"
-                                disabled
-                                title="Modification désactivée - Lecture seule">
-                            <i class="fas fa-plus text-xs"></i>
-                        </button>
-                    </div>
-                    <div class="text-xs text-gray-500 mt-1">
                         {% if commande.etat_actuel.enum_etat.libelle == 'Livrée Partiellement' %}
-                            <i class="fas fa-check-circle mr-1 text-green-600"></i>Livrée au client
+                            <div class="w-16 text-center border-2 border-green-400 bg-green-50 rounded px-3 py-2 text-lg font-bold text-green-700">
+                                {{ panier.quantite }}
+                            </div>
                         {% else %}
-                            <i class="fas fa-lock mr-1"></i>Lecture seule
+                            <button type="button" 
+                                    class="w-8 h-8 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center cursor-not-allowed"
+                                    disabled
+                                    title="Modification désactivée - Lecture seule">
+                                <i class="fas fa-minus text-xs"></i>
+                            </button>
+                            <input type="number" 
+                                   value="{{ panier.quantite }}" 
+                                   readonly
+                                   class="w-16 text-center border border-gray-300 rounded px-2 py-1 text-sm font-medium bg-gray-50 cursor-not-allowed"
+                                   data-panier-id="{{ panier.id }}"
+                                   title="Mode lecture seule">
+                            <button type="button" 
+                                    class="w-8 h-8 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center cursor-not-allowed"
+                                    disabled
+                                    title="Modification désactivée - Lecture seule">
+                                <i class="fas fa-plus text-xs"></i>
+                            </button>
+                        {% endif %}
+                    </div>
+                    <div class="text-xs mt-1">
+                        {% if commande.etat_actuel.enum_etat.libelle == 'Livrée Partiellement' %}
+                            <span class="text-green-600 font-medium">
+                                <i class="fas fa-check-circle mr-1"></i>Confirmé livré
+                            </span>
+                        {% else %}
+                            <span class="text-gray-500">
+                                <i class="fas fa-lock mr-1"></i>Lecture seule
+                            </span>
                         {% endif %}
                     </div>
                 </div>

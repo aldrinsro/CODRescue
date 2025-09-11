@@ -88,6 +88,7 @@ class Commande(models.Model):
     compteur = models.IntegerField(default=0, verbose_name="Compteur d'utilisation")  
     payement  = models.CharField(default='Non payé', verbose_name="Payement", choices=PAYER_CHOICES)
     frais_livraison = models.BooleanField(default=True, verbose_name="Frais de livraison")
+    Date_livraison = models.DateTimeField(null=True, blank=True, verbose_name="Date de livraison")
 
 
     # Relation avec Envoi pour les exports journaliers  

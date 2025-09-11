@@ -28,7 +28,7 @@ class Command(BaseCommand):
             {'libelle': 'Collectée', 'couleur': '#6B7280', 'ordre': 7},
             {'libelle': 'Emballée', 'couleur': '#6B7280', 'ordre': 8},
             {'libelle': 'En livraison', 'couleur': '#8B5CF6', 'ordre': 9},
-            {'libelle': ''}
+            {'libelle': 'Mise en distribution', 'couleur':'#8B5CF6','ordre':20},
             {'libelle': 'Livrée', 'couleur': '#22C55E', 'ordre': 10},
             {'libelle': 'Retournée', 'couleur': '#EF4444', 'ordre': 11},
             {'libelle': 'Retour Confirmation', 'couleur': '#EF4444', 'ordre': 12},

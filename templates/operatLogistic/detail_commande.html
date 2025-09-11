@@ -668,7 +668,26 @@
                                     </div>
                                 </div>
                             </div>
-
+                            
+                            <!-- Champ date de livraison (caché par défaut) -->
+                            <div id="dateLivraisonDiv" class="mb-4 hidden">
+                                <h3 class="text-lg font-medium text-gray-900 mb-4">Date de livraison</h3>
+                                <div class="bg-green-50 p-4 rounded-lg">
+                                    <label for="date_livraison" class="block text-sm font-medium text-gray-700">
+                                        <i class="fas fa-calendar-check mr-1 text-green-600"></i>
+                                        Date de livraison effective
+                                    </label>
+                                    <input type="date" 
+                                           name="date_livraison" 
+                                           id="date_livraison"
+                                           class="w-full mt-2 p-2 border border-green-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                                           required>
+                                    <p class="mt-2 text-sm text-gray-600">
+                                        <i class="fas fa-info-circle mr-1 text-green-600"></i>
+                                        Veuillez indiquer la date à laquelle la commande a été effectivement livrée
+                                    </p>
+                                </div>
+                            </div>
 
                             <label for="commentaire" class="text-sm font-medium text-gray-700">Commentaire (obligatoire)</label>
                             <select name="commentaire" id="commentaire" class="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" required>
@@ -768,14 +787,9 @@
                         <div class="bg-green-50 border border-green-200 rounded-lg p-4">
                             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="articlesALivrerContainer">
                                 {% for panier in commande.paniers.all %}
+<!-- Panier {{ panier.id }}: {{ panier.article.nom }} - Prix: {{ panier.prix_actuel_pour_affichage|default:panier.article.prix_unitaire }} DH -->
                                 <div class="article-livraison-card bg-white rounded-lg border border-green-300 p-4 hover:border-green-400 transition-colors"
-                                     data-panier-id="{{ panier.id }}" 
-                                     data-article-id="{{ panier.article.id }}"
-                                     data-variante-id="{% if panier.variante %}{{ panier.variante.id }}{% endif %}"
-                                     data-article-nom="{{ panier.article.nom }}"
-                                     data-article-prix="{% if commande.compteur > 0 %}{% if commande.compteur == 1 and panier.article.prix_upsell_1 %}{{ panier.article.prix_upsell_1|stringformat:"%.2f" }}{% elif commande.compteur == 2 and panier.article.prix_upsell_2 %}{{ panier.article.prix_upsell_2|stringformat:"%.2f" }}{% elif commande.compteur == 3 and panier.article.prix_upsell_3 %}{{ panier.article.prix_upsell_3|stringformat:"%.2f" }}{% elif commande.compteur >= 4 and panier.article.prix_upsell_4 %}{{ panier.article.prix_upsell_4|stringformat:"%.2f" }}{% else %}{{ panier.article.prix_unitaire|stringformat:"%.2f" }}{% endif %}{% else %}{{ panier.article.prix_unitaire|stringformat:"%.2f" }}{% endif %}"
-                                     data-sous-total="{{ panier.sous_total|stringformat:"%.2f" }}"
-                                     data-quantite-max="{{ panier.quantite }}">
+                                     data-panier-id="{{ panier.id }}">
                                     <div class="flex items-start space-x-3">
                                         <input type="checkbox" 
                                                id="livrer_{{ panier.id }}" 
@@ -786,13 +800,19 @@
                                             <label for="livrer_{{ panier.id }}" class="cursor-pointer">
                                                 <div class="font-medium text-gray-900">
                                                     {{ panier.article.nom }}
+                                                    {% if panier.article.isUpsell and commande.compteur > 0 %}
+                                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700 ml-2">
+                                                            <i class="fas fa-arrow-up mr-1"></i>Upsell Niv.{{ commande.compteur }}
+                                                        </span>
+                                                    {% endif %}
                                                     {% if panier.variante %}
-                                                        -
+                                                        <br><small class="text-gray-600">
                                                         {% if panier.variante.couleur %}{{ panier.variante.couleur.nom }}{% endif %}
                                                         {% if panier.variante.pointure %}{% if panier.variante.couleur %} / {% endif %}{{ panier.variante.pointure.pointure }}{% endif %}
                                                         {% if panier.variante.taille %}{% if panier.variante.couleur or panier.variante.pointure %} / {% endif %}{{ panier.variante.taille }}{% endif %}
                                                         {% if panier.variante.modele %}{% if panier.variante.couleur or panier.variante.pointure or panier.variante.taille %} / {% endif %}{{ panier.variante.modele }}{% endif %}
                                                         {% if panier.variante.matiere %}{% if panier.variante.couleur or panier.variante.pointure or panier.variante.taille or panier.variante.modele %} / {% endif %}{{ panier.variante.matiere }}{% endif %}
+                                                        </small>
                                                     {% endif %}
                                                 </div>
                                                 <div class="text-sm text-gray-500">
@@ -817,7 +837,7 @@
                                                         {% endif %}
                                                     {% endif %}
                                                      <div class="flex justify-between items-center mt-1">
-                                                         <span>Prix unitaire: {% if commande.compteur > 0 %}{% if commande.compteur == 1 and panier.article.prix_upsell_1 %}{{ panier.article.prix_upsell_1|floatformat:2 }}{% elif commande.compteur == 2 and panier.article.prix_upsell_2 %}{{ panier.article.prix_upsell_2|floatformat:2 }}{% elif commande.compteur == 3 and panier.article.prix_upsell_3 %}{{ panier.article.prix_upsell_3|floatformat:2 }}{% elif commande.compteur >= 4 and panier.article.prix_upsell_4 %}{{ panier.article.prix_upsell_4|floatformat:2 }}{% else %}{{ panier.article.prix_unitaire|floatformat:2 }}{% endif %}{% else %}{{ panier.article.prix_unitaire|floatformat:2 }}{% endif %} DH</span>
+                                                         <span>Prix unitaire: {% if commande.compteur > 0 and panier.article.isUpsell %}{% if commande.compteur == 1 and panier.article.prix_upsell_1 %}{{ panier.article.prix_upsell_1|floatformat:2 }}{% elif commande.compteur == 2 and panier.article.prix_upsell_2 %}{{ panier.article.prix_upsell_2|floatformat:2 }}{% elif commande.compteur == 3 and panier.article.prix_upsell_3 %}{{ panier.article.prix_upsell_3|floatformat:2 }}{% elif commande.compteur >= 4 and panier.article.prix_upsell_4 %}{{ panier.article.prix_upsell_4|floatformat:2 }}{% else %}{{ panier.article.prix_unitaire|floatformat:2 }}{% endif %}{% else %}{{ panier.article.prix_unitaire|floatformat:2 }}{% endif %} DH{% if commande.compteur > 0 and panier.article.isUpsell %}<small class="ml-1 text-green-600">(Niveau {{ commande.compteur }})</small>{% endif %}</span>
                                                          <span class="font-medium text-blue-600">Sous-total: {{ panier.sous_total|floatformat:2 }} DH</span>
                                                      </div>
                                                 </div>
@@ -869,7 +889,7 @@
                             <i class="fas fa-calculator mr-2"></i>
                             Résumé de la Livraison Partielle
                         </h4>
-                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
                             <div class="text-center">
                                 <div class="text-2xl font-bold text-green-600" id="totalArticlesLivres">0</div>
                                 <div class="text-sm text-gray-600">Articles à livrer</div>
@@ -883,10 +903,14 @@
                                 <div class="text-sm text-gray-600">Valeur livrée</div>
                             </div>
                             <div class="text-center">
+                                <div class="text-2xl font-bold text-red-600" id="totalValeurRenvoyee">0.00 DH</div>
+                                <div class="text-sm text-gray-600">Valeur renvoyée</div>
+                            </div>
+                            <div class="text-center">
                                 <div class="text-2xl font-bold text-purple-600" 
                                      id="totalCommandeLivraison" 
                                      data-total-commande="{{ commande.total_cmd|stringformat:"%.2f" }}">{{ commande.total_cmd|floatformat:2 }} DH</div>
-                                <div class="text-sm text-gray-600">Total commande original</div>
+                                <div class="text-sm text-gray-600">Total original</div>
                             </div>
                         </div>
                         
@@ -1153,40 +1177,6 @@
                                 </ul>
                             </div>
                         </div>
-                        
-                        <!-- Motif du renvoi -->
-                        <div class="text-left">
-                            <label for="commentaire_renvoi" class="text-sm font-medium text-gray-700 block mb-2">
-                                Demande de modification du client <span class="text-red-500">*</span>
-                            </label>
-                            <textarea 
-                                name="commentaire" 
-                                id="commentaire_renvoi" 
-                                rows="4" 
-                                class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500" 
-                                placeholder="Décrivez les modifications demandées par le client (ex: client veut ajouter un article, modifier les quantités, supprimer un article, etc.)"
-                                required></textarea>
-                            <div class="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                                <p class="text-sm text-blue-700">
-                                    <i class="fas fa-info-circle mr-2"></i>
-                                    <strong>Processus :</strong> La commande sera renvoyée aux opérateurs de préparation qui effectueront les modifications demandées par le client, puis la commande sera remise en livraison.
-                                </p>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-                <div class="items-center px-4 py-3">
-                    <button id="confirmRenvoyerBtn" class="px-4 py-2 bg-purple-600 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-300">
-                        <i class="fas fa-undo mr-2"></i>Confirmer le Renvoi
-                    </button>
-                    <button id="cancelRenvoyerBtn" class="px-4 py-2 bg-gray-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300 mt-2">
-                        Annuler
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Modale de confirmation livraison partielle -->
     <div id="confirmationLivraisonPartielleModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
         <div class="relative top-32 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
@@ -1244,7 +1234,6 @@ function getPrixUpsell(article, compteur) {
     // Si pas de prix upsell défini pour ce niveau, utiliser le prix unitaire
     return prixUnitaire;
 }
-
 
 function remplirSelectArticles() {
     const select = document.getElementById('articleSelect');
@@ -2177,49 +2166,6 @@ function isCommandeConfirmee() {
     return statutElement && statutElement.dataset.statutCommande === 'confirmée';
 }
 
-// Fonction pour afficher les notifications de stock
-function showStockNotification(action, articleNom, quantite, isConfirmee = false) {
-    let message = '';
-    let type = 'info';
-    
-    switch(action) {
-        case 'ajout':
-            if (isConfirmee) {
-                message = `✅ Article "${articleNom}" ajouté (${quantite} unité(s)). Stock décrémenté automatiquement.`;
-                type = 'success';
-            } else {
-                message = `✅ Article "${articleNom}" ajouté (${quantite} unité(s))`;
-                type = 'success';
-            }
-            break;
-        case 'modification':
-            if (isConfirmee) {
-                message = `🔄 Article "${articleNom}" modifié. Stock ajusté automatiquement.`;
-                type = 'info';
-            } else {
-                message = `🔄 Article "${articleNom}" modifié`;
-                type = 'info';
-            }
-            break;
-        case 'suppression':
-            if (isConfirmee) {
-                message = `🗑️ Article "${articleNom}" supprimé. Le stock sera géré par les opérateurs de préparation.`;
-                type = 'warning';
-            } else {
-                message = `🗑️ Article "${articleNom}" supprimé`;
-                type = 'warning';
-            }
-            break;
-        case 'stock_insuffisant':
-            message = `⚠️ Stock insuffisant pour "${articleNom}" (demandé: ${quantite})`;
-            type = 'error';
-            break;
-    }
-    
-    showNotification(message, type);
-}
-
-
 
 // Fonction pour basculer l'affichage de la timeline
 function toggleTimeline() {
@@ -2261,78 +2207,6 @@ function toggleTimeline() {
     }
 }
 
-// ================== GESTION DU RENVOI EN PRÉPARATION ==================
-// Fonctions openRenvoyerModal et closeRenvoyerModal déplacées vers static/js/OperteurSAV/modals.js
-// Gestionnaire pour le bouton de confirmation du renvoi
-document.addEventListener('DOMContentLoaded', function() {
-    const confirmRenvoyerBtn = document.getElementById('confirmRenvoyerBtn');
-    const cancelRenvoyerBtn = document.getElementById('cancelRenvoyerBtn');
-    
-    if (confirmRenvoyerBtn) {
-        confirmRenvoyerBtn.addEventListener('click', function() {
-            const form = document.getElementById('renvoyerForm');
-            const commentaire = document.getElementById('commentaire_renvoi').value.trim();
-            
-            if (!commentaire) {
-                showNotification('❌ Veuillez décrire les modifications demandées par le client', 'error');
-                return;
-            }
-            
-            // Désactiver le bouton pour éviter les doubles clics
-            confirmRenvoyerBtn.disabled = true;
-            confirmRenvoyerBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Traitement...';
-            
-            // Soumettre le formulaire
-            fetch(form.action, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: new URLSearchParams(new FormData(form))
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showNotification('✅ ' + data.message, 'success');
-                    closeRenvoyerModal();
-                    
-                    // Rediriger vers la liste des commandes après un délai
-                    setTimeout(() => {
-                        window.location.href = '{% url "operatLogistic:liste_commandes" %}';
-                    }, 2000);
-                } else {
-                    showNotification('❌ Erreur: ' + data.error, 'error');
-                    // Réactiver le bouton
-                    confirmRenvoyerBtn.disabled = false;
-                    confirmRenvoyerBtn.innerHTML = '<i class="fas fa-undo mr-2"></i>Confirmer le Renvoi';
-                }
-            })
-            .catch(error => {
-                console.error('Erreur:', error);
-                showNotification('❌ Erreur de réseau: ' + error.message, 'error');
-                // Réactiver le bouton
-                confirmRenvoyerBtn.disabled = false;
-                confirmRenvoyerBtn.innerHTML = '<i class="fas fa-undo mr-2"></i>Confirmer le Renvoi';
-            });
-        });
-    }
-    
-    if (cancelRenvoyerBtn) {
-        cancelRenvoyerBtn.addEventListener('click', closeRenvoyerModal);
-    }
-    
-    // Fermer la modale en cliquant à l'extérieur
-    const renvoyerModal = document.getElementById('renvoyerModal');
-    if (renvoyerModal) {
-        renvoyerModal.addEventListener('click', function(event) {
-            if (event.target === renvoyerModal) {
-                closeRenvoyerModal();
-            }
-        });
-    }
-});
-
 // Initialiser les calculs avec frais de livraison et la timeline au chargement
 document.addEventListener('DOMContentLoaded', function() {
     calculerTotalAvecLivraison();
@@ -2357,9 +2231,28 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // ================== GESTION DE LA LIVRAISON PARTIELLE ==================
 
+// Initialiser les données des paniers pour le JavaScript
+window.currentPaniersData = [
+    {% for panier in commande.paniers.all %}
+    {
+        id: {{ panier.id }},
+        nom: "{{ panier.article.nom|escapejs }}",
+        article_id: {{ panier.article.id }},
+        quantite: {{ panier.quantite }},
+        prix_unitaire: "{{ panier.article.prix_unitaire|stringformat:"%.2f" }}",
+        prix_actuel: "{{ panier.prix_actuel_pour_affichage|default:panier.article.prix_unitaire|stringformat:"%.2f" }}",
+        sous_total: "{{ panier.sous_total|stringformat:"%.2f" }}",
+        reference: "{{ panier.article.reference|default:''|escapejs }}",
+        compteur: {{ commande.compteur }},
+        is_upsell: {{ panier.article.isUpsell|yesno:"true,false" }}
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+];
+console.log('🔧 DEBUG: Données des paniers initialisées:', window.currentPaniersData);
+
 // Fonctions ouvrirModalLivraisonPartielle et fermerModalLivraisonPartielle déplacées vers static/js/OperteurSAV/modals.js
 
-function initialiserModalLivraisonPartielle() {
+function initialiserModalLivraisonPartielleTemplate() {
     console.log('DEBUG: Initialisation du modal de livraison partielle');
     
     // Initialiser les événements pour les checkboxes
@@ -2418,7 +2311,10 @@ function mettreAJourResumeLivraisonPartielle() {
     let totalArticlesLivres = 0;
     let totalArticlesRenvoyes = 0;
     let totalValeurLivree = 0;
+    let totalValeurRenvoyee = 0;
     
+    // Pas de fallback texte: on s'appuie uniquement sur data-attributes/JSON numériques
+
     // Parcourir tous les articles du panier original
     document.querySelectorAll('.article-livraison-card').forEach(card => {
         const panierId = parseInt(card.dataset.panierId);
@@ -2430,22 +2326,96 @@ function mettreAJourResumeLivraisonPartielle() {
         const nomElement = card.querySelector('.font-medium.text-gray-900');
         const nomCompletAvecVariante = nomElement ? nomElement.textContent.trim() : articleNom;
         
-        // --- DEBUG PRIX START ---
-        console.log('DEBUG LP - Raw data-article-prix:', card.dataset.articlePrix); // Log 1: Raw string from DOM
-        const articlePrix = parseFloat(card.dataset.articlePrix || '0');
-        console.log('DEBUG LP - Parsed articlePrix (float):', articlePrix); // Log 2: Result of parseFloat
+        // --- DEBUG COMPLET START ---
+        console.log('=== DEBUG ARTICLE START ===');
+        console.log('DEBUG LP - Card element:', card);
+        console.log('DEBUG LP - Raw data-article-prix:', card.dataset.articlePrix);
+        console.log('DEBUG LP - Raw data-article-prix TYPE:', typeof card.dataset.articlePrix);
+        console.log('DEBUG LP - Raw data-article-prix LENGTH:', (card.dataset.articlePrix || '').length);
+        console.log('DEBUG LP - Raw data-sous-total:', card.dataset.sousTotal);
+        console.log('DEBUG LP - Raw data-quantite-max:', card.dataset.quantiteMax);
+        console.log('DEBUG LP - Raw data-is-upsell:', card.dataset.isUpsell);
+        console.log('DEBUG LP - Raw data-compteur:', card.dataset.compteur);
+        console.log('DEBUG LP - Raw data-article (brut):', card.dataset.article);
+        console.log('DEBUG LP - Tous les datasets du card:', card.dataset);
         
-        // Si le prix est 0, essayer de le calculer depuis le sous-total
+        const articlePrix = parseFloat(card.dataset.articlePrix || '0');
+        const sousTotal = parseFloat(card.dataset.sousTotal || '0');
+        const quantiteMax = parseInt(card.dataset.quantiteMax || '1');
+        const isUpsell = card.dataset.isUpsell === 'true';
+        const compteur = parseInt(card.dataset.compteur || '0');
+        
+        console.log('DEBUG LP - Parsed articlePrix (float):', articlePrix);
+        console.log('DEBUG LP - Parsed sousTotal (float):', sousTotal);
+        console.log('DEBUG LP - Parsed quantiteMax (int):', quantiteMax);
+        console.log('DEBUG LP - Parsed isUpsell (bool):', isUpsell);
+        console.log('DEBUG LP - Parsed compteur (int):', compteur);
+        
+        // Calculer le prix unitaire actuel (pas le prix de base)
         let prixUnitaire = articlePrix;
-        if (prixUnitaire === 0) {
-            const sousTotal = parseFloat(card.dataset.sousTotal || '0');
-            const quantiteMax = parseInt(card.dataset.quantiteMax || '1');
-            prixUnitaire = quantiteMax > 0 ? sousTotal / quantiteMax : 0;
+        if (prixUnitaire === 0 && sousTotal > 0 && quantiteMax > 0) {
+            prixUnitaire = sousTotal / quantiteMax;
             console.log('DEBUG LP - Prix calculé depuis sous-total:', prixUnitaire);
         }
-        // --- DEBUG PRIX END ---
-
-        const quantiteMax = parseInt(card.dataset.quantiteMax);
+        
+        // Si le prix est toujours 0, essayer de récupérer depuis les données de l'article
+        if (prixUnitaire === 0) {
+            console.log('ERREUR LP - Prix unitaire = 0, récupération alternative...');
+            
+            // Essayer de récupérer depuis data-article du card
+            try {
+                const articleData = JSON.parse(card.dataset.article || '{}');
+                console.log('DEBUG LP - articleData récupérée:', articleData);
+                
+                // NOUVEAU: Toujours utiliser prix_actuel car il contient déjà le bon prix selon le contexte
+                prixUnitaire = parseFloat(articleData.prix_actuel || articleData.prix_unitaire || 0);
+                console.log('DEBUG LP - Prix actuel récupéré:', prixUnitaire);
+                console.log('DEBUG LP - Prix unitaire de base:', articleData.prix_unitaire);
+                console.log('DEBUG LP - Données upsell disponibles:', {
+                    prix_upsell_1: articleData.prix_upsell_1,
+                    prix_upsell_2: articleData.prix_upsell_2,
+                    prix_upsell_3: articleData.prix_upsell_3,
+                    prix_upsell_4: articleData.prix_upsell_4
+                });
+            } catch (e) {
+                console.error('ERREUR LP - Impossible de parser data-article:', e);
+            }
+        }
+        
+        // Pour les articles upsell, le prix doit déjà être le prix upsell dans data-article-prix
+        if (isUpsell && compteur > 0) {
+            console.log('DEBUG LP - Article UPSELL détecté - Niveau:', compteur);
+            console.log('DEBUG LP - Prix upsell utilisé:', prixUnitaire);
+        } else {
+            console.log('DEBUG LP - Article NORMAL - Prix unitaire de base:', prixUnitaire);
+        }
+        
+        console.log('DEBUG LP - Prix unitaire final utilisé:', prixUnitaire);
+        
+        if (prixUnitaire === 0) {
+            console.error('ERREUR CRITIQUE LP - Prix unitaire reste à 0 !');
+            console.error('ERREUR CRITIQUE LP - Data attributes:', {
+                articlePrix: card.dataset.articlePrix,
+                sousTotal: card.dataset.sousTotal,
+                quantiteMax: card.dataset.quantiteMax,
+                article: card.dataset.article
+            });
+            
+            // FALLBACK D'URGENCE: Essayer de récupérer depuis l'affichage HTML du prix
+            console.log('FALLBACK - Tentative récupération depuis DOM...');
+            const prixElements = card.querySelectorAll('[class*="prix"], [class*="DH"], span, div');
+            prixElements.forEach((el, idx) => {
+                if (el.textContent && el.textContent.includes('DH')) {
+                    console.log(`FALLBACK - Element ${idx}:`, el.textContent.trim());
+                }
+            });
+            
+            // Essayer de récupérer le prix depuis le text "Prix unitaire: X.XX DH"
+            // AUCUN FALLBACK DOM: si data manquante, on reste à 0 et on loggue
+        }
+        
+        console.log('=== DEBUG ARTICLE END ===');
+        // --- DEBUG COMPLET END ---
         
         const checkbox = card.querySelector('.article-livrer-checkbox');
         const quantiteInput = card.querySelector('.quantite-livrer-input');
@@ -2471,34 +2441,99 @@ function mettreAJourResumeLivraisonPartielle() {
             }
             
             if (quantiteRenvoyee > 0) {
+                const isUpsell = card.dataset.isUpsell === 'true';
+                const compteur = parseInt(card.dataset.compteur || '0');
+                
+                console.log('=== DEBUG ARTICLE RENVOYÉ START ===');
+                console.log('DEBUG AR - Article ID:', articleId);
+                console.log('DEBUG AR - Quantité renvoyée:', quantiteRenvoyee);
+                console.log('DEBUG AR - Prix unitaire final:', prixUnitaire);
+                console.log('DEBUG AR - Is upsell:', isUpsell);
+                console.log('DEBUG AR - Compteur:', compteur);
+                console.log('DEBUG AR - Nom complet:', nomCompletAvecVariante);
+                console.log('=== DEBUG ARTICLE RENVOYÉ END ===');
+                
+                const prix = Number(prixUnitaire) || 0;
                 articlesRenvoyes.push({
                     panier_id: panierId,
                     article_id: articleId,
                     variante_id: varianteId,
                     quantite: quantiteRenvoyee,
                     nom: nomCompletAvecVariante,
-                    prix_unitaire: prixUnitaire
+                    prix_unitaire: prix,
+                    prix_actuel: prix,
+                    is_upsell: isUpsell,
+                    compteur: compteur
                 });
                 totalArticlesRenvoyes += quantiteRenvoyee;
+                totalValeurRenvoyee += quantiteRenvoyee * prix;
             }
         } else {
             quantiteRenvoyee = quantiteMax;
+            const isUpsell = card.dataset.isUpsell === 'true';
+            const compteur = parseInt(card.dataset.compteur || '0');
             
+            console.log('=== DEBUG ARTICLE RENVOYÉ COMPLET START ===');
+            console.log('DEBUG ARC - Article ID:', articleId);
+            console.log('DEBUG ARC - Quantité renvoyée (complète):', quantiteRenvoyee);
+            console.log('DEBUG ARC - Prix unitaire final:', prixUnitaire);
+            console.log('DEBUG ARC - Is upsell:', isUpsell);
+            console.log('DEBUG ARC - Compteur:', compteur);
+            console.log('DEBUG ARC - Nom complet:', nomCompletAvecVariante);
+            console.log('=== DEBUG ARTICLE RENVOYÉ COMPLET END ===');
+            
+            const prix = Number(prixUnitaire) || 0;
             articlesRenvoyes.push({
                 panier_id: panierId,
                 article_id: articleId,
                 variante_id: varianteId,
                 quantite: quantiteRenvoyee,
                 nom: nomCompletAvecVariante,
-                prix_unitaire: prixUnitaire
+                prix_unitaire: prix,
+                prix_actuel: prix,
+                is_upsell: isUpsell,
+                compteur: compteur
             });
             totalArticlesRenvoyes += quantiteRenvoyee;
+            totalValeurRenvoyee += quantiteRenvoyee * prix;
         }
     });
     
     // --- DEBUG PRIX FINAL ---
     console.log('DEBUG LP - Final articlesLivres before send:', articlesLivres); // Log 3: Final array
     console.log('DEBUG LP - Final articlesRenvoyes before send:', articlesRenvoyes); // Log 4: Final array
+    
+    // --- DEBUG COMPTEUR UPSELL ---
+    console.log('=== DEBUG COMPTEUR UPSELL START ===');
+    
+    // Calculer le total des quantités upsell qui seront livrées
+    let totalQuantiteUpsellLivrees = 0;
+    articlesLivres.forEach(article => {
+        if (article.is_upsell) {
+            totalQuantiteUpsellLivrees += article.quantite;
+            console.log(`DEBUG COMPTEUR - Article livré upsell: ${article.nom}, Quantité: ${article.quantite}`);
+        }
+    });
+    
+    // Calculer le total des quantités upsell qui seront renvoyées
+    let totalQuantiteUpsellRenvoyees = 0;
+    articlesRenvoyes.forEach(article => {
+        if (article.is_upsell) {
+            totalQuantiteUpsellRenvoyees += article.quantite;
+            console.log(`DEBUG COMPTEUR - Article renvoyé upsell: ${article.nom}, Quantité: ${article.quantite}`);
+        }
+    });
+    
+    const compteurActuel = parseInt(document.querySelector('[data-compteur]')?.dataset.compteur || '0');
+    const nouveauCompteur = totalQuantiteUpsellLivrees >= 2 ? totalQuantiteUpsellLivrees - 1 : 0;
+    
+    console.log(`DEBUG COMPTEUR - Compteur actuel: ${compteurActuel}`);
+    console.log(`DEBUG COMPTEUR - Total quantité upsell livrées: ${totalQuantiteUpsellLivrees}`);
+    console.log(`DEBUG COMPTEUR - Total quantité upsell renvoyées: ${totalQuantiteUpsellRenvoyees}`);
+    console.log(`DEBUG COMPTEUR - Nouveau compteur calculé: ${nouveauCompteur}`);
+    console.log(`DEBUG COMPTEUR - Changement: ${compteurActuel} → ${nouveauCompteur}`);
+    
+    console.log('=== DEBUG COMPTEUR UPSELL END ===');
     // --- DEBUG PRIX FINAL ---
 
     // Mettre à jour les champs cachés (qui seront utilisés par le submit handler)
@@ -2518,6 +2553,7 @@ function mettreAJourResumeLivraisonPartielle() {
     document.getElementById('totalArticlesLivres').textContent = totalArticlesLivres;
     document.getElementById('totalArticlesRenvoyes').textContent = totalArticlesRenvoyes;
     document.getElementById('totalValeurLivree').textContent = totalValeurLivree.toFixed(2) + ' DH';
+    document.getElementById('totalValeurRenvoyee').textContent = totalValeurRenvoyee.toFixed(2) + ' DH';
     
     // Calculer et afficher le pourcentage de livraison
     const totalCommandeElement = document.getElementById('totalCommandeLivraison');
@@ -2560,7 +2596,7 @@ function mettreAJourResumeLivraisonPartielle() {
 
 
 // Fonction qui gère l'affichage des articles à renvoyer dans la section dédiée
-function mettreAJourSectionArticlesRenvoyes(articlesRenvoyes) {
+function mettreAJourSectionArticlesRevoyes(articlesRenvoyes) {
     console.log('DEBUG: mettreAJourSectionArticlesRenvoyes appelée avec', articlesRenvoyes.length, 'articles');
     console.log('DEBUG: Articles à renvoyer:', articlesRenvoyes);
     
@@ -2582,6 +2618,9 @@ function mettreAJourSectionArticlesRenvoyes(articlesRenvoyes) {
     aucunArticleDiv.classList.add('hidden');
 
     articlesRenvoyes.forEach(article => {
+        // Utiliser directement le prix qui vient du backend (déjà calculé)
+        const prixAff = parseFloat(article.prix_actuel) || parseFloat(article.prix_unitaire) || 0;
+        console.log(`DEBUG: Article ${article.nom}, prix_actuel: ${article.prix_actuel}, prix_unitaire: ${article.prix_unitaire}, prix utilisé: ${prixAff}`);
         const articleCard = document.createElement('div');
         articleCard.className = 'article-renvoi-card bg-white rounded-lg border border-orange-300 p-4';
         articleCard.dataset.articleId = article.article_id;
@@ -2593,11 +2632,39 @@ function mettreAJourSectionArticlesRenvoyes(articlesRenvoyes) {
                     <i class="fas fa-undo text-orange-600 text-lg mt-1"></i>
                 </div>
                 <div class="flex-1">
-                    <div class="font-medium text-gray-900">${article.nom}</div>
-                    <div class="text-sm text-gray-500">
-                        Quantité à renvoyer: <span class="font-semibold text-orange-600">${article.quantite}</span><br>
-                        Prix unitaire: ${article.prix_unitaire.toFixed(2)} DH<br>
-                        Valeur: <span class="font-semibold text-orange-600">${(article.quantite * article.prix_unitaire).toFixed(2)} DH</span>
+                    <div class="font-medium text-gray-900">
+                        ${article.nom}
+                        ${article.is_upsell && article.compteur > 0 ? 
+                            `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-700 ml-2">
+                                <i class="fas fa-arrow-up mr-1"></i>Upsell Niv.${article.compteur}
+                            </span>` : ''}
+                    </div>
+                    ${article.variante_id ? `<div class="text-xs text-gray-500 mt-1">Variante: ${article.variante_id}</div>` : ''}
+                    <div class="text-sm text-gray-500 mt-2">
+                        <div class="flex justify-between items-center mb-1">
+                            <span>Quantité à renvoyer:</span>
+                            <span class="font-semibold text-orange-600">${article.quantite}</span>
+                        </div>
+                        <div class="flex justify-between items-center mb-1">
+                            <span>Prix unitaire:</span>
+                            <span class="font-medium text-gray-900">
+                                ${prixAff.toFixed(2)} DH
+                                ${article.is_upsell && article.compteur > 0 ? 
+                                    `<small class="text-green-600 ml-1">(Prix upsell)</small>` : ''}
+                                ${prixAff === 0 ? 
+                                    `<small class="text-red-600 ml-1">⚠️ ERREUR: Prix = 0</small>` : ''}
+                            </span>
+                        </div>
+                        <div class="flex justify-between items-center pt-1 border-t border-orange-200">
+                            <span class="font-medium">Valeur totale renvoyée:</span>
+                            <span class="font-bold text-orange-700 text-lg">${(Number(article.quantite || 0) * prixAff).toFixed(2)} DH</span>
+                        </div>
+                    </div>
+                    <div class="mt-2 text-xs text-orange-600 bg-orange-100 px-2 py-1 rounded-md">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Article renvoyé aux opérateurs de préparation
+                        ${article.is_upsell && article.compteur > 0 ? 
+                            ` • Prix upsell niveau ${article.compteur} appliqué` : ''}
                     </div>
                 </div>
             </div>
@@ -2673,14 +2740,30 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
+                    console.log('✅ Livraison partielle réussie:', data);
+                    
+                    // Afficher les changements de compteur upsell s'il y en a
+                    if (data.compteur_change) {
+                        console.log('=== DEBUG RESPONSE COMPTEUR ===');
+                        console.log('Ancien compteur:', data.compteur_change.ancien_compteur);
+                        console.log('Nouveau compteur:', data.compteur_change.nouveau_compteur);
+                        console.log('Quantité upsell restante:', data.compteur_change.total_quantite_upsell_restante);
+                        console.log('=== FIN DEBUG RESPONSE COMPTEUR ===');
+                    }
+                    
                     // Affichage du toast
                     const messageRetour = 'renvoyés en préparation';
+                    
+                    let messageCompteur = '';
+                    if (data.compteur_change && data.compteur_change.ancien_compteur !== data.compteur_change.nouveau_compteur) {
+                        messageCompteur = `\nCompteur upsell: ${data.compteur_change.ancien_compteur} → ${data.compteur_change.nouveau_compteur}`;
+                    }
                     
                     showNotification(
                         `✅ Livraison partielle effectuée avec succès !\n` +
                         `Articles livrés : ${totalArticlesLivres}\n` +
                         `Articles ${messageRetour} : ${totalArticlesRenvoyes}\n` +
-                        `Valeur totale livrée : ${totalValeurLivree.toFixed(2)} DH`,
+                        `Valeur totale livrée : ${totalValeurLivree.toFixed(2)} DH${messageCompteur}`,
                         'success'
                     );
                     // Affichage de la modale de confirmation
@@ -2693,8 +2776,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             table += `<tr>` +
                                 `<td class='px-2 py-1 border'>${a.nom || '-'}</td>` +
                                 `<td class='px-2 py-1 border text-center'>${a.quantite || 0}</td>` +
-                                `<td class='px-2 py-1 border text-center'>${(a.prix_unitaire || 0).toFixed(2)} DH</td>` +
-                                `<td class='px-2 py-1 border text-center'>${((a.quantite || 0) * (a.prix_unitaire || 0)).toFixed(2)} DH</td>` +
+                                `<td class='px-2 py-1 border text-center'>${(a.prix_actuel || a.prix_unitaire || 0).toFixed(2)} DH</td>` +
+                                `<td class='px-2 py-1 border text-center'>${((a.quantite || 0) * (a.prix_actuel || a.prix_unitaire || 0)).toFixed(2)} DH</td>` +
                             `</tr>`;
                         });
                         table += `</tbody></table>`;
@@ -2733,6 +2816,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     confirmationModal.classList.remove('hidden');
                     fermerModalLivraisonPartielle();
+                    
+                    // Si le compteur a changé, recharger la page pour refléter les nouveaux prix
+                    if (data.compteur_change && data.compteur_change.ancien_compteur !== data.compteur_change.nouveau_compteur) {
+                        console.log('🔄 Rechargement de la page car le compteur upsell a changé');
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 3000);
+                    }
+                    
                     // Gestion du bouton OK
                     const fermerBtn = document.getElementById('fermerConfirmationLivraisonBtn');
                     if (fermerBtn) {
@@ -2757,11 +2849,5 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// ================== FIN GESTION DE LA LIVRAISON PARTIELLE ==================
-
-// ================== GESTION DE LA LIVRAISON PARTIELLE (duplication à supprimer) ==================
-// Cette section est une duplication qui doit être supprimée. La logique a été déplacée plus haut.
-// Je vais la supprimer après la confirmation de cette modification.
-// ... existing code ...
 </script>
 {% endblock %} 

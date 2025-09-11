@@ -256,7 +256,9 @@
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
                 {% for commande in page_obj %}
-                <tr class="hover:bg-gray-50 transition-colors">
+                <tr class="hover:bg-gray-50 transition-colors" 
+                    data-commande-id="{{ commande.id }}" 
+                    data-commande-id-yz="{{ commande.id_yz }}">
                     <td class="px-4 py-4 whitespace-nowrap">
                         <div class="text-sm font-medium text-gray-900">{{ commande.id_yz }}</div>
                     </td>
@@ -301,7 +303,7 @@
                     </td>
                     <td class="px-4 py-4 whitespace-nowrap">
                         {% for etat in commande.etats.all %}
-                            {% if etat.enum_etat.libelle == 'En livraison' and etat.date_fin == None %}
+                            {% if etat.enum_etat.libelle == 'Mise en distribution' and etat.date_fin == None %}
                                 <div class="text-sm text-gray-900">{{ etat.date_debut|date:"d/m/Y" }}</div>
                                 <div class="text-xs text-gray-500">{{ etat.date_debut|date:"H:i" }}</div>
                             {% endif %}
@@ -312,7 +314,7 @@
                             <a href="{% url 'operatLogistic:detail_commande' commande.id %}" class="text-blue-600 hover:text-blue-800 transition-colors" title="Voir les détails">
                                 <i class="fas fa-eye"></i>
                             </a>
-                            <button onclick="openSavActionsModal({{ commande.id }}, '{{ commande.id_yz }}')" 
+                            <button onclick="ouvrirModalActionsSav({{ commande.id }}, '{{ commande.id_yz }}')" 
                             class="text-orange-600 hover:text-orange-900 transition-colors ml-2"
                             title="Actions SAV">
                         <i class="fas fa-tools"></i>
@@ -387,8 +389,8 @@
             <p class="text-sm text-gray-600 mb-6">Commande <span id="commandeIdDisplay" class="font-semibold text-blue-600"></span></p>
             
             <!-- Grille des actions SAV -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <button onclick="openSavModal('Livrée')" class="sav-action-card bg-green-50 hover:bg-green-100 border-2 border-green-200 hover:border-green-300 rounded-lg p-4 transition-all duration-200">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <button onclick="openSavModal('Livrée', {{ commande.id }})" class="sav-action-card bg-green-50 hover:bg-green-100 border-2 border-green-200 hover:border-green-300 rounded-lg p-4 transition-all duration-200">
                     <div class="flex flex-col items-center">
                         <i class="fas fa-check-circle text-3xl text-green-500 mb-2"></i>
                         <span class="font-semibold text-green-800">Livrée</span>
@@ -396,7 +398,7 @@
                     </div>
                 </button>
                 
-                <button onclick="openSavModal('Livrée Partiellement')" class="sav-action-card bg-blue-50 hover:bg-blue-100 border-2 border-blue-200 hover:border-blue-300 rounded-lg p-4 transition-all duration-200">
+                <button onclick="ouvrirModalLivraisonPartielle({{ commande.id }})" class="sav-action-card bg-blue-50 hover:bg-blue-100 border-2 border-blue-200 hover:border-blue-300 rounded-lg p-4 transition-all duration-200">
                     <div class="flex flex-col items-center">
                         <i class="fas fa-box-open text-3xl text-blue-500 mb-2"></i>
                         <span class="font-semibold text-blue-800">Livraison Partielle</span>
@@ -404,17 +406,27 @@
                     </div>
                 </button>
                 
-                <button onclick="openSavModal('Retournée')" class="sav-action-card bg-red-50 hover:bg-red-100 border-2 border-red-200 hover:border-red-300 rounded-lg p-4 transition-all duration-200">
+                <button onclick="openSavModal('Retournée', {{ commande.id }})" class="sav-action-card bg-red-50 hover:bg-red-100 border-2 border-red-200 hover:border-red-300 rounded-lg p-4 transition-all duration-200">
                     <div class="flex flex-col items-center">
                         <i class="fas fa-times-circle text-3xl text-red-500 mb-2"></i>
                         <span class="font-semibold text-red-800">Retournée (SAV)</span>
                         <span class="text-xs text-red-600 mt-1">Retourner la commande</span>
                     </div>
                 </button>
+                <button onclick="openSavModal('Reportée', {{ commande.id }})" class="sav-action-card bg-orange-50 hover:bg-orange-100 border-2 border-orange-200 hover:border-orange-300 rounded-lg p-4 transition-all duration-200">
+                    <div class="flex flex-col items-center">
+                        <i class="fas fa-times-circle text-3xl text-orange-500 mb-2"></i>
+                        <span class="font-semibold text-orange-500-800">Reportée (SAV)</span>
+                        <span class="text-xs text-orange-600 mt-1">Reportée </span>
+                    </div>
+                </button>
             </div>
             
+        </div>
+        
+            
             <div class="flex justify-center">
-                <button id="cancelSavActionsBtn" onclick="fermerModalSav()" class="px-6 py-2 bg-gray-500 text-white text-base font-medium rounded-md shadow-sm hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300 transition-colors">
+                <button id="cancelSavActionsBtn" onclick="fermerModalActionsSav()" class="px-6 py-2 bg-gray-500 text-white text-base font-medium rounded-md shadow-sm hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300 transition-colors">
                     <i class="fas fa-times mr-2"></i>Fermer
                 </button>
             </div>
@@ -432,66 +444,254 @@
                     {% csrf_token %}
                     <input type="hidden" name="nouvel_etat" id="nouvel_etat_input">
                     <div class="text-left">
-                        <!-- Champ commentaire -->
-                        <div class="mb-4">
-                            <label for="commentaire" class="text-sm font-medium text-gray-700">Commentaire (obligatoire)</label>
-                            <select name="commentaire" id="commentaire" class="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" required>
-                                <option value="">Sélectionner un commentaire...</option>
-                                <optgroup label="Livraison" class="optgroup-livraison" style="display: none;">
-                                    <option value="Commande livrée avec succès">Commande livrée avec succès</option>
-                                    <option value="Livraison effectuée dans les délais">Livraison effectuée dans les délais</option>
-                                    <option value="Client satisfait de la livraison">Client satisfait de la livraison</option>
-                                    <option value="Livraison conforme à la commande">Livraison conforme à la commande</option>
-                                </optgroup>
-                                <optgroup label="Livraison Partielle" class="optgroup-livraison-partielle" style="display: none;">
-                                    <option value="Certains articles non disponibles">Certains articles non disponibles</option>
-                                    <option value="Stock insuffisant pour certains articles">Stock insuffisant pour certains articles</option>
-                                    <option value="Articles en cours de préparation">Articles en cours de préparation</option>
-                                    <option value="Livraison échelonnée demandée par le client">Livraison échelonnée demandée par le client</option>
-                                    <option value="Problème de qualité sur certains articles">Problème de qualité sur certains articles</option>
-                                </optgroup>
-                                <optgroup label="Retours et échanges" class="optgroup-retours" style="display: none;">
-                                    <option value="Retour demandé par le client">Retour demandé par le client</option>
-                                    <option value="Échange de taille demandé">Échange de taille demandé</option>
-                                    <option value="Échange de couleur demandé">Échange de couleur demandé</option>
-                                    <option value="Article ne correspond pas à la commande">Article ne correspond pas à la commande</option>
-                                </optgroup>
-                                <optgroup label="Problèmes de qualité" class="optgroup-problemes" style="display: none;">
-                                    <option value="Article défectueux détecté">Article défectueux détecté</option>
-                                    <option value="Problème de qualité signalé par le client">Problème de qualité signalé par le client</option>
-                                    <option value="Article endommagé lors du transport">Article endommagé lors du transport</option>
-                                    <option value="Défaut de fabrication constaté">Défaut de fabrication constaté</option>
-                                </optgroup>
-                                <optgroup label="Communication client" class="optgroup-communication" style="display: none;">
-                                    <option value="Client insatisfait de la qualité">Client insatisfait de la qualité</option>
-                                    <option value="Client demande un remboursement">Client demande un remboursement</option>
-                                    <option value="Problème de communication avec le client">Problème de communication avec le client</option>
-                                </optgroup>
-                                <optgroup label="Autres motifs" class="optgroup-autres" style="display: none;">
-                                    <option value="Demande spéciale du client">Demande spéciale du client</option>
-                                    <option value="Modification de commande demandée">Modification de commande demandée</option>
-                                    <option value="Autre motif - voir détails">Autre motif - voir détails</option>
-                                </optgroup>
-                            </select>
+                        <!-- Champ date de report (caché par défaut) -->
+                        <div id="dateReportDiv" class="mb-4 hidden">
+                            <h3 class="text-lg font-medium text-gray-900 mb-4">Date de report de la commande</h3>
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <label for="date_report" class="block text-sm font-medium text-gray-700">
+                                    Nouvelle date de livraison pour tous les articles
+                                </label>
+                                <input type="date" 
+                                       name="date_report" 
+                                       id="date_report"
+                                       class="w-full mt-2 p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                                       required>
+                                <p class="mt-2 text-sm text-gray-500">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    Cette date sera appliquée à tous les articles de la commande
+                                </p>
+                            </div>
                         </div>
                         
-                        <!-- Champ commentaire personnalisé (caché par défaut) -->
-                        <div id="commentairePersonnalise" class="mb-4 hidden">
-                            <label for="commentaireCustom" class="text-sm font-medium text-gray-700">Commentaire personnalisé</label>
-                            <textarea name="commentaireCustom" id="commentaireCustom" rows="3" class="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" placeholder="Décrivez le motif spécifique..."></textarea>
+                        <!-- Champ date de livraison (caché par défaut) -->
+                        <div id="dateLivraisonDiv" class="mb-4 hidden">
+                            <h3 class="text-lg font-medium text-gray-900 mb-4">Date de livraison</h3>
+                            <div class="bg-green-50 p-4 rounded-lg">
+                                <label for="date_livraison" class="block text-sm font-medium text-gray-700">
+                                    <i class="fas fa-calendar-check mr-1 text-green-600"></i>
+                                    Date de livraison effective
+                                </label>
+                                <input type="date" 
+                                       name="date_livraison" 
+                                       id="date_livraison"
+                                       class="w-full mt-2 p-2 border border-green-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                                       required>
+                                <p class="mt-2 text-sm text-gray-600">
+                                    <i class="fas fa-info-circle mr-1 text-green-600"></i>
+                                    Veuillez indiquer la date à laquelle la commande a été effectivement livrée
+                                </p>
+                            </div>
                         </div>
-                    </div>
-                    
-                    <div class="flex justify-end space-x-3 mt-6">
-                        <button type="button" id="cancelSavBtn" class="px-4 py-2 bg-gray-300 text-gray-700 text-sm font-medium rounded-md shadow-sm hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors">
-                            <i class="fas fa-times mr-2"></i>Annuler
-                        </button>
-                        <button type="button" id="confirmSavBtn" class="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors">
-                            <i class="fas fa-check mr-2"></i>Confirmer
-                        </button>
+
+                        <label for="commentaire" class="text-sm font-medium text-gray-700">Commentaire (obligatoire)</label>
+                        <select name="commentaire" id="commentaire" class="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" required>
+                            <option value="">Sélectionner un commentaire...</option>
+                            <optgroup label="Livraison" class="optgroup-livraison" style="display: none;">
+                                <option value="Commande livrée avec succès">Commande livrée avec succès</option>
+                                <option value="Livraison effectuée dans les délais">Livraison effectuée dans les délais</option>
+                                <option value="Client satisfait de la livraison">Client satisfait de la livraison</option>
+                            </optgroup>
+                            <optgroup label="Problèmes de qualité" class="optgroup-problemes">
+                                <option value="Article défectueux détecté">Article défectueux détecté</option>
+                                <option value="Problème de qualité signalé par le client">Problème de qualité signalé par le client</option>
+                                <option value="Article endommagé lors du transport">Article endommagé lors du transport</option>
+                                <option value="Défaut de fabrication constaté">Défaut de fabrication constaté</option>
+                            </optgroup>
+                            <optgroup label="Retours et échanges" class="optgroup-retours">
+                                <option value="Retour demandé par le client">Retour demandé par le client</option>
+                                <option value="Échange de taille demandé">Échange de taille demandé</option>
+                                <option value="Échange de couleur demandé">Échange de couleur demandé</option>
+                                <option value="Article non conforme à la commande">Article non conforme à la commande</option>
+                            </optgroup>
+                            <optgroup label="Communication client" class="optgroup-communication">
+                                <option value="Client non joignable">Client non joignable</option>
+                                <option value="Adresse de livraison incorrecte">Adresse de livraison incorrecte</option>
+                                <option value="Client absent au moment de la livraison">Client absent au moment de la livraison</option>
+                                <option value="Refus de livraison par le client">Refus de livraison par le client</option>
+                            </optgroup>
+                            <optgroup label="Autres" class="optgroup-autres">
+                                <option value="Demande spéciale du client">Demande spéciale du client</option>
+                                <option value="Modification de commande demandée">Modification de commande demandée</option>
+                                <option value="Urgence signalée par le client">Urgence signalée par le client</option>
+                                <option value="Autre motif - voir détails">Autre motif - voir détails</option>
+                            </optgroup>
+                        </select>
+                        <!-- Champ de commentaire personnalisé (masqué par défaut) -->
+                        <div id="commentairePersonnalise" class="mt-2 hidden">
+                            <label for="commentaireCustom" class="text-sm font-medium text-gray-700">Commentaire personnalisé</label>
+                            <textarea name="commentaireCustom" id="commentaireCustom" rows="3" class="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" placeholder="Décrivez le problème ou la situation..."></textarea>
+                        </div>
                     </div>
                 </form>
             </div>
+            <div class="items-center px-4 py-3">
+                <button id="confirmSavBtn" onclick="soumettreFormulaireSav()" class="px-4 py-2 bg-green-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-300">
+                    Confirmer la mise à jour
+                </button>
+                <button id="cancelSavBtn" onclick="fermerModalSav()" class="px-4 py-2 bg-gray-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300 mt-2">
+                    Annuler
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modale de Livraison Partielle -->
+<div id="livraisonPartielleModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-10 mx-auto p-5 border w-full max-w-4xl shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-xl font-bold text-gray-900 flex items-center">
+                    <i class="fas fa-box-open mr-3 text-blue-600"></i>
+                    Livraison Partielle
+                </h3>
+                <button onclick="fermerModalLivraisonPartielle()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6 rounded-lg">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-info-circle text-blue-400"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm text-blue-700">
+                            <strong>Instructions :</strong> Sélectionnez les articles que vous allez livrer au client. 
+                            Les articles non sélectionnés seront automatiquement renvoyés aux opérateurs de préparation 
+                            pour traitement (remplacement, correction, etc.).
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <form id="livraisonPartielleForm" method="POST">
+                {% csrf_token %}
+                
+                <!-- Ces champs seront remplis dynamiquement par JavaScript juste avant la soumission -->
+                <input type="hidden" name="articles_livres_json" id="articlesLivresJsonInput">
+                <input type="hidden" name="articles_renvoyes_json" id="articlesRenvoyesJsonInput">
+                
+                <!-- Section Articles à Livrer -->
+                <div class="mb-8">
+                    <h4 class="text-lg font-semibold text-green-700 mb-4 flex items-center">
+                        <i class="fas fa-check-circle mr-2"></i>
+                        Articles à Livrer au Client
+                    </h4>
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="articlesALivrerContainer">
+                            <!-- Les articles seront ajoutés dynamiquement par JavaScript -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section Articles à Renvoyer -->
+                <div class="mb-8">
+                    <h4 class="text-lg font-semibold text-orange-700 mb-4 flex items-center">
+                        <i class="fas fa-undo mr-2"></i>
+                        Articles à Renvoyer
+                    </h4>
+                    <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="articlesARenvoyerContainer">
+                            <!-- Les articles non sélectionnés apparaîtront ici dynamiquement -->
+                        </div>
+                        <div id="aucunArticleRenvoyer" class="text-center py-8 text-gray-500">
+                            <i class="fas fa-info-circle text-2xl mb-2"></i>
+                            <p>Aucun article à renvoyer. Tous les articles seront livrés.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Résumé -->
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+                    <h4 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-calculator mr-2"></i>
+                        Résumé de la Livraison Partielle
+                    </h4>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-green-600" id="totalArticlesLivres">0</div>
+                            <div class="text-sm text-gray-600">Articles à livrer</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-orange-600" id="totalArticlesRenvoyes">0</div>
+                            <div class="text-sm text-gray-600">Articles à renvoyer</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-blue-600" id="totalValeurLivree">0.00 DH</div>
+                            <div class="text-sm text-gray-600">Valeur livrée</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-purple-600" id="totalCommandeLivraison">0.00 DH</div>
+                            <div class="text-sm text-gray-600">Total commande original</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Pourcentage de livraison -->
+                    <div class="mt-4 text-center">
+                        <div class="text-lg font-medium text-gray-700">
+                            Pourcentage de livraison: <span id="pourcentageLivraison" class="text-blue-600 font-bold">100%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+                            <div id="barreProgresLivraison" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 100%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Commentaire -->
+                <div class="mb-6">
+                    <label for="commentaireLivraisonPartielle" class="block text-sm font-medium text-gray-700 mb-2">
+                        Commentaire sur la livraison partielle (obligatoire)
+                    </label>
+                    <select name="commentaire" 
+                              id="commentaireLivraisonPartielle" 
+                              class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            required>
+                        <option value="">Sélectionner un commentaire...</option>
+                        <optgroup label="Problèmes de qualité">
+                            <option value="Article défectueux détecté">Article défectueux détecté</option>
+                            <option value="Problème de qualité signalé par le client">Problème de qualité signalé par le client</option>
+                            <option value="Article endommagé lors du transport">Article endommagé lors du transport</option>
+                            <option value="Défaut de fabrication constaté">Défaut de fabrication constaté</option>
+                        </optgroup>
+                        <optgroup label="Modifications demandées">
+                            <option value="Échange de taille demandé">Échange de taille demandé</option>
+                            <option value="Échange de couleur demandé">Échange de couleur demandé</option>
+                            <option value="Article non conforme à la commande">Article non conforme à la commande</option>
+                            <option value="Modification de commande demandée">Modification de commande demandée</option>
+                        </optgroup>
+                        <optgroup label="Autres">
+                            <option value="Demande spéciale du client">Demande spéciale du client</option>
+                            <option value="Urgence signalée par le client">Urgence signalée par le client</option>
+                            <option value="Autre motif - voir détails">Autre motif - voir détails</option>
+                        </optgroup>
+                    </select>
+                    <!-- Champ de commentaire personnalisé (masqué par défaut) -->
+                    <div id="commentairePersonnaliseLivraisonPartielle" class="mt-2 hidden">
+                        <label for="commentaireCustomLivraisonPartielle" class="text-sm font-medium text-gray-700">Commentaire personnalisé</label>
+                        <textarea name="commentaireCustom" 
+                                  id="commentaireCustomLivraisonPartielle" 
+                                  rows="3" 
+                                  class="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" 
+                                  placeholder="Décrivez le problème ou la situation..."></textarea>
+                    </div>
+                </div>
+
+                <!-- Boutons d'action -->
+                <div class="flex justify-end space-x-4">
+                    <button type="button" 
+                            onclick="fermerModalLivraisonPartielle()" 
+                            class="px-6 py-2 bg-gray-500 text-white font-medium rounded-lg hover:bg-gray-600 transition-colors">
+                        Annuler
+                    </button>
+                    <button type="submit" 
+                            id="confirmerLivraisonPartielleBtn"
+                            class="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i class="fas fa-check mr-2"></i>
+                        Confirmer la Livraison Partielle
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -499,6 +699,8 @@
 {% endblock %}
 
 {% block extra_js %}
+<!-- Inclusion du fichier JavaScript pour les modals -->
+<script src="{% static 'js/OperteurSAV/modals.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Améliorer l'expérience utilisateur avec des animations
@@ -729,94 +931,13 @@ if (commentaireSelect && commentairePersonnalise && commentaireCustom) {
 
 // Gestion du formulaire SAV
 const savForm = document.getElementById('savForm');
-const confirmSavBtn = document.getElementById('confirmSavBtn');
-const cancelSavBtn = document.getElementById('cancelSavBtn');
+// Les fonctions de gestion des boutons SAV sont maintenant dans modals.js
+// Ce code a été déplacé pour éviter les conflits
 
-if (confirmSavBtn) {
-    confirmSavBtn.addEventListener('click', function(e) {
-        // Empêcher la soumission classique du formulaire
-        e.preventDefault();
-        
-        // Validation du formulaire SAV
-        const commentaire = document.getElementById('commentaire').value.trim();
-        if (commentaire === '') {
-            alert('⚠️ Le commentaire est obligatoire');
-            return;
-        }
-        
-        // Si "Autre motif" est sélectionné, vérifier le commentaire personnalisé
-        if (commentaire === 'Autre motif - voir détails') {
-            const commentaireCustom = document.getElementById('commentaireCustom');
-            if (!commentaireCustom || !commentaireCustom.value.trim()) {
-                alert('⚠️ Le commentaire personnalisé est obligatoire pour "Autre motif"');
-                return;
-            }
-        }
-        
-        // Soumettre le formulaire via AJAX
-        const formData = new FormData(savForm);
-        
-        // Si un commentaire personnalisé est fourni, l'ajouter
-        const commentaireCustom = document.getElementById('commentaireCustom');
-        if (commentaireCustom && commentaireCustom.value.trim()) {
-            formData.set('commentaire', commentaireCustom.value.trim());
-        }
-        
-        // Définir l'URL de soumission avec l'ID de la commande
-        const commandeId = currentCommandeId;
-        if (!commandeId) {
-            alert('❌ Erreur: Impossible de déterminer l\'ID de la commande');
-            return;
-        }
-        
-        const actionUrl = `/operateur-logistique/commande/${commandeId}/changer-etat-sav/`;
-        
-        fetch(actionUrl, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: new URLSearchParams(formData)
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert(`✅ ${data.message}`);
-                // Fermer la modale SAV
-                document.getElementById('savModal').classList.add('hidden');
-                // Fermer aussi la modale des actions SAV
-                document.getElementById('savActionsModal').classList.add('hidden');
-                // Réinitialiser le formulaire
-                savForm.reset();
-                // Masquer le champ de commentaire personnalisé
-                const commentairePersonnalise = document.getElementById('commentairePersonnalise');
-                if (commentairePersonnalise) {
-                    commentairePersonnalise.classList.add('hidden');
-                }
-                // Pas de redirection - rester sur la même page
-            } else {
-                alert(`❌ Erreur: ${data.error}`);
-            }
-        })
-        .catch(error => {
-            console.error('Erreur:', error);
-            alert('❌ Une erreur est survenue lors de la soumission');
-        });
-    });
-}
-
-if (cancelSavBtn) {
-    cancelSavBtn.addEventListener('click', function() {
-        document.getElementById('savModal').classList.add('hidden');
-        savForm.reset();
-        // Masquer le champ de commentaire personnalisé
-        const commentairePersonnalise = document.getElementById('commentairePersonnalise');
-        if (commentairePersonnalise) {
-            commentairePersonnalise.classList.add('hidden');
-        }
-    });
-}
+// const confirmSavBtn = document.getElementById('confirmSavBtn');
+// const cancelSavBtn = document.getElementById('cancelSavBtn');
+// 
+// Commenté car les boutons utilisent maintenant onclick="soumettreFormulaireSav()" et onclick="fermerModalSav()"
 
 // Fermer la modale SAV avec la touche Échap
 document.addEventListener('keydown', function(e) {
