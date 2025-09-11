@@ -1,0 +1,648 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ticket Commande {{ commande.id_yz }}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* Reset et base */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: white;
+            color: black;
+            line-height: 1.2;
+        }
+
+        /* Conteneur principal - Format 10x10 cm */
+        .ticket-container {
+            width: 100mm;
+            height: 100mm;
+            margin: 0 auto;
+            padding: 0;
+            background: white;
+            border: 2px solid #000000 !important;
+            position: relative;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+
+        /* Section en-tête */
+        .ticket-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0;
+            height: 32mm;
+            padding: 1mm;
+            border: 1px solid #ddd;
+        }
+
+        .logo-section {
+            flex: 1;
+            padding: 0;
+        }
+
+        .logo {
+            width: 30mm;
+            height: 30mm;
+            object-fit: contain;
+            margin: 0;
+        }
+
+        .qr-section {
+            flex: 1;
+            text-align: right;
+            display: flex;
+            flex-direction: row;
+            align-items: flex-end;
+            justify-content: flex-end;
+            padding: 0;
+            gap: 0.5mm;
+        }
+
+        .qr-commande-id {
+            font-size: 7pt;
+            color: #000;
+            margin: 0;
+            text-align: center;
+            height: 15mm;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        .qr-content {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            justify-content: flex-start;
+            height: 30mm;
+        }
+
+        .qr-code {
+            width: 30mm;
+            height: 27mm;
+            object-fit: contain;
+            margin: 0;
+            border: 1px solid #000;
+        }
+
+        .qr-date {
+            font-size: 8pt;
+            color: #000;
+            margin:2mm  2 0;
+            text-align: center;
+            height: 3mm;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        /* Section contenu */
+        .ticket-content {
+            height: 58mm;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        /* Section info client */
+        .client-info {
+            padding: 1mm;
+            height: 12mm;
+            border: 1px solid #ddd;
+            margin-bottom: 0;
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 0.2mm;
+            align-items: center;
+            justify-items: stretch;
+        }
+
+        .client-detail {
+            font-size: 9pt;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            padding: 0;
+            width: 100%;
+            justify-content: flex-start;
+        }
+
+        .client-detail i {
+            width: 10pt;
+            margin-right: 1mm;
+            color: #000;
+            flex-shrink: 0;
+        }
+
+        /* Section articles */
+        .articles-section {
+            flex: 1;
+            padding: 1mm;
+            overflow: hidden;
+            min-height: 20mm;
+            max-height: 50mm;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            border: 1px solid #ddd;
+            margin-bottom: 0;
+        }
+
+        .articles-header {
+            font-size: 8pt;
+            font-weight: bold;
+            color: #000;
+            margin-bottom: 1mm;
+            text-align: left;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            padding-left: 12pt;
+        }
+
+        .article-item {
+            font-size: 9pt;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            min-height: 2.5mm;
+            max-height: 4mm;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .article-name {
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        .article-details {
+            color: #6c757d;
+            font-size: 8pt;
+            margin-left: 0;
+            white-space: nowrap;
+        }
+
+        .article-icon {
+            width: 10pt;
+            margin-right: 1mm;
+            color: #000;
+            flex-shrink: 0;
+        }
+
+        /* Section entreprise en bas */
+        .ticket-footer {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 10mm;
+            background: white;
+            color: black;
+            padding: 1mm;
+            border-radius: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #ddd;
+            box-sizing: border-box;
+        }
+
+        .total-section {
+            flex: 1;
+            padding: 0;
+            height: 100%;
+            display: flex;
+            align-items: center;
+        }
+
+        .total-amount {
+            font-size: 12pt;
+            font-weight: bold;
+            color: black;
+        }
+
+        .total-icon {
+            width: 12pt;
+            margin-right: 1mm;
+            color: #000;
+        }
+
+        .company-section {
+            flex: 1;
+            text-align: right;
+            padding: 0;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .company-name {
+            font-size: 10pt;
+            font-weight: bold;
+            margin-bottom: 0;
+            color: black;
+        }
+
+        .company-details {
+            font-size: 8pt;
+            opacity: 1;
+            color: black;
+        }
+
+        .company-icon {
+            width: 10pt;
+            margin-right: 1mm;
+            color: #000;
+        }
+
+        .articles-list {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.2mm;
+            justify-content: flex-start;
+        }
+
+        /* Système intelligent dynamique */
+        .articles-section {
+            --article-count: 1;
+            --available-height: 50mm;
+            --header-height: 4mm;
+            --padding: 2mm;
+            --item-height: calc((var(--available-height) - var(--header-height) - var(--padding)) / var(--article-count));
+        }
+
+        .article-item {
+            height: var(--item-height);
+            min-height: 2mm;
+            max-height: 6mm;
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+            flex-shrink: 0;
+            transition: height 0.3s ease;
+            padding: 0.5mm 0;
+        }
+
+        /* Adaptation intelligente par plages */
+        .articles-section[data-article-count="1"] {
+            --article-count: 1;
+        }
+        .articles-section[data-article-count="2"] {
+            --article-count: 2;
+        }
+        .articles-section[data-article-count="3"] {
+            --article-count: 3;
+        }
+        .articles-section[data-article-count="4"] {
+            --article-count: 4;
+        }
+        .articles-section[data-article-count="5"] {
+            --article-count: 5;
+        }
+        .articles-section[data-article-count="6"] {
+            --article-count: 6;
+        }
+        .articles-section[data-article-count="7"] {
+            --article-count: 7;
+        }
+        .articles-section[data-article-count="8"] {
+            --article-count: 8;
+        }
+        .articles-section[data-article-count="9"] {
+            --article-count: 9;
+        }
+        .articles-section[data-article-count="10"] {
+            --article-count: 10;
+        }
+        .articles-section[data-article-count="11"] {
+            --article-count: 11;
+        }
+        .articles-section[data-article-count="12"] {
+            --article-count: 12;
+        }
+        .articles-section[data-article-count="13"] {
+            --article-count: 13;
+        }
+        .articles-section[data-article-count="14"] {
+            --article-count: 14;
+        }
+        .articles-section[data-article-count="15"] {
+            --article-count: 15;
+        }
+
+        /* Mode optimisé pour 6-10 articles */
+        .articles-section[data-article-count="6"] .article-item,
+        .articles-section[data-article-count="7"] .article-item,
+        .articles-section[data-article-count="8"] .article-item,
+        .articles-section[data-article-count="9"] .article-item,
+        .articles-section[data-article-count="10"] .article-item {
+            height: 4mm;
+            font-size: 8pt;
+        }
+
+        /* Mode compact pour beaucoup d'articles */
+        .articles-section[data-article-count="16"] .articles-list {
+            overflow-y: auto;
+            gap: 0.2mm;
+        }
+        .articles-section[data-article-count="16"] .article-item {
+            height: 2mm;
+            font-size: 8pt;
+        }
+
+        /* Mode ultra-compact pour très nombreux articles */
+        .articles-section[data-article-count="20"] .article-item {
+            height: 1.8mm;
+            font-size: 7pt;
+        }
+
+        /* Mode liste pour articles très nombreux */
+        .articles-section[data-article-count="25"] .articles-list {
+            overflow-y: auto;
+            max-height: 45mm;
+        }
+        .articles-section[data-article-count="25"] .article-item {
+            height: 1.5mm;
+            font-size: 6pt;
+        }
+
+        /* Animations et transitions intelligentes */
+        .articles-section {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .article-item {
+            transition: all 0.2s ease-in-out;
+        }
+
+        .article-item:hover {
+            background-color: rgba(0, 0, 0, 0.02);
+        }
+
+        /* Indicateur de scroll pour mode compact */
+        .articles-list::-webkit-scrollbar {
+            width: 1mm;
+        }
+
+        .articles-list::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        .articles-list::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 0.5mm;
+        }
+
+        .articles-list::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        /* Styles d'impression */
+        @media print {
+            .ticket-container {
+                width: 100mm !important;
+                height: 100mm !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                border: 2px solid #000000 !important;
+                page-break-after: always;
+                overflow: hidden !important;
+            }
+
+            .ticket-container:last-child {
+                page-break-after: auto;
+            }
+
+            body {
+                margin: 0 !important;
+                padding: 0 !important;
+                overflow: hidden !important;
+            }
+            
+            * {
+                -webkit-print-color-adjust: exact !important;
+                color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+        }
+
+        /* Responsive pour l'aperçu */
+        @media screen {
+            .ticket-container {
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                margin: 10px auto;
+            }
+        }
+    </style>
+    <script>
+        // Système intelligent dynamique
+        document.addEventListener('DOMContentLoaded', function() {
+            const articlesSection = document.querySelector('.articles-section');
+            if (!articlesSection) return;
+
+            const articleCount = parseInt(articlesSection.dataset.articleCount);
+            const articlesList = articlesSection.querySelector('.articles-list');
+            const articleItems = articlesSection.querySelectorAll('.article-item');
+
+            // Calcul dynamique de la hauteur optimale
+            function calculateOptimalHeight() {
+                const availableHeight = 50; // mm
+                const headerHeight = 4; // mm
+                const padding = 2; // mm
+                const usableHeight = availableHeight - headerHeight - padding;
+                
+                let optimalHeight;
+                if (articleCount <= 5) {
+                    optimalHeight = Math.max(usableHeight / articleCount, 6); // Minimum 6mm
+                } else if (articleCount <= 10) {
+                    optimalHeight = 4; // Fixe à 4mm pour 6-10 articles
+                } else if (articleCount <= 15) {
+                    optimalHeight = Math.max(usableHeight / articleCount, 2.5); // Minimum 2.5mm
+                } else if (articleCount <= 20) {
+                    optimalHeight = 2; // mm
+                } else {
+                    optimalHeight = 1.5; // mm
+                }
+
+                // Appliquer la hauteur calculée
+                articlesSection.style.setProperty('--item-height', optimalHeight + 'mm');
+                
+                // Ajuster la police selon la hauteur et le nombre d'articles
+                if (articleCount <= 5) {
+                    articleItems.forEach(item => {
+                        item.style.fontSize = '9pt';
+                    });
+                } else if (articleCount <= 10) {
+                    articleItems.forEach(item => {
+                        item.style.fontSize = '8pt';
+                    });
+                } else if (articleCount <= 15) {
+                    articleItems.forEach(item => {
+                        item.style.fontSize = '7pt';
+                    });
+                } else if (articleCount <= 20) {
+                    articleItems.forEach(item => {
+                        item.style.fontSize = '6pt';
+                    });
+                } else {
+                    articleItems.forEach(item => {
+                        item.style.fontSize = '5pt';
+                    });
+                }
+            }
+
+            // Optimiser l'affichage selon le contenu
+            function optimizeDisplay() {
+                if (articleCount > 10) {
+                    articlesList.style.overflowY = 'auto';
+                    articlesList.style.gap = '0.2mm';
+                } else {
+                    articlesList.style.overflowY = 'hidden';
+                    articlesList.style.gap = '0.2mm';
+                }
+
+                // Ajuster l'espacement entre les articles
+                if (articleCount > 15) {
+                    articlesList.style.justifyContent = 'flex-start';
+                } else {
+                    articlesList.style.justifyContent = 'flex-start';
+                }
+
+                // Ajuster la hauteur de la section articles
+                if (articleCount <= 5) {
+                    articlesSection.style.minHeight = '30mm';
+                    articlesSection.style.maxHeight = '40mm';
+                } else if (articleCount <= 10) {
+                    articlesSection.style.minHeight = '35mm';
+                    articlesSection.style.maxHeight = '45mm';
+                } else {
+                    articlesSection.style.minHeight = '40mm';
+                    articlesSection.style.maxHeight = '50mm';
+                }
+            }
+
+            // Appliquer les optimisations
+            calculateOptimalHeight();
+            optimizeDisplay();
+
+            // Observer les changements de taille
+            const resizeObserver = new ResizeObserver(entries => {
+                calculateOptimalHeight();
+                optimizeDisplay();
+            });
+
+            resizeObserver.observe(articlesSection);
+        });
+    </script>
+</head>
+<body>
+    <div class="ticket-container">
+        <!-- Section en-tête -->
+        <div class="ticket-header">
+            <!-- Logo en haut à gauche -->
+            <div class="logo-section">
+                <img src="{% static 'logo-tiicket/image.svg' %}" alt="Logo" class="logo">
+            </div>
+            
+            <!-- Code QR en haut à droite -->
+            <div class="qr-section">
+                <div class="qr-commande-id">#CMD-{{ commande.id_yz }}</div>
+                <div class="qr-content">
+                    <div class="qr-date">{{ commande.date_commande|date:"d/m/Y" }}</div>
+                    {% if commande.qr_code %}
+                        <img src="data:image/png;base64,{{ commande.qr_code }}" alt="QR Code" class="qr-code">
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Section contenu -->
+        <div class="ticket-content">
+            <!-- Section info client -->
+            <div class="client-info">
+                <div class="client-detail">
+                    <i class="fas fa-user"></i>
+                    {{ commande.client_nom|default:"Non renseigné" }}
+                </div>
+                <div class="client-detail">
+                    <i class="fas fa-phone"></i>
+                    {{ commande.client_telephone|default:"Non renseigné" }}
+                </div>
+                <div class="client-detail">
+                    <i class="fas fa-map-marker-alt"></i>
+                    {{ commande.ville_client|default:"Non renseignée" }}
+                </div>
+                <div class="client-detail">
+                    <i class="fas fa-home"></i>
+                    {{ commande.client_adresse|default:"Non renseignée" }}
+                </div>
+            </div>
+
+            <!-- Section articles -->
+            <div class="articles-section" data-article-count="{{ commande.articles|length }}">
+                <div class="articles-header">Articles ({{ commande.articles|length }})</div>
+                <div class="articles-list">
+                    {% for article in commande.articles %}
+                        <div class="article-item">
+                            <i class="fas fa-shopping-bag article-icon"></i>
+                            <span class="article-name">{{ article.nom }}</span><span class="article-details">{{ article.couleur }} - {{ article.pointure }} | Qté: {{ article.quantite }}</span>
+                        </div>
+                    {% empty %}
+                        <div class="article-item">
+                            <i class="fas fa-exclamation-triangle article-icon"></i>
+                            <div class="article-name">Aucun article trouvé</div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Section entreprise en bas -->
+        <div class="ticket-footer">
+            <div class="total-section">
+                <div class="total-amount">
+                    <i class="fas fa-calculator total-icon"></i>
+                    {{ commande.total }} DH
+                    {% if commande.frais_livraison %}
+                        <span style="font-size: 7pt; color: #666;">(frais inclus)</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="company-section">
+                <div class="company-name">
+                    <i class="fas fa-globe company-icon"></i>
+                    www.yoozak.com
+                </div>
+                <div class="company-details">
+                    <i class="fas fa-phone company-icon"></i>
+                    06 34 21 56 39 / 47<br>
+                    <i class="fas fa-map-marker-alt company-icon"></i>
+                    SETTAT
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+

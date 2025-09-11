@@ -206,36 +206,11 @@
             </a>
             
             <!-- Bouton Impression -->
-            <button onclick="showImpressionModal({{ commande.id }}, '{{ commande.id_yz }}', '{{ commande.client.nom }} {{ commande.client.prenom }}')" 
+            <button onclick="imprimerTicketCommande({{ commande.id }}, '{{ commande.id_yz }}', '{{ commande.client.nom }} {{ commande.client.prenom }}')" 
                     class="p-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 shadow-sm hover:shadow-md"
-                    title="Imprimer">
+                    title="Imprimer Ticket">
                 <i class="fas fa-print text-sm"></i>
             </button>
-            
-            <!-- Bouton Étiquettes Professionnelles -->
-            <a href="{% url 'commande:etiquettes_generator' %}?commande_id={{ commande.id }}" 
-               class="p-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 shadow-sm hover:shadow-md"
-               title="Étiquettes Professionnelles">
-                <i class="fas fa-tags text-sm"></i>
-            </a>
-            
-            <!-- Bouton Impression Multiple Tickets - COMMENTÉ car remplacé par le bouton fusionné -->
-            <!--
-            <button onclick="imprimerTicketsMultipleDirect()" 
-                    class="p-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 shadow-sm hover:shadow-md"
-                    title="Impression Multiple Tickets">
-                <i class="fas fa-receipt text-sm"></i>
-            </button>
-            -->
-            
-            <!-- Bouton Impression Codes QR Articles - COMMENTÉ car remplacé par le bouton fusionné -->
-            <!--
-            <button onclick="imprimerCodesQRArticlesDirect()" 
-                    class="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 shadow-sm hover:shadow-md"
-                    title="Impression Codes QR Articles">
-                <i class="fas fa-qrcode text-sm"></i>
-            </button>
-            -->
             
             <!-- Bouton Affecter (prioritaire - toujours visible) -->
             <button onclick="showAffectationModal({{ commande.id }}, '{{ commande.id_yz }}')" 
