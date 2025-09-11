@@ -9,6 +9,7 @@
   const SP_MAX_PER_PAGE = 100;
   let spAllItems = [];
   let spFilteredItems = [];
+  let spDebounceTimer = null;
 
   // Initialisation (à appeler manuellement si besoin)
   function initSmartPaginationSuperprep(options) {
@@ -37,16 +38,25 @@
     const nodes = document.querySelectorAll(selector);
     spAllItems = Array.from(nodes).map(el => ({ element: el, data: el.dataset }));
     spFilteredItems = [...spAllItems];
+    
+    // Log pour debug
+    console.log(`📊 Pagination: ${spAllItems.length} éléments collectés`);
   }
 
   function createSuperprepPaginationControls(anchorEl, styles) {
-    if (document.getElementById('spPaginationControls')) return;
+    // Supprimer les contrôles existants pour permettre la réinitialisation
+    const existing = document.getElementById('spPaginationControls');
+    if (existing) {
+      existing.remove();
+    }
 
     const s = styles || {};
     const wrap = document.createElement('div');
     wrap.id = 'spPaginationControls';
     wrap.className = 'flex items-center justify-between mt-6 px-6 py-4 bg-white rounded-xl shadow-md border';
     if (s.borderColor) wrap.style.borderColor = s.borderColor;
+    
+    console.log('🔧 Création des contrôles de pagination pour', spAllItems.length, 'éléments');
 
     const info = document.createElement('div');
     info.className = 'flex items-center text-sm';
@@ -121,7 +131,12 @@
     wrap.appendChild(info);
     wrap.appendChild(ctrls);
 
+    if (!anchorEl || !anchorEl.parentNode) {
+      console.log('❌ Impossible d\'ajouter les contrôles de pagination - élément d\'ancrage manquant');
+      return;
+    }
     anchorEl.parentNode.insertBefore(wrap, anchorEl.nextSibling);
+    console.log('✅ Contrôles de pagination ajoutés au DOM');
   }
 
   function spRelocateControls(containerSelector) {
@@ -137,13 +152,30 @@
     if (page > total) page = total;
     spCurrentPage = page;
 
-    spAllItems.forEach(it => { it.element.style.display = 'none'; });
-    const start = (page - 1) * spItemsPerPage;
-    const end = Math.min(start + spItemsPerPage, spFilteredItems.length);
-    for (let i = start; i < end; i++) {
-      if (spFilteredItems[i]) spFilteredItems[i].element.style.display = '';
+    // Débounce pour éviter les appels trop fréquents
+    if (spDebounceTimer) {
+      clearTimeout(spDebounceTimer);
     }
-    spUpdateControls();
+    
+    spDebounceTimer = setTimeout(() => {
+      // Optimisation : masquer tous d'abord, puis afficher seulement ceux nécessaires
+      spAllItems.forEach(it => { 
+        if (it.element) it.element.style.display = 'none'; 
+      });
+      
+      const start = (page - 1) * spItemsPerPage;
+      const end = Math.min(start + spItemsPerPage, spFilteredItems.length);
+      
+      // Utiliser requestAnimationFrame pour un rendu plus fluide
+      requestAnimationFrame(() => {
+        for (let i = start; i < end; i++) {
+          if (spFilteredItems[i] && spFilteredItems[i].element) {
+            spFilteredItems[i].element.style.display = '';
+          }
+        }
+        spUpdateControls();
+      });
+    }, 50); // Délai de 50ms
   }
 
   function spUpdateControls() {

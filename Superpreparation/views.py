@@ -7911,6 +7911,8 @@ def liste_variantes(request):
     """Liste des variantes d'articles avec recherche, filtres et pagination"""
     variantes_articles = VarianteArticle.objects.filter(actif=True).select_related(
         'article', 'couleur', 'pointure', 'article__categorie'
+    ).prefetch_related(
+        'article__promotions'
     ).order_by('article__nom')
     
     # Formulaire de promotion pour la modal
@@ -7980,47 +7982,10 @@ def liste_variantes(request):
             price_query                                   # Recherche par prix
         ).distinct()
     
-    # Gestion de la pagination flexible
-    items_per_page = request.GET.get('items_per_page', 12)
-    start_range = request.GET.get('start_range', '')
-    end_range = request.GET.get('end_range', '')
-    
-    # Conserver une copie des variantes non paginées pour les statistiques
-    variantes_non_paginees = variantes_articles
-    
-    # Gestion de la plage personnalisée
-    if start_range and end_range:
-        try:
-            start_idx = int(start_range) - 1  # Index commence à 0
-            end_idx = int(end_range)
-            if start_idx >= 0 and end_idx > start_idx:
-                variantes_articles = list(variantes_articles)[start_idx:end_idx]
-                # Créer un paginator factice pour la plage
-                paginator = Paginator(variantes_articles, len(variantes_articles))
-                page_obj = paginator.get_page(1)
-        except (ValueError, TypeError):
-            # En cas d'erreur, utiliser la pagination normale
-            items_per_page = 12
-            paginator = Paginator(variantes_articles, items_per_page)
-            page_number = request.GET.get('page', 1)
-            page_obj = paginator.get_page(page_number)
-    else:
-        # Pagination normale
-        page_number = request.GET.get('page', 1)
-        if items_per_page == 'all':
-            # Afficher toutes les variantes
-            paginator = Paginator(variantes_articles, variantes_articles.count())
-            page_obj = paginator.get_page(1)
-        else:
-            try:
-                items_per_page = int(items_per_page)
-                if items_per_page <= 0:
-                    items_per_page = 12
-            except (ValueError, TypeError):
-                items_per_page = 12
-            
-            paginator = Paginator(variantes_articles, items_per_page)
-            page_obj = paginator.get_page(page_number)
+    # Pagination côté serveur - 50 éléments par page pour de bonnes performances
+    paginator = Paginator(variantes_articles, 50)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
     
     # Statistiques mises à jour selon les filtres appliqués
     all_variantes_articles = VarianteArticle.objects.filter(actif=True)
@@ -8061,18 +8026,15 @@ def liste_variantes(request):
             'page_obj': page_obj
         }, request=request)
         
-        html_pagination = render_to_string('Superpreparation/partials/_articles_pagination.html', {
+        html_pagination = render_to_string('Superpreparation/partials/_variantes_pagination.html', {
             'page_obj': page_obj,
             'search': search,
             'filtre_phase': filtre_phase,
             'filtre_promotion': filtre_promotion,
             'filtre_stock': filtre_stock,
-            'items_per_page': items_per_page,
-            'start_range': start_range,
-            'end_range': end_range
         }, request=request)
         
-        html_pagination_info = render_to_string('Superpreparation/partials/_articles_pagination_info.html', {
+        html_pagination_info = render_to_string('Superpreparation/partials/_variantes_pagination_info.html', {
             'page_obj': page_obj
         }, request=request)
         
@@ -8083,7 +8045,7 @@ def liste_variantes(request):
             'html_grid_body': html_grid_body,
             'html_pagination': html_pagination,
             'html_pagination_info': html_pagination_info,
-            'total_count': variantes_non_paginees.count()
+            'total_count': paginator.count
         })
 
     context = {
@@ -8094,9 +8056,6 @@ def liste_variantes(request):
         'filtre_phase': filtre_phase,
         'filtre_promotion': filtre_promotion,
         'filtre_stock': filtre_stock,
-        'items_per_page': items_per_page,
-        'start_range': start_range,
-        'end_range': end_range,
     }
     return render(request, 'Superpreparation/Liste_variante_article.html', context)
 def creer_variantes_ajax(request):

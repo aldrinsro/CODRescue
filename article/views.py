@@ -1918,15 +1918,7 @@ def supprimer_variante(request, id):
 @login_required
 def gestion_couleurs_pointures(request):
     """Page de gestion des couleurs, pointures, catégories et genres"""
-    from django.core.paginator import Paginator, EmptyPage, InvalidPage
     from article.models import Couleur, Pointure, Categorie, Genre
-    
-    # Paramètres de pagination
-    items_per_page = request.GET.get('items_per_page', '10')
-    try:
-        items_per_page = int(items_per_page)
-    except ValueError:
-        items_per_page = 10
     
     # Recherche pour les couleurs
     search_couleur = request.GET.get('search_couleur', '')
@@ -1937,15 +1929,7 @@ def gestion_couleurs_pointures(request):
             Q(description__icontains=search_couleur) |
             Q(code_hex__icontains=search_couleur)
         )
-    couleurs = couleurs.order_by('nom')
-    
-    # Pagination pour les couleurs
-    paginator_couleurs = Paginator(couleurs, items_per_page)
-    page_couleur = request.GET.get('page_couleur', 1)
-    try:
-        couleurs = paginator_couleurs.page(page_couleur)
-    except (ValueError, EmptyPage, InvalidPage):
-        couleurs = paginator_couleurs.page(1)
+    couleurs = list(couleurs.order_by('nom'))
     
     # Recherche pour les pointures
     search_pointure = request.GET.get('search_pointure', '')
@@ -1955,15 +1939,7 @@ def gestion_couleurs_pointures(request):
             Q(pointure__icontains=search_pointure) |
             Q(description__icontains=search_pointure)
         )
-    pointures = pointures.order_by('ordre', 'pointure')
-    
-    # Pagination pour les pointures
-    paginator_pointures = Paginator(pointures, items_per_page)
-    page_pointure = request.GET.get('page_pointure', 1)
-    try:
-        pointures = paginator_pointures.page(page_pointure)
-    except (ValueError, EmptyPage, InvalidPage):
-        pointures = paginator_pointures.page(1)
+    pointures = list(pointures.order_by('ordre', 'pointure'))
     
     # Recherche pour les catégories
     search_categorie = request.GET.get('search_categorie', '')
@@ -1973,15 +1949,7 @@ def gestion_couleurs_pointures(request):
             Q(nom__icontains=search_categorie) |
             Q(description__icontains=search_categorie)
         )
-    categories = categories.order_by('nom')
-    
-    # Pagination pour les catégories
-    paginator_categories = Paginator(categories, items_per_page)
-    page_categorie = request.GET.get('page_categorie', 1)
-    try:
-        categories = paginator_categories.page(page_categorie)
-    except (ValueError, EmptyPage, InvalidPage):
-        categories = paginator_categories.page(1)
+    categories = list(categories.order_by('nom'))
     
     # Recherche pour les genres
     search_genre = request.GET.get('search_genre', '')
@@ -1991,34 +1959,21 @@ def gestion_couleurs_pointures(request):
             Q(nom__icontains=search_genre) |
             Q(description__icontains=search_genre)
         )
-    genres = genres.order_by('nom')
-    
-    # Pagination pour les genres
-    paginator_genres = Paginator(genres, items_per_page)
-    page_genre = request.GET.get('page_genre', 1)
-    try:
-        genres = paginator_genres.page(page_genre)
-    except (ValueError, EmptyPage, InvalidPage):
-        genres = paginator_genres.page(1)
+    genres = list(genres.order_by('nom'))
     
     context = {
         'couleurs': couleurs,
         'pointures': pointures,
         'categories': categories,
         'genres': genres,
-        'couleurs_count': Couleur.objects.count(),
-        'pointures_count': Pointure.objects.count(),
-        'categories_count': Categorie.objects.count(),
-        'genres_count': Genre.objects.count(),
+        'couleurs_count': len(couleurs),
+        'pointures_count': len(pointures),
+        'categories_count': len(categories),
+        'genres_count': len(genres),
         'search_couleur': search_couleur,
         'search_pointure': search_pointure,
         'search_categorie': search_categorie,
         'search_genre': search_genre,
-        'items_per_page': str(items_per_page),
-        'total_couleurs': paginator_couleurs.count,
-        'total_pointures': paginator_pointures.count,
-        'total_categories': paginator_categories.count,
-        'total_genres': paginator_genres.count,
     }
     
     return render(request, 'article/gestion_couleurs_pointures.html', context)
