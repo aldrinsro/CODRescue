@@ -499,12 +499,10 @@
                                 <span class="text-gray-600">Sous-total articles:</span>
                                 <span class="font-medium">{{ commande.sous_total_articles|floatformat:2 }} DH</span>
                             </div>
-                            {% if commande.frais_livraison %}
                             <div class="flex justify-between">
                                 <span class="text-gray-600">Frais de livraison:</span>
                                 <span class="font-medium text-blue-600">{{ commande.frais_livraison|floatformat:2 }} DH</span>
                             </div>
-                            {% endif %}
                             <hr class="border-gray-300">
                             <div class="flex justify-between">
                                 <span class="font-semibold" style="color: #4B352A;">Total commande:</span>

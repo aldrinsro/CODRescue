@@ -66,6 +66,10 @@ urlpatterns = [
 
 
     # URLs pour les modales d'impression
+    path('api/ticket-commande/', views.api_ticket_commande, name='api_ticket_commande'),
+    path('api/ticket-commande-multiple/', views.api_ticket_commande_multiple, name='api_ticket_commande_multiple'),
+    path('api/etiquettes-articles/', views.api_etiquettes_articles, name='api_etiquettes_articles'),
+    path('api/etiquettes-articles-multiple/', views.api_etiquettes_articles_multiple, name='api_etiquettes_articles_multiple'),
     path('api/finaliser-preparation/<int:commande_id>/', views.api_finaliser_preparation, name='api_finaliser_preparation'),
 
 

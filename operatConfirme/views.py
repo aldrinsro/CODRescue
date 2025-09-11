@@ -24,6 +24,8 @@ from django.template.loader import render_to_string
 
 # Create your views here.
 
+
+
 @login_required
 def dashboard(request):
     """Page d'accueil de l'interface opérateur de confirmation"""
@@ -144,7 +146,7 @@ def liste_commandes(request):
     commandes_list = Commande.objects.filter(
         etats__operateur=operateur,
         etats__date_fin__isnull=True,
-        etats__enum_etat__libelle__in=['Affectée', 'En cours de confirmation', 'Retour Confirmation', 'Confirmation décalée']
+        etats__enum_etat__libelle__in=['Affectée', 'En cours de confirmation', 'Retour Confirmation']
     ).distinct().select_related(
         'client', 'ville', 'ville__region'
     ).prefetch_related(
@@ -182,15 +184,9 @@ def liste_commandes(request):
         etats__operateur=operateur,
             etats__date_fin__isnull=True, 
             etats__enum_etat__libelle='Retour Confirmation'
-        ).distinct().count(),
-        
-        'confirmation_decalee': Commande.objects.filter(
-            etats__operateur=operateur,
-            etats__date_fin__isnull=True, 
-            etats__enum_etat__libelle='Confirmation décalée'
         ).distinct().count()
     }
-    stats['total'] = stats['en_attente'] + stats['en_cours'] + stats['retournees'] + stats['confirmation_decalee']
+    stats['total'] = stats['en_attente'] + stats['en_cours'] + stats['retournees']
 
     # Filtrage par onglet
     tab = request.GET.get('tab', 'toutes')
@@ -198,12 +194,11 @@ def liste_commandes(request):
         'en_attente': {'libelle': 'Affectée', 'display': 'En Attente'},
         'en_cours': {'libelle': 'En cours de confirmation', 'display': 'En Cours'},
         'retournees': {'libelle': 'Retour Confirmation', 'display': 'Retournées'},
-        'confirmation_decalee': {'libelle': 'Confirmation décalée', 'display': 'Confirmation Décalée'},
     }
     
     current_tab_display_name = "Toutes"
     if tab in tab_map:
-        commandes_list = commandes_list.filter(etats__enum_etat__libelle=tab_map[tab]['libelle'], etats__date_fin__isnull=True)
+        commandes_list = commandes_list.filter(etats__operateur=operateur, etats__enum_etat__libelle=tab_map[tab]['libelle'], etats__date_fin__isnull=True)
         current_tab_display_name = tab_map[tab]['display']
     
     # Pagination
@@ -239,11 +234,8 @@ def confirmer_commande_ajax(request, commande_id):
             import json
             data = json.loads(request.body)
             commentaire = data.get('commentaire', '')
-            confirmation_type = data.get('confirmation_type', 'immediate')  # 'immediate' ou 'delayed'
-            date_fin_delayed = data.get('date_fin_delayed', None)
         except:
             commentaire = ''
-            confirmation_type = 'immediate'
     
     try:
         # Récupérer l'opérateur
@@ -381,31 +373,23 @@ def confirmer_commande_ajax(request, commande_id):
                     'stock_insuffisant': stock_insuffisant
                 })
             
-            # Déterminer l'état suivant selon le type de confirmation
-            if confirmation_type == 'delayed':
-                # Confirmation décalée : passer à l'état "Confirmation décalée"
-                enum_suivant = EnumEtatCmd.objects.get(libelle='Confirmation décalée')
-                print(f"🕐 DEBUG: Confirmation décalée sélectionnée")
-            else:
-                # Confirmation immédiate : passer à l'état "Confirmée"
-                enum_suivant = EnumEtatCmd.objects.get(libelle='Confirmée')
-                print(f"⚡ DEBUG: Confirmation immédiate sélectionnée")
+            # Créer le nouvel état "confirmée"
+            enum_confirmee = EnumEtatCmd.objects.get(libelle='Confirmée')
             
             # Fermer l'état actuel
             etat_actuel.date_fin = timezone.now()
             etat_actuel.save()
             print(f"🔄 DEBUG: État actuel fermé: {etat_actuel.enum_etat.libelle}")
             
-            # Créer le nouvel état selon le type de confirmation
+            # Créer le nouvel état Confirmée (historisation courte)
             nouvel_etat = EtatCommande.objects.create(
                 commande=commande,
-                enum_etat=enum_suivant,
+                enum_etat=enum_confirmee,
                 operateur=operateur,
                 date_debut=timezone.now(),
-                commentaire=commentaire,
-                date_fin_delayed=date_fin_delayed if confirmation_type == 'delayed' and date_fin_delayed else None
+                commentaire=commentaire
             )
-            print(f"✅ DEBUG: Nouvel état créé: {enum_suivant.libelle}")
+            print(f"✅ DEBUG: Nouvel état créé: Confirmée")
 
             # L'état "Confirmée" reste actif (pas de date_fin définie)
             # La commande sera visible dans la liste des commandes confirmées
@@ -421,16 +405,9 @@ def confirmer_commande_ajax(request, commande_id):
             for item in articles_decrémentes:
                 print(f"   - {item['article']}: {item['ancien_stock']} → {item['nouveau_stock']} (-{item['quantite_decrémententée']})")
         
-        # Message selon le type de confirmation
-        if confirmation_type == 'delayed':
-            message = f'Commande {commande.id_yz} mise en confirmation décalée avec succès.'
-        else:
-            message = f'Commande {commande.id_yz} confirmée immédiatement avec succès.'
-        
         return JsonResponse({
             'success': True, 
-            'message': message,
-            'confirmation_type': confirmation_type,
+            'message': f'Commande {commande.id_yz} confirmée avec succès.',
             'articles_decrémentes': len(articles_decrémentes),
             'details_stock': articles_decrémentes,
             'redirect_url': '/operateur-confirme/confirmation/'
@@ -1570,8 +1547,12 @@ def modifier_commande(request, commande_id):
                         panier.sous_total = float(sous_total)
                         panier.save()
                     
-                    # Recalculer le total de la commande avec les frais de livraison
-                    commande.recalculer_total_avec_frais()
+                    # Recalculer le total de la commande
+                    total_commande = commande.paniers.aggregate(
+                        total=models.Sum('sous_total')
+                    )['total'] or 0
+                    commande.total_cmd = float(total_commande)
+                    commande.save()
                     
                     # Déterminer si c'était un ajout ou une mise à jour
                     message = 'Article ajouté avec succès' if not panier_existant else f'Quantité mise à jour ({panier.quantite})'
@@ -1654,8 +1635,12 @@ def modifier_commande(request, commande_id):
                         sous_total=float(sous_total)
                     )
                     
-                    # Recalculer le total de la commande avec les frais de livraison
-                    commande.recalculer_total_avec_frais()
+                    # Recalculer le total de la commande
+                    total_commande = commande.paniers.aggregate(
+                        total=models.Sum('sous_total')
+                    )['total'] or 0
+                    commande.total_cmd = float(total_commande)
+                    commande.save()
                     
                     return JsonResponse({
                         'success': True,
@@ -1718,8 +1703,12 @@ def modifier_commande(request, commande_id):
                         # Recalculer TOUS les articles de la commande avec le nouveau compteur
                         commande.recalculer_totaux_upsell()
                     
-                    # Recalculer le total de la commande avec les frais de livraison
-                    commande.recalculer_total_avec_frais()
+                    # Recalculer le total de la commande
+                    total_commande = commande.paniers.aggregate(
+                        total=models.Sum('sous_total')
+                    )['total'] or 0
+                    commande.total_cmd = float(total_commande)
+                    commande.save()
                     
                     return JsonResponse({
                         'success': True,
@@ -1797,8 +1786,12 @@ def modifier_commande(request, commande_id):
                         panier.sous_total = float(prix_unitaire * nouvelle_quantite)
                         panier.save()
                     
-                    # Recalculer le total de la commande avec les frais de livraison
-                    commande.recalculer_total_avec_frais()
+                    # Recalculer le total de la commande
+                    total_commande = commande.paniers.aggregate(
+                        total=models.Sum('sous_total')
+                    )['total'] or 0
+                    commande.total_cmd = float(total_commande)
+                    commande.save()
                     
                     return JsonResponse({
                         'success': True,
@@ -1948,7 +1941,11 @@ def modifier_commande(request, commande_id):
                     commande.adresse = adresse
                     
                     # Recalculer le total avec les nouveaux frais de livraison
-                    commande.recalculer_total_avec_frais()
+                    sous_total_articles = commande.sous_total_articles
+                    frais_livraison = commande.ville.frais_livraison if commande.ville else 0
+                    # Convertir explicitement en float pour éviter l'erreur Decimal + float
+                    nouveau_total = float(sous_total_articles) 
+                    commande.total_cmd = float(nouveau_total)
                     
                     # Sauvegarder les modifications
                     commande.save()
@@ -1970,47 +1967,10 @@ def modifier_commande(request, commande_id):
                         'message': message,
                         'ville_nom': commande.ville.nom if commande.ville else None,
                         'region_nom': commande.ville.region.nom_region if commande.ville and commande.ville.region else None,
-                        'frais_livraison': commande.montant_frais_livraison,
+                        'frais_livraison': commande.ville.frais_livraison if commande.ville else None,
                         'adresse': adresse,
-                        'nouveau_total': commande.total_cmd,
-                        'sous_total_articles': commande.sous_total_articles
-                    })
-                    
-                except Exception as e:
-                    return JsonResponse({'success': False, 'error': str(e)})
-            
-            elif action == 'toggle_frais_livraison':
-                # Changer le statut des frais de livraison
-                try:
-                    nouveau_statut = request.POST.get('frais_livraison_actif') == 'true'
-                    ancien_statut = commande.frais_livraison
-                    
-                    # Mettre à jour le statut
-                    commande.frais_livraison = nouveau_statut
-                    commande.save()
-                    
-                    # Recalculer le total avec les frais de livraison
-                    commande.recalculer_total_avec_frais()
-                    
-                    # Préparer le message de succès
-                    if nouveau_statut:
-                        message = "Frais de livraison activés et inclus dans le total"
-                        statut_display = "Activés"
-                        couleur = "green"
-                    else:
-                        message = "Frais de livraison désactivés et retirés du total"
-                        statut_display = "Désactivés"
-                        couleur = "gray"
-                    
-                    return JsonResponse({
-                        'success': True,
-                        'message': message,
-                        'nouveau_statut': nouveau_statut,
-                        'statut_display': statut_display,
-                        'couleur': couleur,
-                        'total_commande': float(commande.total_cmd),
-                        'frais_livraison_ville': float(commande.montant_frais_livraison),
-                        'ancien_statut': ancien_statut
+                        'nouveau_total': nouveau_total,
+                        'sous_total_articles': sous_total_articles
                     })
                     
                 except Exception as e:
@@ -2125,8 +2085,12 @@ def modifier_commande(request, commande_id):
                         sous_total=float(sous_total)
                     )
                     
-                    # Recalculer le total de la commande avec les frais de livraison
-                    commande.recalculer_total_avec_frais()
+                    # Recalculer le total de la commande
+                    total_commande = commande.paniers.aggregate(
+                        total=models.Sum('sous_total')
+                    )['total'] or 0
+                    commande.total_cmd = float(total_commande)
+                    commande.save()
                     
                     return JsonResponse({
                         'success': True,
@@ -2237,8 +2201,12 @@ def modifier_commande(request, commande_id):
                         except (Article.DoesNotExist, ValueError):
                             continue
             
-            # 4. Recalculer le total de la commande avec les frais de livraison
-            commande.recalculer_total_avec_frais()
+            # 4. Recalculer le total de la commande
+            total_commande = commande.paniers.aggregate(
+                total=models.Sum('sous_total')
+            )['total'] or 0
+            commande.total_cmd = float(total_commande)
+            commande.save()
             
             # ================ GESTION DES OPÉRATIONS ================
             
@@ -2545,9 +2513,6 @@ def creer_commande(request):
                 adresse = request.POST.get('adresse', '').strip()
                 is_upsell = request.POST.get('is_upsell') == 'on'
                 total_cmd = request.POST.get('total_cmd', 0)
-                source = request.POST.get('source')
-                payement = request.POST.get('payement', 'Non payé')
-                frais_livraison_actif = request.POST.get('frais_livraison_actif') == 'true'
 
                 # Log des données reçues
                 logging.info(f"Données de création de commande reçues: type_client={type_client}, ville_id={ville_id}, adresse={adresse}, is_upsell={is_upsell}, total_cmd={total_cmd}")
@@ -2599,10 +2564,8 @@ def creer_commande(request):
                         ville=ville,
                         adresse=adresse,
                         total_cmd=0,  # Sera calculé après ajout des articles
-                        origine='OC',  # Définir l'origine comme Opérateur Confirmation
-                        source=source,
-                        payement=payement,
-                        frais_livraison=frais_livraison_actif
+                        is_upsell=is_upsell,
+                        origine='OC'  # Définir l'origine comme Opérateur Confirmation
                     )
                 except Exception as e:
                     logging.error(f"Erreur lors de la création de la commande: {str(e)}")
@@ -2656,9 +2619,6 @@ def creer_commande(request):
                 # Mettre à jour le total final de la commande avec le montant recalculé
                 commande.total_cmd = float(total_calcule)
                 commande.save()
-                
-                # Recalculer le total avec les frais de livraison si activés
-                commande.recalculer_total_avec_frais()
 
                 # Créer l'état initial "Affectée" directement à l'opérateur créateur
                 try:
@@ -2773,14 +2733,9 @@ def api_panier_commande(request, commande_id):
             paniers = commande.paniers.all()
             total_articles = sum(panier.quantite for panier in paniers)
             total_montant = sum(panier.sous_total for panier in paniers)
-            
-            # Calculer les frais de livraison SEULEMENT si activés
-            if commande.frais_livraison:
-                frais_livraison = commande.ville.frais_livraison if commande.ville else 0
-                total_final = float(total_montant) + float(frais_livraison)
-            else:
-                frais_livraison = 0
-                total_final = float(total_montant)
+            frais_livraison = commande.ville.frais_livraison if commande.ville else 0
+            # Convertir explicitement en float pour éviter l'erreur Decimal + float
+            total_final = float(total_montant) + float(frais_livraison)
             
             # Construire la liste des articles pour le JSON
             articles_data = []

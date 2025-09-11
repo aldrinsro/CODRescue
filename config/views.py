@@ -20,13 +20,6 @@ def home_redirect(request):
     """
     user = request.user
     
-    # Vérifier s'il y a un paramètre 'next' dans la session (redirection après login)
-    next_url = request.session.get('next_url')
-    if next_url:
-        # Nettoyer la session
-        del request.session['next_url']
-        return redirect(next_url)
-    
     # Vérifier si l'utilisateur a un profil opérateur
     try:
         operateur = Operateur.objects.get(user=user, actif=True)

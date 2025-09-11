@@ -3,11 +3,7 @@
 
 {% block title %}Commandes Livrées - SAV - YZ-CMD{% endblock %}
 
-{% block extra_css %}
-{% endblock %}
-
 {% block content %}
-{% csrf_token %}
 <div class="main-content transition-all duration-300" id="mainContent">
     <!-- En-tête de la page -->
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 text-white p-6 rounded-xl shadow-lg" 
@@ -25,111 +21,6 @@
         </div>
     </div>
 
-    <!-- Filtre de temps personnalisable -->
-    <div class="bg-white rounded-xl shadow-md border p-6 mb-8" style="border-color: #e2e8f0;">
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div class="flex flex-col md:flex-row items-start md:items-center gap-4">
-                <label class="text-sm font-medium text-gray-700">PÉRIODE :</label>
-                <form method="get" class="flex flex-col md:flex-row items-start md:items-center gap-4">
-                    <!-- Conserver les paramètres d'onglet -->
-                    {% if current_tab %}
-                        <input type="hidden" name="tab" value="{{ current_tab }}">
-                    {% endif %}
-                    
-                    <select name="preset" class="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-offset-2 transition-all" 
-                            style="border-color: var(--logistic-border-accent); focus:ring-color: var(--logistic-primary);"
-                            onchange="this.form.submit()">
-                        <option value="">Sélectionner une période</option>
-                        <option value="today" {% if filter_preset == 'today' %}selected{% endif %}>Aujourd'hui</option>
-                        <option value="yesterday" {% if filter_preset == 'yesterday' %}selected{% endif %}>Hier</option>
-                        <option value="this_week" {% if filter_preset == 'this_week' %}selected{% endif %}>Cette semaine</option>
-                        <option value="last_week" {% if filter_preset == 'last_week' %}selected{% endif %}>Semaine dernière</option>
-                        <option value="this_month" {% if filter_preset == 'this_month' %}selected{% endif %}>Ce mois</option>
-                        <option value="last_month" {% if filter_preset == 'last_month' %}selected{% endif %}>Mois dernier</option>
-                        <option value="this_year" {% if filter_preset == 'this_year' %}selected{% endif %}>Cette année</option>
-                        <option value="last_year" {% if filter_preset == 'last_year' %}selected{% endif %}>Année dernière</option>
-                        <option value="custom" {% if filter_start_date and filter_end_date %}selected{% endif %}>Personnalisé</option>
-                    </select>
-                </form>
-            </div>
-            
-            <!-- Formulaire pour période personnalisée -->
-            <form method="get" class="flex flex-col md:flex-row items-start md:items-center gap-4">
-                <!-- Conserver les paramètres d'onglet -->
-                {% if current_tab %}
-                    <input type="hidden" name="tab" value="{{ current_tab }}">
-                {% endif %}
-                
-                <div class="flex flex-col md:flex-row items-start md:items-center gap-4">
-                    <div class="flex flex-col">
-                        <label class="text-sm font-medium text-gray-700 mb-1">DATE DÉBUT :</label>
-                        <input type="date" name="start_date" value="{{ filter_start_date|default:'' }}" 
-                               class="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-offset-2 transition-all"
-                               style="border-color: var(--logistic-border-accent); focus:ring-color: var(--logistic-primary);">
-                    </div>
-                    <div class="flex flex-col">
-                        <label class="text-sm font-medium text-gray-700 mb-1">DATE FIN :</label>
-                        <input type="date" name="end_date" value="{{ filter_end_date|default:'' }}" 
-                               class="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-offset-2 transition-all"
-                               style="border-color: var(--logistic-border-accent); focus:ring-color: var(--logistic-primary);">
-                    </div>
-                    <button type="submit" class="px-6 py-2 rounded-lg text-white font-medium transition-all shadow-md hover:shadow-lg transform hover:scale-105" 
-                            style="background-color: var(--logistic-primary);">
-                        <i class="fas fa-filter mr-2"></i>Appliquer
-                    </button>
-                </div>
-            </form>
-        </div>
-        
-        <!-- Affichage de la période active -->
-        {% if filter_start_date and filter_end_date %}
-        <div class="mt-4">
-            <div class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium" 
-                 style="background-color: var(--logistic-accent-color); color: white;">
-                <i class="fas fa-calendar-alt mr-2"></i>
-                {{ filter_start_date|date:"d/m/Y" }} - {{ filter_end_date|date:"d/m/Y" }}
-            </div>
-        </div>
-        {% elif filter_preset %}
-        <div class="mt-4">
-            <div class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium" 
-                 style="background-color: var(--logistic-accent-color); color: white;">
-                <i class="fas fa-calendar-alt mr-2"></i>
-                {% if filter_preset == 'today' %}Aujourd'hui
-                {% elif filter_preset == 'yesterday' %}Hier
-                {% elif filter_preset == 'this_week' %}Cette semaine
-                {% elif filter_preset == 'last_week' %}Semaine dernière
-                {% elif filter_preset == 'this_month' %}Ce mois
-                {% elif filter_preset == 'last_month' %}Mois dernier
-                {% elif filter_preset == 'this_year' %}Cette année
-                {% elif filter_preset == 'last_year' %}Année dernière
-                {% endif %}
-            </div>
-        </div>
-        {% endif %}
-    </div>
-
-    <!-- Onglets de navigation -->
-    <div class="mb-6 bg-white rounded-xl shadow-lg p-1">
-        <div class="flex space-x-1">
-            <a href="?tab=toutes{% if filter_start_date %}&start_date={{ filter_start_date }}{% endif %}{% if filter_end_date %}&end_date={{ filter_end_date }}{% endif %}{% if filter_preset %}&preset={{ filter_preset }}{% endif %}" 
-               class="tab-link flex-1 text-center py-3 px-4 rounded-lg font-medium transition-all duration-200 {% if current_tab == 'toutes' %}bg-green-600 text-white shadow-md{% else %}text-gray-600 hover:bg-gray-100{% endif %}">
-                <i class="fas fa-list mr-2"></i>
-                Toutes ({{ total_commandes }})
-            </a>
-            <a href="?tab=payees{% if filter_start_date %}&start_date={{ filter_start_date }}{% endif %}{% if filter_end_date %}&end_date={{ filter_end_date }}{% endif %}{% if filter_preset %}&preset={{ filter_preset }}{% endif %}" 
-               class="tab-link flex-1 text-center py-3 px-4 rounded-lg font-medium transition-all duration-200 {% if current_tab == 'payees' %}bg-green-600 text-white shadow-md{% else %}text-gray-600 hover:bg-gray-100{% endif %}">
-                <i class="fas fa-money-bill-wave mr-2"></i>
-                Payées ({{ commandes_payees }})
-            </a>
-            <a href="?tab=non_payees{% if filter_start_date %}&start_date={{ filter_start_date }}{% endif %}{% if filter_end_date %}&end_date={{ filter_end_date }}{% endif %}{% if filter_preset %}&preset={{ filter_preset }}{% endif %}" 
-               class="tab-link flex-1 text-center py-3 px-4 rounded-lg font-medium transition-all duration-200 {% if current_tab == 'non_payees' %}bg-green-600 text-white shadow-md{% else %}text-gray-600 hover:bg-gray-100{% endif %}">
-                <i class="fas fa-clock mr-2"></i>
-                Non Payées ({{ commandes_non_payees }})
-            </a>
-        </div>
-    </div>
-
     <!-- Tableau des commandes -->
     <div class="overflow-x-auto mb-8 bg-white rounded-xl shadow-lg">
         <table class="min-w-full divide-y divide-gray-200">
@@ -143,10 +34,10 @@
                     <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                         <div class="flex items-center">
                             <i class="fas fa-box-open mr-1"></i>Articles
+                            <span class="ml-1 text-xs opacity-75">(détail livraison)</span>
                         </div>
                     </th>
                     <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Date Livraison</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Statut de paiement</th>
                     <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Statut Actuel</th>
                     <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Opérateur</th>
                     <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Commentaire</th>
@@ -226,19 +117,12 @@
                         {% endif %}
                     </td>
                     <td class="px-4 py-4 whitespace-nowrap">
-                        {% if commande.payement == 'Payé' %}
-                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                <i class="fas fa-money-bill-wave mr-1"></i>{{ commande.payement }}
-                            </span>
-                        {% else %}
-                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                <i class="fas fa-clock mr-1"></i>{{ commande.payement }}
-                            </span>
-                        {% endif %}
-                    </td>
-                     <td class="px-4 py-4 whitespace-nowrap">
-                         {% if commande.etat_actuel_sav %}
-                             {% if commande.etat_actuel_sav.enum_etat.libelle == 'Livrée Partiellement' %}
+                        {% if commande.etat_actuel_sav %}
+                            {% if commande.etat_actuel_sav.enum_etat.libelle == 'Reportée' %}
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                    <i class="fas fa-clock mr-1"></i>Reportée
+                                </span>
+                            {% elif commande.etat_actuel_sav.enum_etat.libelle == 'Livrée Partiellement' %}
                                 <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
                                     <i class="fas fa-box-open mr-1"></i>Livrée partiellement
                                 </span>
@@ -367,37 +251,39 @@
 <!-- Modale des Actions SAV -->
 <div id="savActionsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
     <div class="relative top-10 mx-auto p-6 border w-full max-w-2xl shadow-lg rounded-lg bg-white">
-        <div class="flex justify-between items-start mb-6">
-            <div class="text-center flex-1">
-            <h3 class="text-xl leading-6 font-bold text-gray-900 mb-2">Actions de Livraison (SAV)</h3>
-                <p class="text-sm text-gray-600">Commande <span id="commandeIdDisplay" class="font-semibold text-blue-600"></span></p>
-            </div>
-             <button onclick="fermerModalSav()" class="text-gray-400 hover:text-gray-600 transition-colors p-2 rounded-full hover:bg-gray-100" title="Fermer">
-                 <i class="fas fa-times text-2xl"></i>
-             </button>
-        </div>
         <div class="text-center">
+            <h3 class="text-xl leading-6 font-bold text-gray-900 mb-2">Actions de Livraison (SAV)</h3>
+            <p class="text-sm text-gray-600 mb-6">Commande <span id="commandeIdDisplay" class="font-semibold text-blue-600"></span></p>
+            
             <!-- Grille des actions SAV -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                <button onclick="openSavModal('Retournée')" class="sav-action-card bg-red-50 hover:bg-red-100 border-2 border-red-200 hover:border-red-300 rounded-lg p-4 transition-all duration-200">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                <button onclick="selectSavAction('Reportée')" class="sav-action-card bg-orange-50 hover:bg-orange-100 border-2 border-orange-200 hover:border-orange-300 rounded-lg p-4 transition-all duration-200">
+                    <div class="flex flex-col items-center">
+                        <i class="fas fa-clock text-3xl text-orange-500 mb-2"></i>
+                        <span class="font-semibold text-orange-800">Reporter</span>
+                        <span class="text-xs text-orange-600 mt-1">Reprogrammer la livraison</span>
+                    </div>
+                </button>
+                
+                <button onclick="selectSavAction('Livrée Partiellement')" class="sav-action-card bg-blue-50 hover:bg-blue-100 border-2 border-blue-200 hover:border-blue-300 rounded-lg p-4 transition-all duration-200">
+                    <div class="flex flex-col items-center">
+                        <i class="fas fa-box-open text-3xl text-blue-500 mb-2"></i>
+                        <span class="font-semibold text-blue-800">Livraison Partielle</span>
+                        <span class="text-xs text-blue-600 mt-1">Certains articles livrés</span>
+                    </div>
+                </button>
+                
+                <button onclick="selectSavAction('Retournée (SAV)')" class="sav-action-card bg-red-50 hover:bg-red-100 border-2 border-red-200 hover:border-red-300 rounded-lg p-4 transition-all duration-200">
                     <div class="flex flex-col items-center">
                         <i class="fas fa-times-circle text-3xl text-red-500 mb-2"></i>
                         <span class="font-semibold text-red-800">Retournée (SAV)</span>
                         <span class="text-xs text-red-600 mt-1">Retourner la commande</span>
                     </div>
                 </button>
-
-                <button id="marquerPayeBtn" onclick="marquerCommePaye()" class="sav-action-card bg-green-50 hover:bg-green-100 border-2 border-green-200 hover:border-green-300 rounded-lg p-4 transition-all duration-200">
-                    <div class="flex flex-col items-center">
-                        <i class="fas fa-money-bill-wave text-3xl text-green-500 mb-2"></i>
-                        <span class="font-semibold text-green-800">Marquer Payé</span>
-                        <span class="text-xs text-green-600 mt-1">Confirmer le paiement</span>
-                    </div>
-                </button>
             </div>
             
             <div class="flex justify-center">
-                <button id="cancelSavActionsBtn" onclick="fermerModalSav()" class="px-6 py-2 bg-gray-500 text-white text-base font-medium rounded-md shadow-sm hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300 transition-colors">
+                <button id="cancelSavActionsBtn" class="px-6 py-2 bg-gray-500 text-white text-base font-medium rounded-md shadow-sm hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300 transition-colors">
                     <i class="fas fa-times mr-2"></i>Fermer
                 </button>
             </div>
@@ -405,197 +291,12 @@
     </div>
 </div>
 
-<!-- Modale SAV pour changer l'état -->
-<div id="savModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
-    <div class="relative top-20 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white">
-        <div class="mt-3 text-center">
-            <h3 class="text-lg leading-6 font-medium text-gray-900" id="savModalTitle">Mettre à jour l'état</h3>
-            <div class="mt-2 px-7 py-3">
-                <form id="savForm" method="POST">
-                    {% csrf_token %}
-                    <input type="hidden" name="nouvel_etat" id="nouvel_etat_input">
-                    <div class="text-left">
-                        <!-- Champ commentaire -->
-                        <div class="mb-4">
-                            <label for="commentaire" class="text-sm font-medium text-gray-700">Commentaire (obligatoire)</label>
-                            <select name="commentaire" id="commentaire" class="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" required>
-                                <option value="">Sélectionner un commentaire...</option>
-                                <optgroup label="Retours et échanges" class="optgroup-retours" style="display: none;">
-                                    <option value="Retour demandé par le client">Retour demandé par le client</option>
-                                    <option value="Échange de taille demandé">Échange de taille demandé</option>
-                                    <option value="Échange de couleur demandé">Échange de couleur demandé</option>
-                                    <option value="Article ne correspond pas à la commande">Article ne correspond pas à la commande</option>
-                                </optgroup>
-                                <optgroup label="Problèmes de qualité" class="optgroup-problemes" style="display: none;">
-                                    <option value="Article défectueux détecté">Article défectueux détecté</option>
-                                    <option value="Problème de qualité signalé par le client">Problème de qualité signalé par le client</option>
-                                    <option value="Article endommagé lors du transport">Article endommagé lors du transport</option>
-                                    <option value="Défaut de fabrication constaté">Défaut de fabrication constaté</option>
-                                </optgroup>
-                                <optgroup label="Communication client" class="optgroup-communication" style="display: none;">
-                                    <option value="Client insatisfait de la qualité">Client insatisfait de la qualité</option>
-                                    <option value="Client demande un remboursement">Client demande un remboursement</option>
-                                    <option value="Problème de communication avec le client">Problème de communication avec le client</option>
-                                </optgroup>
-                                <optgroup label="Autres motifs" class="optgroup-autres" style="display: none;">
-                                    <option value="Demande spéciale du client">Demande spéciale du client</option>
-                                    <option value="Modification de commande demandée">Modification de commande demandée</option>
-                                    <option value="Autre motif - voir détails">Autre motif - voir détails</option>
-                                </optgroup>
-                            </select>
-                        </div>
-                        
-                        <!-- Champ commentaire personnalisé (caché par défaut) -->
-                        <div id="commentairePersonnalise" class="mb-4 hidden">
-                            <label for="commentaireCustom" class="text-sm font-medium text-gray-700">Commentaire personnalisé</label>
-                            <textarea name="commentaireCustom" id="commentaireCustom" rows="3" class="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" placeholder="Décrivez le motif spécifique..."></textarea>
-                        </div>
-                    </div>
-                    
-                    <div class="flex justify-end space-x-3 mt-6">
-                        <button type="button" id="cancelSavBtn" class="px-4 py-2 bg-gray-300 text-gray-700 text-sm font-medium rounded-md shadow-sm hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors">
-                            <i class="fas fa-times mr-2"></i>Annuler
-                        </button>
-                        <button type="button" id="confirmSavBtn" class="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors">
-                            <i class="fas fa-check mr-2"></i>Confirmer
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modale de Confirmation pour Marquer Payé -->
-<div id="confirmPayeModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-60">
-    <div class="relative top-20 mx-auto p-6 border w-full max-w-md shadow-lg rounded-lg bg-white">
-        <div class="text-center">
-            <!-- Icône de confirmation -->
-            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
-                <i class="fas fa-money-bill-wave text-2xl text-green-600"></i>
-            </div>
-            
-            <!-- Titre -->
-            <h3 class="text-lg font-medium text-gray-900 mb-2">Confirmer le Paiement</h3>
-            
-            <!-- Message -->
-            <div class="mb-6">
-                <p class="text-sm text-gray-500">
-                    Êtes-vous sûr de vouloir marquer la commande 
-                    <span id="confirmCommandeId" class="font-semibold text-blue-600"></span> 
-                    comme payée ?
-                </p>
-                <p class="text-xs text-gray-400 mt-2">
-                    Cette action mettra à jour le statut de paiement de la commande.
-                </p>
-            </div>
-            
-            <!-- Boutons d'action -->
-            <div class="flex space-x-3 justify-center">
-                <button id="confirmPayeBtn" onclick="confirmerPaiement()" class="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors">
-                    <i class="fas fa-check mr-2"></i>Confirmer
-                </button>
-                <button id="cancelPayeBtn" onclick="annulerPaiement()" class="px-4 py-2 bg-gray-300 text-gray-700 text-sm font-medium rounded-md shadow-sm hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors">
-                    <i class="fas fa-times mr-2"></i>Annuler
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-
 {% endblock %}
 
 {% block extra_js %}
 <script>
 let currentCommandeId = null;
 let currentCommandeIdYz = null;
-let currentCommandePayement = null;
-let savedCommandeId = null; // Variable pour sauvegarder l'ID pendant la confirmation
-
-// ================== GESTION DU SAV ==================
-
-function openSavModal(etat, commandeId = null) {
-    // Si un ID de commande est fourni, l'utiliser, sinon utiliser currentCommandeId
-    if (commandeId) {
-        currentCommandeId = commandeId;
-    }
-    
-    // Vérifier qu'on a un ID de commande
-    if (!currentCommandeId) {
-        alert('❌ Erreur: Impossible de déterminer l\'ID de la commande');
-        return;
-    }
-    
-    document.getElementById('nouvel_etat_input').value = etat;
-    
-    // Titre et couleur selon l'état
-    let titre = '';
-    let couleur = '';
-    let icone = '';
-    
-    switch(etat) {
-        case 'Retournée':
-            titre = 'Retourner la Commande';
-            couleur = 'text-red-600';
-            icone = 'fa-times-circle';
-            break;
-        default:
-            titre = 'Mettre à jour l\'état';
-            couleur = 'text-gray-600';
-            icone = 'fa-edit';
-    }
-    
-    // Mettre à jour le titre de la modale
-    document.getElementById('savModalTitle').innerHTML = `
-        <i class="fas ${icone} ${couleur} mr-2"></i>${titre}
-    `;
-    
-    // Réinitialiser le formulaire
-    document.getElementById('commentaire').value = '';
-    
-    // Masquer le champ de commentaire personnalisé
-    const commentairePersonnalise = document.getElementById('commentairePersonnalise');
-    if (commentairePersonnalise) {
-        commentairePersonnalise.classList.add('hidden');
-    }
-    
-    // Gérer l'affichage des options de commentaire selon l'état
-    const optgroupRetours = document.querySelector('.optgroup-retours');
-    const optgroupProblemes = document.querySelector('.optgroup-problemes');
-    const optgroupCommunication = document.querySelector('.optgroup-communication');
-    const optgroupAutres = document.querySelector('.optgroup-autres');
-    
-    // Masquer toutes les options par défaut
-    if (optgroupRetours) optgroupRetours.style.display = 'none';
-    if (optgroupProblemes) optgroupProblemes.style.display = 'none';
-    if (optgroupCommunication) optgroupCommunication.style.display = 'none';
-    if (optgroupAutres) optgroupAutres.style.display = 'none';
-    
-    // Afficher les options selon l'état
-    switch(etat) {
-        case 'Retournée':
-            if (optgroupRetours) optgroupRetours.style.display = 'block';
-            if (optgroupProblemes) optgroupProblemes.style.display = 'block';
-            if (optgroupCommunication) optgroupCommunication.style.display = 'block';
-            if (optgroupAutres) optgroupAutres.style.display = 'block';
-            break;
-    }
-    
-    // Ouvrir le modal
-    document.getElementById('savModal').classList.remove('hidden');
-}
-
-// Fonction pour fermer la modale SAV et réinitialiser les variables
-function fermerModalSav() {
-    const actionsModal = document.getElementById('savActionsModal');
-    if (actionsModal) {
-        actionsModal.classList.add('hidden');
-    }
-    currentCommandeId = null;
-    currentCommandeIdYz = null;
-    currentCommandePayement = null;
-}
 
 // Fonction pour afficher les détails des articles
 function afficherDetailsArticles(commandeId, commandeNum) {
@@ -899,484 +600,62 @@ function fermerPanierComplet() {
 }
 
 function openSavActionsModal(commandeId, commandeIdYz) {
-    try {
-        console.log('🔍 Debug - openSavActionsModal appelée avec:', { commandeId, commandeIdYz });
-        currentCommandeId = commandeId;
-        currentCommandeIdYz = commandeIdYz;
-        console.log('🔍 Debug - Variables assignées:', { currentCommandeId, currentCommandeIdYz });
-        
-        // Récupérer les données de la commande depuis le DOM
-        const row = document.querySelector(`tr[data-commande-id="${commandeId}"]`);
-        if (!row) {
-            console.error('Commande non trouvée:', commandeId);
-            alert('Erreur: Commande non trouvée');
-            return;
-        }
-        
-        // Extraire le statut de paiement depuis la ligne du tableau
-        const payementCell = row.querySelector('td:nth-child(8)'); // Colonne statut de paiement
-        if (payementCell) {
-            const payementSpan = payementCell.querySelector('span');
-            if (payementSpan) {
-                const payementText = payementSpan.textContent.trim();
-                // Logique corrigée : si le texte contient "Non Payée" ou "Non payé", c'est non payé
-                if (payementText.includes('Non Payée') || payementText.includes('Non payé')) {
-                    currentCommandePayement = 'Non payé';
-                } else if (payementText.includes('Payé')) {
-                    currentCommandePayement = 'Payé';
-                } else {
-                    currentCommandePayement = 'Non payé'; // Par défaut
-                }
-                console.log('🔍 Debug - Texte de paiement extrait:', payementText);
-                console.log('🔍 Debug - Statut interprété:', currentCommandePayement);
-            }
-        }
-        
-        // Mettre à jour l'affichage
-        document.getElementById('commandeIdDisplay').textContent = commandeIdYz;
-        
-        // Gérer l'affichage du bouton "Marquer Payé" selon le statut
-        const marquerPayeBtn = document.getElementById('marquerPayeBtn');
-        console.log('🔍 Debug - Bouton marquerPayeBtn trouvé:', marquerPayeBtn);
-        console.log('🔍 Debug - Statut de paiement:', currentCommandePayement);
-        
-        if (marquerPayeBtn) {
-            if (currentCommandePayement === 'Payé') {
-                marquerPayeBtn.style.display = 'none';
-                console.log('🔍 Debug - Bouton masqué (commande payée)');
-            } else {
-                marquerPayeBtn.style.display = 'block';
-                console.log('🔍 Debug - Bouton affiché (commande non payée)');
-            }
-        } else {
-            console.error('❌ Debug - Bouton marquerPayeBtn non trouvé dans le DOM');
-        }
-        
-        // Afficher la modale
-        document.getElementById('savActionsModal').classList.remove('hidden');
-        
-    } catch (error) {
-        console.error('Erreur lors de l\'ouverture de la modale SAV:', error);
-        alert('Erreur lors de l\'ouverture de la modale');
-    }
+    currentCommandeId = commandeId;
+    currentCommandeIdYz = commandeIdYz;
+    document.getElementById('commandeIdDisplay').textContent = commandeIdYz;
+    document.getElementById('savActionsModal').classList.remove('hidden');
 }
 
 function selectSavAction(etat) {
-    console.log('🔍 Debug - selectSavAction appelée avec:', { etat, currentCommandeId, currentCommandeIdYz });
+    // Fermer la modale des actions
+    document.getElementById('savActionsModal').classList.add('hidden');
     
-    // Sauvegarder les variables avant de fermer la modale
-    const commandeId = currentCommandeId;
-    const commandeIdYz = currentCommandeIdYz;
+    // Rediriger vers la page de détail avec l'action appropriée
+    const detailUrl = `/operateur-logistique/commande/${currentCommandeId}/`;
     
-    console.log('🔍 Debug - Variables sauvegardées:', { commandeId, commandeIdYz });
+    // Ajouter un paramètre pour indiquer l'action à effectuer
+    const actionParam = encodeURIComponent(etat);
+    const finalUrl = `${detailUrl}?action=${actionParam}`;
     
-    // Vérifier que nous avons un ID valide
-    if (!commandeId) {
-        console.error('❌ Debug - ID de commande manquant:', { currentCommandeId, commandeId });
-        alert('Erreur: Impossible de déterminer l\'ID de la commande');
-            return;
-        }
-        
-        // Fermer la modale des actions
-    fermerModalSav();
-    
-    // Rediriger vers la page SAV avec l'action appropriée
-    const savUrl = `/operateur-logistique/sav/livrees/`;
-        
-        // Ajouter un paramètre pour indiquer l'action à effectuer
-        const actionParam = encodeURIComponent(etat);
-    const finalUrl = `${savUrl}?action=${actionParam}`;
-    
-    console.log('🔍 Debug - Redirection vers:', finalUrl);
-    
-    // Rediriger vers la page SAV
+    // Rediriger vers la page de détail
     window.location.href = finalUrl;
 }
 
-function marquerCommePaye() {
-    console.log('🔍 Debug - marquerCommePaye appelée avec:', { currentCommandeId, currentCommandeIdYz });
-    
-    // Sauvegarder les variables avant de fermer la modale
-    const commandeId = currentCommandeId;
-    const commandeIdYz = currentCommandeIdYz;
-    
-    // Sauvegarder l'ID pour la confirmation
-    savedCommandeId = commandeId;
-        
-        // Fermer la modale des actions SAV
-    fermerModalSav();
-    
-    // Afficher la modale de confirmation
-    document.getElementById('confirmCommandeId').textContent = commandeIdYz;
-    document.getElementById('confirmPayeModal').classList.remove('hidden');
-}
-
-// Fonction pour confirmer le paiement
-function confirmerPaiement() {
-    console.log('🔍 Debug - confirmerPaiement appelée avec savedCommandeId:', savedCommandeId);
-    const commandeId = savedCommandeId;
-        
-        // Créer un FormData pour envoyer les données
-        const formData = new FormData();
-        formData.append('statut_paiement', 'Payé');
-        
-        // Envoyer la requête AJAX
-    fetch(`{% url 'operatLogistic:marquer_commande_payee' 0 %}`.replace('0', commandeId), {
-            method: 'POST',
-            body: formData,
-            headers: {
-            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-        }
-    })
-    .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-            // Fermer la modale de confirmation
-            document.getElementById('confirmPayeModal').classList.add('hidden');
-            
-            // Afficher un message de succès plus élégant
-            const successMessage = document.createElement('div');
-            successMessage.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
-            successMessage.innerHTML = `
-                <div class="flex items-center">
-                    <i class="fas fa-check-circle mr-2"></i>
-                    <span>${data.message || 'Commande marquée comme payée avec succès'}</span>
-                </div>
-            `;
-            document.body.appendChild(successMessage);
-            
-            // Supprimer le message après 3 secondes
-            setTimeout(() => {
-                successMessage.remove();
-            }, 3000);
-            
-                // Recharger la page pour mettre à jour la liste
-                setTimeout(() => {
-                    location.reload();
-            }, 1000);
-            } else {
-            // Fermer la modale de confirmation
-            document.getElementById('confirmPayeModal').classList.add('hidden');
-            alert(`Erreur: ${data.error}`);
-            }
-        })
-        .catch(error => {
-        console.error('Erreur:', error);
-        // Fermer la modale de confirmation
-        document.getElementById('confirmPayeModal').classList.add('hidden');
-        alert('Erreur de réseau lors de la mise à jour du paiement.');
-    });
-}
-
-// Fonction pour annuler le paiement
-function annulerPaiement() {
-    console.log('🔍 Debug - Fonction annulerPaiement exécutée');
-    document.getElementById('confirmPayeModal').classList.add('hidden');
-    savedCommandeId = null; // Réinitialiser la variable sauvegardée
-}
-
 document.addEventListener('DOMContentLoaded', function() {
-    console.log("Page de suivi des commandes livrées chargée.");
-    
-    // ================== GESTION DE LA MODALE SAV ==================
-    
-    // Gestion du select de commentaire
-    const commentaireSelect = document.getElementById('commentaire');
-    const commentairePersonnalise = document.getElementById('commentairePersonnalise');
-    const commentaireCustom = document.getElementById('commentaireCustom');
-    
-    if (commentaireSelect && commentairePersonnalise && commentaireCustom) {
-        commentaireSelect.addEventListener('change', function() {
-            if (this.value === 'Autre motif - voir détails') {
-                commentairePersonnalise.classList.remove('hidden');
-                commentaireCustom.required = true;
-            } else {
-                commentairePersonnalise.classList.add('hidden');
-                commentaireCustom.required = false;
-                commentaireCustom.value = '';
-            }
-        });
-    }
-    
-    // Gestion du formulaire SAV
-    const savForm = document.getElementById('savForm');
-    const confirmSavBtn = document.getElementById('confirmSavBtn');
-    const cancelSavBtn = document.getElementById('cancelSavBtn');
-    
-    if (confirmSavBtn) {
-        confirmSavBtn.addEventListener('click', function(e) {
-            // Empêcher la soumission classique du formulaire
-            e.preventDefault();
-            
-            // Validation du formulaire SAV
-            const commentaire = document.getElementById('commentaire').value.trim();
-            if (commentaire === '') {
-                alert('⚠️ Le commentaire est obligatoire');
-                return;
-            }
-            
-            // Si "Autre motif" est sélectionné, vérifier le commentaire personnalisé
-            if (commentaire === 'Autre motif - voir détails') {
-                const commentaireCustom = document.getElementById('commentaireCustom');
-                if (!commentaireCustom || !commentaireCustom.value.trim()) {
-                    alert('⚠️ Le commentaire personnalisé est obligatoire pour "Autre motif"');
-                    return;
-                }
-            }
-            
-            // Soumettre le formulaire via AJAX
-            const formData = new FormData(savForm);
-            
-            // Si un commentaire personnalisé est fourni, l'ajouter
-            if (commentaireCustom && commentaireCustom.value.trim()) {
-                formData.set('commentaire', commentaireCustom.value.trim());
-            }
-            
-            // Définir l'URL de soumission avec l'ID de la commande
-            const commandeId = currentCommandeId;
-            if (!commandeId) {
-                alert('❌ Erreur: Impossible de déterminer l\'ID de la commande');
-                return;
-            }
-            
-            savForm.action = `/operateur-logistique/commande/${commandeId}/changer-etat-sav/`;
-            
-            fetch(savForm.action, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: new URLSearchParams(formData)
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert(`✅ ${data.message}`);
-                    // Fermer la modale SAV
-                    document.getElementById('savModal').classList.add('hidden');
-                    // Fermer aussi la modale des actions SAV
-                    document.getElementById('savActionsModal').classList.add('hidden');
-                    // Réinitialiser le formulaire
-                    savForm.reset();
-                    // Masquer le champ de commentaire personnalisé
-                    const commentairePersonnalise = document.getElementById('commentairePersonnalise');
-                    if (commentairePersonnalise) {
-                        commentairePersonnalise.classList.add('hidden');
-                    }
-                    // Pas de redirection - rester sur la même page
-                } else {
-                    alert(`❌ Erreur: ${data.error}`);
-                }
-            })
-            .catch(error => {
-                console.error('Erreur:', error);
-                alert('❌ Une erreur est survenue lors de la soumission');
-            });
-        });
-    }
-    
-    if (cancelSavBtn) {
-        cancelSavBtn.addEventListener('click', function() {
-            document.getElementById('savModal').classList.add('hidden');
-            savForm.reset();
-            // Masquer le champ de commentaire personnalisé
-            const commentairePersonnalise = document.getElementById('commentairePersonnalise');
-            if (commentairePersonnalise) {
-                commentairePersonnalise.classList.add('hidden');
-            }
-        });
-    }
-    
-    // Fermer la modale SAV avec la touche Échap
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            const savModal = document.getElementById('savModal');
-            if (savModal && !savModal.classList.contains('hidden')) {
-                savModal.classList.add('hidden');
-                savForm.reset();
-                const commentairePersonnalise = document.getElementById('commentairePersonnalise');
-                if (commentairePersonnalise) {
-                    commentairePersonnalise.classList.add('hidden');
-                }
-            }
-        }
-    });
-    
-    // ================== FIN GESTION MODALE SAV ==================
-    
-    // Gestion des formulaires de filtre
-    const presetSelect = document.querySelector('select[name="preset"]');
-    const customDateForm = document.querySelector('form input[name="start_date"]').closest('form');
-    
-    if (presetSelect) {
-        presetSelect.addEventListener('change', function() {
-            if (this.value === 'custom') {
-                // Afficher le formulaire de dates personnalisées
-                customDateForm.style.display = 'flex';
-                // Masquer le select
-                this.style.display = 'none';
-            } else if (this.value) {
-                // Soumettre le formulaire pour appliquer le preset
-                this.form.submit();
-            }
-        });
-    }
-    
-    // Gestion du formulaire de dates personnalisées
-    if (customDateForm) {
-        const startDateInput = customDateForm.querySelector('input[name="start_date"]');
-        const endDateInput = customDateForm.querySelector('input[name="end_date"]');
-        
-        // Validation des dates
-        function validateDates() {
-            if (startDateInput && endDateInput && startDateInput.value && endDateInput.value) {
-                const startDate = new Date(startDateInput.value);
-                const endDate = new Date(endDateInput.value);
-                
-                if (startDate > endDate) {
-                    alert('La date de début ne peut pas être postérieure à la date de fin.');
-                    return false;
-                }
-            }
-            return true;
-        }
-        
-        // Ajouter la validation avant soumission
-        customDateForm.addEventListener('submit', function(e) {
-            if (!validateDates()) {
-                e.preventDefault();
-            }
-        });
-        
-        // Validation en temps réel
-        [startDateInput, endDateInput].forEach(input => {
-            input.addEventListener('change', validateDates);
-        });
-    }
-    
-    // Bouton pour revenir au select de presets
-    const backToPresetsBtn = document.createElement('button');
-    backToPresetsBtn.type = 'button';
-    backToPresetsBtn.className = 'px-3 py-1 text-sm text-gray-600 hover:text-gray-800 transition-colors';
-    backToPresetsBtn.innerHTML = '<i class="fas fa-arrow-left mr-1"></i>Retour aux presets';
-    backToPresetsBtn.style.display = 'none';
-    
-    if (customDateForm && presetSelect) {
-        customDateForm.parentNode.insertBefore(backToPresetsBtn, customDateForm);
-        
-        backToPresetsBtn.addEventListener('click', function() {
-            customDateForm.style.display = 'none';
-            presetSelect.style.display = 'block';
-            presetSelect.value = '';
-            this.style.display = 'none';
-        });
-        
-        // Afficher le bouton si on est en mode personnalisé
-        if (presetSelect.value === 'custom' || (startDateInput && startDateInput.value)) {
-            customDateForm.style.display = 'flex';
-            presetSelect.style.display = 'none';
-            backToPresetsBtn.style.display = 'block';
-        }
-    }
-    
-    // Gestion des modales
     const actionsModal = document.getElementById('savActionsModal');
     const cancelActionsBtn = document.getElementById('cancelSavActionsBtn');
 
-
     // Fermer la modale des actions
-    if (cancelActionsBtn) {
-        cancelActionsBtn.addEventListener('click', fermerModalSav);
-    }
+    cancelActionsBtn.addEventListener('click', function() {
+        actionsModal.classList.add('hidden');
+        currentCommandeId = null;
+        currentCommandeIdYz = null;
+    });
 
     // Fermer les modales si on clique en dehors
-    if (actionsModal) {
-        actionsModal.addEventListener('click', function(e) {
-            if (e.target === actionsModal) {
-                fermerModalSav();
-            }
-        });
-    }
-
-    // Fermer la modale avec la touche Échap
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && actionsModal && !actionsModal.classList.contains('hidden')) {
-            fermerModalSav();
+    actionsModal.addEventListener('click', function(e) {
+        if (e.target === actionsModal) {
+            actionsModal.classList.add('hidden');
+            currentCommandeId = null;
+            currentCommandeIdYz = null;
         }
     });
 
     // Gestion de la modale des détails des articles
     const articlesDetailsModal = document.getElementById('articlesDetailsModal');
-    if (articlesDetailsModal) {
-        articlesDetailsModal.addEventListener('click', function(e) {
-            if (e.target === articlesDetailsModal) {
-                fermerDetailsArticles();
-            }
-        });
-    }
-    
-    // Gestion de la modale du panier complet
-    const panierCompletModal = document.getElementById('panierCompletModal');
-    if (panierCompletModal) {
-        panierCompletModal.addEventListener('click', function(e) {
-            if (e.target === panierCompletModal) {
-                fermerPanierComplet();
-            }
-        });
-    }
-    
-    // Gestion de la modale de confirmation de paiement
-    const confirmPayeModal = document.getElementById('confirmPayeModal');
-    const confirmPayeBtn = document.getElementById('confirmPayeBtn');
-    const cancelPayeBtn = document.getElementById('cancelPayeBtn');
-    
-    console.log('🔍 Debug - Éléments de la modale de confirmation:', {
-        confirmPayeModal,
-        confirmPayeBtn,
-        cancelPayeBtn
-    });
-    
-    if (confirmPayeBtn) {
-        console.log('🔍 Debug - Ajout du gestionnaire d\'événement pour confirmPayeBtn');
-        confirmPayeBtn.addEventListener('click', function(e) {
-            console.log('🔍 Debug - Clic détecté sur confirmPayeBtn');
-            e.preventDefault();
-            e.stopPropagation();
-            confirmerPaiement();
-        });
-    } else {
-        console.error('❌ Debug - confirmPayeBtn non trouvé dans le DOM');
-    }
-    
-    if (cancelPayeBtn) {
-        console.log('🔍 Debug - Ajout du gestionnaire d\'événement pour cancelPayeBtn');
-        cancelPayeBtn.addEventListener('click', function(e) {
-            console.log('🔍 Debug - Clic détecté sur cancelPayeBtn');
-            e.preventDefault();
-            e.stopPropagation();
-            annulerPaiement();
-        });
-    } else {
-        console.error('❌ Debug - cancelPayeBtn non trouvé dans le DOM');
-    }
-    
-    if (confirmPayeModal) {
-        confirmPayeModal.addEventListener('click', function(e) {
-            if (e.target === confirmPayeModal) {
-                annulerPaiement();
-            }
-        });
-    }
-    
-    // Fermer la modale de confirmation avec la touche Échap
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && confirmPayeModal && !confirmPayeModal.classList.contains('hidden')) {
-            annulerPaiement();
+    articlesDetailsModal.addEventListener('click', function(e) {
+        if (e.target === articlesDetailsModal) {
+            fermerDetailsArticles();
         }
     });
     
-    console.log('✅ Interface de filtre initialisée avec succès');
+    // Gestion de la modale du panier complet
+    const panierCompletModal = document.getElementById('panierCompletModal');
+    panierCompletModal.addEventListener('click', function(e) {
+        if (e.target === panierCompletModal) {
+            fermerPanierComplet();
+        }
+    });
 });
 </script>
 {% endblock %}

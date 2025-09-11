@@ -38,7 +38,7 @@ def page_360(request):
         'etats__operateur', # Pour récupérer l'opérateur qui a fait l'état
         'paniers__article' # Accéder aux articles via les paniers
     ).only(
-        'id', 'num_cmd', 'id_yz', 'date_cmd', 'total_cmd',
+        'id', 'num_cmd', 'id_yz', 'date_cmd', 'total_cmd', 'is_upsell',
         'client__nom', 'client__prenom', 'client__numero_tel', 'client__adresse',
         'ville__nom', 'ville__region__nom_region'
     )
@@ -102,7 +102,7 @@ def vue_360_realtime_data(request):
         ).prefetch_related(
             'etats__enum_etat', 'etats__operateur', 'paniers__article'
         ).only(
-            'id', 'num_cmd', 'id_yz', 'date_cmd', 'total_cmd', 
+            'id', 'num_cmd', 'id_yz', 'date_cmd', 'total_cmd', 'is_upsell',
             'client__nom', 'client__prenom', 'client__numero_tel', 'client__adresse',
             'ville__nom', 'ville__region__nom_region'
         )
@@ -494,6 +494,7 @@ def prepare_commandes_data(commandes_queryset):
             'operateur_assigne': operateur_assigne_nom,
             'agent_confirmation': agent_confirmation_nom,
             'client_fidele': "future qui seras des les tables models plustard dans le projet",
+            'upsell_display': "Oui" if cmd.is_upsell else "Non",
             'preparation_status': preparation_info.enum_etat.libelle if preparation_info else "Non Préparée",
             'etat_livraison': etat_livraison,
             'etat_paiement': etat_paiement,
@@ -654,7 +655,7 @@ def export_all_data_csv(request):
                 'etats__operateur',
                 'paniers__article'
             ).only(
-                'id', 'num_cmd', 'id_yz', 'date_cmd', 'total_cmd',
+                'id', 'num_cmd', 'id_yz', 'date_cmd', 'total_cmd', 'is_upsell',
                 'client__nom', 'client__prenom', 'client__numero_tel', 'client__adresse',
                 'ville__nom', 'ville__region__nom_region'
             )
@@ -723,6 +724,7 @@ def export_all_data_csv(request):
                     operateur_assigne_nom,
                     agent_confirmation_nom,
                     "future qui seras des les tables models plustard dans le projet", # Client Fidèle
+                    "Oui" if cmd.is_upsell else "Non", # UPSELL
                     preparation_info.enum_etat.libelle if preparation_info else "Non Préparée",
                     etat_livraison,
                     etat_paiement,
@@ -815,7 +817,7 @@ def export_all_data_excel(request):
             'etats__operateur', 
             'paniers__article'
         ).only(
-            'id', 'num_cmd', 'id_yz', 'date_cmd', 'total_cmd', 
+            'id', 'num_cmd', 'id_yz', 'date_cmd', 'total_cmd', 'is_upsell',
             'client__nom', 'client__prenom', 'client__numero_tel', 'client__adresse',
             'ville__nom', 'ville__region__nom_region'
         )
@@ -887,7 +889,8 @@ def export_all_data_excel(request):
                 operateur_assigne_nom,
                 agent_confirmation_nom,
                 "future qui seras des les tables models plustard dans le projet", # Client Fidèle
-               # preparation_info.enum_etat.libelle if preparation_info else "Non Préparée",
+                "Oui" if cmd.is_upsell else "Non", # UPSELL
+                preparation_info.enum_etat.libelle if preparation_info else "Non Préparée",
                 etat_livraison,
                 etat_paiement,
                 tarif_livraison,

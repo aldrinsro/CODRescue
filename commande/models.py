@@ -217,14 +217,11 @@ class Commande(models.Model):
             
             nouveau_total += nouveau_sous_total
         
-        # Ajouter les frais de livraison au total SEULEMENT si frais_livraison = True
-        if self.frais_livraison:
-            frais_livraison = self.ville.frais_livraison if self.ville else 0
-            nouveau_total_avec_frais = float(nouveau_total) + float(frais_livraison)
-        else:
-            nouveau_total_avec_frais = float(nouveau_total)
+        # Ajouter les frais de livraison au total
+        frais_livraison = self.ville.frais_livraison if self.ville else 0
+        nouveau_total_avec_frais = float(nouveau_total) + float(frais_livraison)
         
-        # Mettre à jour le total de la commande
+        # Mettre à jour le total de la commande si nécessaire
         if self.total_cmd != nouveau_total_avec_frais:
             self.total_cmd = nouveau_total_avec_frais
             self.save(update_fields=['total_cmd'])
@@ -235,49 +232,15 @@ class Commande(models.Model):
         return sum(panier.sous_total for panier in self.paniers.all())
     
     @property
-    def total_articles(self):
-        """Alias pour sous_total_articles pour la compatibilité avec les templates"""
-        return self.sous_total_articles
-    
-    @property
-    def montant_frais_livraison(self):
-        """Retourne le montant des frais de livraison de la ville"""
+    def frais_livraison(self):
+        """Retourne les frais de livraison"""
         frais = self.ville.frais_livraison if self.ville else 0
         return float(frais)
     
     @property
     def total_avec_frais(self):
         """Retourne le total articles + frais de livraison"""
-        return float(self.sous_total_articles) + float(self.montant_frais_livraison)
-    
-    def recalculer_total_avec_frais(self):
-        """
-        Recalcule le total de la commande en incluant les frais de livraison
-        SEULEMENT si frais_livraison = True
-        """
-        # Calculer le sous-total des articles
-        sous_total_articles = sum(panier.sous_total for panier in self.paniers.all())
-        
-        if self.frais_livraison:
-            # Récupérer les frais de livraison de la ville
-            frais_ville = self.ville.frais_livraison if self.ville else 0
-            
-            # Calculer le nouveau total avec frais
-            nouveau_total = float(sous_total_articles) + float(frais_ville)
-            
-            # Mettre à jour le total si nécessaire
-            if self.total_cmd != nouveau_total:
-                self.total_cmd = nouveau_total
-                # Éviter la récursion en utilisant update_fields
-                Commande.objects.filter(id=self.id).update(total_cmd=nouveau_total)
-                print(f"✅ Frais de livraison ajoutés: {sous_total_articles} + {frais_ville} = {nouveau_total}")
-        else:
-            # Si frais_livraison = False, calculer le total sans frais
-            nouveau_total = float(sous_total_articles)
-            if self.total_cmd != nouveau_total:
-                self.total_cmd = nouveau_total
-                Commande.objects.filter(id=self.id).update(total_cmd=nouveau_total)
-                print(f"ℹ️  Frais de livraison désactivés - Total recalculé: {nouveau_total}")
+        return float(self.sous_total_articles) + float(self.frais_livraison)
 
 
 class Panier(models.Model):
@@ -307,7 +270,6 @@ class EtatCommande(models.Model):
     date_fin = models.DateTimeField(blank=True, null=True)
     commentaire = models.TextField(blank=True, null=True)
     operateur = models.ForeignKey(Operateur, on_delete=models.CASCADE, related_name='etats_modifies', blank=True, null=True)
-    date_fin_delayed = models.DateTimeField(blank=True, null=True, verbose_name="Date de fin de confirmation décalée")
     
     class Meta:
         verbose_name = "État de commande(Suivi de commande)"
@@ -469,3 +431,66 @@ class EtatArticleRenvoye(models.Model):
     def __str__(self):
         return f"{self.article} ({self.etat}) dans {self.commande}"
 
+
+class EtiquetteTemplate(models.Model):
+    """Template pour les étiquettes d'articles professionnelles"""
+    name = models.CharField(max_length=100, verbose_name="Nom du template")
+    width = models.FloatField(default=180, verbose_name="Largeur (mm)")
+    height = models.FloatField(default=260, verbose_name="Hauteur (mm)")
+    margin_top = models.FloatField(default=10, verbose_name="Marge haute (mm)")
+    margin_bottom = models.FloatField(default=10, verbose_name="Marge basse (mm)")
+    margin_left = models.FloatField(default=10, verbose_name="Marge gauche (mm)")
+    margin_right = models.FloatField(default=10, verbose_name="Marge droite (mm)")
+    
+    # Styles
+    font_family = models.CharField(max_length=50, default="Helvetica", verbose_name="Police")
+    font_size_title = models.IntegerField(default=16, verbose_name="Taille police titre")
+    font_size_text = models.IntegerField(default=12, verbose_name="Taille police texte")
+    font_size_barcode = models.IntegerField(default=14, verbose_name="Taille police code-barres")
+    
+    # Couleurs
+    color_header = models.CharField(max_length=7, default="#2c3e50", verbose_name="Couleur en-tête")
+    color_footer = models.CharField(max_length=7, default="#2c3e50", verbose_name="Couleur pied")
+    color_text = models.CharField(max_length=7, default="#333333", verbose_name="Couleur texte")
+    
+    # Code-barres
+    barcode_width = models.FloatField(default=4, verbose_name="Largeur barres (mm)")
+    barcode_height = models.FloatField(default=80, verbose_name="Hauteur barres (mm)")
+    barcode_format = models.CharField(max_length=20, default="CODE128B", verbose_name="Format code-barres")
+    
+    # QR Code
+    qr_size = models.IntegerField(default=300, verbose_name="Taille QR code (px)")
+    
+    # Options
+    show_header = models.BooleanField(default=True, verbose_name="Afficher en-tête")
+    show_footer = models.BooleanField(default=True, verbose_name="Afficher pied")
+    show_barcode = models.BooleanField(default=True, verbose_name="Afficher code-barres")
+    show_qr = models.BooleanField(default=False, verbose_name="Afficher QR code")
+    
+    # Métadonnées
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True, verbose_name="Actif")
+    
+    class Meta:
+        verbose_name = "Template d'étiquette"
+        verbose_name_plural = "Templates d'étiquettes"
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.name} ({self.width}x{self.height}mm)"
+    
+    def get_dimensions(self):
+        """Retourne les dimensions en points (pour ReportLab)"""
+        from reportlab.lib.units import mm
+        return (self.width * mm, self.height * mm)
+    
+    def get_margins(self):
+        """Retourne les marges en points"""
+        from reportlab.lib.units import mm
+        return {
+            'top': self.margin_top * mm,
+            'bottom': self.margin_bottom * mm,
+            'left': self.margin_left * mm,
+            'right': self.margin_right * mm
+        }

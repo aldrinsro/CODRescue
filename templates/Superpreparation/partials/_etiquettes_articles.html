@@ -104,7 +104,6 @@
                     <div class="contact-info">
                         <div><i class="fas fa-globe"></i> www.yoozak.com</div>
                         <div><i class="fas fa-phone"></i> 06 34 21 56 39</div>
-                        <div><i class="fas fa-map-marker-alt"></i> SETTAT</div>
                     </div>
                 </div>
             </div>
@@ -161,8 +160,8 @@
 
 /* Étiquette d'article - Style identique au ticket de commande */
 .article-label {
-    width: 101mm;
-    height: 101mm;
+    width: 75mm;
+    height: 74mm;
     border: 1px solid #000000;
     font-family: 'Arial', sans-serif;
     font-size: 8px;
@@ -172,7 +171,6 @@
     flex-direction: column;
     position: relative;
     overflow: hidden;
-    box-sizing: border-box;
 }
 
 .ticket-content {
@@ -402,7 +400,7 @@
 }
 
 .contact-name {
-    font-size: 12px;
+    font-size: 8px;
     font-weight: bold;
     color: #000000;
     display: flex;
@@ -411,7 +409,7 @@
 }
 
 .contact-name i {
-    font-size: 13px;
+    font-size: 9px;
     color: #7c3aed;
 }
 
@@ -419,7 +417,7 @@
     text-align: right;
     color: #000000;
     font-weight: bold;
-    font-size: 10px;
+    font-size: 6px;
     line-height: 1.4;
 }
 
@@ -432,7 +430,7 @@
 }
 
 .contact-info i {
-    font-size: 10px;
+    font-size: 6px;
     color: #6b7280;
 }
 
@@ -445,16 +443,16 @@
 /* Styles pour l'impression - Page de la même taille que l'étiquette */
 @media print {
     @page {
-        size: 105mm 105mm;
-        margin: 2mm;
+        size: 75mm 74mm;
+        margin: 0;
     }
 
     body, html {
         margin: 0 !important;
         padding: 0 !important;
         background: white !important;
-        width: 101mm !important;
-        height: 101mm !important;
+        width: 75mm !important;
+        height: 74mm !important;
         -webkit-print-color-adjust: exact !important;
         color-adjust: exact !important;
         print-color-adjust: exact !important;
@@ -473,17 +471,17 @@
     /* Container pour les étiquettes */
     .etiquettes-container {
         display: block !important;
-        width: 101mm !important;
-        height: 101mm !important;
+        width: 75mm !important;
+        height: 74mm !important;
         margin: 0 !important;
         padding: 0 !important;
     }
     
     /* Format compact d'étiquette - Style ticket de commande */
     .etiquette-article {
-        width: 101mm !important;
-        height: 101mm !important;
-        border: 1px solid #000000 !important;
+        width: 75mm !important;
+        height: 74mm !important;
+        border: none !important;
         font-family: Arial, sans-serif !important;
         font-size: 7px !important;
         background: white !important;
@@ -493,7 +491,6 @@
         padding: 0 !important;
         overflow: hidden;
         display: block !important;
-        box-sizing: border-box !important;
     }
     
     .etiquette-article:last-child {

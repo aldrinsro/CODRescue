@@ -206,51 +206,43 @@ class VariantesManager {
     }
 
     showAlert(message, type = 'info') {
-        // Créer le conteneur de toast s'il n'existe pas
-        let toastContainer = document.getElementById('toastContainer');
-        if (!toastContainer) {
-            toastContainer = document.createElement('div');
-            toastContainer.id = 'toastContainer';
-            toastContainer.className = 'fixed top-4 right-4 z-50';
-            document.body.appendChild(toastContainer);
-        }
-
+        // Créer une notification toast
         const toast = document.createElement('div');
-        const bgColor = type === 'success' ? 'bg-green-500' : 
-                       type === 'error' ? 'bg-red-500' : 
-                       type === 'warning' ? 'bg-yellow-500' : 'bg-blue-500';
+        toast.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-300 transform translate-x-full toast-notification`;
         
-        toast.className = `${bgColor} text-white px-6 py-3 rounded-lg shadow-lg mb-2 max-w-md opacity-0 transform transition-all duration-300 ease-in-out`;
+        // Couleurs selon le type
+        const colors = {
+            success: 'bg-green-500 text-white',
+            error: 'bg-red-500 text-white',
+            warning: 'bg-yellow-500 text-white',
+            info: 'bg-blue-500 text-white'
+        };
         
-        const icon = type === 'success' ? 'fa-check-circle' : 
-                    type === 'error' ? 'fa-exclamation-circle' : 
-                    type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle';
+        toast.className += ` ${colors[type] || colors.info}`;
         
         toast.innerHTML = `
             <div class="flex items-center space-x-2">
-                <i class="fas ${icon} mr-2"></i>
-                <span class="text-sm font-medium">${message}</span>
+                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : type === 'warning' ? 'exclamation-triangle' : 'info-circle'}"></i>
+                <span>${message}</span>
             </div>
         `;
         
-        toastContainer.appendChild(toast);
+        document.body.appendChild(toast);
         
         // Animation d'entrée
-        requestAnimationFrame(() => {
-            toast.classList.remove('opacity-0');
-            toast.classList.add('opacity-100');
-        });
-        
-        // Suppression automatique
         setTimeout(() => {
-            toast.classList.remove('opacity-100');
-            toast.classList.add('opacity-0');
+            toast.classList.remove('translate-x-full');
+        }, 100);
+        
+        // Auto-suppression après 3 secondes
+        setTimeout(() => {
+            toast.classList.add('hiding');
             setTimeout(() => {
                 if (toast.parentNode) {
                     toast.parentNode.removeChild(toast);
                 }
             }, 300);
-        }, 5000);
+        }, 3000);
     }
 
     // Méthode pour récupérer toutes les variantes (utile pour la validation)

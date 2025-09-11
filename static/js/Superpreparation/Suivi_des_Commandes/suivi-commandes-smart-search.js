@@ -75,18 +75,6 @@ class SuiviCommandesSmartSearch {
                 dateField: 'dateLivraison',
                 dateLabel: 'Date Livraison'
             },
-            emballees: {
-                title: 'Suivi des Commandes Emballées',
-                filters: ['idYz', 'numCmd', 'client', 'phone', 'email', 'villeClient', 'villeRegion', 'datePreparation', 'totalMin', 'totalMax', 'operateur'],
-                dateField: 'datePreparation',
-                dateLabel: 'Date Emballage'
-            },
-            preparees: {
-                title: 'Suivi des Commandes Préparées',
-                filters: ['idYz', 'numCmd', 'client', 'phone', 'email', 'villeClient', 'villeRegion', 'datePreparation', 'totalMin', 'totalMax', 'operateur'],
-                dateField: 'datePreparation',
-                dateLabel: 'Date Préparation'
-            },
             generic: {
                 title: 'Suivi des Commandes',
                 filters: ['idYz', 'numCmd', 'client', 'phone', 'email', 'villeClient', 'villeRegion', 'dateCommande', 'totalMin', 'totalMax', 'etat', 'operateur'],
@@ -393,7 +381,6 @@ function initSuiviCommandesSearch(pageType = 'generic') {
     
     // Initialiser le système de recherche
     suiviCommandesSmartSearch = new SuiviCommandesSmartSearch({ pageType });
-    window.suiviCommandesSmartSearch = suiviCommandesSmartSearch;
     
     // Ajouter des raccourcis clavier
     document.addEventListener('keydown', function(e) {
@@ -425,9 +412,6 @@ function initSuiviCommandesSearch(pageType = 'generic') {
     console.log(`📊 ${rows.length} lignes de commande disponibles pour la recherche`);
 }
 
-// Exposer la fonction d'initialisation globalement
-window.initSuiviCommandesSearch = initSuiviCommandesSearch;
-
 // Initialiser quand le DOM est chargé
 document.addEventListener('DOMContentLoaded', function() {
     // Détecter automatiquement le type de page basé sur l'URL ou le titre
@@ -443,10 +427,6 @@ document.addEventListener('DOMContentLoaded', function() {
         pageType = 'retournées';
     } else if (window.location.pathname.includes('livrees_partiellement')) {
         pageType = 'livrees_partiellement';
-    } else if (window.location.pathname.includes('emballees')) {
-        pageType = 'emballees';
-    } else if (window.location.pathname.includes('preparees')) {
-        pageType = 'preparees';
     }
     
     initSuiviCommandesSearch(pageType);
@@ -462,85 +442,6 @@ window.debugSuiviCommandesSearch = function() {
         console.log('  - Lignes visibles:', Array.from(suiviCommandesSmartSearch.rows).filter(row => row.style.display !== 'none').length);
     } else {
         console.log('❌ Système de recherche non initialisé');
-    }
-};
-
-// Fonctions globales pour l'interface utilisateur
-window.toggleAdvancedSearch = function() {
-    const advancedSearch = document.getElementById('advancedSearch');
-    if (advancedSearch) {
-        const isHidden = advancedSearch.style.display === 'none' || advancedSearch.classList.contains('hidden');
-        if (isHidden) {
-            advancedSearch.style.display = 'block';
-            advancedSearch.classList.remove('hidden');
-            console.log('🔍 Filtres avancés affichés');
-        } else {
-            advancedSearch.style.display = 'none';
-            advancedSearch.classList.add('hidden');
-            console.log('🔍 Filtres avancés masqués');
-        }
-    }
-};
-
-window.clearSmartSearch = function() {
-    // Effacer le champ de recherche
-    const searchInput = document.getElementById('smartSearch');
-    if (searchInput) {
-        searchInput.value = '';
-    }
-    
-    // Effacer tous les filtres avancés
-    const filterInputs = document.querySelectorAll('#advancedSearch input, #advancedSearch select');
-    filterInputs.forEach(input => {
-        if (input.type === 'checkbox') {
-            input.checked = false;
-        } else {
-            input.value = '';
-        }
-    });
-    
-    // Réinitialiser les filtres dans l'instance
-    if (window.suiviCommandesSmartSearch) {
-        window.suiviCommandesSmartSearch.filters = window.suiviCommandesSmartSearch.getDefaultFilters();
-        window.suiviCommandesSmartSearch.performSmartSearch('');
-    }
-    
-    // Afficher tous les résultats
-    const rows = document.querySelectorAll('.commande-row');
-    rows.forEach(row => {
-        row.style.display = '';
-    });
-    
-    // Mettre à jour le compteur
-    const resultCount = document.getElementById('resultCount');
-    if (resultCount) {
-        resultCount.textContent = `${rows.length} résultats trouvés`;
-    }
-    
-    console.log('🧹 Recherche et filtres effacés');
-};
-
-window.applyFilters = function() {
-    if (window.suiviCommandesSmartSearch) {
-        // Collecter les valeurs des filtres depuis le formulaire
-        const filterInputs = document.querySelectorAll('#advancedSearch input, #advancedSearch select');
-        filterInputs.forEach(input => {
-            const filterName = input.name || input.id;
-            if (filterName && window.suiviCommandesSmartSearch.filters.hasOwnProperty(filterName)) {
-                if (input.type === 'checkbox') {
-                    window.suiviCommandesSmartSearch.filters[filterName] = input.checked;
-                } else {
-                    window.suiviCommandesSmartSearch.filters[filterName] = input.value;
-                }
-            }
-        });
-        
-        // Appliquer la recherche avec les filtres
-        const searchInput = document.getElementById('smartSearch');
-        const searchValue = searchInput ? searchInput.value : '';
-        window.suiviCommandesSmartSearch.performSmartSearch(searchValue);
-        
-        console.log('🔍 Filtres appliqués:', window.suiviCommandesSmartSearch.filters);
     }
 };
 

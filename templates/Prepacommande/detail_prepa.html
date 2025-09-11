@@ -97,17 +97,11 @@
             </div>
 
             <!-- Frais de livraison -->
-            <div class="{% if commande.frais_livraison %}bg-green-50 border-green-200{% else %}bg-gray-50 border-gray-200{% endif %} p-4 rounded-lg border">
-                <label class="block text-sm font-semibold mb-2 {% if commande.frais_livraison %}text-green-600{% else %}text-gray-600{% endif %}">Frais de livraison :</label>
-                <p class="text-lg font-medium {% if commande.frais_livraison %}text-green-800{% else %}text-gray-800{% endif %}">
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <label class="block text-sm font-semibold mb-2 text-purple-600">Frais de livraison :</label>
+                <p class="text-lg font-medium text-purple-800">
                     <i class="fas fa-truck mr-2"></i>
-                    {% if commande.frais_livraison %}
-                        {{ commande.ville.frais_livraison|default:0|floatformat:2 }} DH
-                        <span class="text-sm font-normal text-green-600 ml-2">(Activé)</span>
-                    {% else %}
-                        Inclus dans le prix
-                        <span class="text-sm font-normal text-gray-500 ml-2">(Désactivé)</span>
-                    {% endif %}
+                    {{ commande.ville.frais_livraison|default:0|floatformat:2 }} DH
                 </p>
             </div>
 
@@ -340,9 +334,6 @@
     <div class="bg-white rounded-xl shadow-lg border p-6 md:p-8 mb-6" style="border-color: var(--preparation-border-accent);">
         <h2 class="text-2xl font-bold flex items-center mb-6" style="color: var(--preparation-primary);">
             <i class="fas fa-shopping-basket mr-2"></i>Articles du Panier
-            <span class="ml-3 bg-blue-100 text-blue-800 text-sm font-medium px-2.5 py-0.5 rounded-full">
-                {{ paniers|length }} article{{ paniers|length|pluralize }}
-            </span>
         </h2>
         
         <div class="overflow-x-auto rounded-lg shadow-sm border border-gray-200">
@@ -350,125 +341,52 @@
                 <thead style="background-color: var(--preparation-primary);">
                     <tr>
                         <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Produit</th>
-                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Variante</th>
-                        <th scope="col" class="px-4 py-3 text-center text-xs font-medium text-white uppercase tracking-wider">Quantité</th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Quantité</th>
                         <th scope="col" class="px-4 py-3 text-right text-xs font-medium text-white uppercase tracking-wider">Prix Unitaire</th>
-                        <th scope="col" class="px-4 py-3 text-right text-xs font-medium text-white uppercase tracking-wider">Total Ligne</th>
+                        <th scope="col" class="px-4 py-3 text-right text-xs font-medium text-white uppercase tracking-wider">Total</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                     {% for panier in paniers %}
-                        <tr class="hover:bg-gray-50 transition-colors duration-200">
-                            <td class="px-4 py-4 whitespace-nowrap">
-                                <div class="flex items-center">
-                                    {% if panier.article.image_url %}
-                                        <img src="{{ panier.article.image_url }}" alt="{{ panier.article.nom }}" class="w-12 h-12 object-cover rounded-lg mr-3 shadow-sm">
-                                    {% else %}
-                                        <span class="inline-flex items-center justify-center w-12 h-12 rounded-lg bg-gray-200 text-gray-500 mr-3">
-                                            <i class="fas fa-image text-lg"></i>
-                                        </span>
-                                    {% endif %}
-                                    <div class="flex-1">
-                                        <div class="text-sm font-medium text-gray-900">{{ panier.article.nom }}</div>
-                                        {% if panier.article.reference %}
-                                            <div class="text-xs text-gray-500 mt-1">
-                                                <i class="fas fa-barcode mr-1"></i>Réf: {{ panier.article.reference }}
-                                            </div>
-                                        {% endif %}
-                                        {% if panier.article.categorie %}
-                                            <div class="text-xs text-blue-600 mt-1">
-                                                <i class="fas fa-tag mr-1"></i>{{ panier.article.categorie.nom }}
-                                            </div>
-                                        {% endif %}
-                                    </div>
-                                </div>
+                        <tr>
+                            <td class="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                {% if panier.article.image_url %}
+                                    <img src="{{ panier.article.image_url }}" alt="{{ panier.article.nom }}" class="w-10 h-10 object-cover rounded-full mr-2">
+                                {% else %}
+                                    <span class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-gray-200 text-gray-500 mr-2">
+                                        <i class="fas fa-image"></i>
+                                    </span>
+                                {% endif %}
+                                {{ panier.article.nom }}
+                                {% if panier.article.reference %}
+                                    <span class="text-xs text-gray-500 block">Réf: {{ panier.article.reference }}</span>
+                                    
+                                {% endif %}
                             </td>
-                            <td class="px-4 py-4 whitespace-nowrap">
-                                <div class="text-sm text-gray-900">
-                                    {% if panier.couleur_display %}
-                                        <div class="flex items-center mb-1">
-                                            <span class="inline-block w-3 h-3 rounded-full mr-2 border border-gray-300" 
-                                                  style="background-color: {{ panier.couleur_display|lower }};"></span>
-                                            <span class="text-xs font-medium">{{ panier.couleur_display }}</span>
-                                        </div>
-                                    {% endif %}
-                                    {% if panier.pointure_display %}
-                                        <div class="text-xs text-gray-600">
-                                            <i class="fas fa-ruler mr-1"></i>{{ panier.pointure_display }}
-                                        </div>
-                                    {% endif %}
-                                    {% if not panier.couleur_display and not panier.pointure_display %}
-                                        <span class="text-xs text-gray-400 italic">Aucune variante</span>
-                                    {% endif %}
-                                </div>
-                            </td>
-                            <td class="px-4 py-4 whitespace-nowrap text-center">
-                                <span class="inline-flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-800 text-sm font-bold rounded-full">
-                                    {{ panier.quantite }}
-                                </span>
-                            </td>
-                            <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-medium">
-                                {{ panier.prix_unitaire|floatformat:2 }} DH
-                            </td>
-                            <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-bold">
-                                {{ panier.total_ligne|floatformat:2 }} DH
-                            </td>
+                            <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{{ panier.quantite }}</td>
+                            <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 text-right">{{ panier.prix_unitaire|floatformat:2 }} DH</td>
+                            <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 text-right">{{ panier.total_ligne|floatformat:2 }} DH</td>
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="5" class="px-4 py-8 text-center">
-                                <div class="flex flex-col items-center py-8">
-                                    <i class="fas fa-shopping-basket text-6xl text-gray-300 mb-4"></i>
-                                    <p class="text-xl font-medium text-gray-600 mb-2">Aucun article</p>
+                            <td colspan="4" class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                                <div class="flex flex-col items-center py-6">
+                                    <i class="fas fa-shopping-basket text-4xl text-gray-300 mb-3"></i>
+                                    <p class="text-lg font-medium text-gray-600 mb-1">Aucun article</p>
                                     <p class="text-sm text-gray-400">Cette commande ne contient aucun article</p>
                                 </div>
                             </td>
                         </tr>
                     {% endfor %}
+                    {% if paniers %}
+                        <tr class="bg-gray-50">
+                            <td colspan="3" class="px-4 py-4 whitespace-nowrap text-sm font-bold text-gray-900 text-right">Total Commande:</td>
+                            <td class="px-4 py-4 whitespace-nowrap text-sm font-bold text-gray-900 text-right">{{ commande.total_cmd|floatformat:2 }} DH</td>
+                        </tr>
+                    {% endif %}
                 </tbody>
             </table>
         </div>
-        
-        <!-- Résumé des totaux -->
-        {% if paniers %}
-        <div class="mt-6 bg-gray-50 rounded-lg p-4 border border-gray-200">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <!-- Total des articles -->
-                <div class="text-center">
-                    <div class="text-sm font-medium text-gray-600 mb-1">Total Articles</div>
-                    <div class="text-lg font-bold text-gray-900">{{ total_articles|floatformat:2 }} DH</div>
-                </div>
-                
-                <!-- Frais de livraison -->
-                <div class="text-center">
-                    <div class="text-sm font-medium text-gray-600 mb-1">Frais de Livraison</div>
-                    <div class="text-lg font-bold {% if commande.frais_livraison %}text-green-600{% else %}text-gray-400{% endif %}">
-                        {% if commande.frais_livraison %}
-                            {{ commande.ville.frais_livraison|default:0|floatformat:2 }} DH
-                        {% else %}
-                            Inclus
-                        {% endif %}
-                    </div>
-                </div>
-                
-                <!-- Total commande -->
-                <div class="text-center">
-                    <div class="text-sm font-medium text-gray-600 mb-1">Total Commande</div>
-                    <div class="text-xl font-bold text-blue-600">{{ commande.total_cmd|floatformat:2 }} DH</div>
-                </div>
-            </div>
-            
-            <!-- Détail du calcul si frais de livraison -->
-            {% if commande.frais_livraison %}
-            <div class="mt-4 pt-4 border-t border-gray-300">
-                <div class="text-xs text-gray-600 text-center">
-                    <i class="fas fa-calculator mr-1"></i>
-                    Calcul: {{ total_articles|floatformat:2 }} DH (articles) + {{ commande.ville.frais_livraison|default:0|floatformat:2 }} DH (livraison) = {{ commande.total_cmd|floatformat:2 }} DH
-                </div>
-            </div>
-            {% endif %}
-        </div>
-        {% endif %}
     </div>
 
     <!-- Section: Opérations sur la Commande -->

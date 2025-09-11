@@ -1590,6 +1590,80 @@ def sav_livrees(request):
 @staff_member_required
 @login_required
 @require_POST
+def sav_creer_nouvelle_commande(request, commande_id):
+    """Créer une nouvelle commande pour les articles défectueux retournés"""
+    from commande.models import Commande, Panier, EtatCommande, EnumEtatCmd
+    from django.db import transaction
+    from django.utils import timezone
+    import json
+    
+    try:
+        commande_originale = get_object_or_404(Commande, id=commande_id)
+        
+        # Récupérer les articles défectueux depuis la requête POST
+        articles_defectueux = json.loads(request.POST.get('articles_defectueux', '[]'))
+        commentaire = request.POST.get('commentaire', '')
+        
+        if not articles_defectueux:
+            messages.error(request, "Aucun article défectueux spécifié.")
+            return redirect('app_admin:sav_commandes_retournees')
+        
+        with transaction.atomic():
+            # Créer une nouvelle commande
+            nouvelle_commande = Commande.objects.create(
+                client=commande_originale.client,
+                ville=commande_originale.ville,
+                total_cmd=0,  # Sera recalculé
+                num_cmd=f"SAV-{commande_originale.num_cmd}",
+                id_yz=f"SAV-{commande_originale.id_yz}",
+                is_upsell=False
+            )
+            
+            total = 0
+            # Créer les paniers pour les articles défectueux
+            for article_data in articles_defectueux:
+                article_id = article_data['article_id']
+                quantite = int(article_data['quantite'])
+                
+                # Récupérer l'article original
+                panier_original = commande_originale.paniers.filter(
+                    article_id=article_id
+                ).first()
+                
+                if panier_original:
+                    Panier.objects.create(
+                        commande=nouvelle_commande,
+                        article=panier_original.article,
+                        quantite=quantite,
+                        sous_total=panier_original.article.prix_unitaire * quantite
+                    )
+                    total += panier_original.article.prix_unitaire * quantite
+            
+            # Mettre à jour le total de la commande
+            nouvelle_commande.total_cmd = total
+            nouvelle_commande.save()
+            
+            # Créer l'état initial "Non affectée"
+            enum_etat = EnumEtatCmd.objects.get(libelle='Non affectée')
+            EtatCommande.objects.create(
+                commande=nouvelle_commande,
+                enum_etat=enum_etat,
+                operateur=request.user.profil_operateur,
+                date_debut=timezone.now(),
+                commentaire=f"Commande SAV créée pour articles défectueux. {commentaire}"
+            )
+            
+            messages.success(request, 
+                f"Nouvelle commande SAV créée avec succès : {nouvelle_commande.num_cmd}")
+            return redirect('commande:detail', commande_id=nouvelle_commande.id)
+            
+    except Exception as e:
+        messages.error(request, f"Erreur lors de la création de la commande SAV : {str(e)}")
+        return redirect('app_admin:sav_commandes_retournees')
+
+@staff_member_required
+@login_required
+@require_POST
 def sav_renvoyer_preparation(request, commande_id):
     """Renvoyer la commande aux opérateurs de préparation suite aux modifications du client"""
     from commande.models import Commande, EtatCommande, EnumEtatCmd

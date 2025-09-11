@@ -76,7 +76,6 @@ INSTALLED_APPS = [
     'Prepacommande',
     'Superpreparation',
     'kpis',
-    'etiquettes_pro',  # Nouvelle app pour étiquettes professionnelles
     
 ]
 
@@ -89,11 +88,9 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'config.middleware_redirect.RedirectAfterLoginMiddleware',
     'config.middleware.SessionTimeoutMiddleware',
     'config.middleware.UserTypeValidationMiddleware',
     'config.middleware.CSRFDebugMiddleware',
-    'commande.middleware.DelayedConfirmationMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django_browser_reload.middleware.BrowserReloadMiddleware',
 ]

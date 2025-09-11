@@ -518,8 +518,11 @@ def liste_prepa(request):
         cmd.etats.filter(date_debut__lt=date_limite_urgence).exists()
     )
     
-    # Pagination serveur désactivée pour laisser la pagination client gérer l'affichage
-    commandes_page = commandes_enrichies
+    # Pagination
+    from django.core.paginator import Paginator
+    paginator = Paginator(commandes_enrichies, items_per_page)
+    page_number = request.GET.get('page', 1)
+    commandes_page = paginator.get_page(page_number)
     
     # Contexte
     context = {
@@ -577,9 +580,18 @@ def commandes_preparees(request):
         etats__date_debut__date=today
     ).count()
 
-    # Désactivation de la pagination serveur: laisser le client gérer
-    items_per_page = request.GET.get('items_per_page', 'all')
-    commandes_page = commandes_preparees
+    # Pagination
+    items_per_page = request.GET.get('items_per_page', 10)
+    try:
+        items_per_page = int(items_per_page)
+        if items_per_page <= 0:
+            items_per_page = 10
+    except (ValueError, TypeError):
+        items_per_page = 10
+
+    paginator = Paginator(commandes_preparees, items_per_page)
+    page_number = request.GET.get('page', 1)
+    commandes_page = paginator.get_page(page_number)
 
     context = {
         'page_title': 'Commandes Préparées',
@@ -708,28 +720,15 @@ def commandes_livrees_partiellement(request):
             return redirect('Superpreparation:home')
     except Operateur.DoesNotExist:
         messages.error(request, "Votre profil opérateur n'existe pas.")
-
-        
         return redirect('login')
     commandes_livrees_partiellement_qs = (
         Commande.objects
         .filter(etats__enum_etat__libelle='Livrée Partiellement')
-        .filter(etats__enum_etat__libelle='En préparation')
+        .filter(etats__enum_etat__libelle='En préparation', etats__operateur=operateur_profile)
         .select_related('client', 'ville', 'ville__region')
         .prefetch_related('paniers__article', 'etats')
         .distinct()
     )
-    
-    # Recherche
-    search_query = request.GET.get('search', '')
-    if search_query:
-        commandes_livrees_partiellement_qs = commandes_livrees_partiellement_qs.filter(
-            Q(id_yz__icontains=search_query) |
-            Q(num_cmd__icontains=search_query) |
-            Q(client__nom__icontains=search_query) |
-            Q(client__prenom__icontains=search_query) |
-            Q(client__numero_tel__icontains=search_query)
-        ).distinct()
     commandes_livrees_partiellement = []
     for commande_originale in commandes_livrees_partiellement_qs:
         commande_renvoi = Commande.objects.filter(
@@ -759,7 +758,6 @@ def commandes_livrees_partiellement(request):
         'profile': operateur_profile,
         'commandes_livrees_partiellement': commandes_livrees_partiellement,
         'commandes_count': len(commandes_livrees_partiellement),
-        'search_query': search_query,
         'active_tab': 'livrees_partiellement',
         'is_readonly': True,
         'is_tracking_page': True
@@ -782,9 +780,6 @@ def commandes_retournees(request):
     # Récupérer le paramètre d'onglet
     tab = request.GET.get('tab', 'actives')
     
-    # Recherche
-    search_query = request.GET.get('search', '')
-    
     # Commandes ACTIVES (sans date_fin) - à traiter
     commandes_actives_qs = (
         Commande.objects
@@ -792,7 +787,7 @@ def commandes_retournees(request):
         .prefetch_related('paniers__article', 'etats')
         .distinct()
     )
-
+    
     # Commandes TRAITÉES (avec date_fin) - déjà traitées
     commandes_traitees_qs = (
         Commande.objects
@@ -800,24 +795,6 @@ def commandes_retournees(request):
         .prefetch_related('paniers__article', 'etats')
         .distinct()
     )
-    
-    # Appliquer la recherche si fournie
-    if search_query:
-        commandes_actives_qs = commandes_actives_qs.filter(
-            Q(id_yz__icontains=search_query) |
-            Q(num_cmd__icontains=search_query) |
-            Q(client__nom__icontains=search_query) |
-            Q(client__prenom__icontains=search_query) |
-            Q(client__numero_tel__icontains=search_query)
-        ).distinct()
-        
-        commandes_traitees_qs = commandes_traitees_qs.filter(
-            Q(id_yz__icontains=search_query) |
-            Q(num_cmd__icontains=search_query) |
-            Q(client__nom__icontains=search_query) |
-            Q(client__prenom__icontains=search_query) |
-            Q(client__numero_tel__icontains=search_query)
-        ).distinct()
 
     commandes_actives = list(commandes_actives_qs)
     commandes_traitees = list(commandes_traitees_qs)
@@ -858,7 +835,6 @@ def commandes_retournees(request):
         'commandes_actives': commandes_actives,
         'commandes_traitees': commandes_traitees,
         'commandes_count': len(commandes_actives) if tab == 'actives' else len(commandes_traitees),
-        'search_query': search_query,
         'stats': stats,
         'active_tab': 'retournees',
         'current_tab': tab,
@@ -1138,9 +1114,15 @@ def detail_prepa(request, pk):
     try:
 
         operateur_profile = request.user.profil_operateur
+
+        
+
         # Autoriser superviseur ou équipe préparation
+
         if not (operateur_profile.is_preparation or operateur_profile.is_superviseur_preparation):
+
             messages.error(request, "Accès non autorisé. Réservé à l'équipe préparation.")
+
             return redirect('Superpreparation:home')
 
             
@@ -2437,18 +2419,33 @@ def modifier_commande_prepa(request, commande_id):
 
 @superviseur_preparation_required
 def modifier_commande_superviseur(request, commande_id):
+
     """Page de modification complète d'une commande pour les superviseurs de préparation"""
+
     import json
+
     from commande.models import Commande, Operation
+
     from parametre.models import Ville
+
+    
+
     try:
+
         # Accepter PREPARATION et SUPERVISEUR_PREPARATION
+
         operateur = Operateur.objects.get(user=request.user, actif=True)
+
         if operateur.type_operateur not in ['PREPARATION', 'SUPERVISEUR_PREPARATION']:
+
             messages.error(request, "Accès non autorisé. Réservé à l'équipe préparation.")
+
             return redirect('Superpreparation:home')
+
     except Operateur.DoesNotExist:
+
         # Pas de profil: continuer (le décorateur a déjà validé l'accès via groupes)
+
         operateur = None
 
     
@@ -3699,7 +3696,37 @@ def api_panier_commande(request, commande_id):
         }, status=500)
 
 @superviseur_preparation_required
-# Fonction d'impression de tickets supprimée
+def imprimer_tickets_preparation(request):
+    """
+    Vue pour imprimer les tickets de préparation SANS changer l'état des commandes.
+    Permet d'imprimer ou de réimprimer des tickets pour les commandes en préparation.
+    """
+    try:
+        operateur_profile = request.user.profil_operateur
+        if not operateur_profile.is_preparation:
+            return HttpResponse("Accès non autorisé.", status=403)
+    except Operateur.DoesNotExist:
+        return HttpResponse("Profil opérateur non trouvé.", status=403)
+    commande_ids_str = request.GET.get('ids')
+    if not commande_ids_str:
+        return HttpResponse("Aucun ID de commande fourni.", status=400)
+    try:
+        commande_ids = [int(id) for id in commande_ids_str.split(',') if id.isdigit()]
+    except ValueError:
+        return HttpResponse("IDs de commande invalides.", status=400)
+    commandes = Commande.objects.filter(
+        id__in=commande_ids,
+        etats__operateur=operateur_profile,
+        etats__enum_etat__libelle='En préparation',
+        etats__date_fin__isnull=True
+    ).distinct()
+
+    if not commandes.exists():
+        messages.info(request, "L'impression des tickets est désactivée. Utilisez les outils de gestion.")
+        return redirect('Superpreparation:liste_prepa')
+    code128 = barcode.get_barcode_class('code128')
+    messages.info(request, "L'impression des tickets a été retirée de l'interface superviseur.")
+    return redirect('Superpreparation:liste_prepa')
 
 
 def get_operateur_display_name(operateur):
@@ -5420,14 +5447,53 @@ def commandes_confirmees(request):
     # Tri par date de confirmation (plus récentes en premier)
     commandes_confirmees = commandes_confirmees.order_by('-etats__date_debut')
 
-    # Fournir un page_obj compatible pour le template (une seule page avec toutes les commandes)
+    # Créer une copie des données non paginées pour les statistiques AVANT la pagination
     commandes_non_paginees = commandes_confirmees
-    total_count_confirmees = commandes_confirmees.count()
-    paginator = Paginator(commandes_confirmees, total_count_confirmees or 1)
-    page_obj = paginator.get_page(1)
-    items_per_page = request.GET.get('items_per_page', 'all')
+
+    # Paramètres de pagination flexible
+    items_per_page = request.GET.get('items_per_page', 25)
     start_range = request.GET.get('start_range')
     end_range = request.GET.get('end_range')
+
+    # Gestion de la pagination flexible
+    if start_range and end_range:
+        try:
+            start_range = int(start_range)
+            end_range = int(end_range)
+            if start_range > 0 and end_range >= start_range:
+                # Pagination par plage personnalisée
+                commandes_confirmees = commandes_confirmees[start_range-1:end_range]
+                paginator = Paginator(commandes_confirmees, end_range - start_range + 1)
+                page_obj = paginator.get_page(1)
+            else:
+                # Plage invalide, utiliser la pagination normale
+                items_per_page = 25
+                paginator = Paginator(commandes_confirmees, items_per_page)
+                page_number = request.GET.get('page', 1)
+                page_obj = paginator.get_page(page_number)
+        except (ValueError, TypeError):
+            # Erreur de conversion, utiliser la pagination normale
+            items_per_page = 25
+            paginator = Paginator(commandes_confirmees, items_per_page)
+            page_number = request.GET.get('page', 1)
+            page_obj = paginator.get_page(page_number)
+    else:
+        # Pagination normale
+        if items_per_page == 'all':
+            # Afficher toutes les commandes
+            paginator = Paginator(commandes_confirmees, commandes_confirmees.count())
+            page_obj = paginator.get_page(1)
+        else:
+            try:
+                items_per_page = int(items_per_page)
+                if items_per_page <= 0:
+                    items_per_page = 25
+            except (ValueError, TypeError):
+                items_per_page = 25
+            
+            paginator = Paginator(commandes_confirmees, items_per_page)
+            page_number = request.GET.get('page', 1)
+            page_obj = paginator.get_page(page_number)
 
     # Statistiques
     today = timezone.now().date()
@@ -5487,7 +5553,13 @@ def commandes_confirmees(request):
             'page_obj': page_obj
         }, request=request)
         
-        html_pagination = ''
+        html_pagination = render_to_string('Superpreparation/partials/_confirmees_pagination.html', {
+            'page_obj': page_obj,
+            'search_query': search_query,
+            'items_per_page': items_per_page,
+            'start_range': start_range,
+            'end_range': end_range
+        }, request=request)
         
         html_pagination_info = render_to_string('Superpreparation/partials/_confirmees_pagination_info.html', {
             'page_obj': page_obj
@@ -5599,15 +5671,38 @@ def get_article_variants(request, article_id):
             'error': 'Erreur lors de la récupération des variantes'
         }, status=500)
 
+def generate_barcode_for_commande(commande_id_yz):
+    """Fonction utilitaire pour générer le code-barres d'une commande"""
+    try:
+        barcode_data = str(commande_id_yz)
+        print(f"📊 Génération du code-barres: {barcode_data}")
+        
+        # Créer un code-barres avec les mêmes options que Prepacommande
+        code128 = barcode.get_barcode_class("code128")
+        barcode_instance = code128(barcode_data, writer=ImageWriter())
+        buffer = BytesIO()
+        barcode_instance.write(
+            buffer,
+            options={
+                "write_text": False,
+                "module_height": 4.0,  # Hauteur augmentée pour meilleure lisibilité
+                "module_width": 0.15,  # Largeur augmentée pour impression claire
+                "quiet_zone": 2.0,     # Zone de silence autour du code-barres
+            },
+        )
+        barcode_base64 = base64.b64encode(buffer.getvalue()).decode()
+        print(f"✅ Code-barres généré avec succès (dimensions optimisées)")
+        return barcode_base64
+    except Exception as barcode_error:
+            print(f"❌ Erreur lors de la génération du code-barres: {str(barcode_error)}")
+    return ""
 
 
 @superviseur_preparation_required
-def api_etiquettes_articles(request):
-    """API pour récupérer le contenu HTML des étiquettes des articles"""
+def api_ticket_commande(request):
+    """API pour récupérer le contenu HTML du ticket de commande"""
     try:
         ids = request.GET.get('ids')
-        format_type = request.GET.get('format', 'qr')  # 'qr' ou 'barcode'
-        
         if not ids:
             return JsonResponse({'error': 'IDs des commandes requis'}, status=400)
         

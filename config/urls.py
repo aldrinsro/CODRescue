@@ -49,7 +49,6 @@ urlpatterns = [
     path('parametre/', include('parametre.urls')),
     path('synchronisation/', include('synchronisation.urls')),
     path('kpis/', include('kpis.urls')),
-    path('etiquettes-pro/', include('etiquettes_pro.urls')),  # Nouvelle app étiquettes professionnelles
     # Notifications app supprimée
     
     # Pages 404 personnalisées par interface

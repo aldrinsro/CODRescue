@@ -100,52 +100,24 @@
             </button>
             <div class="mt-2 space-y-1 pl-8 hidden" id="articles-dropdown">
                 <a href="{% url 'Superpreparation:liste_articles' %}" class="flex items-center px-4 py-2 text-white hover:text-white transition-all duration-200 transform hover:translate-x-1 border-l-4 border-transparent hover:border-indigo-400 hover:shadow-lg" style="hover:background-color: var(--preparation-hover-bg);">
-                    <i class="fas fa-box mr-3 text-blue-400 transition-transform duration-200 flex-shrink-0"></i>
+                    <i class="fas fa-list mr-3 text-white transition-transform duration-200 flex-shrink-0"></i>
                     <span class="whitespace-nowrap">Liste des articles</span>
                 </a>
                 <a href="{% url 'Superpreparation:liste_promotions' %}" class="flex items-center px-4 py-2 text-white hover:text-white transition-all duration-200 transform hover:translate-x-1 border-l-4 border-transparent hover:border-indigo-400 hover:shadow-lg" style="hover:background-color: var(--preparation-hover-bg);">
-                    <i class="fas fa-tags mr-3 text-purple-400 transition-transform duration-200 flex-shrink-0"></i>
+                    <i class="fas fa-list mr-3 text-white transition-transform duration-200 flex-shrink-0"></i>
                     <span class="whitespace-nowrap">Liste des promotions</span>
                 </a>
                 <a href="{% url 'Superpreparation:liste_variantes' %}" class="flex items-center px-4 py-2 text-white hover:text-white transition-all duration-200 transform hover:translate-x-1 border-l-4 border-transparent hover:border-indigo-400 hover:shadow-lg" style="hover:background-color: var(--preparation-hover-bg);">
-                    <i class="fas fa-box mr-3 text-indigo-400 transition-transform duration-200 flex-shrink-0"></i>
+                    <i class="fas fa-list mr-3 text-white transition-transform duration-200 flex-shrink-0"></i>
                     <span class="whitespace-nowrap">Liste des variantes d'articles</span>
                 </a>
                 <a href="{% url 'Superpreparation:gestion_couleurs_pointures' %}" class="flex items-center px-4 py-2 text-white hover:text-white transition-all duration-200 transform hover:translate-x-1 border-l-4 border-transparent hover:border-indigo-400 hover:shadow-lg" style="hover:background-color: var(--preparation-hover-bg);">
-                    <i class="fas fa-palette mr-3 text-pink-400 transition-transform duration-200 flex-shrink-0"></i>
+                    <i class="fas fa-palette mr-3 text-white transition-transform duration-200 flex-shrink-0"></i>
                     <span class="whitespace-nowrap">Gestion des attributs des articles</span>
                 </a>
             </div>
         </div>
         
-        <!-- Section Étiquettes Professionnelles -->
-        <div class="mb-6">
-            <button class="flex items-center justify-between w-full px-4 py-3 text-white hover:text-white transition-all duration-200 transform hover:translate-x-1 border-l-4 border-transparent hover:border-cyan-400 hover:shadow-lg" style="hover:background-color: var(--preparation-hover-bg);" onclick="toggleDropdown('etiquettes-dropdown')">
-                <div class="flex items-center">
-                    <i class="fas fa-tags text-lg mr-3 text-white transition-transform duration-200 flex-shrink-0"></i>
-                    <span class="whitespace-nowrap">Étiquettes Professionnelles</span>
-                </div>
-                <i class="fas fa-angle-down transition-transform duration-300" id="etiquettes-dropdown-icon"></i>
-            </button>
-            <div class="mt-2 space-y-1 pl-8 hidden" id="etiquettes-dropdown">
-                <a href="{% url 'etiquettes_pro:dashboard' %}" class="flex items-center px-4 py-2 text-white hover:text-white transition-all duration-200 transform hover:translate-x-1 border-l-4 border-transparent hover:border-blue-400 hover:shadow-lg" style="hover:background-color: var(--preparation-hover-bg);">
-                    <i class="fas fa-tachometer-alt mr-3 text-blue-400 transition-transform duration-200 flex-shrink-0"></i>
-                    <span class="whitespace-nowrap">Tableau de bord</span>
-                </a>
-                <a href="{% url 'etiquettes_pro:template_list' %}" class="flex items-center px-4 py-2 text-white hover:text-white transition-all duration-200 transform hover:translate-x-1 border-l-4 border-transparent hover:border-blue-400 hover:shadow-lg" style="hover:background-color: var(--preparation-hover-bg);">
-                    <i class="fas fa-file-alt mr-3 text-blue-400 transition-transform duration-200 flex-shrink-0"></i>
-                    <span class="whitespace-nowrap">Modèles d'étiquettes</span>
-                </a>
-                <a href="{% url 'etiquettes_pro:template_create' %}" class="flex items-center px-4 py-2 text-white hover:text-white transition-all duration-200 transform hover:translate-x-1 border-l-4 border-transparent hover:border-green-400 hover:shadow-lg" style="hover:background-color: var(--preparation-hover-bg);">
-                    <i class="fas fa-plus-circle mr-3 text-green-400 transition-transform duration-200 flex-shrink-0"></i>
-                    <span class="whitespace-nowrap">Créer un modèle</span>
-                </a>
-                <a href="{% url 'etiquettes_pro:etiquette_list' %}" class="flex items-center px-4 py-2 text-white hover:text-white transition-all duration-200 transform hover:translate-x-1 border-l-4 border-transparent hover:border-green-400 hover:shadow-lg" style="hover:background-color: var(--preparation-hover-bg);">
-                    <i class="fas fa-list mr-3 text-green-400 transition-transform duration-200 flex-shrink-0"></i>
-                    <span class="whitespace-nowrap">Mes étiquettes</span>
-                </a>
-            </div>
-        </div>
 
         
         <!-- Section Mon Profil -->

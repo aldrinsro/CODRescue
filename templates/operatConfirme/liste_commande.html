@@ -73,11 +73,6 @@
                 Retournées
                 <span class="ml-2 px-2 py-0.5 rounded-full text-xs font-medium tab-badge">{{ stats.retournees|default:0 }}</span>
             </a>
-            <a href="?tab=confirmation_decalee" class="px-3 py-4 border-b-2 font-medium text-sm transition-all duration-300 {% if current_tab == 'confirmation_decalee' %}tab-active{% else %}tab-inactive hover:text-gray-700 hover:border-gray-300{% endif %}">
-                <i class="fas fa-clock mr-1" style="color: #f39c12;"></i>
-                Confirmation Décalée
-                <span class="ml-2 px-2 py-0.5 rounded-full text-xs font-medium tab-badge">{{ stats.confirmation_decalee|default:0 }}</span>
-            </a>
         </nav>
     </div>
 
@@ -153,9 +148,6 @@
                     <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Date</th>
                     <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Total</th>
                     <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">État</th>
-                    {% if current_tab == 'confirmation_decalee' %}
-                    <th class="px-4 py-3 text-center text-xs font-medium text-white uppercase tracking-wider">Expire le</th>
-                    {% endif %}
                     <th class="px-4 py-3 text-center text-xs font-medium text-white uppercase tracking-wider">Panier</th>
                     <th class="px-4 py-3 text-center text-xs font-medium text-white uppercase tracking-wider">Actions</th>
                 </tr>
@@ -219,36 +211,6 @@
                         {% endif %}
                         {% endwith %}
                     </td>
-                    {% if current_tab == 'confirmation_decalee' %}
-                    <td class="px-4 py-3 text-center">
-                        {% with etat_actuel=commande.etats.all|first %}
-                        {% if etat_actuel.date_fin_delayed %}
-                            <div class="flex flex-col items-center">
-                                <span class="text-sm font-medium text-gray-700">
-                                    {{ etat_actuel.date_fin_delayed|date:"d/m/Y" }}
-                                </span>
-                                <span class="text-xs text-gray-500">
-                                    {{ etat_actuel.date_fin_delayed|date:"H:i" }}
-                                </span>
-                                {% now "Y-m-d H:i:s" as now_str %}
-                                {% if etat_actuel.date_fin_delayed|date:"Y-m-d H:i:s" <= now_str %}
-                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 mt-1">
-                                        <i class="fas fa-exclamation-triangle mr-1"></i>
-                                        Expiré
-                                    </span>
-                                {% else %}
-                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 mt-1">
-                                        <i class="fas fa-clock mr-1"></i>
-                                        En attente
-                                    </span>
-                                {% endif %}
-                            </div>
-                        {% else %}
-                            <span class="text-xs text-gray-400">-</span>
-                        {% endif %}
-                        {% endwith %}
-                    </td>
-                    {% endif %}
                     <td class="px-4 py-4 whitespace-nowrap text-center">
                         <button class="text-blue-600 hover:text-blue-800" onclick="viewCart('{{ commande.id }}')">
                             <i class="fas fa-shopping-basket"></i>
