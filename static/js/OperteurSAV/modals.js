@@ -904,8 +904,21 @@ function mettreAJourResumeLivraisonPartielle() {
     let totalLivres = 0;
     let totalRenvoyes = 0;
     let totalValeurLivree = 0;
+    
+    // Récupérer les informations sur les frais de livraison
+    const totalCommandeElement = document.getElementById('totalCommandeLivraison');
+    const fraisLivraison = parseFloat(totalCommandeElement?.dataset.fraisLivraison || '0') || 0;
+    const inclureFrais = totalCommandeElement?.dataset.inclureFrais === 'true';
 
-    document.querySelectorAll('.article-livraison-card').forEach(card => {
+    const cards = document.querySelectorAll('.article-livraison-card');
+    console.log(`🔧 DEBUG: Trouvé ${cards.length} cartes d'articles`);
+    
+    if (cards.length === 0) {
+        console.error('❌ Aucune carte d\'article trouvée avec la classe .article-livraison-card');
+        return;
+    }
+    
+    cards.forEach(card => {
         const panierId = parseInt(card.dataset.panierId);
         
         // Récupérer les données directement depuis les attributs data-* du DOM
@@ -924,6 +937,8 @@ function mettreAJourResumeLivraisonPartielle() {
         const input = card.querySelector('.quantite-livrer-input');
         const quantiteLivree = checkbox?.checked ? (parseInt(input?.value || '0') || 0) : 0;
         const quantiteRenvoyee = quantiteMax - quantiteLivree;
+        
+        console.log(`🔧 DEBUG: Article ${nom} - Checkbox cochée: ${checkbox?.checked}, Quantité: ${input?.value}, Quantité livrée: ${quantiteLivree}`);
 
         if (quantiteLivree > 0) {
             articlesLivres.push({ 
@@ -959,20 +974,51 @@ function mettreAJourResumeLivraisonPartielle() {
 
     const livresInput = document.getElementById('articlesLivresJsonInput');
     const renvoyesInput = document.getElementById('articlesRenvoyesJsonInput');
-    if (livresInput) livresInput.value = JSON.stringify(articlesLivres);
-    if (renvoyesInput) renvoyesInput.value = JSON.stringify(articlesRenvoyes);
+    
+    console.log(`🔧 DEBUG: ${articlesLivres.length} articles à livrer, ${articlesRenvoyes.length} articles à renvoyer`);
+    console.log('🔧 DEBUG: Articles livrés:', articlesLivres);
+    console.log('🔧 DEBUG: Articles renvoyés:', articlesRenvoyes);
+    
+    if (livresInput) {
+        livresInput.value = JSON.stringify(articlesLivres);
+        console.log('🔧 DEBUG: Champ articlesLivresJsonInput rempli:', livresInput.value);
+    } else {
+        console.error('❌ Champ articlesLivresJsonInput non trouvé');
+    }
+    
+    if (renvoyesInput) {
+        renvoyesInput.value = JSON.stringify(articlesRenvoyes);
+        console.log('🔧 DEBUG: Champ articlesRenvoyesJsonInput rempli:', renvoyesInput.value);
+    } else {
+        console.error('❌ Champ articlesRenvoyesJsonInput non trouvé');
+    }
 
     const aucunDiv = document.getElementById('aucunArticleRenvoyer');
     if (aucunDiv) {
         if (totalRenvoyes > 0) aucunDiv.classList.add('hidden'); else aucunDiv.classList.remove('hidden');
     }
 
+    // Calculer les valeurs avec frais de livraison si applicable
+    const totalValeurLivreeAvecFrais = inclureFrais ? (totalValeurLivree + fraisLivraison) : totalValeurLivree;
+    
     const totalLivresEl = document.getElementById('totalArticlesLivres');
     const totalRenvoyesEl = document.getElementById('totalArticlesRenvoyes');
     const totalValeurEl = document.getElementById('totalValeurLivree');
     if (totalLivresEl) totalLivresEl.textContent = totalLivres;
     if (totalRenvoyesEl) totalRenvoyesEl.textContent = totalRenvoyes;
-    if (totalValeurEl) totalValeurEl.textContent = `${totalValeurLivree.toFixed(2)} DH`;
+    if (totalValeurEl) totalValeurEl.textContent = `${totalValeurLivreeAvecFrais.toFixed(2)} DH`;
+    
+    // Mettre à jour le pourcentage de livraison
+    const totalCommandeOriginal = parseFloat(totalCommandeElement?.dataset.totalCommande || '0') || 0;
+    const pourcentageLivraison = totalCommandeOriginal > 0 ? (totalValeurLivreeAvecFrais / totalCommandeOriginal * 100) : 0;
+    
+    const pourcentageEl = document.getElementById('pourcentageLivraison');
+    const barreProgresEl = document.getElementById('barreProgresLivraison');
+    if (pourcentageEl) pourcentageEl.textContent = `${pourcentageLivraison.toFixed(1)}%`;
+    if (barreProgresEl) barreProgresEl.style.width = `${Math.min(pourcentageLivraison, 100)}%`;
+    
+    console.log(`🔧 DEBUG: Total valeur livrée: ${totalValeurLivree} DH${inclureFrais ? ` + Frais: ${fraisLivraison} DH = ${totalValeurLivreeAvecFrais} DH` : ''}`);
+    console.log(`🔧 DEBUG: Pourcentage de livraison: ${pourcentageLivraison.toFixed(1)}%`);
 
     mettreAJourSectionArticlesRenvoyes(articlesRenvoyes);
 }
@@ -1049,14 +1095,47 @@ function mettreAJourSectionArticlesRenvoyes(articlesRenvoyes = []) {
 
 function submitLivraisonPartielleUnified(e) {
     e.preventDefault();
+    
     // S'assurer que les JSON sont à jour
     mettreAJourResumeLivraisonPartielle();
+    
+    // Vérifier qu'il y a au moins un article à livrer
+    const articlesLivresInput = document.getElementById('articlesLivresJsonInput');
+    const articlesRenvoyesInput = document.getElementById('articlesRenvoyesJsonInput');
+    
+    if (!articlesLivresInput || !articlesRenvoyesInput) {
+        alert('❌ Erreur: Champs de données manquants');
+        return;
+    }
+    
+    let articlesLivres = [];
+    let articlesRenvoyes = [];
+    
+    try {
+        articlesLivres = JSON.parse(articlesLivresInput.value || '[]');
+        articlesRenvoyes = JSON.parse(articlesRenvoyesInput.value || '[]');
+    } catch (error) {
+        console.error('❌ Erreur de parsing JSON:', error);
+        alert('❌ Erreur: Données invalides');
+        return;
+    }
+    
+    console.log(`🔧 DEBUG: Articles à livrer: ${articlesLivres.length}, Articles à renvoyer: ${articlesRenvoyes.length}`);
+    console.log('🔧 DEBUG: Articles livrés:', articlesLivres);
+    console.log('🔧 DEBUG: Articles renvoyés:', articlesRenvoyes);
+    
+    if (articlesLivres.length === 0) {
+        alert('❌ Erreur: Aucun article à livrer spécifié. Veuillez sélectionner au moins un article.');
+        return;
+    }
+    
     const form = e.currentTarget;
     const submitBtn = document.getElementById('confirmerLivraisonPartielleBtn');
     if (submitBtn) {
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Traitement...';
     }
+    
     const formData = new FormData(form);
     fetch(form.action, { method: 'POST', body: formData })
         .then(r => r.json())

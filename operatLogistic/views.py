@@ -761,63 +761,91 @@ def livraison_partielle(request, commande_id):
             return JsonResponse({'success': False, 'error': 'Aucun article à livrer spécifié.'})
 
         with transaction.atomic():
-            # === Réintégration du stock pour les articles renvoyés: déléguée à la préparation ===
-            # Construire un récap détaillé côté backend (prix calculés selon compteur/upsell)
+            # === Construire un récap détaillé des articles renvoyés (prix calculés selon compteur/upsell) ===
             recap_articles_renvoyes = []
             if articles_renvoyes:
                 for article_data in articles_renvoyes:
                     article_id = article_data.get('id') or article_data.get('article_id')
                     variante_id = article_data.get('variante_id')
-                    nom_article = None
+                    nom_article = article_data.get('nom', '')  # Utiliser le nom du frontend
                     quantite_raw = article_data.get('quantite', 0)
                     try:
                         quantite = int(quantite_raw) if quantite_raw else 0
                     except (ValueError, TypeError):
                         quantite = 0
+                    
                     if article_id and quantite > 0:
                         try:
                             from article.models import Article, VarianteArticle
                             article_obj = Article.objects.get(id=article_id)
-                            nom_article = article_obj.nom
+                            # Utiliser le nom du frontend s'il est fourni, sinon celui de la DB
+                            if not nom_article:
+                                nom_article = article_obj.nom
+                            
                             # Calcul prix upsell s'il y a lieu
                             prix_unitaire_calc = article_obj.prix_unitaire
+                            prix_actuel_calc = article_obj.prix_unitaire
+                            
                             if commande.compteur > 0 and getattr(article_obj, 'isUpsell', False):
                                 if commande.compteur == 1 and article_obj.prix_upsell_1:
-                                    prix_unitaire_calc = article_obj.prix_upsell_1
+                                    prix_actuel_calc = article_obj.prix_upsell_1
                                 elif commande.compteur == 2 and article_obj.prix_upsell_2:
-                                    prix_unitaire_calc = article_obj.prix_upsell_2
+                                    prix_actuel_calc = article_obj.prix_upsell_2
                                 elif commande.compteur == 3 and article_obj.prix_upsell_3:
-                                    prix_unitaire_calc = article_obj.prix_upsell_3
+                                    prix_actuel_calc = article_obj.prix_upsell_3
                                 elif commande.compteur >= 4 and article_obj.prix_upsell_4:
-                                    prix_unitaire_calc = article_obj.prix_upsell_4
-                            # Enrichir le nom si variante fournie
+                                    prix_actuel_calc = article_obj.prix_upsell_4
+                            
+                            # Récupérer les détails de la variante
+                            variante_details = {}
                             if variante_id:
                                 try:
                                     variante_obj = VarianteArticle.objects.get(id=variante_id, article=article_obj)
-                                    details = []
-                                    if getattr(variante_obj, 'couleur', None):
-                                        details.append(str(variante_obj.couleur))
-                                    if getattr(variante_obj, 'pointure', None):
-                                        details.append(str(variante_obj.pointure))
-                                    if getattr(variante_obj, 'taille', None):
-                                        details.append(str(variante_obj.taille))
-                                    if details:
-                                        nom_article = f"{nom_article} - {' / '.join(details)}"
-                                except Exception:
-                                    pass
-                        except Exception:
-                            # En cas d'erreur, fallback sûr
-                            article_obj = None
-                            prix_unitaire_calc = 0.0
+                                    variante_details = {
+                                        'id': variante_obj.id,
+                                        'couleur': variante_obj.couleur.nom if variante_obj.couleur else None,
+                                        'pointure': variante_obj.pointure.pointure if variante_obj.pointure else None,
+                                        'reference_variante': variante_obj.reference_variante
+                                    }
+                                except Exception as e:
+                                    print(f"DEBUG: Erreur récupération variante {variante_id}: {e}")
+                                    variante_details = {
+                                        'id': variante_id,
+                                        'couleur': None,
+                                        'pointure': None,
+                                        'reference_variante': None
+                                    }
+                            
                             recap_articles_renvoyes.append({
                                 'article_id': article_id,
                                 'variante_id': variante_id,
-                                'nom': nom_article or '',
+                                'nom': nom_article,
                                 'quantite': quantite,
                                 'prix_unitaire': float(prix_unitaire_calc),
-                                'prix_actuel': float(prix_unitaire_calc),
+                                'prix_actuel': float(prix_actuel_calc),
                                 'is_upsell': bool(getattr(article_obj, 'isUpsell', False)),
-                                'compteur': int(commande.compteur or 0)
+                                'compteur': int(commande.compteur or 0),
+                                'variante_details': variante_details
+                            })
+                            
+                        except Exception as e:
+                            print(f"DEBUG: Erreur traitement article renvoyé {article_id}: {e}")
+                            # En cas d'erreur, utiliser les données du frontend
+                            recap_articles_renvoyes.append({
+                                'article_id': article_id,
+                                'variante_id': variante_id,
+                                'nom': nom_article or f'Article ID {article_id}',
+                                'quantite': quantite,
+                                'prix_unitaire': float(article_data.get('prix_unitaire', 0)),
+                                'prix_actuel': float(article_data.get('prix_actuel', 0)),
+                                'is_upsell': bool(article_data.get('is_upsell', False)),
+                                'compteur': int(article_data.get('compteur', 0)),
+                                'variante_details': {
+                                    'id': variante_id,
+                                    'couleur': None,
+                                    'pointure': None,
+                                    'reference_variante': None
+                                }
                             })
             
             # 1. Terminer l'état "En cours de livraison" actuel
@@ -841,8 +869,19 @@ def livraison_partielle(request, commande_id):
                 commentaire=commentaire_etat
             )
             
-            # 4. Ne plus créer de commande de renvoi: seulement mettre à jour la commande actuelle
-            articles_renvoyes = []
+            # 4. Traiter les articles renvoyés (supprimer de la commande actuelle)
+            articles_renvoyes_ids = []
+            if articles_renvoyes:
+                for article_data in articles_renvoyes:
+                    panier_id = article_data.get('panier_id')
+                    if panier_id:
+                        try:
+                            panier = commande.paniers.get(id=panier_id)
+                            articles_renvoyes_ids.append(panier_id)
+                            print(f"DEBUG: Article renvoyé supprimé - Panier ID: {panier_id}, Article: {panier.article.nom}")
+                            panier.delete()  # Supprimer complètement le panier renvoyé
+                        except Exception as e:
+                            print(f"DEBUG: Erreur suppression panier {panier_id}: {e}")
             
             # 5. Mettre à jour les quantités des articles livrés dans la commande originale
             for article_data in articles_livres:
@@ -916,11 +955,21 @@ def livraison_partielle(request, commande_id):
                     print(f"  - Prix actuel: {ancien_prix_actuel} → {prix_unitaire}")
                     print(f"  - Sous-total: {ancien_sous_total} → {panier.sous_total}")
             
-            # 7. Recalculer le total de la commande originale
-            total_commande = commande.paniers.aggregate(
+            # 7. Recalculer le total de la commande originale avec frais de livraison
+            sous_total_articles = commande.paniers.aggregate(
                 total=Sum('sous_total')
             )['total'] or 0
-            commande.total_cmd = float(total_commande)
+            
+            # Ajouter les frais de livraison si activés
+            if commande.frais_livraison and commande.ville:
+                frais_livraison = float(commande.ville.frais_livraison or 0)
+                total_commande = float(sous_total_articles) + frais_livraison
+                print(f"DEBUG LIVRAISON PARTIELLE: Sous-total articles: {sous_total_articles} + Frais livraison: {frais_livraison} = Total: {total_commande}")
+            else:
+                total_commande = float(sous_total_articles)
+                print(f"DEBUG LIVRAISON PARTIELLE: Sous-total articles: {sous_total_articles} (sans frais de livraison)")
+            
+            commande.total_cmd = total_commande
             commande.save()
             
             # 8. Construire les récapitulatifs pour l'opération (sans renvoi)
@@ -928,6 +977,8 @@ def livraison_partielle(request, commande_id):
             for article_data in articles_livres:
                 article_id = article_data.get('article_id') or article_data.get('id')
                 variante_id = article_data.get('variante_id')
+                quantite_livree = article_data.get('quantite', 0)
+                
                 try:
                     from article.models import Article
                     article = Article.objects.get(id=article_id)
@@ -945,10 +996,21 @@ def livraison_partielle(request, commande_id):
                             prix_unitaire = article.prix_upsell_4
                 except Exception:
                     prix_unitaire = 0.0
+                
+                # Trouver la quantité originale de l'article avant livraison partielle
+                quantite_originale = 0
+                for panier_original in commande.paniers.all():
+                    if panier_original.article.id == article_id:
+                        quantite_originale = panier_original.quantite
+                        break
+                
                 payload_item = {
                     'article_id': article_id,
-                    'quantite': article_data.get('quantite', 0),
-                    'prix_unitaire': float(prix_unitaire)
+                    'quantite_livree': quantite_livree,
+                    'quantite_originale': quantite_originale,
+                    'quantite_renvoyee': quantite_originale - quantite_livree,
+                    'prix_unitaire': float(prix_unitaire),
+                    'est_livraison_partielle': quantite_livree < quantite_originale
                 }
                 if variante_id:
                     payload_item['variante_id'] = variante_id
@@ -959,8 +1021,28 @@ def livraison_partielle(request, commande_id):
                 'articles_livres_count': len(articles_livres_json),
                 'articles_renvoyes_count': len(recap_articles_renvoyes),
                 'articles_livres': articles_livres_json,
-                'recap_articles_renvoyes': recap_articles_renvoyes
+                'recap_articles_renvoyes': recap_articles_renvoyes,
+                'articles_renvoyes_ids': articles_renvoyes_ids,  # IDs des paniers supprimés
+                'compteur_change': {
+                    'ancien_compteur': ancien_compteur,
+                    'nouveau_compteur': commande.compteur,
+                    'total_quantite_upsell_restante': total_quantite_upsell_restante
+                },
+                'totaux': {
+                    'sous_total_articles': float(sous_total_articles),
+                    'total_commande': float(total_commande),
+                    'frais_livraison_inclus': bool(commande.frais_livraison and commande.ville)
+                }
             }
+            
+            # 9. Créer une opération pour tracer la livraison partielle
+            Operation.objects.create(
+                commande=commande,
+                type_operation='LIVRAISON_PARTIELLE',
+                operateur=operateur,
+                date_operation=timezone.now(),
+                conclusion=json.dumps(operation_conclusion_data, ensure_ascii=False)
+            )
             
             if recap_articles_renvoyes:
                 messages.success(request, 
@@ -974,14 +1056,16 @@ def livraison_partielle(request, commande_id):
                 'message': f'Livraison partielle effectuée avec succès',
                 'articles_livres': len(articles_livres),
                 'articles_renvoyes': len(recap_articles_renvoyes),
-                'commande_renvoi_id': None,
-                'commande_renvoi_num': None,
-                'recap_articles_renvoyes': operation_conclusion_data['recap_articles_renvoyes'],
-                'recap_stock_commande': [],
+                'recap_articles_renvoyes': recap_articles_renvoyes,
                 'compteur_change': {
                     'ancien_compteur': ancien_compteur,
                     'nouveau_compteur': commande.compteur,
                     'total_quantite_upsell_restante': total_quantite_upsell_restante
+                },
+                'totaux': {
+                    'sous_total_articles': float(sous_total_articles),
+                    'total_commande': float(total_commande),
+                    'frais_livraison_inclus': bool(commande.frais_livraison and commande.ville)
                 }
             })
                 

@@ -594,7 +594,7 @@
     {% endif %}
 
     <!-- Section Actions de Livraison (SAV) -->
-    {% if commande.etat_actuel.enum_etat.libelle != 'Retournée' %}
+    {% if commande.etat_actuel.enum_etat.libelle != 'Retournée' and commande.etat_actuel.enum_etat.libelle != 'Livrée Partiellement'  %}
     <div class="bg-white rounded-xl shadow-lg border p-6 md:p-8 mt-6" style="border-color: var(--logistic-border);">
         <h2 class="text-2xl font-bold flex items-center mb-6" style="color: var(--logistic-primary);">
             <i class="fas fa-shipping-fast mr-2"></i>Actions de Livraison (SAV)
@@ -775,8 +775,8 @@
                     {% csrf_token %}
                     
                     <!-- Ces champs seront remplis dynamiquement par JavaScript juste avant la soumission -->
-                    <input type="hidden" name="articles_livres_json" id="articlesLivresJsonInput">
-                    <input type="hidden" name="articles_renvoyes_json" id="articlesRenvoyesJsonInput">
+                    <input type="hidden" name="articles_livres" id="articlesLivresJsonInput">
+                    <input type="hidden" name="articles_renvoyes" id="articlesRenvoyesJsonInput">
                     
                     <!-- Section Articles à Livrer -->
                     <div class="mb-8">
@@ -898,7 +898,7 @@
                             <i class="fas fa-calculator mr-2"></i>
                             Résumé de la Livraison Partielle
                         </h4>
-                        <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+                        <div class="grid grid-cols-1 md:grid-cols-6 gap-3">
                             <div class="text-center">
                                 <div class="text-2xl font-bold text-green-600" id="totalArticlesLivres">0</div>
                                 <div class="text-sm text-gray-600">Articles à livrer</div>
@@ -915,11 +915,22 @@
                                 <div class="text-2xl font-bold text-red-600" id="totalValeurRenvoyee">0.00 DH</div>
                                 <div class="text-sm text-gray-600">Valeur renvoyée</div>
                             </div>
+                            {% if commande.frais_livraison and commande.ville.frais_livraison %}
+                            <div class="text-center">
+                                <div class="text-2xl font-bold text-indigo-600" id="totalFraisLivraison">{{ commande.ville.frais_livraison|floatformat:2 }} DH</div>
+                                <div class="text-sm text-gray-600">Frais de livraison</div>
+                            </div>
+                            {% endif %}
                             <div class="text-center">
                                 <div class="text-2xl font-bold text-purple-600" 
                                      id="totalCommandeLivraison" 
-                                     data-total-commande="{{ commande.total_cmd|stringformat:"%.2f" }}">{{ commande.total_cmd|floatformat:2 }} DH</div>
+                                     data-total-commande="{{ commande.total_cmd|stringformat:"%.2f" }}"
+                                     data-frais-livraison="{{ commande.ville.frais_livraison|default:0|stringformat:"%.2f" }}"
+                                     data-inclure-frais="{{ commande.frais_livraison|yesno:'true,false' }}">{{ commande.total_cmd|floatformat:2 }} DH</div>
                                 <div class="text-sm text-gray-600">Total original</div>
+                                {% if commande.frais_livraison and commande.ville.frais_livraison %}
+                                <div class="text-xs text-gray-500">(incl. frais)</div>
+                                {% endif %}
                             </div>
                         </div>
                         
