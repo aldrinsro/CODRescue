@@ -332,6 +332,41 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
+<!-- Activation du bouton hamburger (aligné aux autres pages Superpréparation) -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var menuToggle = document.getElementById('menu-toggle');
+    var body = document.body;
+    if (!menuToggle) return;
+
+    function persistSidebarState() {
+        try {
+            var state = body.classList.contains('sidebar-collapsed') ? 'collapsed' : 'open';
+            localStorage.setItem('yz.sidebar.state', state);
+        } catch (e) {}
+    }
+
+    // Restaurer l'état
+    try {
+        var saved = localStorage.getItem('yz.sidebar.state');
+        if (saved === 'open') {
+            body.classList.add('sidebar-open');
+            body.classList.remove('sidebar-collapsed');
+        } else if (saved === 'collapsed') {
+            body.classList.add('sidebar-collapsed');
+            body.classList.remove('sidebar-open');
+        }
+    } catch (e) {}
+
+    menuToggle.addEventListener('click', function() {
+        body.classList.toggle('sidebar-open');
+        body.classList.toggle('sidebar-collapsed');
+        menuToggle.classList.toggle('hamburger-active');
+        setTimeout(persistSidebarState, 10);
+    });
+});
+</script>
+
 <!-- Styles personnalisés -->
 <style>
 @keyframes pulse-green {

@@ -6458,7 +6458,19 @@ def liste_articles(request):
                 'success': False,
                 'error': f'Erreur dans la génération des templates: {str(e)}'
             }, status=500)
-
+    # Requête classique: rendre la page complète
+    context = {
+        'page_obj': page_obj,
+        'items_per_page': items_per_page,
+        'start_range': start_range,
+        'end_range': end_range,
+        'search': search,
+        'filtre_phase': filtre_phase,
+        'filtre_promotion': filtre_promotion,
+        'filtre_stock': filtre_stock,
+        'stats': stats,
+    }
+    return render(request, 'Superpreparation/liste_articles.html', context)
 def api_qr_codes_articles(request):
     """API pour récupérer les QR codes des articles d'une commande (format 10x10)"""
     try:
