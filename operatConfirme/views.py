@@ -3518,4 +3518,119 @@ def get_prix_remise_article(request, commande_id, panier_id):
             'error': 'Erreur lors de la récupération des prix de remise'
         }, status=500)
 
+@login_required
+def activer_remise_panier(request, panier_id):
+    """Endpoint pour activer remise_appliquer à True pour un panier donné"""
+    print(f"🔄 DEBUG: activer_remise_panier appelé avec panier_id={panier_id}")
+    print(f"🔄 DEBUG: Method={request.method}, User={request.user}")
+    
+    if request.method == 'POST':
+        try:
+            # Récupérer l'opérateur
+            operateur = Operateur.objects.get(user=request.user, type_operateur='CONFIRMATION')
+            print(f"✅ DEBUG: Opérateur trouvé: {operateur}")
+        except Operateur.DoesNotExist:
+            print(f"❌ DEBUG: Opérateur non trouvé pour user={request.user}")
+            return JsonResponse({
+                'success': False,
+                'message': 'Profil d\'opérateur de confirmation non trouvé'
+            })
+        
+        try:
+            # Récupérer le panier
+            panier = Panier.objects.get(id=panier_id)
+            print(f"✅ DEBUG: Panier trouvé: {panier}")
+            
+            # Vérifier que la commande est affectée à cet opérateur
+            etat_actuel = panier.commande.etat_actuel
+            print(f"✅ DEBUG: État actuel: {etat_actuel}")
+            print(f"✅ DEBUG: Opérateur état actuel: {etat_actuel.operateur if etat_actuel else None}")
+            print(f"✅ DEBUG: Opérateur connecté: {operateur}")
+            
+            if not etat_actuel or etat_actuel.operateur != operateur:
+                print(f"❌ DEBUG: Commande non affectée à cet opérateur")
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Cette commande ne vous est pas affectée'
+                })
+            
+            # Activer la remise
+            print(f"✅ DEBUG: Activation de la remise pour panier {panier.id}")
+            panier.remise_appliquer = True
+            panier.save(update_fields=['remise_appliquer'])
+            print(f"✅ DEBUG: Remise activée avec succès")
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Remise activée avec succès',
+                'panier_id': panier.id,
+                'remise_appliquer': panier.remise_appliquer
+            })
+            
+        except Panier.DoesNotExist:
+            print(f"❌ DEBUG: Panier non trouvé avec id={panier_id}")
+            return JsonResponse({
+                'success': False,
+                'message': 'Panier non trouvé'
+            })
+        except Exception as e:
+            print(f"❌ DEBUG: Erreur exception: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return JsonResponse({
+                'success': False,
+                'message': f'Erreur lors de l\'activation de la remise: {str(e)}'
+            })
+    
+    print(f"❌ DEBUG: Méthode non autorisée - method={request.method}")
+    return JsonResponse({'success': False, 'message': 'Méthode non autorisée'})
+
+@login_required
+def desactiver_remise_panier(request, panier_id):
+    """Endpoint pour désactiver remise_appliquer (mettre à False) pour un panier donné"""
+    if request.method == 'POST':
+        try:
+            # Récupérer l'opérateur
+            operateur = Operateur.objects.get(user=request.user, type_operateur='CONFIRMATION')
+        except Operateur.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'message': 'Profil d\'opérateur de confirmation non trouvé'
+            })
+        
+        try:
+            # Récupérer le panier
+            panier = Panier.objects.get(id=panier_id)
+            
+            # Vérifier que la commande est affectée à cet opérateur
+            etat_actuel = panier.commande.etat_actuel
+            if not etat_actuel or etat_actuel.operateur != operateur:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Cette commande ne vous est pas affectée'
+                })
+            
+            # Désactiver la remise
+            panier.remise_appliquer = False
+            panier.save(update_fields=['remise_appliquer'])
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Remise désactivée avec succès',
+                'panier_id': panier.id,
+                'remise_appliquer': panier.remise_appliquer
+            })
+            
+        except Panier.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'message': 'Panier non trouvé'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'Erreur lors de la désactivation de la remise: {str(e)}'
+            })
+    
+    return JsonResponse({'success': False, 'message': 'Méthode non autorisée'})
 

@@ -7058,7 +7058,7 @@ function saveLivraisonFromModal() {
         
         <!-- Actions -->
         <div class="flex justify-end pt-4 border-t border-gray-200">
-            <button type="button" onclick="fermerModalPrixRemise()" 
+            <button type="button" onclick="fermerModalRemise()" 
                     class="px-6 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors">
                 <i class="fas fa-times mr-2"></i>Annuler
             </button>
@@ -7071,8 +7071,6 @@ function saveLivraisonFromModal() {
 <!-- Script JSON pour les articles disponibles -->
 {{ articles_json|json_script:"articles-data" }}
 
-<!-- Script pour la gestion des remises -->
-<script src="{% static 'js/operatConfirme/Confirmation_commande/Remise.js' %}"></script>
 
 <!-- Debug script temporaire pour vérifier les images -->
 <script>
