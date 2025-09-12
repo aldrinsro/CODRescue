@@ -1,6 +1,7 @@
 {% extends 'composant_generale/operatConfirme/base.html' %}
 {% load static %}
 {% load commande_filters %}
+{% load remise_filters %}
 
 {% block title %}Modifier Commande {{ commande.id_yz }} - YZ-CMD{% endblock %}
 
@@ -1950,10 +1951,32 @@ document.addEventListener('DOMContentLoaded', function() {
         
         console.log('📋 Système complet initialisé avec succès');
         
+        // Initialiser les marqueurs de remise pour les paniers existants
+        initRemiseMarkers();
+        
     } catch (error) {
         console.error('❌ Erreur lors de l\'initialisation:', error);
     }
 });
+
+// Fonction pour initialiser les marqueurs de remise au chargement de la page
+function initRemiseMarkers() {
+    try {
+        // Parcourir tous les paniers pour détecter ceux avec remise appliquée
+        {% for panier in commande.paniers.all %}
+            {% if panier.remise_appliquer %}
+                // Marquer le panier {{ panier.id }} comme ayant une remise appliquée
+                if (typeof marquerPanierAvecRemise === 'function') {
+                    marquerPanierAvecRemise({{ panier.id }});
+                }
+            {% endif %}
+        {% endfor %}
+        
+        console.log('✅ Marqueurs de remise initialisés');
+    } catch (error) {
+        console.error('❌ Erreur lors de l\'initialisation des marqueurs de remise:', error);
+    }
+}
 
 // Fonction pour changer l'opération (ancienne fonction - gardée pour compatibilité)
 function changerOperation() {
@@ -4482,8 +4505,14 @@ function mettreAJourPrixUnitaires(nouveauCompteur) {
     
     articleCards.forEach(articleCard => {
         const panierId = articleCard.getAttribute('data-article-id');
-        const dataArticleAttr = articleCard.getAttribute('data-article');
         
+        // Vérifier si ce panier a une remise appliquée - NE PAS le recalculer
+        if (typeof panierARemiseAppliquee === 'function' && panierARemiseAppliquee(panierId)) {
+            console.log(`🛡️ Panier ${panierId} ignoré - remise appliquée`);
+            return; // Ignorer ce panier
+        }
+        
+        const dataArticleAttr = articleCard.getAttribute('data-article');
         const articleData = parseArticleData(dataArticleAttr, panierId);
         
         if (articleData && !articleData.error) {
@@ -4522,6 +4551,12 @@ function mettreAJourPrixUnitaires(nouveauCompteur) {
 
 // Fonction utilitaire pour mettre à jour le sous-total d'un article
 function mettreAJourSousTotalArticle(panierId, prixUnitaire) {
+    // Vérifier si ce panier a une remise appliquée - NE PAS le recalculer
+    if (typeof panierARemiseAppliquee === 'function' && panierARemiseAppliquee(panierId)) {
+        console.log(`🛡️ Sous-total du panier ${panierId} ignoré - remise appliquée`);
+        return; // Ne pas recalculer le sous-total
+    }
+    
     const sousTotalElement = document.getElementById(`sous-total-${panierId}`);
     if (sousTotalElement) {
         // Récupérer la quantité depuis l'input
@@ -4550,8 +4585,23 @@ function recalculerTousLesSousTotaux() {
     
     articleCards.forEach(articleCard => {
         const panierId = articleCard.getAttribute('data-article-id');
-        const dataArticleAttr = articleCard.getAttribute('data-article');
         
+        // Vérifier si ce panier a une remise appliquée - utiliser le sous-total existant
+        if (typeof panierARemiseAppliquee === 'function' && panierARemiseAppliquee(panierId)) {
+            console.log(`🛡️ Recalcul ignoré pour panier ${panierId} - remise appliquée`);
+            
+            // Récupérer le sous-total existant affiché
+            const sousTotalElement = document.getElementById(`sous-total-${panierId}`);
+            if (sousTotalElement) {
+                const sousTotalText = sousTotalElement.textContent.replace(' DH', '');
+                const sousTotalExistant = parseFloat(sousTotalText) || 0;
+                totalSousTotaux += sousTotalExistant;
+                console.log(`💰 Sous-total préservé pour panier ${panierId}: ${sousTotalExistant.toFixed(2)} DH`);
+            }
+            return; // Ne pas recalculer ce panier
+        }
+        
+        const dataArticleAttr = articleCard.getAttribute('data-article');
         const articleData = parseArticleData(dataArticleAttr, panierId);
         
         if (articleData && !articleData.error) {
@@ -5973,6 +6023,12 @@ function modifierQuantiteDirecte(panierId, nouvelleQuantite) {
         }
         showToast('⚠️ La quantité doit être au moins de 1.', 'warning');
         return;
+    }
+
+    // Vérifier si ce panier a une remise appliquée
+    if (typeof panierARemiseAppliquee === 'function' && panierARemiseAppliquee(panierId)) {
+        console.log(`🛡️ Panier ${panierId} a une remise appliquée - les prix seront préservés côté serveur`);
+        showToast('💰 Prix remisé préservé lors du changement de quantité', 'info');
     }
 
     // Sauvegarder la valeur précédente

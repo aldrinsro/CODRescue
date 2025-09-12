@@ -205,18 +205,24 @@ class Commande(models.Model):
         
         # Recalculer chaque panier selon le compteur upsell
         for panier in self.paniers.all():
-            # Calculer le prix selon le compteur de la commande
-            prix_unitaire = get_prix_upsell_avec_compteur(panier.article, self.compteur)
-            nouveau_sous_total = prix_unitaire * panier.quantite
-            
-            print(f"   📦 {panier.article.nom} (upsell: {panier.article.isUpsell}): qté={panier.quantite}, prix={prix_unitaire}, sous_total={nouveau_sous_total}")
-            
-            # Mettre à jour le sous-total du panier si nécessaire
-            if panier.sous_total != nouveau_sous_total:
-                panier.sous_total = float(nouveau_sous_total)
-                panier.save()
-            
-            nouveau_total += nouveau_sous_total
+            # Vérifier si une remise a été appliquée sur ce panier
+            if hasattr(panier, 'remise_appliquer') and panier.remise_appliquer:
+                # Une remise a été appliquée - NE PAS recalculer, conserver le prix remisé
+                print(f"   📦 {panier.article.nom} (REMISE APPLIQUÉE): qté={panier.quantite}, sous_total préservé={panier.sous_total}")
+                nouveau_total += float(panier.sous_total)
+            else:
+                # Aucune remise - calculer selon le compteur de la commande
+                prix_unitaire = get_prix_upsell_avec_compteur(panier.article, self.compteur)
+                nouveau_sous_total = prix_unitaire * panier.quantite
+                
+                print(f"   📦 {panier.article.nom} (upsell: {panier.article.isUpsell}): qté={panier.quantite}, prix={prix_unitaire}, sous_total={nouveau_sous_total}")
+                
+                # Mettre à jour le sous-total du panier si nécessaire
+                if panier.sous_total != nouveau_sous_total:
+                    panier.sous_total = float(nouveau_sous_total)
+                    panier.save()
+                
+                nouveau_total += nouveau_sous_total
         
         # Ajouter les frais de livraison au total SEULEMENT si frais_livraison = True
         if self.frais_livraison:
@@ -298,7 +304,7 @@ class Commande(models.Model):
         """Valeur totale des articles retournés"""
         total = 0
         for article_retourne in self.articles_retournes.all():
-            total += article_retourne.valeur_retour()
+            total += float(article_retourne.valeur_retour())
         return total
     
     def a_des_articles_retournes(self):
@@ -339,11 +345,22 @@ class Commande(models.Model):
 
 
 class Panier(models.Model):
+    CHOIX_TYPE_REMISE = [
+        ('', 'Aucune remise'),
+        ('remise_1', 'Prix remise 1'),
+        ('remise_2', 'Prix remise 2'),
+        ('remise_3', 'Prix remise 3'),
+        ('remise_4', 'Prix remise 4'),
+      
+    ]
+    
     commande = models.ForeignKey(Commande, on_delete=models.CASCADE, related_name='paniers')
     article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name='paniers')
     variante = models.ForeignKey(VarianteArticle, on_delete=models.SET_NULL, null=True, blank=True, related_name='paniers')
     quantite = models.IntegerField()
     sous_total = models.FloatField()
+    remise_appliquer = models.BooleanField(default=False)
+    type_remise_appliquee = models.CharField(max_length=20, choices=CHOIX_TYPE_REMISE, blank=True, default='')
     
     class Meta:
         verbose_name = "Panier"

@@ -15,19 +15,6 @@ from article.models   import Article
 
 
 
-def surveiller_affectations_anormales():
-    # Fonctionnalité supprimée
-    return []
-
-
-def surveiller_livraisons_partielles():
-    # Fonctionnalité supprimée
-    return []
-
-def corriger_livraisons_partielles():
-    # Fonctionnalité supprimée
-    return []
-
 
 @login_required
 def dashboard(request):
@@ -718,10 +705,6 @@ def modifier_quantite_article(request, commande_id):
         
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
-
-    
-
-
 
 @login_required
 @require_POST

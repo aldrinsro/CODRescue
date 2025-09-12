@@ -44,6 +44,7 @@ urlpatterns = [
     path('rechercher-client-telephone/', views.rechercher_client_telephone, name='rechercher_client_telephone'),
     path('api/recherche-article-ref/', views.api_recherche_article_ref, name='api_recherche_article_ref'),
     path('get-article-variants/<int:article_id>/', views.get_article_variants, name='get_article_variants'),
+    path('api/commande/<int:commande_id>/panier/<int:panier_id>/prix-remise/', views.get_prix_remise_article, name='get_prix_remise_article'),
     
     # URLs pour la recherche globale
     path('recherche-globale/', search_views.global_search_view, name='global_search'),

@@ -408,44 +408,6 @@ def commandes_livrees_partiellement(request):
 
     return _render_sav_list_custom(request, commandes, 'commandes_livrees_partiellement.html')
 
-@login_required
-def commandes_livrees_avec_changement(request):
-    """Affiche les commandes livrées avec des changements."""
-    commandes = Commande.objects.filter(
-        etats__enum_etat__libelle='Livrée avec changement',
-        etats__date_fin__isnull=True
-    ).select_related('client', 'ville', 'ville__region').prefetch_related(
-        'etats__enum_etat', 'etats__operateur',
-        'envois', 'paniers__article'
-    ).order_by('-etats__date_debut').distinct()
-    
-    # Enrichir les données pour chaque commande
-    for commande in commandes:
-        # Trouver l'état actuel
-        commande.etat_actuel_sav = commande.etats.filter(
-            enum_etat__libelle='Livrée avec changement',
-            date_fin__isnull=True
-        ).first()
-        
-        # Calculer le nombre d'articles dans la commande
-        commande.nombre_articles = commande.paniers.count()
-        
-        # Préparer les articles pour la modale (même logique que pour les livraisons partielles)
-        commande.articles_livres_partiellement = [
-            {
-                'article_id': panier.article.id,
-                'nom': panier.article.nom,
-                'reference': panier.article.reference,
-                'pointure': getattr(panier.article, 'pointure', ''),
-                'couleur': getattr(panier.article, 'couleur', ''),
-                'quantite_livree': panier.quantite,
-                'prix_unitaire': float(getattr(panier.article, 'prix_unitaire', 0.0) or 0.0)
-            }
-            for panier in commande.paniers.all()
-        ]
-        commande.articles_renvoyes = []
-    
-    return _render_sav_list_custom(request, commandes, 'commandes_livrees_avec_changement.html')
 
 @login_required
 def commandes_retournees(request):

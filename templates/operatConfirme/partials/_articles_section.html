@@ -1,10 +1,12 @@
 {% load commande_filters %}
+{% load remise_filters %}
+{% load l10n %}
 
 {% for panier in commande.paniers.all %}
 
 <div class="article-card p-4 bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-all shadow-sm" 
     data-article-id="{{ panier.id }}"
-    data-article='{"id": {{ panier.article.id|default:0 }}, "nom": "{{ panier.article.nom|default:''|escapejs }}", "reference": "{{ panier.article.reference|default:''|escapejs }}", "prix_actuel": {{ panier.article.prix_actuel|default:0|floatformat:2 }}, "prix_unitaire": {{ panier.article.prix_unitaire|default:0|floatformat:2 }}, "prix_upsell_1": {{ panier.article.prix_upsell_1|default:0|floatformat:2 }}, "prix_upsell_2": {{ panier.article.prix_upsell_2|default:0|floatformat:2 }}, "prix_upsell_3": {{ panier.article.prix_upsell_3|default:0|floatformat:2 }}, "prix_upsell_4": {{ panier.article.prix_upsell_4|default:0|floatformat:2 }}, "prix_remise_1": {{ panier.article.prix_remise_1|default:0|floatformat:2 }}, "prix_remise_2": {{ panier.article.prix_remise_2|default:0|floatformat:2 }}, "prix_remise_3": {{ panier.article.prix_remise_3|default:0|floatformat:2 }}, "prix_remise_4": {{ panier.article.prix_remise_4|default:0|floatformat:2 }}, "Prix_liquidation": {{ panier.article.Prix_liquidation|default:0|floatformat:2 }}, "isUpsell": {{ panier.article.isUpsell|default_if_none:False|yesno:"true,false" }}, "pointure": "{{ panier.pointure|default:''|escapejs }}", "couleur": "{{ panier.couleur|default:''|escapejs }}", "categorie": "{{ panier.article.categorie|default:''|escapejs }}", "qte_article": {{ panier.article.qte_disponible|default:0 }}, "phase": "{{ panier.article.phase|default:''|escapejs }}", "has_promo_active": {{ panier.article.has_promo_active|default_if_none:False|yesno:"true,false" }}"{% if panier.variante_id %}, "variante_id": {{ panier.variante_id|default:0 }}, "qte_variante": {{ panier.variante.qte_disponible|default:0 }}{% endif %}}'>
+    data-article='{"id": {{ panier.article.id|default:0 }}, "nom": "{{ panier.article.nom|default:''|escapejs }}", "reference": "{{ panier.article.reference|default:''|escapejs }}", "prix_actuel": {{ panier.article.prix_actuel|default:0|unlocalize }}, "prix_unitaire": {{ panier.article.prix_unitaire|default:0|unlocalize }}, "prix_upsell_1": {{ panier.article.prix_upsell_1|default:0|unlocalize }}, "prix_upsell_2": {{ panier.article.prix_upsell_2|default:0|unlocalize }}, "prix_upsell_3": {{ panier.article.prix_upsell_3|default:0|unlocalize }}, "prix_upsell_4": {{ panier.article.prix_upsell_4|default:0|unlocalize }}, "prix_remise_1": {{ panier.article.prix_remise_1|default:0|unlocalize }}, "prix_remise_2": {{ panier.article.prix_remise_2|default:0|unlocalize }}, "prix_remise_3": {{ panier.article.prix_remise_3|default:0|unlocalize }}, "prix_remise_4": {{ panier.article.prix_remise_4|default:0|unlocalize }}, "Prix_liquidation": {{ panier.article.Prix_liquidation|default:0|unlocalize }}, "isUpsell": {{ panier.article.isUpsell|default_if_none:False|yesno:"true,false" }}, "pointure": "{{ panier.pointure|default:''|escapejs }}", "couleur": "{{ panier.couleur|default:''|escapejs }}", "categorie": "{{ panier.article.categorie|default:''|escapejs }}", "qte_article": {{ panier.article.qte_disponible|default:0 }}, "phase": "{{ panier.article.phase|default:''|escapejs }}", "has_promo_active": {{ panier.article.has_promo_active|default_if_none:False|yesno:"true,false" }}{% if panier.variante_id %}, "variante_id": {{ panier.variante_id|default:0 }}, "qte_variante": {{ panier.variante.qte_disponible|default:0 }}{% endif %}}'>
     <div class="flex items-center justify-between">
         <!-- Informations de l'article -->
         <div class="flex-1">
@@ -28,11 +30,19 @@
                 <!-- Nom et référence -->
                 <div class="min-w-0 flex-1">
                     
-                    <div class="font-semibold text-lg" style="color: #4B352A;">
+                    <div class="font-semibold text-lg article-title" style="color: #4B352A;">
                         {{ panier.article.nom }}
+                        
                         {% if panier.variante %}
                         <span class="inline-flex items-center px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium ml-2">
                             <i class="fas fa-layer-group mr-1"></i>Variante
+                        </span>
+                        {% endif %}
+                        
+                        <!-- Badge pour remise appliquée -->
+                        {% if panier.remise_appliquer %}
+                        <span class="badge-remise inline-flex items-center px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium ml-2">
+                            <i class="fas fa-percent mr-1"></i>Remise appliquée
                         </span>
                         {% endif %}
 
@@ -112,22 +122,39 @@
                 <!-- Prix unitaire -->
                 <div class="text-center min-w-0">
                     <div class="text-sm text-gray-500">Prix actuel</div>
-                    {% with panier.article|get_prix_avec_phase_info:commande.compteur as prix_info %}
-                    <div class="font-medium {{ prix_info.couleur_classe }}" id="prix-unitaire-{{ panier.id }}">
-                        {{ prix_info.prix|floatformat:2 }} DH
+                    
+                    <!-- Utiliser le nouveau filtre pour obtenir le prix effectif -->
+                    {% with panier|get_prix_effectif_panier as prix_effectif %}
+                    
+                    <div class="font-medium {{ prix_effectif.couleur_classe }}" id="prix-unitaire-{{ panier.id }}">
+                        {{ prix_effectif.prix_unitaire|floatformat:2 }} DH
                     </div>
-                    <div class="text-xs {{ prix_info.couleur_classe }} mt-1" id="prix-libelle-{{ panier.id }}">
-                        {{ prix_info.libelle }}
+                    <div class="text-xs {{ prix_effectif.couleur_classe }} mt-1" id="prix-libelle-{{ panier.id }}">
+                        <i class="{{ prix_effectif.icone }} mr-1"></i>{{ prix_effectif.libelle }}
                     </div>
+                    
+                    {% if prix_effectif.est_remise %}
+                        <!-- Afficher le prix original barré si une remise est appliquée -->
+                        {% with panier.article|get_prix_affichage_remise:panier.quantite as prix_normal %}
+                        <div class="text-xs text-gray-400 line-through mt-1">
+                            <i class="fas fa-arrow-down mr-1"></i>{{ prix_normal.prix|floatformat:2 }} DH
+                        </div>
+                        {% endwith %}
+                    {% endif %}
+                    
                     {% endwith %}
                 </div>
                 
                 <!-- Sous-total -->
                 <div class="text-center min-w-0">
                     <div class="text-sm text-gray-500">Sous-total</div>
+                    
+                    <!-- Récupérer le prix effectif calculé précédemment -->
+                    {% with panier|get_prix_effectif_panier as prix_effectif %}
                     <div class="text-lg font-bold" style="color: #6d4b3b;" id="sous-total-{{ panier.id }}">
-                        {{ panier|calculer_sous_total_avec_compteur:commande.compteur|floatformat:2 }} DH
+                        {{ prix_effectif.sous_total|floatformat:2 }} DH
                     </div>
+                    {% endwith %}
                 </div>
             </div>
         </div>
