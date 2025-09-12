@@ -910,11 +910,11 @@ function mettreAJourResumeLivraisonPartielle() {
     const fraisLivraison = parseFloat(totalCommandeElement?.dataset.fraisLivraison || '0') || 0;
     const inclureFrais = totalCommandeElement?.dataset.inclureFrais === 'true';
 
-    const cards = document.querySelectorAll('.article-livraison-card');
+    const cards = document.querySelectorAll('.article-card');
     console.log(`🔧 DEBUG: Trouvé ${cards.length} cartes d'articles`);
     
     if (cards.length === 0) {
-        console.error('❌ Aucune carte d\'article trouvée avec la classe .article-livraison-card');
+        console.error('❌ Aucune carte d\'article trouvée avec la classe .article-card');
         return;
     }
     
@@ -940,6 +940,10 @@ function mettreAJourResumeLivraisonPartielle() {
         
         console.log(`🔧 DEBUG: Article ${nom} - Checkbox cochée: ${checkbox?.checked}, Quantité: ${input?.value}, Quantité livrée: ${quantiteLivree}`);
 
+        // NOUVELLE LOGIQUE: Un panier ne peut être que dans UNE seule liste
+        // Si quantité livrée > 0, il va dans articlesLivres SEULEMENT
+        // Le backend calculera automatiquement la quantité restante
+        
         if (quantiteLivree > 0) {
             articlesLivres.push({ 
                 panier_id: panierId, 
@@ -954,28 +958,32 @@ function mettreAJourResumeLivraisonPartielle() {
             });
             totalLivres += quantiteLivree;
             totalValeurLivree += quantiteLivree * prixActuel;
-        }
-        
-        if (quantiteRenvoyee > 0) {
+            
+            console.log(`✅ Panier ${panierId} ajouté à articlesLivres avec quantité ${quantiteLivree}`);
+        } 
+        // Si quantité livrée = 0, alors TOUT le panier est retourné
+        else if (quantiteMax > 0) {
             articlesRenvoyes.push({ 
                 panier_id: panierId, 
                 article_id: articleId, 
                 variante_id: varianteId, 
-                quantite: quantiteRenvoyee, 
+                quantite: quantiteMax, // Toute la quantité est retournée
                 nom: nom, 
                 prix_unitaire: prixUnitaire, 
                 prix_actuel: prixActuel,
                 is_upsell: isUpsell,
                 compteur: compteur
             });
-            totalRenvoyes += quantiteRenvoyee;
+            totalRenvoyes += quantiteMax;
+            
+            console.log(`✅ Panier ${panierId} ajouté à articlesRenvoyes avec quantité ${quantiteMax} (entièrement retourné)`);
         }
     });
 
     const livresInput = document.getElementById('articlesLivresJsonInput');
-    const renvoyesInput = document.getElementById('articlesRenvoyesJsonInput');
+    const renvoyesInput = document.getElementById('articlesRetournesJsonInput');
     
-    console.log(`🔧 DEBUG: ${articlesLivres.length} articles à livrer, ${articlesRenvoyes.length} articles à renvoyer`);
+    console.log(`🔧 DEBUG: ${articlesLivres.length} articles à livrer, ${articlesRenvoyes.length} articles à retourner`);
     console.log('🔧 DEBUG: Articles livrés:', articlesLivres);
     console.log('🔧 DEBUG: Articles renvoyés:', articlesRenvoyes);
     
@@ -988,9 +996,9 @@ function mettreAJourResumeLivraisonPartielle() {
     
     if (renvoyesInput) {
         renvoyesInput.value = JSON.stringify(articlesRenvoyes);
-        console.log('🔧 DEBUG: Champ articlesRenvoyesJsonInput rempli:', renvoyesInput.value);
+        console.log('🔧 DEBUG: Champ articlesRetournesJsonInput rempli:', renvoyesInput.value);
     } else {
-        console.error('❌ Champ articlesRenvoyesJsonInput non trouvé');
+        console.error('❌ Champ articlesRetournesJsonInput non trouvé');
     }
 
     const aucunDiv = document.getElementById('aucunArticleRenvoyer');
@@ -1040,7 +1048,7 @@ function mettreAJourSectionArticlesRenvoyes(articlesRenvoyes = []) {
         const prixAff = parseFloat(article.prix_actuel) || parseFloat(article.prix_unitaire) || 0;
         const valeurTotale = (parseFloat(article.quantite || 0) * prixAff);
         
-        console.log(`🔧 DEBUG Article renvoyé: ${article.nom}, prix_actuel: ${article.prix_actuel}, prix_unitaire: ${article.prix_unitaire}, prix utilisé: ${prixAff}`);
+        console.log(`🔧 DEBUG Article retourné: ${article.nom}, prix_actuel: ${article.prix_actuel}, prix_unitaire: ${article.prix_unitaire}, prix utilisé: ${prixAff}`);
         
         const articleCard = document.createElement('div');
         articleCard.className = 'article-renvoi-card bg-white rounded-lg border border-orange-300 p-4';
@@ -1063,7 +1071,7 @@ function mettreAJourSectionArticlesRenvoyes(articlesRenvoyes = []) {
                     ${article.variante_id ? `<div class="text-xs text-gray-500 mt-1">Variante ID: ${article.variante_id}</div>` : ''}
                     <div class="text-sm text-gray-500 mt-2">
                         <div class="flex justify-between items-center mb-1">
-                            <span>Quantité à renvoyer:</span>
+                            <span>Quantité à retourner:</span>
                             <span class="font-semibold text-orange-600">${article.quantite || 0}</span>
                         </div>
                         <div class="flex justify-between items-center mb-1">
@@ -1077,13 +1085,13 @@ function mettreAJourSectionArticlesRenvoyes(articlesRenvoyes = []) {
                             </span>
                         </div>
                         <div class="flex justify-between items-center pt-1 border-t border-orange-200">
-                            <span class="font-medium">Valeur totale renvoyée:</span>
+                            <span class="font-medium">Valeur totale retournée:</span>
                             <span class="font-bold text-orange-700 text-lg">${valeurTotale.toFixed(2)} DH</span>
                         </div>
                     </div>
                     <div class="mt-2 text-xs text-orange-600 bg-orange-100 px-2 py-1 rounded-md">
                         <i class="fas fa-info-circle mr-1"></i>
-                        Article renvoyé aux opérateurs de préparation
+                        Article retourné aux opérateurs de préparation
                         ${article.is_upsell && article.compteur > 0 ? 
                             ` • Prix upsell niveau ${article.compteur} appliqué` : ''}
                     </div>
@@ -1101,7 +1109,7 @@ function submitLivraisonPartielleUnified(e) {
     
     // Vérifier qu'il y a au moins un article à livrer
     const articlesLivresInput = document.getElementById('articlesLivresJsonInput');
-    const articlesRenvoyesInput = document.getElementById('articlesRenvoyesJsonInput');
+    const articlesRenvoyesInput = document.getElementById('articlesRetournesJsonInput');
     
     if (!articlesLivresInput || !articlesRenvoyesInput) {
         alert('❌ Erreur: Champs de données manquants');
@@ -1120,7 +1128,7 @@ function submitLivraisonPartielleUnified(e) {
         return;
     }
     
-    console.log(`🔧 DEBUG: Articles à livrer: ${articlesLivres.length}, Articles à renvoyer: ${articlesRenvoyes.length}`);
+    console.log(`🔧 DEBUG: Articles à livrer: ${articlesLivres.length}, Articles à retourner: ${articlesRenvoyes.length}`);
     console.log('🔧 DEBUG: Articles livrés:', articlesLivres);
     console.log('🔧 DEBUG: Articles renvoyés:', articlesRenvoyes);
     

@@ -2,6 +2,7 @@ from django.urls import path
 from . import views
 from .service_apres_vente import views as sav_views
 from .barre_recherche_globale import views as search_views
+from . import articles_retournes_views
 
 app_name = 'operatLogistic'
 
@@ -21,8 +22,7 @@ urlpatterns = [
     # URLs pour les opérations sur les articles
     path('commande/<int:commande_id>/ajouter-article/', views.ajouter_article, name='ajouter_article'),
     path('commande/<int:commande_id>/modifier-quantite/', views.modifier_quantite_article, name='modifier_quantite_article'),
-    # URL pour renvoyer en préparation
-    path('commande/<int:commande_id>/renvoyer-preparation/', views.renvoyer_en_preparation, name='renvoyer_preparation'), 
+
     # URL pour la livraison partielle
     path('commande/<int:commande_id>/livraison-partielle/', views.livraison_partielle, name='livraison_partielle'),
     # URL pour voir les commandes renvoyées en préparation
@@ -43,4 +43,11 @@ urlpatterns = [
     path('recherche-globale/', search_views.global_search_view, name='global_search'),
     path('recherche-globale/api/', search_views.global_search_api, name='global_search_api'),
     path('recherche-globale/suggestions/', search_views.search_suggestions_api, name='search_suggestions_api'),
+    
+    # URLs pour la gestion des articles retournés
+    path('articles-retournes/', articles_retournes_views.liste_articles_retournes, name='liste_articles_retournes'),
+    path('articles-retournes/<int:retour_id>/', articles_retournes_views.detail_article_retourne, name='detail_article_retourne'),
+    path('articles-retournes/<int:retour_id>/traiter/', articles_retournes_views.traiter_article_retourne, name='traiter_article_retourne'),
+    path('articles-retournes/reintegrer-automatique/', articles_retournes_views.reintegrer_automatique, name='reintegrer_automatique'),
+    path('articles-retournes/statistiques/', articles_retournes_views.statistiques_retours, name='statistiques_retours'),
 ] 

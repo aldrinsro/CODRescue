@@ -26,7 +26,7 @@
         <table class="min-w-full divide-y divide-gray-200">
             <thead style="background-color: var(--logistic-primary);">
                 <tr>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">ID YZ</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Nº commande</th>
                     <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Client</th>
                     <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Téléphone</th>
                     <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Ville & Région</th>
@@ -49,7 +49,7 @@
                 <tr class="hover:bg-gray-50" 
                     data-commande-id="{{ commande.id }}"
                     data-articles-livres='{% if commande.articles_livres_partiellement %}[{% for article_data in commande.articles_livres_partiellement %}{"nom": "{{ article_data.nom|escapejs }}", "reference": "{{ article_data.reference|escapejs }}", "quantite_livree": {{ article_data.quantite_livree }}, "prix_unitaire": "{{ article_data.prix_unitaire|stringformat:'%.2f' }}", "pointure": "{{ article_data.pointure|default:''|escapejs }}", "couleur": "{{ article_data.couleur|default:''|escapejs }}"}{% if not forloop.last %},{% endif %}{% endfor %}]{% else %}[]{% endif %}'
-                    data-articles-renvoyes='{% if commande.articles_renvoyes %}[{% for article_data in commande.articles_renvoyes %}{"nom": "{{ article_data.nom|escapejs }}", "reference": "{{ article_data.reference|escapejs }}", "quantite": {{ article_data.quantite }}, "prix_unitaire": "{{ article_data.prix_unitaire|stringformat:'%.2f' }}", "pointure": "{{ article_data.pointure|default:''|escapejs }}", "couleur": "{{ article_data.couleur|default:''|escapejs }}", "etat": "{{ article_data.etat|escapejs }}"}{% if not forloop.last %},{% endif %}{% endfor %}]{% else %}[]{% endif %}'
+                    data-articles-retournes='{% if commande.articles_retournes.exists %}[{% for article_retourne in commande.articles_retournes.all %}{"nom": "{{ article_retourne.article.nom|escapejs }}", "reference": "{{ article_retourne.article.reference|escapejs }}", "quantite": {{ article_retourne.quantite_retournee }}, "prix_unitaire": "{{ article_retourne.prix_unitaire_origine|stringformat:'%.2f' }}", "pointure": "{% if article_retourne.variante and article_retourne.variante.pointure %}{{ article_retourne.variante.pointure.numero|escapejs }}{% endif %}", "couleur": "{% if article_retourne.variante and article_retourne.variante.couleur %}{{ article_retourne.variante.couleur.nom|escapejs }}{% endif %}", "statut": "{{ article_retourne.get_statut_retour_display|escapejs }}", "date_retour": "{{ article_retourne.date_retour|date:'d/m/Y H:i'|escapejs }}", "raison": "{{ article_retourne.raison_retour|escapejs }}"}{% if not forloop.last %},{% endif %}{% endfor %}]{% else %}[]{% endif %}'
                     data-commentaire="{{ commande.commentaire_livraison_partielle|escapejs }}"
                     data-date-livraison="{% if commande.date_livraison_partielle %}{{ commande.date_livraison_partielle|date:'d/m/Y H:i' }}{% endif %}"
                     data-operateur="{% if commande.operateur_livraison %}{{ commande.operateur_livraison.prenom }} {{ commande.operateur_livraison.nom }}{% endif %}">
@@ -100,9 +100,9 @@
                                         <i class="fas fa-check mr-1"></i>{{ commande.articles_livres_partiellement|length }} livré{{ commande.articles_livres_partiellement|length|pluralize }}
                                     </span>
                                 {% endif %}
-                                {% if commande.articles_renvoyes %}
+                                {% if commande.articles_retournes.exists %}
                                     <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                                        <i class="fas fa-undo mr-1"></i>{{ commande.articles_renvoyes|length }} renvoyé{{ commande.articles_renvoyes|length|pluralize }}
+                                        <i class="fas fa-undo mr-1"></i>{{ commande.articles_retournes.count }} retourné{{ commande.articles_retournes.count|pluralize }}
                                     </span>
                                 {% endif %}
                             </div>
@@ -167,11 +167,6 @@
                                title="Voir le détail de la commande">
                                 <i class="fas fa-eye"></i>
                             </a>
-                            <button onclick="openSavActionsModal({{ commande.id }}, '{{ commande.id_yz }}')" 
-                                    class="text-orange-600 hover:text-orange-900 transition-colors"
-                                    title="Actions SAV">
-                                <i class="fas fa-tools"></i>
-                            </button>
                         </div>
                     </td>
                 </tr>
@@ -248,48 +243,6 @@
     </div>
 </div>
 
-<!-- Modale des Actions SAV -->
-<div id="savActionsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
-    <div class="relative top-10 mx-auto p-6 border w-full max-w-2xl shadow-lg rounded-lg bg-white">
-        <div class="text-center">
-            <h3 class="text-xl leading-6 font-bold text-gray-900 mb-2">Actions de Livraison (SAV)</h3>
-            <p class="text-sm text-gray-600 mb-6">Commande <span id="commandeIdDisplay" class="font-semibold text-blue-600"></span></p>
-            
-            <!-- Grille des actions SAV -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                <button onclick="selectSavAction('Reportée')" class="sav-action-card bg-orange-50 hover:bg-orange-100 border-2 border-orange-200 hover:border-orange-300 rounded-lg p-4 transition-all duration-200">
-                    <div class="flex flex-col items-center">
-                        <i class="fas fa-clock text-3xl text-orange-500 mb-2"></i>
-                        <span class="font-semibold text-orange-800">Reporter</span>
-                        <span class="text-xs text-orange-600 mt-1">Reprogrammer la livraison</span>
-                    </div>
-                </button>
-                
-                <button onclick="selectSavAction('Livrée')" class="sav-action-card bg-green-50 hover:bg-green-100 border-2 border-green-200 hover:border-green-300 rounded-lg p-4 transition-all duration-200">
-                    <div class="flex flex-col items-center">
-                        <i class="fas fa-check-circle text-3xl text-green-500 mb-2"></i>
-                        <span class="font-semibold text-green-800">Livrée</span>
-                        <span class="text-xs text-green-600 mt-1">Livraison réussie</span>
-                    </div>
-                </button>
-                
-                <button onclick="selectSavAction('Retournée (SAV)')" class="sav-action-card bg-red-50 hover:bg-red-100 border-2 border-red-200 hover:border-red-300 rounded-lg p-4 transition-all duration-200">
-                    <div class="flex flex-col items-center">
-                        <i class="fas fa-times-circle text-3xl text-red-500 mb-2"></i>
-                        <span class="font-semibold text-red-800">Retournée (SAV)</span>
-                        <span class="text-xs text-red-600 mt-1">Retourner la commande</span>
-                    </div>
-                </button>
-            </div>
-            
-            <div class="flex justify-center">
-                <button id="cancelSavActionsBtn" class="px-6 py-2 bg-gray-500 text-white text-base font-medium rounded-md shadow-sm hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300 transition-colors">
-                    <i class="fas fa-times mr-2"></i>Fermer
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
 
 {% endblock %}
 
@@ -311,7 +264,7 @@ function afficherDetailsArticles(commandeId, commandeNum) {
     
     // Extraire les données des articles depuis les attributs data
     const articlesLivres = JSON.parse(row.getAttribute('data-articles-livres') || '[]');
-    const articlesRenvoyes = JSON.parse(row.getAttribute('data-articles-renvoyes') || '[]');
+    const articlesRetournes = JSON.parse(row.getAttribute('data-articles-retournes') || '[]');
     const commentaire = row.getAttribute('data-commentaire') || '';
     const dateLivraison = row.getAttribute('data-date-livraison') || '';
     const operateur = row.getAttribute('data-operateur') || '';
@@ -335,7 +288,7 @@ function afficherDetailsArticles(commandeId, commandeNum) {
                     </div>
                     <div class="flex justify-between">
                         <span class="text-gray-600">Total articles :</span>
-                        <span class="font-medium">${articlesLivres.length + articlesRenvoyes.length}</span>
+                        <span class="font-medium">${articlesLivres.length + articlesRetournes.length}</span>
                     </div>
                 </div>
             </div>
@@ -394,24 +347,26 @@ function afficherDetailsArticles(commandeId, commandeNum) {
         `;
     }
     
-    // Section des articles renvoyés
-    if (articlesRenvoyes.length > 0) {
+    // Section des articles retournés
+    if (articlesRetournes.length > 0) {
         content += `
             <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
                 <h4 class="font-semibold text-orange-800 mb-4 flex items-center">
-                    <i class="fas fa-undo mr-2"></i>Articles Renvoyés (${articlesRenvoyes.length})
+                    <i class="fas fa-undo mr-2"></i>Articles Retournés (${articlesRetournes.length})
                 </h4>
                 <div class="space-y-3">
         `;
         
-        articlesRenvoyes.forEach(article => {
-            let badgeEtat = '';
-            if (article.etat === 'defectueux') {
-                badgeEtat = `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700 ml-2"><i class="fas fa-times-circle mr-1"></i>Défectueux</span>`;
-            } else if (article.etat === 'bon') {
-                badgeEtat = `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700 ml-2"><i class="fas fa-check-circle mr-1"></i>Bon</span>`;
+        articlesRetournes.forEach(article => {
+            let badgeStatut = '';
+            if (article.statut === 'En attente') {
+                badgeStatut = `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-yellow-100 text-yellow-700 ml-2"><i class="fas fa-clock mr-1"></i>En attente</span>`;
+            } else if (article.statut === 'Réintégré en stock') {
+                badgeStatut = `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700 ml-2"><i class="fas fa-check-circle mr-1"></i>Réintégré</span>`;
+            } else if (article.statut === 'Défectueux') {
+                badgeStatut = `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700 ml-2"><i class="fas fa-times-circle mr-1"></i>Défectueux</span>`;
             } else {
-                badgeEtat = `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-700 ml-2"><i class="fas fa-question-circle mr-1"></i>Inconnu</span>`;
+                badgeStatut = `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-700 ml-2"><i class="fas fa-info-circle mr-1"></i>${article.statut}</span>`;
             }
             let prix = parseFloat(article.prix_unitaire);
             if (isNaN(prix) || prix === 0) prix = 0.00;
@@ -419,17 +374,19 @@ function afficherDetailsArticles(commandeId, commandeNum) {
                 <div class="bg-white p-3 rounded-lg border border-orange-200 shadow-sm">
                     <div class="flex items-center justify-between">
                         <div class="flex-1">
-                            <div class="font-medium text-gray-900">${article.nom} ${badgeEtat}</div>
+                            <div class="font-medium text-gray-900">${article.nom} ${badgeStatut}</div>
                             <div class="text-sm text-gray-500">Réf: ${article.reference}</div>
                             <div class="text-xs text-gray-400 mt-1">
                                 ${article.pointure ? `Taille: ${article.pointure} | ` : ''}
                                 ${article.couleur ? `Couleur: ${article.couleur}` : ''}
                             </div>
+                            ${article.date_retour ? `<div class="text-xs text-orange-600 mt-1"><i class="fas fa-calendar mr-1"></i>Retourné le: ${article.date_retour}</div>` : ''}
+                            ${article.raison ? `<div class="text-xs text-gray-500 mt-1"><i class="fas fa-comment mr-1"></i>${article.raison.substring(0, 50)}${article.raison.length > 50 ? '...' : ''}</div>` : ''}
                         </div>
                         <div class="text-right">
                             <div class="flex items-center">
                                 <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 mr-2">
-                                    <i class="fas fa-undo mr-1"></i>Renvoyé
+                                    <i class="fas fa-undo mr-1"></i>Retourné
                                 </span>
                                 <span class="text-lg font-bold text-orange-600">${article.quantite}x</span>
                             </div>
@@ -599,27 +556,7 @@ function fermerPanierComplet() {
     document.getElementById('panierCompletModal').classList.add('hidden');
 }
 
-function openSavActionsModal(commandeId, commandeIdYz) {
-    currentCommandeId = commandeId;
-    currentCommandeIdYz = commandeIdYz;
-    document.getElementById('commandeIdDisplay').textContent = commandeIdYz;
-    document.getElementById('savActionsModal').classList.remove('hidden');
-}
 
-function selectSavAction(etat) {
-    // Fermer la modale des actions
-    document.getElementById('savActionsModal').classList.add('hidden');
-    
-    // Rediriger vers la page de détail avec l'action appropriée
-    const detailUrl = `/operateur-logistique/commande/${currentCommandeId}/`;
-    
-    // Ajouter un paramètre pour indiquer l'action à effectuer
-    const actionParam = encodeURIComponent(etat);
-    const finalUrl = `${detailUrl}?action=${actionParam}`;
-    
-    // Rediriger vers la page de détail
-    window.location.href = finalUrl;
-}
 
 document.addEventListener('DOMContentLoaded', function() {
     const actionsModal = document.getElementById('savActionsModal');

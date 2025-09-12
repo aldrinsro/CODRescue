@@ -712,11 +712,7 @@ def modifier_quantite_article(request, commande_id):
         return JsonResponse({'success': False, 'error': str(e)})
 
     
-@login_required
-@require_POST
-def renvoyer_en_preparation(request, commande_id):
-    # Fonctionnalité supprimée
-    return JsonResponse({'success': False, 'error': 'Fonctionnalité supprimée'})
+
 
 
 @login_required
@@ -740,18 +736,36 @@ def livraison_partielle(request, commande_id):
         
         # Récupérer les données du formulaire
         import json
-        articles_livres = json.loads(request.POST.get('articles_livres', '[]'))
-        articles_renvoyes = json.loads(request.POST.get('articles_renvoyes', '[]'))
+        
+        # Récupérer les chaînes JSON brutes pour diagnostiquer
+        articles_livres_raw = request.POST.get('articles_livres', '[]')
+        articles_renvoyes_raw = request.POST.get('articles_renvoyes', '[]')
         commentaire = request.POST.get('commentaire', '').strip()
+        
+        print(f"🔧 DEBUG JSON: articles_livres_raw = '{articles_livres_raw}'")
+        print(f"🔧 DEBUG JSON: articles_renvoyes_raw = '{articles_renvoyes_raw}'")
+        
+        # Parser avec gestion d'erreur
+        try:
+            articles_livres = json.loads(articles_livres_raw) if articles_livres_raw.strip() else []
+        except json.JSONDecodeError as e:
+            print(f"❌ ERREUR JSON articles_livres: {e}")
+            return JsonResponse({'success': False, 'error': f'Erreur JSON articles_livres: {str(e)}'})
+        
+        try:
+            articles_renvoyes = json.loads(articles_renvoyes_raw) if articles_renvoyes_raw.strip() else []
+        except json.JSONDecodeError as e:
+            print(f"❌ ERREUR JSON articles_renvoyes: {e}")
+            return JsonResponse({'success': False, 'error': f'Erreur JSON articles_renvoyes: {str(e)}'})
         
         # DEBUG: Afficher les valeurs reçues du frontend
         print("=== DEBUG RECEPTION LIVRAISON PARTIELLE ===")
         print(f"Articles livrés reçus (RAW): {articles_livres}")
-        print(f"Articles renvoyés reçus (RAW): {articles_renvoyes}")
+        print(f"Articles retournés reçus (RAW): {articles_renvoyes}")
         for i, article in enumerate(articles_livres):
             print(f"Article livré {i+1}: ID: {article.get('article_id', 'N/A')}, Variante ID: {article.get('variante_id', 'N/A')}, Nom: {article.get('nom', 'N/A')}, Prix Unitaire: {article.get('prix_unitaire', 'N/A')}")
         for i, article in enumerate(articles_renvoyes):
-            print(f"Article renvoyé {i+1}: ID: {article.get('article_id', 'N/A')}, Variante ID: {article.get('variante_id', 'N/A')}, Nom: {article.get('nom', 'N/A')}, Prix Unitaire: {article.get('prix_unitaire', 'N/A')}")
+            print(f"Article retourné {i+1}: ID: {article.get('article_id', 'N/A')}, Variante ID: {article.get('variante_id', 'N/A')}, Nom: {article.get('nom', 'N/A')}, Prix Unitaire: {article.get('prix_unitaire', 'N/A')}")
         print("=== FIN DEBUG RECEPTION ===")
         
         if not commentaire:
@@ -761,92 +775,6 @@ def livraison_partielle(request, commande_id):
             return JsonResponse({'success': False, 'error': 'Aucun article à livrer spécifié.'})
 
         with transaction.atomic():
-            # === Construire un récap détaillé des articles renvoyés (prix calculés selon compteur/upsell) ===
-            recap_articles_renvoyes = []
-            if articles_renvoyes:
-                for article_data in articles_renvoyes:
-                    article_id = article_data.get('id') or article_data.get('article_id')
-                    variante_id = article_data.get('variante_id')
-                    nom_article = article_data.get('nom', '')  # Utiliser le nom du frontend
-                    quantite_raw = article_data.get('quantite', 0)
-                    try:
-                        quantite = int(quantite_raw) if quantite_raw else 0
-                    except (ValueError, TypeError):
-                        quantite = 0
-                    
-                    if article_id and quantite > 0:
-                        try:
-                            from article.models import Article, VarianteArticle
-                            article_obj = Article.objects.get(id=article_id)
-                            # Utiliser le nom du frontend s'il est fourni, sinon celui de la DB
-                            if not nom_article:
-                                nom_article = article_obj.nom
-                            
-                            # Calcul prix upsell s'il y a lieu
-                            prix_unitaire_calc = article_obj.prix_unitaire
-                            prix_actuel_calc = article_obj.prix_unitaire
-                            
-                            if commande.compteur > 0 and getattr(article_obj, 'isUpsell', False):
-                                if commande.compteur == 1 and article_obj.prix_upsell_1:
-                                    prix_actuel_calc = article_obj.prix_upsell_1
-                                elif commande.compteur == 2 and article_obj.prix_upsell_2:
-                                    prix_actuel_calc = article_obj.prix_upsell_2
-                                elif commande.compteur == 3 and article_obj.prix_upsell_3:
-                                    prix_actuel_calc = article_obj.prix_upsell_3
-                                elif commande.compteur >= 4 and article_obj.prix_upsell_4:
-                                    prix_actuel_calc = article_obj.prix_upsell_4
-                            
-                            # Récupérer les détails de la variante
-                            variante_details = {}
-                            if variante_id:
-                                try:
-                                    variante_obj = VarianteArticle.objects.get(id=variante_id, article=article_obj)
-                                    variante_details = {
-                                        'id': variante_obj.id,
-                                        'couleur': variante_obj.couleur.nom if variante_obj.couleur else None,
-                                        'pointure': variante_obj.pointure.pointure if variante_obj.pointure else None,
-                                        'reference_variante': variante_obj.reference_variante
-                                    }
-                                except Exception as e:
-                                    print(f"DEBUG: Erreur récupération variante {variante_id}: {e}")
-                                    variante_details = {
-                                        'id': variante_id,
-                                        'couleur': None,
-                                        'pointure': None,
-                                        'reference_variante': None
-                                    }
-                            
-                            recap_articles_renvoyes.append({
-                                'article_id': article_id,
-                                'variante_id': variante_id,
-                                'nom': nom_article,
-                                'quantite': quantite,
-                                'prix_unitaire': float(prix_unitaire_calc),
-                                'prix_actuel': float(prix_actuel_calc),
-                                'is_upsell': bool(getattr(article_obj, 'isUpsell', False)),
-                                'compteur': int(commande.compteur or 0),
-                                'variante_details': variante_details
-                            })
-                            
-                        except Exception as e:
-                            print(f"DEBUG: Erreur traitement article renvoyé {article_id}: {e}")
-                            # En cas d'erreur, utiliser les données du frontend
-                            recap_articles_renvoyes.append({
-                                'article_id': article_id,
-                                'variante_id': variante_id,
-                                'nom': nom_article or f'Article ID {article_id}',
-                                'quantite': quantite,
-                                'prix_unitaire': float(article_data.get('prix_unitaire', 0)),
-                                'prix_actuel': float(article_data.get('prix_actuel', 0)),
-                                'is_upsell': bool(article_data.get('is_upsell', False)),
-                                'compteur': int(article_data.get('compteur', 0)),
-                                'variante_details': {
-                                    'id': variante_id,
-                                    'couleur': None,
-                                    'pointure': None,
-                                    'reference_variante': None
-                                }
-                            })
             
             # 1. Terminer l'état "En cours de livraison" actuel
             etat_actuel = commande.etat_actuel
@@ -869,30 +797,55 @@ def livraison_partielle(request, commande_id):
                 commentaire=commentaire_etat
             )
             
-            # 4. Traiter les articles renvoyés (supprimer de la commande actuelle)
-            articles_renvoyes_ids = []
-            if articles_renvoyes:
-                for article_data in articles_renvoyes:
-                    panier_id = article_data.get('panier_id')
-                    if panier_id:
-                        try:
-                            panier = commande.paniers.get(id=panier_id)
-                            articles_renvoyes_ids.append(panier_id)
-                            print(f"DEBUG: Article renvoyé supprimé - Panier ID: {panier_id}, Article: {panier.article.nom}")
-                            panier.delete()  # Supprimer complètement le panier renvoyé
-                        except Exception as e:
-                            print(f"DEBUG: Erreur suppression panier {panier_id}: {e}")
+            # 4. NOUVELLE LOGIQUE: Stocker les articles retournés en base de données
+            from commande.models import ArticleRetourne
+            articles_retournes_crees = []
             
-            # 5. Mettre à jour les quantités des articles livrés dans la commande originale
+            # Traiter les articles livrés et créer les retours pour les quantités non livrées
             for article_data in articles_livres:
                 panier = commande.paniers.filter(
                     id=article_data['panier_id']
                 ).first()
                 if panier:
-                    if article_data['quantite'] > 0:
-                        panier.quantite = article_data['quantite']
+                    quantite_originale = panier.quantite
+                    quantite_livree = article_data['quantite']
+                    quantite_retournee = quantite_originale - quantite_livree
+                    
+                    print(f"DEBUG QUANTITÉS: Panier {panier.id} - Original: {quantite_originale}, Livrée: {quantite_livree}, Retournée: {quantite_retournee}")
+                    
+                    # Créer un enregistrement de retour si une partie n'est pas livrée
+                    if quantite_retournee > 0:
+                        # Calculer le prix unitaire au moment du retour
+                        prix_unitaire_retour = panier.article.prix_unitaire
+                        if commande.compteur > 0 and panier.article.isUpsell:
+                            if commande.compteur == 1 and panier.article.prix_upsell_1:
+                                prix_unitaire_retour = panier.article.prix_upsell_1
+                            elif commande.compteur == 2 and panier.article.prix_upsell_2:
+                                prix_unitaire_retour = panier.article.prix_upsell_2
+                            elif commande.compteur == 3 and panier.article.prix_upsell_3:
+                                prix_unitaire_retour = panier.article.prix_upsell_3
+                            elif commande.compteur >= 4 and panier.article.prix_upsell_4:
+                                prix_unitaire_retour = panier.article.prix_upsell_4
                         
-                        # Appliquer le prix upsell selon le compteur de la commande
+                        # Créer l'enregistrement de retour
+                        article_retourne = ArticleRetourne.objects.create(
+                            commande=commande,
+                            article=panier.article,
+                            variante=panier.variante,
+                            quantite_retournee=quantite_retournee,
+                            prix_unitaire_origine=prix_unitaire_retour,
+                            raison_retour=commentaire,
+                            operateur_retour=operateur,
+                            statut_retour='en_attente'
+                        )
+                        articles_retournes_crees.append(article_retourne)
+                        print(f"✅ Article retourné créé: {article_retourne}")
+                    
+                    # Mettre à jour le panier avec seulement la quantité livrée
+                    if quantite_livree > 0:
+                        panier.quantite = quantite_livree
+                        
+                        # Appliquer le prix upsell selon le compteur
                         prix_unitaire = panier.article.prix_unitaire
                         if commande.compteur > 0 and panier.article.isUpsell:
                             if commande.compteur == 1 and panier.article.prix_upsell_1:
@@ -904,10 +857,80 @@ def livraison_partielle(request, commande_id):
                             elif commande.compteur >= 4 and panier.article.prix_upsell_4:
                                 prix_unitaire = panier.article.prix_upsell_4
                         
-                        panier.sous_total = prix_unitaire * article_data['quantite']
+                        panier.sous_total = prix_unitaire * quantite_livree
                         panier.save()
+                        print(f"✅ Panier {panier.id} mis à jour - Quantité livrée: {quantite_livree}")
                     else:
+                        # Aucun article livré, supprimer le panier
+                        print(f"🗑️ Panier {panier.id} supprimé - Aucun article livré")
                         panier.delete()
+            
+            # Traiter les articles entièrement retournés (s'il y en a dans la liste articles_renvoyes)
+            articles_retournes_ids = []
+            if articles_renvoyes:
+                for article_data in articles_renvoyes:
+                    panier_id = article_data.get('panier_id')
+                    if panier_id:
+                        try:
+                            panier = commande.paniers.get(id=panier_id)
+                            
+                            # Calculer le prix unitaire au moment du retour
+                            prix_unitaire_retour = panier.article.prix_unitaire
+                            if commande.compteur > 0 and panier.article.isUpsell:
+                                if commande.compteur == 1 and panier.article.prix_upsell_1:
+                                    prix_unitaire_retour = panier.article.prix_upsell_1
+                                elif commande.compteur == 2 and panier.article.prix_upsell_2:
+                                    prix_unitaire_retour = panier.article.prix_upsell_2
+                                elif commande.compteur == 3 and panier.article.prix_upsell_3:
+                                    prix_unitaire_retour = panier.article.prix_upsell_3
+                                elif commande.compteur >= 4 and panier.article.prix_upsell_4:
+                                    prix_unitaire_retour = panier.article.prix_upsell_4
+                            
+                            # Créer l'enregistrement de retour complet
+                            article_retourne = ArticleRetourne.objects.create(
+                                commande=commande,
+                                article=panier.article,
+                                variante=panier.variante,
+                                quantite_retournee=panier.quantite,
+                                prix_unitaire_origine=prix_unitaire_retour,
+                                raison_retour=f"Article entièrement retourné: {commentaire}",
+                                operateur_retour=operateur,
+                                statut_retour='en_attente'
+                            )
+                            articles_retournes_crees.append(article_retourne)
+                            articles_retournes_ids.append(panier_id)
+                            
+                            print(f"✅ Article entièrement retourné créé: {article_retourne}")
+                            panier.delete()  # Supprimer le panier original
+                        except Exception as e:
+                            print(f"❌ Erreur traitement panier retourné {panier_id}: {e}")
+            
+            # 5. Construire le récap des articles retournés depuis les enregistrements créés
+            recap_articles_retournes = []
+            for article_retourne in articles_retournes_crees:
+                variante_details = {}
+                if article_retourne.variante:
+                    variante_details = {
+                        'id': article_retourne.variante.id,
+                        'couleur': article_retourne.variante.couleur.nom if article_retourne.variante.couleur else None,
+                        'pointure': article_retourne.variante.pointure.pointure if article_retourne.variante.pointure else None,
+                        'reference_variante': article_retourne.variante.reference_variante
+                    }
+                
+                recap_articles_retournes.append({
+                    'article_id': article_retourne.article.id,
+                    'variante_id': article_retourne.variante.id if article_retourne.variante else None,
+                    'nom': article_retourne.article.nom,
+                    'quantite': article_retourne.quantite_retournee,
+                    'prix_unitaire': float(article_retourne.article.prix_unitaire),
+                    'prix_actuel': float(article_retourne.prix_unitaire_origine),
+                    'is_upsell': bool(getattr(article_retourne.article, 'isUpsell', False)),
+                    'compteur': int(commande.compteur or 0),
+                    'variante_details': variante_details,
+                    'retour_id': article_retourne.id,
+                    'statut_retour': article_retourne.statut_retour,
+                    'date_retour': article_retourne.date_retour.isoformat()
+                })
             
             # 6. Recalculer le compteur upsell après livraison partielle
             from django.db.models import Sum
@@ -1008,7 +1031,7 @@ def livraison_partielle(request, commande_id):
                     'article_id': article_id,
                     'quantite_livree': quantite_livree,
                     'quantite_originale': quantite_originale,
-                    'quantite_renvoyee': quantite_originale - quantite_livree,
+                    'quantite_retournee': quantite_originale - quantite_livree,
                     'prix_unitaire': float(prix_unitaire),
                     'est_livraison_partielle': quantite_livree < quantite_originale
                 }
@@ -1019,10 +1042,10 @@ def livraison_partielle(request, commande_id):
             operation_conclusion_data = {
                 'commentaire': commentaire,
                 'articles_livres_count': len(articles_livres_json),
-                'articles_renvoyes_count': len(recap_articles_renvoyes),
+                'articles_retournes_count': len(recap_articles_retournes),
                 'articles_livres': articles_livres_json,
-                'recap_articles_renvoyes': recap_articles_renvoyes,
-                'articles_renvoyes_ids': articles_renvoyes_ids,  # IDs des paniers supprimés
+                'recap_articles_retournes': recap_articles_retournes,
+                'articles_retournes_ids': articles_retournes_ids,  # IDs des paniers supprimés
                 'compteur_change': {
                     'ancien_compteur': ancien_compteur,
                     'nouveau_compteur': commande.compteur,
@@ -1035,18 +1058,9 @@ def livraison_partielle(request, commande_id):
                 }
             }
             
-            # 9. Créer une opération pour tracer la livraison partielle
-            Operation.objects.create(
-                commande=commande,
-                type_operation='LIVRAISON_PARTIELLE',
-                operateur=operateur,
-                date_operation=timezone.now(),
-                conclusion=json.dumps(operation_conclusion_data, ensure_ascii=False)
-            )
-            
-            if recap_articles_renvoyes:
+            if recap_articles_retournes:
                 messages.success(request, 
-                    f"Livraison partielle effectuée avec succès. {len(articles_livres)} article(s) livré(s), {len(recap_articles_renvoyes)} article(s) renvoyé(s) en préparation.")
+                    f"Livraison partielle effectuée avec succès. {len(articles_livres)} article(s) livré(s), {len(recap_articles_retournes)} article(s) retourné(s).")
             else:
                 messages.success(request, 
                     f"Livraison partielle effectuée avec succès. {len(articles_livres)} article(s) livré(s).")
@@ -1055,8 +1069,8 @@ def livraison_partielle(request, commande_id):
                 'success': True,
                 'message': f'Livraison partielle effectuée avec succès',
                 'articles_livres': len(articles_livres),
-                'articles_renvoyes': len(recap_articles_renvoyes),
-                'recap_articles_renvoyes': recap_articles_renvoyes,
+                'articles_retournes': len(recap_articles_retournes),
+                'recap_articles_retournes': recap_articles_retournes,
                 'compteur_change': {
                     'ancien_compteur': ancien_compteur,
                     'nouveau_compteur': commande.compteur,
@@ -1077,52 +1091,85 @@ def livraison_partielle(request, commande_id):
 def api_panier_commande(request, commande_id):
     """API pour récupérer les données du panier d'une commande."""
     try:
+        print(f"🔧 DEBUG API: Recherche commande ID {commande_id}")
         commande = get_object_or_404(Commande, id=commande_id)
+        print(f"🔧 DEBUG API: Commande trouvée {commande.id_yz}")
         
         # Récupérer les paniers avec les articles
         paniers = commande.paniers.select_related('article').all()
+        print(f"🔧 DEBUG API: Nombre de paniers trouvés: {paniers.count()}")
         
         # Préparer les données du panier avec calcul de prix upsell
         paniers_data = []
         for panier in paniers:
-            # Calculer le prix en fonction du compteur et de l'upsell (même logique que detail_commande)
-            prix_actuel = panier.article.prix_unitaire  # Prix de base par défaut
-            
-            if commande.compteur > 0 and panier.article.isUpsell:
-                if commande.compteur == 1 and panier.article.prix_upsell_1:
-                    prix_actuel = panier.article.prix_upsell_1
-                elif commande.compteur == 2 and panier.article.prix_upsell_2:
-                    prix_actuel = panier.article.prix_upsell_2
-                elif commande.compteur == 3 and panier.article.prix_upsell_3:
-                    prix_actuel = panier.article.prix_upsell_3
-                elif commande.compteur >= 4 and panier.article.prix_upsell_4:
-                    prix_actuel = panier.article.prix_upsell_4
-            
-            paniers_data.append({
-                'id': panier.id,
-                'nom': panier.article.nom,
-                'reference': panier.article.reference,
-                'quantite': panier.quantite,
-                'prix_unitaire': f"{panier.article.prix_unitaire:.2f}",
-                'prix_actuel': f"{prix_actuel:.2f}",
-                'sous_total': f"{panier.sous_total:.2f}",
-                'pointure': panier.article.pointure,
-                'couleur': panier.article.couleur,
-                'article_id': panier.article.id,
-                'is_upsell': panier.article.isUpsell,
-                'compteur': commande.compteur,
-            })
+            try:
+                # Calculer le prix en fonction du compteur et de l'upsell (même logique que detail_commande)
+                prix_actuel = float(panier.article.prix_unitaire or 0)  # Prix de base par défaut
+                
+                if commande.compteur and commande.compteur > 0 and getattr(panier.article, 'isUpsell', False):
+                    if commande.compteur == 1 and getattr(panier.article, 'prix_upsell_1', None):
+                        prix_actuel = float(panier.article.prix_upsell_1)
+                    elif commande.compteur == 2 and getattr(panier.article, 'prix_upsell_2', None):
+                        prix_actuel = float(panier.article.prix_upsell_2)
+                    elif commande.compteur == 3 and getattr(panier.article, 'prix_upsell_3', None):
+                        prix_actuel = float(panier.article.prix_upsell_3)
+                    elif commande.compteur >= 4 and getattr(panier.article, 'prix_upsell_4', None):
+                        prix_actuel = float(panier.article.prix_upsell_4)
+                
+                paniers_data.append({
+                    'id': panier.id,
+                    'nom': panier.article.nom or '',
+                    'reference': getattr(panier.article, 'reference', '') or '',
+                    'quantite': panier.quantite or 0,
+                    'prix_unitaire': f"{float(panier.article.prix_unitaire or 0):.2f}",
+                    'prix_actuel': f"{prix_actuel:.2f}",
+                    'sous_total': f"{float(panier.sous_total or 0):.2f}",
+                    'pointure': getattr(panier.article, 'pointure', '') or '',
+                    'couleur': getattr(panier.article, 'couleur', '') or '',
+                    'article_id': panier.article.id,
+                    'is_upsell': getattr(panier.article, 'isUpsell', False),
+                    'compteur': commande.compteur or 0,
+                })
+            except Exception as panier_error:
+                print(f"❌ Erreur traitement panier {panier.id}: {panier_error}")
+                # Ajouter quand même le panier avec des valeurs par défaut
+                paniers_data.append({
+                    'id': panier.id,
+                    'nom': getattr(panier.article, 'nom', f'Article {panier.id}'),
+                    'reference': getattr(panier.article, 'reference', ''),
+                    'quantite': panier.quantite or 0,
+                    'prix_unitaire': "0.00",
+                    'prix_actuel': "0.00",
+                    'sous_total': "0.00",
+                    'pointure': '',
+                    'couleur': '',
+                    'article_id': getattr(panier.article, 'id', 0),
+                    'is_upsell': False,
+                    'compteur': 0,
+                })
         
         # Préparer les données de la commande
-        commande_data = {
-            'id': commande.id,
-            'id_yz': commande.id_yz,
-            'num_cmd': commande.num_cmd,
-            'total_cmd': f"{commande.total_cmd:.2f}",
-            'date_cmd': commande.date_cmd.strftime('%d/%m/%Y') if commande.date_cmd else None,
-            'etat_actuel': commande.etat_actuel.enum_etat.libelle if commande.etat_actuel else None,
-        }
+        try:
+            commande_data = {
+                'id': commande.id,
+                'id_yz': commande.id_yz or '',
+                'num_cmd': commande.num_cmd or '',
+                'total_cmd': f"{float(commande.total_cmd or 0):.2f}",
+                'date_cmd': commande.date_cmd.strftime('%d/%m/%Y') if commande.date_cmd else None,
+                'etat_actuel': commande.etat_actuel.enum_etat.libelle if (commande.etat_actuel and hasattr(commande.etat_actuel, 'enum_etat')) else None,
+            }
+        except Exception as commande_error:
+            print(f"❌ Erreur traitement commande {commande.id}: {commande_error}")
+            commande_data = {
+                'id': commande.id,
+                'id_yz': getattr(commande, 'id_yz', ''),
+                'num_cmd': getattr(commande, 'num_cmd', ''),
+                'total_cmd': "0.00",
+                'date_cmd': None,
+                'etat_actuel': None,
+            }
         
+        print(f"🔧 DEBUG API: Préparation réponse avec {len(paniers_data)} paniers")
         return JsonResponse({
             'success': True,
             'commande': commande_data,
@@ -1130,6 +1177,9 @@ def api_panier_commande(request, commande_id):
         })
         
     except Exception as e:
+        print(f"❌ ERREUR API api_panier_commande: {str(e)}")
+        import traceback
+        print(f"❌ TRACEBACK: {traceback.format_exc()}")
         return JsonResponse({
             'success': False,
             'error': str(e)

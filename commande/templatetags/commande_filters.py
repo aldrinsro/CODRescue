@@ -251,3 +251,12 @@ def get_phase_couleur(article):
     """
     info = get_prix_avec_phase_info(article, compteur=None)
     return info['couleur_classe']
+
+# Filtre utilitaire conservé pour d'autres usages
+@register.filter
+def safe_multiply(value1, value2):
+    """Multiplication sécurisée de deux valeurs"""
+    try:
+        return float(value1) * float(value2)
+    except (ValueError, TypeError):
+        return 0

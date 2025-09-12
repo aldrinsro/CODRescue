@@ -280,6 +280,63 @@ class Commande(models.Model):
                 Commande.objects.filter(id=self.id).update(total_cmd=nouveau_total)
                 print(f"ℹ️  Frais de livraison désactivés - Total recalculé: {nouveau_total}")
 
+    # === Méthodes pour la gestion des articles retournés ===
+    
+    def get_articles_retournes(self):
+        """Retourne tous les articles retournés pour cette commande"""
+        return self.articles_retournes.all()
+    
+    def articles_retournes_en_attente(self):
+        """Retourne les articles retournés en attente de traitement"""
+        return self.articles_retournes.filter(statut_retour='en_attente')
+    
+    def articles_retournes_count(self):
+        """Nombre total d'articles retournés pour cette commande"""
+        return self.articles_retournes.count()
+    
+    def valeur_articles_retournes(self):
+        """Valeur totale des articles retournés"""
+        total = 0
+        for article_retourne in self.articles_retournes.all():
+            total += article_retourne.valeur_retour()
+        return total
+    
+    def a_des_articles_retournes(self):
+        """Vérifie si la commande a des articles retournés"""
+        return self.articles_retournes.exists()
+    
+    def peut_reintegrer_articles_retournes(self):
+        """Vérifie si des articles retournés peuvent être réintégrés en stock"""
+        return self.articles_retournes.filter(
+            statut_retour='en_attente',
+            variante__isnull=False,
+            variante__actif=True
+        ).exists()
+    
+    def reintegrer_tous_articles_retournes(self, operateur=None, commentaire="Réintégration automatique"):
+        """Réintègre automatiquement tous les articles retournés éligibles"""
+        articles_reintegres = 0
+        for article_retourne in self.articles_retournes_en_attente():
+            if article_retourne.peut_etre_reintegre():
+                if article_retourne.reintegrer_stock(operateur, commentaire):
+                    articles_reintegres += 1
+        return articles_reintegres
+    
+    def resume_retours(self):
+        """Résumé des retours pour cette commande"""
+        retours = self.articles_retournes.all()
+        if not retours:
+            return None
+        
+        return {
+            'total_articles': retours.count(),
+            'total_quantite': sum(r.quantite_retournee for r in retours),
+            'total_valeur': sum(r.valeur_retour() for r in retours),
+            'en_attente': retours.filter(statut_retour='en_attente').count(),
+            'reintegres': retours.filter(statut_retour='reintegre_stock').count(),
+            'traites': retours.exclude(statut_retour='en_attente').count()
+        }
+
 
 class Panier(models.Model):
     commande = models.ForeignKey(Commande, on_delete=models.CASCADE, related_name='paniers')
@@ -535,3 +592,128 @@ class EtiquetteTemplate(models.Model):
             'left': self.margin_left * mm,
             'right': self.margin_right * mm
         }
+
+
+class ArticleRetourne(models.Model):
+    """
+    Modèle pour stocker les articles/variantes retournés lors d'une livraison partielle.
+    Ces articles seront réintégrés en stock ou renvoyés en préparation.
+    """
+    commande = models.ForeignKey(
+        'Commande', 
+        on_delete=models.CASCADE, 
+        related_name='articles_retournes',
+        help_text="Commande d'origine de l'article retourné"
+    )
+    article = models.ForeignKey(
+        Article, 
+        on_delete=models.CASCADE,
+        help_text="Article retourné"
+    )
+    variante = models.ForeignKey(
+        VarianteArticle,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        help_text="Variante spécifique de l'article retourné"
+    )
+    quantite_retournee = models.PositiveIntegerField(
+        help_text="Quantité retournée de cet article/variante"
+    )
+    prix_unitaire_origine = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2,
+        help_text="Prix unitaire de l'article au moment de la livraison partielle"
+    )
+    raison_retour = models.TextField(
+        max_length=500,
+        blank=True,
+        help_text="Raison du retour (optionnel)"
+    )
+    date_retour = models.DateTimeField(
+        auto_now_add=True,
+        help_text="Date et heure du retour"
+    )
+    operateur_retour = models.ForeignKey(
+        Operateur,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="Opérateur qui a effectué le retour"
+    )
+    
+    # Statut du traitement du retour
+    STATUT_RETOUR_CHOICES = [
+        ('en_attente', 'En attente de traitement'),
+        ('reintegre_stock', 'Réintégré en stock'),
+        ('renvoye_preparation', 'Renvoyé en préparation'),
+        ('defectueux', 'Défectueux - à écarter'),
+        ('traite', 'Traité'),
+    ]
+    
+    statut_retour = models.CharField(
+        max_length=50,
+        choices=STATUT_RETOUR_CHOICES,
+        default='en_attente',
+        help_text="Statut du traitement du retour"
+    )
+    
+    date_traitement = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Date de traitement du retour"
+    )
+    
+    operateur_traitement = models.ForeignKey(
+        Operateur,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='retours_traites',
+        help_text="Opérateur qui a traité le retour"
+    )
+    
+    commentaire_traitement = models.TextField(
+        max_length=500,
+        blank=True,
+        help_text="Commentaire sur le traitement du retour"
+    )
+
+    class Meta:
+        verbose_name = "Article Retourné"
+        verbose_name_plural = "Articles Retournés"
+        ordering = ['-date_retour']
+        indexes = [
+            models.Index(fields=['commande', 'statut_retour']),
+            models.Index(fields=['article', 'statut_retour']),
+            models.Index(fields=['date_retour']),
+        ]
+
+    def __str__(self):
+        variante_str = f" ({self.variante})" if self.variante else ""
+        return f"Retour: {self.article.nom}{variante_str} x{self.quantite_retournee} - Commande {self.commande.id_yz}"
+
+    def valeur_retour(self):
+        """Calcule la valeur totale du retour"""
+        return self.quantite_retournee * self.prix_unitaire_origine
+
+    def peut_etre_reintegre(self):
+        """Vérifie si l'article peut être réintégré en stock"""
+        return self.statut_retour == 'en_attente' and self.variante and self.variante.actif
+
+    def reintegrer_stock(self, operateur=None, commentaire=""):
+        """Réintègre l'article en stock"""
+        if self.peut_etre_reintegre():
+            # Augmenter la quantité disponible de la variante
+            self.variante.qte_disponible += self.quantite_retournee
+            self.variante.save(update_fields=['qte_disponible'])
+            
+            # Mettre à jour le statut
+            self.statut_retour = 'reintegre_stock'
+            self.date_traitement = timezone.now()
+            self.operateur_traitement = operateur
+            self.commentaire_traitement = commentaire or f"Réintégré automatiquement en stock: +{self.quantite_retournee}"
+            self.save()
+            
+            return True
+        return False

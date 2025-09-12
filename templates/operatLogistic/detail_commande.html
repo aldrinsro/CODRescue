@@ -506,7 +506,7 @@
                     </h3>
                     <p class="text-green-700 mb-3">
                         Cette commande a été livrée partiellement. Certains articles ont été livrés au client, 
-                        tandis que d'autres ont été renvoyés en préparation pour traitement.
+                        tandis que d'autres ont été retournés pour traitement.
                     </p>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="bg-white p-3 rounded border border-green-200">
@@ -521,7 +521,7 @@
                         <div class="bg-white p-3 rounded border border-orange-200">
                             <div class="flex items-center mb-2">
                                 <i class="fas fa-undo text-orange-600 mr-2"></i>
-                                <span class="font-medium text-orange-800">Articles Renvoyés</span>
+                                <span class="font-medium text-orange-800">Articles Retournés</span>
                             </div>
                             <p class="text-sm text-orange-700">
                                 Les articles non livrés ont été transférés vers une commande de renvoi pour traitement.
@@ -579,7 +579,7 @@
                     <div class="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                         <p class="text-sm text-yellow-800">
                             <i class="fas fa-exclamation-triangle mr-2"></i>
-                            <strong>Note :</strong> La commande sera renvoyée aux opérateurs de préparation qui effectueront les modifications demandées par le client.
+                            <strong>Note :</strong> La commande sera retournée aux opérateurs de préparation qui effectueront les modifications demandées par le client.
                         </p>
                     </div>
                 </div>
@@ -764,7 +764,7 @@
                         <div class="ml-3">
                             <p class="text-sm text-blue-700">
                                 <strong>Instructions :</strong> Sélectionnez les articles que vous allez livrer au client. 
-                                Les articles non sélectionnés seront automatiquement renvoyés aux opérateurs de préparation 
+                                Les articles non sélectionnés seront automatiquement retournés aux opérateurs de préparation 
                                 pour traitement (remplacement, correction, etc.).
                             </p>
                         </div>
@@ -776,7 +776,7 @@
                     
                     <!-- Ces champs seront remplis dynamiquement par JavaScript juste avant la soumission -->
                     <input type="hidden" name="articles_livres" id="articlesLivresJsonInput">
-                    <input type="hidden" name="articles_renvoyes" id="articlesRenvoyesJsonInput">
+                    <input type="hidden" name="articles_renvoyes" id="articlesRetournesJsonInput">
                     
                     <!-- Section Articles à Livrer -->
                     <div class="mb-8">
@@ -877,16 +877,16 @@
                     <div class="mb-8">
                         <h4 class="text-lg font-semibold text-orange-700 mb-4 flex items-center">
                             <i class="fas fa-undo mr-2"></i>
-                            Articles à Renvoyer
+                            Articles à Retourner
                         </h4>
                         <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
                             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="articlesARenvoyerContainer">
                                 <!-- Les articles non sélectionnés apparaîtront ici dynamiquement -->
-                                <!-- Pour chaque article à renvoyer, on ajoute un champ select pour l'état -->
+                                <!-- Pour chaque article à retourner, on ajoute un champ select pour l'état -->
                             </div>
                             <div id="aucunArticleRenvoyer" class="text-center py-8 text-gray-500">
                                 <i class="fas fa-info-circle text-2xl mb-2"></i>
-                                <p>Aucun article à renvoyer. Tous les articles seront livrés.</p>
+                                <p>Aucun article à retourner. Tous les articles seront livrés.</p>
                             </div>
                             
                         </div>
@@ -905,7 +905,7 @@
                             </div>
                             <div class="text-center">
                                 <div class="text-2xl font-bold text-orange-600" id="totalArticlesRenvoyes">0</div>
-                                <div class="text-sm text-gray-600">Articles à renvoyer</div>
+                                <div class="text-sm text-gray-600">Articles à retourner</div>
                             </div>
                             <div class="text-center">
                                 <div class="text-2xl font-bold text-blue-600" id="totalValeurLivree">0.00 DH</div>
@@ -913,7 +913,7 @@
                             </div>
                             <div class="text-center">
                                 <div class="text-2xl font-bold text-red-600" id="totalValeurRenvoyee">0.00 DH</div>
-                                <div class="text-sm text-gray-600">Valeur renvoyée</div>
+                                <div class="text-sm text-gray-600">Valeur retournée</div>
                             </div>
                             {% if commande.frais_livraison and commande.ville.frais_livraison %}
                             <div class="text-center">
@@ -993,6 +993,7 @@
                         </button>
                         <button type="submit" 
                                 id="confirmerLivraisonPartielleBtn"
+                                onclick="mettreAJourDonneesAvantSoumission()"
                                 class="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                             <i class="fas fa-check mr-2"></i>
                             Confirmer la Livraison Partielle
@@ -1136,67 +1137,7 @@
         </div>
     </div>
 
-    <!-- Modale de Renvoi en Préparation -->
-    <div id="renvoyerModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
-        <div class="relative top-20 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white">
-            <div class="mt-3 text-center">
-                <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4 flex items-center justify-center">
-                    <i class="fas fa-undo mr-2 text-purple-600"></i>
-                    Renvoi en Préparation
-                </h3>
-                <div class="mt-2 px-7 py-3">
-                    <form id="renvoyerForm" action="{% url 'operatLogistic:renvoyer_preparation' commande.id %}" method="POST">
-                        {% csrf_token %}
-                        
-                        <!-- Informations de la commande -->
-                        <div class="bg-purple-50 p-4 rounded-lg border border-purple-200 mb-4">
-                            <h4 class="font-semibold text-purple-800 mb-3 flex items-center">
-                                <i class="fas fa-info-circle mr-2"></i>
-                                Détails de la commande
-                            </h4>
-                            <div class="grid grid-cols-2 gap-4 text-sm">
-                                <div>
-                                    <span class="text-purple-600">ID:</span>
-                                    <span class="font-medium ml-2">{{ commande.id_yz }}</span>
-                                </div>
-                                <div>
-                                    <span class="text-purple-600">Client:</span>
-                                    <span class="font-medium ml-2">{{ commande.client.prenom }} {{ commande.client.nom }}</span>
-                                </div>
-                                <div>
-                                    <span class="text-purple-600">Articles:</span>
-                                    <span class="font-medium ml-2">{{ commande.paniers.count }} article(s)</span>
-                                </div>
-                                <div>
-                                    <span class="text-purple-600">Total:</span>
-                                    <span class="font-medium ml-2">{{ commande.total_cmd|floatformat:2 }} DH</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Liste des articles actuels -->
-                        <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-4">
-                            <h4 class="font-semibold text-gray-800 mb-3 flex items-center">
-                                <i class="fas fa-box mr-2"></i>
-                                Articles actuels de la commande
-                            </h4>
-                            <div class="max-h-40 overflow-y-auto">
-                                <ul class="space-y-2">
-                                {% for panier in commande.paniers.all %}
-                                    <li class="text-sm text-gray-700 flex items-center justify-between">
-                                        <div class="flex items-center">
-                                            <i class="fas fa-circle text-gray-400 mr-2 text-xs"></i>
-                                            <span class="font-medium">{{ panier.article.nom }}</span>
-                                            {% if panier.article.reference %}
-                                                <span class="text-gray-500 ml-1">({{ panier.article.reference }})</span>
-                                            {% endif %}
-                                        </div>
-                                        <span class="text-gray-600">x{{ panier.quantite }}</span>
-                                    </li>
-                                {% endfor %}
-                                </ul>
-                            </div>
-                        </div>
+ 
     <!-- Modale de confirmation livraison partielle -->
     <div id="confirmationLivraisonPartielleModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
         <div class="relative top-32 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
@@ -1530,7 +1471,7 @@ function showStockNotification(action, articleName, quantite, stockChange = null
         case 'suppression':
             message = `🗑️ Article supprimé: ${articleName}`;
             if (stockChange) {
-                message += `\n📦 Article renvoyé en préparation`;
+                message += `\n📦 Article retourné en préparation`;
             }
             type = 'success';
             break;
@@ -1539,7 +1480,7 @@ function showStockNotification(action, articleName, quantite, stockChange = null
             if (stockChange && stockChange > 0) {
                 message += `\n📦 Stock décrémenté: -${stockChange} unités`;
             } else if (stockChange && stockChange < 0) {
-                message += `\n📦 Article renvoyé en préparation`;
+                message += `\n📦 Article retourné en préparation`;
             }
             type = 'success';
             break;
@@ -2560,7 +2501,7 @@ function mettreAJourResumeLivraisonPartielle() {
 
     // Mettre à jour les champs cachés (qui seront utilisés par le submit handler)
     document.getElementById('articlesLivresJsonInput').value = JSON.stringify(articlesLivres);
-    document.getElementById('articlesRenvoyesJsonInput').value = JSON.stringify(articlesRenvoyes);
+    document.getElementById('articlesRetournesJsonInput').value = JSON.stringify(articlesRenvoyes);
     
     // Gérer l'affichage de la section des articles à renvoyer
     const aucunArticleRenvoyer = document.getElementById('aucunArticleRenvoyer');
@@ -2616,182 +2557,38 @@ function mettreAJourResumeLivraisonPartielle() {
     console.log('DEBUG: Fin de miseAJourResumeLivraisonPartielle - Bouton toujours activé');
 }
 
+// Fonction appelée juste avant la soumission pour s'assurer que les données sont à jour
+function mettreAJourDonneesAvantSoumission() {
+    console.log('🔧 DEBUG: Mise à jour des données avant soumission');
+    
+    // Forcer la mise à jour des données
+    mettreAJourDonneesLivraison();
+    
+    // Vérifier que les champs sont remplis
+    const articlesLivresInput = document.getElementById('articlesLivresJsonInput');
+    const articlesRetournesInput = document.getElementById('articlesRetournesJsonInput');
+    
+    console.log('🔧 DEBUG: Articles livrés input value:', articlesLivresInput.value);
+    console.log('🔧 DEBUG: Articles retournés input value:', articlesRetournesInput.value);
+    
+    // S'assurer qu'on a au moins des tableaux vides
+    if (!articlesLivresInput.value || articlesLivresInput.value.trim() === '') {
+        articlesLivresInput.value = '[]';
+        console.log('⚠️ WARNING: articles_livres était vide, défini à []');
+    }
+    
+    if (!articlesRetournesInput.value || articlesRetournesInput.value.trim() === '') {
+        articlesRetournesInput.value = '[]';
+        console.log('⚠️ WARNING: articles_retournes était vide, défini à []');
+    }
+}
 
 // Cette fonction est maintenant gérée par modals.js avec les données du backend
 
-// ================== Ancien Gestionnaire de Soumission de Formulaire ==================
-// Ce bloc est maintenant simplifié et doit utiliser les hidden inputs JSON
-// qui sont mis à jour par mettreAJourResumeLivraisonPartielle()
-document.addEventListener('DOMContentLoaded', function() {
-    const livraisonPartielleForm = document.getElementById('livraisonPartielleForm');
-    if (livraisonPartielleForm) {
-        livraisonPartielleForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            // Validation du commentaire
-            const commentaireSelect = document.getElementById('commentaireLivraisonPartielle').value.trim();
-            let commentaire = commentaireSelect;
-            
-            // Si "Autre motif" est sélectionné, utiliser le commentaire personnalisé
-            if (commentaireSelect === 'Autre motif - voir détails') {
-                const commentaireCustom = document.getElementById('commentaireCustomLivraisonPartielle').value.trim();
-                if (!commentaireCustom) {
-                    showNotification('⚠️ Veuillez détailler le motif dans le commentaire personnalisé', 'warning');
-                    return;
-                }
-                commentaire = commentaireCustom;
-            }
-            
-            if (!commentaire) {
-                showNotification('⚠️ Le commentaire est obligatoire', 'warning');
-                return;
-            }
-            
-            const articlesLivres = JSON.parse(document.getElementById('articlesLivresJsonInput').value);
-            const articlesRenvoyes = JSON.parse(document.getElementById('articlesRenvoyesJsonInput').value);
-            
-            // DEBUG: Afficher les valeurs collectées
-            console.log('=== DEBUG LIVRAISON PARTIELLE ===');
-            console.log('Articles renvoyés:', articlesRenvoyes);
-            articlesRenvoyes.forEach((article, index) => {
-                console.log(`Article ${index + 1}: ${article.nom} - Quantité: ${article.quantite}`);
-            });
-            console.log('=== FIN DEBUG ===');
-            
-            const totalArticlesLivres = articlesLivres.reduce((acc, a) => acc + (a.quantite || 0), 0);
-            const totalArticlesRenvoyes = articlesRenvoyes.reduce((acc, a) => acc + (a.quantite || 0), 0);
-            const totalValeurLivree = articlesLivres.reduce((acc, a) => acc + (a.quantite * a.prix || 0), 0);
-            
-            // Suppression de la validation - le bouton peut être cliqué même sans articles sélectionnés
-            // La validation sera gérée côté serveur si nécessaire
-            
-            // Désactiver le bouton pour éviter les doubles soumissions
-            const submitBtn = document.getElementById('confirmerLivraisonPartielleBtn');
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Traitement...';
-            
-            // Créer un FormData pour envoyer les données
-            const formData = new FormData();
-            formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
-            formData.append('articles_livres', JSON.stringify(articlesLivres));
-            formData.append('articles_renvoyes', JSON.stringify(articlesRenvoyes));
-            formData.append('commentaire', commentaire);
+// ================== SUPPRIMÉ - Gestionnaire maintenant dans modals.js ==================
+// Le gestionnaire de soumission du formulaire de livraison partielle a été déplacé
+// vers modals.js pour éviter les doubles exécutions
 
-            fetch(livraisonPartielleForm.action, {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    console.log('✅ Livraison partielle réussie:', data);
-                    
-                    // Afficher les changements de compteur upsell s'il y en a
-                    if (data.compteur_change) {
-                        console.log('=== DEBUG RESPONSE COMPTEUR ===');
-                        console.log('Ancien compteur:', data.compteur_change.ancien_compteur);
-                        console.log('Nouveau compteur:', data.compteur_change.nouveau_compteur);
-                        console.log('Quantité upsell restante:', data.compteur_change.total_quantite_upsell_restante);
-                        console.log('=== FIN DEBUG RESPONSE COMPTEUR ===');
-                    }
-                    
-                    // Affichage du toast
-                    const messageRetour = 'renvoyés en préparation';
-                    
-                    let messageCompteur = '';
-                    if (data.compteur_change && data.compteur_change.ancien_compteur !== data.compteur_change.nouveau_compteur) {
-                        messageCompteur = `\nCompteur upsell: ${data.compteur_change.ancien_compteur} → ${data.compteur_change.nouveau_compteur}`;
-                    }
-                    
-                    showNotification(
-                        `✅ Livraison partielle effectuée avec succès !\n` +
-                        `Articles livrés : ${totalArticlesLivres}\n` +
-                        `Articles ${messageRetour} : ${totalArticlesRenvoyes}\n` +
-                        `Valeur totale livrée : ${totalValeurLivree.toFixed(2)} DH${messageCompteur}`,
-                        'success'
-                    );
-                    // Affichage de la modale de confirmation
-                    const confirmationModal = document.getElementById('confirmationLivraisonPartielleModal');
-                    const detailsDiv = document.getElementById('confirmation-livraison-details');
-                    if (data.recap_articles_renvoyes && Array.isArray(data.recap_articles_renvoyes) && data.recap_articles_renvoyes.length > 0) {
-                        let table = `<table class='min-w-full text-sm text-left border mt-4'>`;
-                        table += `<thead><tr><th class='px-2 py-1 border'>Article</th><th class='px-2 py-1 border'>Qté</th><th class='px-2 py-1 border'>Prix unitaire</th><th class='px-2 py-1 border'>Valeur</th></tr></thead><tbody>`;
-                        data.recap_articles_renvoyes.forEach(a => {
-                            table += `<tr>` +
-                                `<td class='px-2 py-1 border'>${a.nom || '-'}</td>` +
-                                `<td class='px-2 py-1 border text-center'>${a.quantite || 0}</td>` +
-                                `<td class='px-2 py-1 border text-center'>${(a.prix_actuel || a.prix_unitaire || 0).toFixed(2)} DH</td>` +
-                                `<td class='px-2 py-1 border text-center'>${((a.quantite || 0) * (a.prix_actuel || a.prix_unitaire || 0)).toFixed(2)} DH</td>` +
-                            `</tr>`;
-                        });
-                        table += `</tbody></table>`;
-                        let stockTable = '';
-                        if (data.recap_stock_commande && Array.isArray(data.recap_stock_commande) && data.recap_stock_commande.length > 0) {
-                            stockTable = `<div class='mt-6 mb-2 font-semibold text-gray-700'>Résumé des articles :</div>`;
-                            stockTable += `<table class='min-w-full text-sm text-left border'>`;
-                            stockTable += `<thead><tr><th class='px-2 py-1 border'>Article</th><th class='px-2 py-1 border'>Statut</th></tr></thead><tbody>`;
-                            data.recap_stock_commande.forEach(a => {
-                                stockTable += `<tr>` +
-                                    `<td class='px-2 py-1 border'>${a.nom || '-'}</td>` +
-                                    `<td class='px-2 py-1 border text-center'>${a.statut || 'Livré'}</td>` +
-                                `</tr>`;
-                            });
-                            stockTable += `</tbody></table>`;
-                        }
-                        const messageRetour = 'renvoyés en préparation';
-                        const titreDetail = 'Détail des articles renvoyés';
-                        
-                        detailsDiv.innerHTML = `
-                            <div><strong>Articles livrés :</strong> ${totalArticlesLivres}</div>
-                            <div><strong>Articles ${messageRetour} :</strong> ${totalArticlesRenvoyes}</div>
-                            <div><strong>Valeur totale livrée :</strong> ${totalValeurLivree.toFixed(2)} DH</div>
-                            <div class='mt-4 mb-2 font-semibold text-gray-700'>${titreDetail} :</div>
-                            ${table}
-                            ${stockTable}
-                        `;
-                    } else {
-                        const messageRetour = 'renvoyés en préparation';
-                        
-                        detailsDiv.innerHTML = `
-                            <div><strong>Articles livrés :</strong> ${totalArticlesLivres}</div>
-                            <div><strong>Articles ${messageRetour} :</strong> ${totalArticlesRenvoyes}</div>
-                            <div><strong>Valeur totale livrée :</strong> ${totalValeurLivree.toFixed(2)} DH</div>
-                        `;
-                    }
-                    confirmationModal.classList.remove('hidden');
-                    fermerModalLivraisonPartielle();
-                    
-                    // Si le compteur a changé, recharger la page pour refléter les nouveaux prix
-                    if (data.compteur_change && data.compteur_change.ancien_compteur !== data.compteur_change.nouveau_compteur) {
-                        console.log('🔄 Rechargement de la page car le compteur upsell a changé');
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 3000);
-                    }
-                    
-                    // Gestion du bouton OK
-                    const fermerBtn = document.getElementById('fermerConfirmationLivraisonBtn');
-                    if (fermerBtn) {
-                        fermerBtn.onclick = function() {
-                            confirmationModal.classList.add('hidden');
-                        window.location.reload();
-                        };
-                    }
-                } else {
-                    showNotification('❌ Erreur: ' + data.error, 'error');
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = '<i class="fas fa-check mr-2"></i>Confirmer la Livraison Partielle';
-                }
-            })
-            .catch(error => {
-                console.error('Erreur:', error);
-                showNotification('❌ Erreur de réseau: ' + error.message, 'error');
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="fas fa-check mr-2"></i>Confirmer la Livraison Partielle';
-            });
-        });
-    }
-});
 
 </script>
 {% endblock %} 

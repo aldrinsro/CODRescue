@@ -389,7 +389,7 @@
             <p class="text-sm text-gray-600 mb-6">Commande <span id="commandeIdDisplay" class="font-semibold text-blue-600"></span></p>
             
             <!-- Grille des actions SAV -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <button onclick="openSavModal('Livrée', {{ commande.id }})" class="sav-action-card bg-green-50 hover:bg-green-100 border-2 border-green-200 hover:border-green-300 rounded-lg p-4 transition-all duration-200">
                     <div class="flex flex-col items-center">
                         <i class="fas fa-check-circle text-3xl text-green-500 mb-2"></i>
@@ -398,13 +398,6 @@
                     </div>
                 </button>
                 
-                <button onclick="ouvrirModalLivraisonPartielle({{ commande.id }})" class="sav-action-card bg-blue-50 hover:bg-blue-100 border-2 border-blue-200 hover:border-blue-300 rounded-lg p-4 transition-all duration-200">
-                    <div class="flex flex-col items-center">
-                        <i class="fas fa-box-open text-3xl text-blue-500 mb-2"></i>
-                        <span class="font-semibold text-blue-800">Livraison Partielle</span>
-                        <span class="text-xs text-blue-600 mt-1">Certains articles livrés</span>
-                    </div>
-                </button>
                 
                 <button onclick="openSavModal('Retournée', {{ commande.id }})" class="sav-action-card bg-red-50 hover:bg-red-100 border-2 border-red-200 hover:border-red-300 rounded-lg p-4 transition-all duration-200">
                     <div class="flex flex-col items-center">
@@ -931,15 +924,7 @@ if (commentaireSelect && commentairePersonnalise && commentaireCustom) {
 
 // Gestion du formulaire SAV
 const savForm = document.getElementById('savForm');
-// Les fonctions de gestion des boutons SAV sont maintenant dans modals.js
-// Ce code a été déplacé pour éviter les conflits
 
-// const confirmSavBtn = document.getElementById('confirmSavBtn');
-// const cancelSavBtn = document.getElementById('cancelSavBtn');
-// 
-// Commenté car les boutons utilisent maintenant onclick="soumettreFormulaireSav()" et onclick="fermerModalSav()"
-
-// Fermer la modale SAV avec la touche Échap
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         const savModal = document.getElementById('savModal');
