@@ -802,88 +802,83 @@ def livraison_partielle(request, commande_id):
             articles_retournes_crees = []
             
             # Traiter les articles livrés et créer les retours pour les quantités non livrées
+            paniers_traites = set()  # Éviter le double traitement
+            
             for article_data in articles_livres:
-                panier = commande.paniers.filter(
-                    id=article_data['panier_id']
-                ).first()
-                if panier:
+                panier_id = article_data['panier_id']
+                panier = commande.paniers.filter(id=panier_id).first()
+                
+                if panier and panier_id not in paniers_traites:
+                    paniers_traites.add(panier_id)
+                    
                     quantite_originale = panier.quantite
-                    quantite_livree = article_data['quantite']
+                    quantite_livree = max(0, int(article_data['quantite']))  # S'assurer que c'est positif
                     quantite_retournee = quantite_originale - quantite_livree
                     
                     print(f"DEBUG QUANTITÉS: Panier {panier.id} - Original: {quantite_originale}, Livrée: {quantite_livree}, Retournée: {quantite_retournee}")
                     
+                    # Validation des quantités
+                    if quantite_livree > quantite_originale:
+                        print(f"❌ ERREUR: Quantité livrée ({quantite_livree}) > Quantité originale ({quantite_originale}) pour panier {panier_id}")
+                        continue
+                    
+                    # Calculer le prix unitaire actuel (avec upsell si applicable)
+                    prix_unitaire_actuel = panier.article.prix_unitaire
+                    if commande.compteur > 0 and getattr(panier.article, 'isUpsell', False):
+                        if commande.compteur == 1 and getattr(panier.article, 'prix_upsell_1', None):
+                            prix_unitaire_actuel = panier.article.prix_upsell_1
+                        elif commande.compteur == 2 and getattr(panier.article, 'prix_upsell_2', None):
+                            prix_unitaire_actuel = panier.article.prix_upsell_2
+                        elif commande.compteur == 3 and getattr(panier.article, 'prix_upsell_3', None):
+                            prix_unitaire_actuel = panier.article.prix_upsell_3
+                        elif commande.compteur >= 4 and getattr(panier.article, 'prix_upsell_4', None):
+                            prix_unitaire_actuel = panier.article.prix_upsell_4
+                    
                     # Créer un enregistrement de retour si une partie n'est pas livrée
                     if quantite_retournee > 0:
-                        # Calculer le prix unitaire au moment du retour
-                        prix_unitaire_retour = panier.article.prix_unitaire
-                        if commande.compteur > 0 and panier.article.isUpsell:
-                            if commande.compteur == 1 and panier.article.prix_upsell_1:
-                                prix_unitaire_retour = panier.article.prix_upsell_1
-                            elif commande.compteur == 2 and panier.article.prix_upsell_2:
-                                prix_unitaire_retour = panier.article.prix_upsell_2
-                            elif commande.compteur == 3 and panier.article.prix_upsell_3:
-                                prix_unitaire_retour = panier.article.prix_upsell_3
-                            elif commande.compteur >= 4 and panier.article.prix_upsell_4:
-                                prix_unitaire_retour = panier.article.prix_upsell_4
-                        
-                        # Créer l'enregistrement de retour
                         article_retourne = ArticleRetourne.objects.create(
                             commande=commande,
                             article=panier.article,
                             variante=panier.variante,
                             quantite_retournee=quantite_retournee,
-                            prix_unitaire_origine=prix_unitaire_retour,
-                            raison_retour=commentaire,
+                            prix_unitaire_origine=prix_unitaire_actuel,
+                            raison_retour=f"Livraison partielle - {commentaire}",
                             operateur_retour=operateur,
                             statut_retour='en_attente'
                         )
                         articles_retournes_crees.append(article_retourne)
-                        print(f"✅ Article retourné créé: {article_retourne}")
+                        print(f"✅ Article retourné créé: {panier.article.nom} - Quantité: {quantite_retournee}")
                     
                     # Mettre à jour le panier avec seulement la quantité livrée
                     if quantite_livree > 0:
                         panier.quantite = quantite_livree
-                        
-                        # Appliquer le prix upsell selon le compteur
-                        prix_unitaire = panier.article.prix_unitaire
-                        if commande.compteur > 0 and panier.article.isUpsell:
-                            if commande.compteur == 1 and panier.article.prix_upsell_1:
-                                prix_unitaire = panier.article.prix_upsell_1
-                            elif commande.compteur == 2 and panier.article.prix_upsell_2:
-                                prix_unitaire = panier.article.prix_upsell_2
-                            elif commande.compteur == 3 and panier.article.prix_upsell_3:
-                                prix_unitaire = panier.article.prix_upsell_3
-                            elif commande.compteur >= 4 and panier.article.prix_upsell_4:
-                                prix_unitaire = panier.article.prix_upsell_4
-                        
-                        panier.sous_total = prix_unitaire * quantite_livree
+                        panier.sous_total = prix_unitaire_actuel * quantite_livree
                         panier.save()
-                        print(f"✅ Panier {panier.id} mis à jour - Quantité livrée: {quantite_livree}")
+                        print(f"✅ Panier {panier.id} mis à jour - Quantité livrée: {quantite_livree}, Sous-total: {panier.sous_total}")
                     else:
                         # Aucun article livré, supprimer le panier
                         print(f"🗑️ Panier {panier.id} supprimé - Aucun article livré")
                         panier.delete()
             
-            # Traiter les articles entièrement retournés (s'il y en a dans la liste articles_renvoyes)
+            # Traiter les articles entièrement retournés (seulement ceux pas déjà traités)
             articles_retournes_ids = []
             if articles_renvoyes:
                 for article_data in articles_renvoyes:
                     panier_id = article_data.get('panier_id')
-                    if panier_id:
+                    if panier_id and panier_id not in paniers_traites:
                         try:
                             panier = commande.paniers.get(id=panier_id)
                             
-                            # Calculer le prix unitaire au moment du retour
+                            # Calculer le prix unitaire au moment du retour (avec upsell si applicable)
                             prix_unitaire_retour = panier.article.prix_unitaire
-                            if commande.compteur > 0 and panier.article.isUpsell:
-                                if commande.compteur == 1 and panier.article.prix_upsell_1:
+                            if commande.compteur > 0 and getattr(panier.article, 'isUpsell', False):
+                                if commande.compteur == 1 and getattr(panier.article, 'prix_upsell_1', None):
                                     prix_unitaire_retour = panier.article.prix_upsell_1
-                                elif commande.compteur == 2 and panier.article.prix_upsell_2:
+                                elif commande.compteur == 2 and getattr(panier.article, 'prix_upsell_2', None):
                                     prix_unitaire_retour = panier.article.prix_upsell_2
-                                elif commande.compteur == 3 and panier.article.prix_upsell_3:
+                                elif commande.compteur == 3 and getattr(panier.article, 'prix_upsell_3', None):
                                     prix_unitaire_retour = panier.article.prix_upsell_3
-                                elif commande.compteur >= 4 and panier.article.prix_upsell_4:
+                                elif commande.compteur >= 4 and getattr(panier.article, 'prix_upsell_4', None):
                                     prix_unitaire_retour = panier.article.prix_upsell_4
                             
                             # Créer l'enregistrement de retour complet
@@ -893,17 +888,20 @@ def livraison_partielle(request, commande_id):
                                 variante=panier.variante,
                                 quantite_retournee=panier.quantite,
                                 prix_unitaire_origine=prix_unitaire_retour,
-                                raison_retour=f"Article entièrement retourné: {commentaire}",
+                                raison_retour=f"Article entièrement retourné - {commentaire}",
                                 operateur_retour=operateur,
                                 statut_retour='en_attente'
                             )
                             articles_retournes_crees.append(article_retourne)
                             articles_retournes_ids.append(panier_id)
+                            paniers_traites.add(panier_id)
                             
-                            print(f"✅ Article entièrement retourné créé: {article_retourne}")
+                            print(f"✅ Article entièrement retourné créé: {panier.article.nom} - Quantité: {panier.quantite}")
                             panier.delete()  # Supprimer le panier original
                         except Exception as e:
                             print(f"❌ Erreur traitement panier retourné {panier_id}: {e}")
+                    elif panier_id in paniers_traites:
+                        print(f"⚠️ Panier {panier_id} déjà traité, ignoré dans articles_renvoyes")
             
             # 5. Construire le récap des articles retournés depuis les enregistrements créés
             recap_articles_retournes = []
