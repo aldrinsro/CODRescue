@@ -94,16 +94,9 @@
                             
                             <!-- Résumé compact -->
                             <div class="text-xs text-gray-600 mt-1">
-                                {% if commande.articles_livres_partiellement %}
-                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 mr-1">
-                                        <i class="fas fa-check mr-1"></i>{{ commande.articles_livres_partiellement|length }} livré{{ commande.articles_livres_partiellement|length|pluralize }}
-                                    </span>
-                                {% endif %}
-                                {% if commande.articles_renvoyes %}
-                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                                        <i class="fas fa-undo mr-1"></i>{{ commande.articles_renvoyes|length }} renvoyé{{ commande.articles_renvoyes|length|pluralize }}
-                                    </span>
-                                {% endif %}
+                              
+                               
+                              
                             </div>
                         </div>
                     </td>

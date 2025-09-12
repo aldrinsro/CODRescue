@@ -4,7 +4,7 @@
 
 <div class="article-card p-4 bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-all shadow-sm" 
     data-article-id="{{ panier.id }}"
-    data-article='{"id": {{ panier.article.id|default:0 }}, "nom": "{{ panier.article.nom|default:''|escapejs }}", "reference": "{{ panier.article.reference|default:''|escapejs }}", "prix_actuel": {{ panier.article.prix_actuel|default:0|floatformat:2 }}, "prix_unitaire": {{ panier.article.prix_unitaire|default:0|floatformat:2 }}, "prix_upsell_1": {{ panier.article.prix_upsell_1|default:0|floatformat:2 }}, "prix_upsell_2": {{ panier.article.prix_upsell_2|default:0|floatformat:2 }}, "prix_upsell_3": {{ panier.article.prix_upsell_3|default:0|floatformat:2 }}, "prix_upsell_4": {{ panier.article.prix_upsell_4|default:0|floatformat:2 }}, "isUpsell": {{ panier.article.isUpsell|default_if_none:False|yesno:"true,false" }}, "pointure": "{{ panier.pointure|default:''|escapejs }}", "couleur": "{{ panier.couleur|default:''|escapejs }}", "categorie": "{{ panier.article.categorie|default:''|escapejs }}", "qte_article": {{ panier.article.qte_disponible|default:0 }}, "phase": "{{ panier.article.phase|default:''|escapejs }}", "has_promo_active": {{ panier.article.has_promo_active|default_if_none:False|yesno:"true,false" }}"{% if panier.variante_id %}, "variante_id": {{ panier.variante_id|default:0 }}, "qte_variante": {{ panier.variante.qte_disponible|default:0 }}{% endif %}}'>
+    data-article='{"id": {{ panier.article.id|default:0 }}, "nom": "{{ panier.article.nom|default:''|escapejs }}", "reference": "{{ panier.article.reference|default:''|escapejs }}", "prix_actuel": {{ panier.article.prix_actuel|default:0|floatformat:2 }}, "prix_unitaire": {{ panier.article.prix_unitaire|default:0|floatformat:2 }}, "prix_upsell_1": {{ panier.article.prix_upsell_1|default:0|floatformat:2 }}, "prix_upsell_2": {{ panier.article.prix_upsell_2|default:0|floatformat:2 }}, "prix_upsell_3": {{ panier.article.prix_upsell_3|default:0|floatformat:2 }}, "prix_upsell_4": {{ panier.article.prix_upsell_4|default:0|floatformat:2 }}, "prix_remise_1": {{ panier.article.prix_remise_1|default:0|floatformat:2 }}, "prix_remise_2": {{ panier.article.prix_remise_2|default:0|floatformat:2 }}, "prix_remise_3": {{ panier.article.prix_remise_3|default:0|floatformat:2 }}, "prix_remise_4": {{ panier.article.prix_remise_4|default:0|floatformat:2 }}, "Prix_liquidation": {{ panier.article.Prix_liquidation|default:0|floatformat:2 }}, "isUpsell": {{ panier.article.isUpsell|default_if_none:False|yesno:"true,false" }}, "pointure": "{{ panier.pointure|default:''|escapejs }}", "couleur": "{{ panier.couleur|default:''|escapejs }}", "categorie": "{{ panier.article.categorie|default:''|escapejs }}", "qte_article": {{ panier.article.qte_disponible|default:0 }}, "phase": "{{ panier.article.phase|default:''|escapejs }}", "has_promo_active": {{ panier.article.has_promo_active|default_if_none:False|yesno:"true,false" }}"{% if panier.variante_id %}, "variante_id": {{ panier.variante_id|default:0 }}, "qte_variante": {{ panier.variante.qte_disponible|default:0 }}{% endif %}}'>
     <div class="flex items-center justify-between">
         <!-- Informations de l'article -->
         <div class="flex-1">
@@ -134,7 +134,13 @@
         
         <!-- Boutons d'action -->
         <div class="flex space-x-2 ml-4">
-       
+            <!-- Bouton Remise -->
+            <button type="button" onclick="ouvrirModalRemise({{ panier.id }})" 
+                    class="px-3 py-2 bg-purple-500 hover:bg-purple-600 text-white text-sm rounded-lg transition-colors flex items-center" 
+                    title="Appliquer une remise">
+                <i class="fas fa-percent mr-1"></i>Remise
+            </button>
+            
             <button type="button" onclick="supprimerArticle({{ panier.id }})" 
                     class="px-3 py-2 bg-red-500 hover:bg-red-600 text-white text-sm rounded-lg transition-colors flex items-center" 
                     title="Supprimer">

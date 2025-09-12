@@ -6942,10 +6942,81 @@ function saveLivraisonFromModal() {
     </div>
 </div>
 
+<!-- Modal des prix de remise -->
+<div id="modalPrixRemise" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50 p-4" style="backdrop-filter: blur(8px); display: none;">
+    <div class="bg-white rounded-xl p-6 w-full max-w-4xl mx-auto shadow-2xl max-h-[90vh] overflow-y-auto">
+        <!-- En-tête du modal -->
+        <div class="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                    <i class="fas fa-percent text-purple-600 text-lg"></i>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold text-gray-900">Prix de Remise Disponibles</h3>
+                    <p class="text-sm text-gray-600">Sélectionnez un prix de remise à appliquer</p>
+                </div>
+            </div>
+            <button type="button" onclick="fermerModalPrixRemise()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        
+        <!-- Informations de l'article -->
+        <div class="bg-gray-50 rounded-lg p-4 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">ARTICLE</label>
+                    <div id="articleNomRemise" class="font-semibold text-gray-900">-</div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">RÉFÉRENCE</label>
+                    <div id="articleRefRemise" class="text-gray-800">-</div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">PRIX ACTUEL</label>
+                    <div id="prixUnitaireActuel" class="font-bold text-lg text-green-600">-</div>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">CATÉGORIE</label>
+                    <div id="articleCategorieRemise" class="text-gray-800">-</div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">VARIANTE</label>
+                    <div id="articleVarianteRemise" class="text-gray-800">-</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Liste des prix de remise -->
+        <div class="mb-6">
+            <h4 class="text-lg font-semibold text-gray-900 mb-4">
+                <i class="fas fa-tags mr-2 text-purple-600"></i>Prix de Remise Disponibles
+            </h4>
+            <div id="listePrixRemises" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Les prix de remise seront générés ici par JavaScript -->
+            </div>
+        </div>
+        
+        <!-- Actions -->
+        <div class="flex justify-end pt-4 border-t border-gray-200">
+            <button type="button" onclick="fermerModalPrixRemise()" 
+                    class="px-6 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors">
+                <i class="fas fa-times mr-2"></i>Annuler
+            </button>
+        </div>
+    </div>
+</div>
+
 </script>
 
 <!-- Script JSON pour les articles disponibles -->
 {{ articles_json|json_script:"articles-data" }}
+
+<!-- Script pour la gestion des remises -->
+<script src="{% static 'js/operatConfirme/Confirmation_commande/Remise.js' %}"></script>
 
 <!-- Debug script temporaire pour vérifier les images -->
 <script>
