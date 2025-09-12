@@ -109,8 +109,34 @@ def _render_sav_list(request, commandes, page_title, page_subtitle):
 
 def _render_sav_list_custom(request, commandes, template_name):
     """Fonction utilitaire pour rendre la liste SAV avec un template personnalisé."""
+    from django.core.paginator import Paginator
+    
+    # Gestion de la pagination avec sélecteur
+    per_page = request.GET.get('per_page', '20')
+    try:
+        per_page = int(per_page)
+        if per_page not in [5, 10, 15, 20, 25, 30, 40, 50]:
+            per_page = 20
+    except (ValueError, TypeError):
+        per_page = 20
+    
+    # Calculer le total avant pagination
+    total_commandes = commandes.count()
+    
+    # Créer le paginateur
+    paginator = Paginator(commandes, per_page)
+    page_number = request.GET.get('page', 1)
+    
+    try:
+        commandes_page = paginator.get_page(page_number)
+    except:
+        commandes_page = paginator.get_page(1)
+    
     context = {
-        'commandes': commandes,
+        'commandes': commandes_page,
+        'paginator': paginator,
+        'per_page': per_page,
+        'total_commandes': total_commandes,
     }
     return render(request, f'operatLogistic/sav/{template_name}', context)
 

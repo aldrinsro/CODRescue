@@ -49,7 +49,7 @@
                 <tr class="hover:bg-gray-50" 
                     data-commande-id="{{ commande.id }}"
                     data-articles-livres='{% if commande.articles_livres_partiellement %}[{% for article_data in commande.articles_livres_partiellement %}{"nom": "{{ article_data.nom|escapejs }}", "reference": "{{ article_data.reference|escapejs }}", "quantite_livree": {{ article_data.quantite_livree }}, "prix_unitaire": "{{ article_data.prix_unitaire|stringformat:'%.2f' }}", "pointure": "{{ article_data.pointure|default:''|escapejs }}", "couleur": "{{ article_data.couleur|default:''|escapejs }}"}{% if not forloop.last %},{% endif %}{% endfor %}]{% else %}[]{% endif %}'
-                    data-articles-retournes='{% if commande.articles_retournes.exists %}[{% for article_retourne in commande.articles_retournes.all %}{"nom": "{{ article_retourne.article.nom|escapejs }}", "reference": "{{ article_retourne.article.reference|escapejs }}", "quantite": {{ article_retourne.quantite_retournee }}, "prix_unitaire": "{{ article_retourne.prix_unitaire_origine|stringformat:'%.2f' }}", "pointure": "{% if article_retourne.variante and article_retourne.variante.pointure %}{{ article_retourne.variante.pointure.numero|escapejs }}{% endif %}", "couleur": "{% if article_retourne.variante and article_retourne.variante.couleur %}{{ article_retourne.variante.couleur.nom|escapejs }}{% endif %}", "statut": "{{ article_retourne.get_statut_retour_display|escapejs }}", "date_retour": "{{ article_retourne.date_retour|date:'d/m/Y H:i'|escapejs }}", "raison": "{{ article_retourne.raison_retour|escapejs }}"}{% if not forloop.last %},{% endif %}{% endfor %}]{% else %}[]{% endif %}'
+                    data-articles-retournes='{% if commande.articles_retournes.exists %}[{% for article_retourne in commande.articles_retournes.all %}{"nom": "{{ article_retourne.article.nom|escapejs }}", "reference": "{% if article_retourne.variante and article_retourne.variante.reference_variante %}{{ article_retourne.variante.reference_variante|escapejs }}{% else %}{{ article_retourne.article.reference|escapejs }}{% endif %}", "quantite": {{ article_retourne.quantite_retournee }}, "prix_unitaire": "{{ article_retourne.prix_unitaire_origine|stringformat:'%.2f' }}", "pointure": "{% if article_retourne.variante and article_retourne.variante.pointure %}{{ article_retourne.variante.pointure.pointure|escapejs }}{% endif %}", "couleur": "{% if article_retourne.variante and article_retourne.variante.couleur %}{{ article_retourne.variante.couleur.nom|escapejs }}{% endif %}", "statut": "{{ article_retourne.get_statut_retour_display|escapejs }}", "date_retour": "{{ article_retourne.date_retour|date:'d/m/Y H:i'|escapejs }}", "raison": "{{ article_retourne.raison_retour|escapejs }}"}{% if not forloop.last %},{% endif %}{% endfor %}]{% else %}[]{% endif %}'
                     data-commentaire="{{ commande.commentaire_livraison_partielle|escapejs }}"
                     data-date-livraison="{% if commande.date_livraison_partielle %}{{ commande.date_livraison_partielle|date:'d/m/Y H:i' }}{% endif %}"
                     data-operateur="{% if commande.operateur_livraison %}{{ commande.operateur_livraison.prenom }} {{ commande.operateur_livraison.nom }}{% endif %}">
@@ -181,6 +181,9 @@
             </tbody>
         </table>
     </div>
+    
+    <!-- Pagination globale -->
+    {% include 'operatLogistic/partials/_pagination.html' %}
 </div>
 
 <!-- Modale du Panier Complet -->
@@ -347,12 +350,12 @@ function afficherDetailsArticles(commandeId, commandeNum) {
         `;
     }
     
-    // Section des articles retournés
+    // Section des variantes retournées
     if (articlesRetournes.length > 0) {
         content += `
             <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
                 <h4 class="font-semibold text-orange-800 mb-4 flex items-center">
-                    <i class="fas fa-undo mr-2"></i>Articles Retournés (${articlesRetournes.length})
+                    <i class="fas fa-undo mr-2"></i>Variantes Retournées (${articlesRetournes.length})
                 </h4>
                 <div class="space-y-3">
         `;
@@ -377,16 +380,16 @@ function afficherDetailsArticles(commandeId, commandeNum) {
                             <div class="font-medium text-gray-900">${article.nom} ${badgeStatut}</div>
                             <div class="text-sm text-gray-500">Réf: ${article.reference}</div>
                             <div class="text-xs text-gray-400 mt-1">
-                                ${article.pointure ? `Taille: ${article.pointure} | ` : ''}
+                                ${article.pointure ? `Pointure : ${article.pointure} | ` : ''}
                                 ${article.couleur ? `Couleur: ${article.couleur}` : ''}
                             </div>
-                            ${article.date_retour ? `<div class="text-xs text-orange-600 mt-1"><i class="fas fa-calendar mr-1"></i>Retourné le: ${article.date_retour}</div>` : ''}
+                            ${article.date_retour ? `<div class="text-xs text-orange-600 mt-1"><i class="fas fa-calendar mr-1"></i>Retournée le: ${article.date_retour}</div>` : ''}
                             ${article.raison ? `<div class="text-xs text-gray-500 mt-1"><i class="fas fa-comment mr-1"></i>${article.raison.substring(0, 50)}${article.raison.length > 50 ? '...' : ''}</div>` : ''}
                         </div>
                         <div class="text-right">
                             <div class="flex items-center">
                                 <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 mr-2">
-                                    <i class="fas fa-undo mr-1"></i>Retourné
+                                    <i class="fas fa-undo mr-1"></i>Retournée
                                 </span>
                                 <span class="text-lg font-bold text-orange-600">${article.quantite}x</span>
                             </div>

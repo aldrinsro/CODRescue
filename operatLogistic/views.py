@@ -220,7 +220,16 @@ def liste_commandes(request):
     # Calculer le total des montants
     total_montant = sum(cmd.total_cmd or 0 for cmd in commandes_list)
     
-    paginator   = Paginator(commandes_list, 20)
+    # Gestion de la pagination avec sélecteur
+    per_page = request.GET.get('per_page', '20')
+    try:
+        per_page = int(per_page)
+        if per_page not in [5, 10, 15, 20, 25, 30, 40, 50]:
+            per_page = 20
+    except (ValueError, TypeError):
+        per_page = 20
+    
+    paginator   = Paginator(commandes_list, per_page)
     page_number = request.GET.get('page')
     page_obj    = paginator.get_page(page_number)
     
@@ -234,6 +243,7 @@ def liste_commandes(request):
         'affectees_aujourd_hui': affectees_aujourd_hui,
         'affectees_semaine': affectees_semaine,
         'affectees_mois': affectees_mois,
+        'per_page'        : per_page,
         # Paramètres de filtre pour le template
         'filter_start_date': start_date,
         'filter_end_date': end_date,
@@ -470,11 +480,9 @@ def changer_etat_sav(request, commande_id):
 def rafraichir_articles(request, commande_id):
     """Rafraîchir la section des articles d'une commande."""
     try:
-        commande = get_object_or_404(Commande, id=commande_id)
-        
+        commande = get_object_or_404(Commande, id=commande_id)   
         # S'assurer que les totaux sont à jour
-        commande.recalculer_totaux_upsell()
-        
+        commande.recalculer_totaux_upsell() 
         context = {
             'commande': commande
         }
