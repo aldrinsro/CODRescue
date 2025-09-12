@@ -57,6 +57,14 @@
             margin: 0;
         }
 
+        .header-divider {
+            width: 0.6mm;
+            background: #ddd;
+            align-self: stretch;
+            height: 100%;
+            margin: 0 1mm;
+        }
+
         .qr-section {
             flex: 1;
             text-align: right;
@@ -134,7 +142,7 @@
         }
 
         .client-detail {
-            font-size: 9pt;
+            font-size: 11pt;
             margin: 0;
             display: flex;
             align-items: center;
@@ -144,7 +152,7 @@
         }
 
         .client-detail i {
-            width: 10pt;
+            width: 12pt;
             margin-right: 1mm;
             color: #000;
             flex-shrink: 0;
@@ -165,7 +173,7 @@
         }
 
         .articles-header {
-            font-size: 8pt;
+            font-size: 10pt;
             font-weight: bold;
             color: #000;
             margin-bottom: 1mm;
@@ -177,7 +185,7 @@
         }
 
         .article-item {
-            font-size: 9pt;
+            font-size: 11pt;
             margin: 0;
             padding: 0;
             display: flex;
@@ -195,35 +203,35 @@
 
         .article-details {
             color: #6c757d;
-            font-size: 8pt;
+            font-size: 10pt;
             margin-left: 0;
             white-space: nowrap;
         }
 
         .article-icon {
-            width: 10pt;
+            width: 12pt;
             margin-right: 1mm;
             color: #000;
             flex-shrink: 0;
         }
 
         /* Section entreprise en bas */
-        .ticket-footer {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 10mm;
-            background: white;
-            color: black;
-            padding: 1mm;
-            border-radius: 0;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border: 1px solid #ddd;
-            box-sizing: border-box;
-        }
+         .ticket-footer {
+             position: absolute;
+             bottom: 2mm;
+             left: 0;
+             right: 0;
+             height: 12mm;
+             background: white;
+             color: black;
+             padding: 2mm 1mm 4mm 1mm;
+             border-radius: 0;
+             display: flex;
+             justify-content: space-between;
+             align-items: center;
+             border: none;
+             box-sizing: border-box;
+         }
 
         .total-section {
             flex: 1;
@@ -234,13 +242,13 @@
         }
 
         .total-amount {
-            font-size: 12pt;
+            font-size: 14pt;
             font-weight: bold;
             color: black;
         }
 
         .total-icon {
-            width: 12pt;
+            width: 14pt;
             margin-right: 1mm;
             color: #000;
         }
@@ -256,20 +264,20 @@
         }
 
         .company-name {
-            font-size: 10pt;
+            font-size: 12pt;
             font-weight: bold;
             margin-bottom: 0;
             color: black;
         }
 
         .company-details {
-            font-size: 8pt;
+            font-size: 10pt;
             opacity: 1;
             color: black;
         }
 
         .company-icon {
-            width: 10pt;
+            width: 12pt;
             margin-right: 1mm;
             color: #000;
         }
@@ -562,9 +570,12 @@
         <div class="ticket-header">
             <!-- Logo en haut à gauche -->
             <div class="logo-section">
-                <img src="{% static 'logo-tiicket/image.svg' %}" alt="Logo" class="logo">
+                <img src="{% static 'logo-tickets/image.svg' %}" alt="Logo" class="logo">
             </div>
             
+            <!-- Barre verticale -->
+            <div class="header-divider"></div>
+
             <!-- Code QR en haut à droite -->
             <div class="qr-section">
                 <div class="qr-commande-id">#CMD-{{ commande.id_yz }}</div>
