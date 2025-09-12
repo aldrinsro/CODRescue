@@ -1,14 +1,12 @@
-{% load static %}
 {% load commande_filters %}
-{% load remise_filters %}
-{% load l10n %}
+{% load static%}
 
 {% for panier in commande.paniers.all %}
 
-<div class="article-card p-4 bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-all shadow-sm" 
-    data-article-id="{{ panier.id }}"
-    data-article='{"id": {{ panier.article.id|default:0 }}, "nom": "{{ panier.article.nom|default:''|escapejs }}", "reference": "{{ panier.article.reference|default:''|escapejs }}", "prix_actuel": {{ panier.article.prix_actuel|default:0|unlocalize }}, "prix_unitaire": {{ panier.article.prix_unitaire|default:0|unlocalize }}, "prix_upsell_1": {{ panier.article.prix_upsell_1|default:0|unlocalize }}, "prix_upsell_2": {{ panier.article.prix_upsell_2|default:0|unlocalize }}, "prix_upsell_3": {{ panier.article.prix_upsell_3|default:0|unlocalize }}, "prix_upsell_4": {{ panier.article.prix_upsell_4|default:0|unlocalize }}, "prix_remise_1": {{ panier.article.prix_remise_1|default:0|unlocalize }}, "prix_remise_2": {{ panier.article.prix_remise_2|default:0|unlocalize }}, "prix_remise_3": {{ panier.article.prix_remise_3|default:0|unlocalize }}, "prix_remise_4": {{ panier.article.prix_remise_4|default:0|unlocalize }}, "Prix_liquidation": {{ panier.article.Prix_liquidation|default:0|unlocalize }}, "isUpsell": {{ panier.article.isUpsell|default_if_none:False|yesno:"true,false" }}, "pointure": "{{ panier.pointure|default:''|escapejs }}", "couleur": "{{ panier.couleur|default:''|escapejs }}", "categorie": "{{ panier.article.categorie|default:''|escapejs }}", "qte_article": {{ panier.article.qte_disponible|default:0 }}, "phase": "{{ panier.article.phase|default:''|escapejs }}", "has_promo_active": {{ panier.article.has_promo_active|default_if_none:False|yesno:"true,false" }}{% if panier.variante_id %}, "variante_id": {{ panier.variante_id|default:0 }}, "qte_variante": {{ panier.variante.qte_disponible|default:0 }}{% endif %}}'>
-    <div class="flex items-center justify-between">
+  <div class="article-card p-4 bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-all shadow-sm" 
+  data-article-id="{{ panier.id }}"
+  data-article='{"id": {{ panier.article.id|default:0 }}, "nom": "{{ panier.article.nom|default:''|escapejs }}", "reference": "{{ panier.article.reference|default:''|escapejs }}", "prix_actuel": {{ panier.article.prix_actuel|default:0|floatformat:2 }}, "prix_unitaire": {{ panier.article.prix_unitaire|default:0|floatformat:2 }}, "prix_upsell_1": {{ panier.article.prix_upsell_1|default:0|floatformat:2}}, "prix_upsell_2": {{ panier.article.prix_upsell_2|default:0|floatformat:2 }}, "prix_upsell_3": {{ panier.article.prix_upsell_3|default:0|floatformat:2 }}, "prix_upsell_4": {{ panier.article.prix_upsell_4|default:0|floatformat:2 }}, "prix_remise_1": {{ panier.article.prix_remise_1|default:0|floatformat:2 }}, "prix_remise_2": {{ panier.article.prix_remise_2|default:0|floatformat:2 }}, "prix_remise_3": {{ panier.article.prix_remise_3|default:0|floatformat:2 }}, "prix_remise_4": {{ panier.article.prix_remise_4|default:0|floatformat:2 }}, "Prix_liquidation": {{ panier.article.Prix_liquidation|default:0|floatformat:2 }}, "isUpsell": {{ panier.article.isUpsell|default_if_none:False|yesno:"true,false" }}, "pointure": "{{ panier.pointure|default:''|escapejs }}", "couleur": "{{ panier.couleur|default:''|escapejs }}", "categorie": "{{ panier.article.categorie|default:''|escapejs }}", "qte_article": {{ panier.article.qte_disponible|default:0 }}, "phase": "{{ panier.article.phase|default:''|escapejs }}", "has_promo_active": {{ panier.article.has_promo_active|default_if_none:False|yesno:"true,false" }}{% if panier.variante_id %}, "variante_id": {{ panier.variante_id|default:0 }}, "qte_variante": {{ panier.variante.qte_disponible|default:0 }}{% endif %}}'>
+  <div class="flex items-center justify-between">
         <!-- Informations de l'article -->
         <div class="flex-1">
             <div class="flex items-center space-x-4">
@@ -31,38 +29,29 @@
                 <!-- Nom et référence -->
                 <div class="min-w-0 flex-1">
                     
-                    <div class="font-semibold text-lg article-title" style="color: #4B352A;">
+                    <div class="font-semibold text-lg" style="color: #4B352A;">
                         {{ panier.article.nom }}
-                        
                         {% if panier.variante %}
                         <span class="inline-flex items-center px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium ml-2">
                             <i class="fas fa-layer-group mr-1"></i>Variante
                         </span>
                         {% endif %}
-                        
-                        <!-- Bouton pour activer/désactiver remise -->
-                        {% if not panier.remise_appliquer %}
-                        <button type="button" onclick="activerRemise({{ panier.id }})" 
-                                class="inline-flex items-center px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium ml-2 hover:bg-green-200 transition-colors" 
-                                title="Activer la remise"
-                                id="btn-activer-remise-{{ panier.id }}">
-                            <i class="fas fa-check mr-1"></i>Activer remise
-                        </button>
-                        {% else %}
-                        <button type="button" onclick="desactiverRemise({{ panier.id }})" 
-                                class="inline-flex items-center px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-medium ml-2 hover:bg-red-200 transition-colors" 
-                                title="Désactiver la remise"
-                                id="btn-desactiver-remise-{{ panier.id }}">
-                            <i class="fas fa-times mr-1"></i>Désactiver remise
-                        </button>
-                        {% endif %}
-                        
-                        <!-- Badge pour remise appliquée -->
-                        {% if panier.remise_appliquer %}
-                        <span class="badge-remise inline-flex items-center px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium ml-2">
-                            <i class="fas fa-percent mr-1"></i>Remise appliquée
-                        </span>
-                        {% endif %}
+                          <!-- Bouton pour activer/désactiver remise -->
+  {% if not panier.remise_appliquer %}
+  <button type="button" onclick="activerRemise({{ panier.id }})" 
+          class="inline-flex items-center px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium ml-2 hover:bg-green-200 transition-colors" 
+          title="Activer la remise"
+          id="btn-activer-remise-{{ panier.id }}">
+      <i class="fas fa-check mr-1"></i>Activer remise
+  </button>
+  {% else %}
+  <button type="button" onclick="desactiverRemise({{ panier.id }})" 
+          class="inline-flex items-center px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-medium ml-2 hover:bg-red-200 transition-colors" 
+          title="Désactiver la remise"
+          id="btn-desactiver-remise-{{ panier.id }}">
+      <i class="fas fa-times mr-1"></i>Désactiver remise
+  </button>
+  {% endif %}
 
                     </div>
                     <div class="text-sm text-gray-500">
@@ -141,9 +130,8 @@
                 <div class="text-center min-w-0">
                     <div class="text-sm text-gray-500">Prix actuel</div>
                     
-                    <!-- Utiliser le nouveau filtre pour obtenir le prix effectif -->
+                    <!-- Utiliser le filtre get_prix_effectif_panier pour la logique des remises -->
                     {% with panier|get_prix_effectif_panier as prix_effectif %}
-                    
                     <div class="font-medium {{ prix_effectif.couleur_classe }}" id="prix-unitaire-{{ panier.id }}">
                         {{ prix_effectif.prix_unitaire|floatformat:2 }} DH
                     </div>
@@ -159,7 +147,6 @@
                         </div>
                         {% endwith %}
                     {% endif %}
-                    
                     {% endwith %}
                 </div>
                 
@@ -167,7 +154,7 @@
                 <div class="text-center min-w-0">
                     <div class="text-sm text-gray-500">Sous-total</div>
                     
-                    <!-- Récupérer le prix effectif calculé précédemment -->
+                    <!-- Utiliser le prix effectif calculé précédemment -->
                     {% with panier|get_prix_effectif_panier as prix_effectif %}
                     <div class="text-lg font-bold" style="color: #6d4b3b;" id="sous-total-{{ panier.id }}">
                         {{ prix_effectif.sous_total|floatformat:2 }} DH
@@ -177,17 +164,17 @@
             </div>
         </div>
         
-        <!-- Boutons d'action -->
-        <div class="flex space-x-2 ml-4">
-            <!-- Bouton Remise -->
-            <button type="button" onclick="ouvrirModalRemise({{ panier.id }})" 
-                    class="px-3 py-2 bg-purple-500 hover:bg-purple-600 text-white text-sm rounded-lg transition-colors flex items-center {% if not panier.remise_appliquer %}opacity-50 cursor-not-allowed{% endif %}" 
-                    title="Appliquer une remise"
-                    id="btn-remise-{{ panier.id }}"
-                    {% if not panier.remise_appliquer %}disabled{% endif %}>
-                <i class="fas fa-percent mr-1"></i>Remise
-            </button>
-            
+         <!-- Boutons d'action -->
+   <div class="flex space-x-2 ml-4">
+    <!-- Bouton Remise -->
+    <button type="button" onclick="ouvrirModalRemise({{ panier.id }})" 
+            class="px-3 py-2 bg-purple-500 hover:bg-purple-600 text-white text-sm rounded-lg transition-colors flex items-center {% if not panier.remise_appliquer %}opacity-50 cursor-not-allowed{% endif %}" 
+            title="Appliquer une remise"
+            id="btn-remise-{{ panier.id }}"
+            {% if not panier.remise_appliquer %}disabled{% endif %}>
+        <i class="fas fa-percent mr-1"></i>Remise
+    </button>
+       
             <button type="button" onclick="supprimerArticle({{ panier.id }})" 
                     class="px-3 py-2 bg-red-500 hover:bg-red-600 text-white text-sm rounded-lg transition-colors flex items-center" 
                     title="Supprimer">
@@ -198,5 +185,7 @@
 </div>
 {% endfor %} 
 
+      
 <!-- Script pour la gestion des remises - inclus directement dans le partial -->
 <script src="{% static 'js/operatConfirme/Confirmation_commande/Remise.js' %}"></script>
+
