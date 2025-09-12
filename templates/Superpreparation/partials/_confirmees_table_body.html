@@ -1,5 +1,5 @@
 {% for commande in page_obj %}
-<tr class="hover:bg-gray-50 transition-colors border-b border-gray-200 commande-row" 
+<tr class="hover:bg-gray-50 transition-colors commande-row" 
     data-id-yz="{{ commande.id_yz }}"
     data-num-cmd="{{ commande.num_cmd|default:'' }}"
     data-client="{{ commande.client.nom }} {{ commande.client.prenom }}"
@@ -19,24 +19,23 @@
     </td>
 
     <!-- ID YZ -->
-    <td class="column-idyz px-4 py-4 text-sm font-medium text-gray-900 border-r" style="border-color: #F5DEB3;">
+    <td class="column-idyz px-4 py-4 text-sm font-medium text-gray-900">
         <div class="id-info">
             <div class="id-yz font-bold" style="color: #2e1b22;">{{ commande.id_yz }}</div>
         </div>
     </td>
 
     <!-- N° Externe -->
-    <td class="column-numext px-4 py-4 text-sm text-gray-600 border-r" style="border-color: #F5DEB3;">
+    <td class="column-numext px-4 py-4 text-sm text-gray-600">
         <div class="num-cmd-info">
             <div class="num-cmd font-medium">{{ commande.num_cmd|default:"Non renseigné" }}</div>
             {% if commande.num_cmd %}
-                <div class="num-cmd-type text-xs text-gray-500">Numéro externe</div>
             {% endif %}
         </div>
     </td>
 
     <!-- Client -->
-    <td class="column-client px-4 py-4 text-sm border-r" style="border-color: #F5DEB3;">
+    <td class="column-client px-4 py-4 text-sm">
         {% if commande.client %}
             <div class="client-info">
                 <div class="client-name">{{ commande.client.nom }} {{ commande.client.prenom }}</div>
@@ -53,7 +52,7 @@
     </td>
 
     <!-- Téléphone -->
-    <td class="column-phone px-4 py-4 whitespace-nowrap text-sm text-gray-600 border-r" style="border-color: #F5DEB3;">
+    <td class="column-phone px-4 py-4 whitespace-nowrap text-sm text-gray-600">
         {% if commande.client %}
             <span class="font-medium">{{ commande.client.numero_tel|default:"Non renseigné" }}</span>
         {% else %}
@@ -62,7 +61,7 @@
     </td>
 
     <!-- Ville & Région -->
-    <td class="column-ville px-4 py-4 text-sm border-r" style="border-color: #F5DEB3;">
+    <td class="column-ville px-4 py-4 text-sm">
         {% if commande.ville %}
             <div class="ville-info">
                 <div class="ville-name">{{ commande.ville.nom }}</div>
@@ -79,14 +78,14 @@
     </td>
 
     <!-- Total -->
-    <td class="column-total px-4 py-4 text-sm font-bold border-r" style="border-color: #F5DEB3;">
+    <td class="column-total px-4 py-4 text-sm font-bold">
         <div class="total-info">
             <div class="text-green-600 font-bold">{{ commande.total_cmd|floatformat:2 }} DH</div>
         </div>
     </td>
 
     <!-- Date Confirmation -->
-    <td class="column-dateconf px-4 py-4 text-sm border-r" style="border-color: #F5DEB3;">
+    <td class="column-dateconf px-4 py-4 text-sm">
         {% if commande.etat_confirmation %}
             <div class="date-confirmation-info">
                 <div class="date font-medium text-gray-900">{{ commande.etat_confirmation.date_debut|date:"d/m/Y" }}</div>
@@ -101,7 +100,7 @@
     </td>
 
     <!-- Opérateur Confirmation -->
-    <td class="column-operateur px-4 py-4 text-sm border-r" style="border-color: #F5DEB3;">
+    <td class="column-operateur px-4 py-4 text-sm">
         {% if commande.etat_confirmation and commande.etat_confirmation.operateur %}
             <div class="flex items-center space-x-2">
                 <div class="w-6 h-6 rounded-full flex items-center justify-center" style="background-color: #2e1b22;">
@@ -134,7 +133,7 @@
     </td>
 
     <!-- État Préparation -->
-    <td class="column-etat px-4 py-4 text-sm border-r" style="border-color: #F5DEB3;">
+    <td class="column-etat px-4 py-4 text-sm">
         <div class="flex flex-col space-y-1">
             <!-- État actuel avec icône d'information -->
             <div class="flex items-center">

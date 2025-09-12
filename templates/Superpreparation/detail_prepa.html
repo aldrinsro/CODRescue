@@ -121,9 +121,17 @@
 
     <!-- Section 2: Informations Générales de la Commande -->
     <div class="bg-white rounded-xl shadow-lg border p-6 md:p-8 mb-6" style="border-color: var(--preparation-border-accent);">
-        <h2 class="text-2xl font-bold flex items-center mb-6" style="color: var(--preparation-primary);">
-            <i class="fas fa-info-circle mr-2"></i>Informations Générales de la Commande
-        </h2>
+        <div class="flex items-center justify-between mb-2">
+            <h2 class="text-2xl font-bold flex items-center" style="color: var(--preparation-primary);">
+                <i class="fas fa-info-circle mr-2"></i>Informations Générales de la Commande
+            </h2>
+            <button type="button" title="Afficher/Masquer la section" onclick="toggleSection('infosGeneralesBody', this)" aria-expanded="false" class="px-3 py-1.5 text-sm rounded-lg bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 text-blue-700 hover:from-blue-100 hover:to-blue-200 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-200">Afficher <span class="chevron ml-2 inline-block transition-transform duration-300"><i class="fas fa-chevron-down"></i></span></button>
+        </div>
+        <div class="text-xs text-blue-600 mb-4 flex items-center">
+            <i class="fas fa-info-circle mr-1 text-blue-500"></i>
+            Astuce : cliquez sur « Afficher/Masquer » pour dérouler ou replier cette section.
+        </div>
+        <div id="infosGeneralesBody" class="hidden overflow-hidden transition-all duration-300 ease-out">
         
         <!-- Section spéciale pour les commandes livrées partiellement -->
         {% if is_commande_livree_partiellement %}
@@ -267,14 +275,21 @@
 
         <!-- Section Codes-barres des Articles - Complètement séparée -->
         <div class="mb-6 bg-white rounded-xl shadow-lg p-4 animate-slideInUp border-l-4 border-blue-500">
-            <h3 class="text-lg font-semibold mb-4 section-title">
-                <i class="fas fa-barcode mr-3"></i>Codes-barres des Articles
-                <span class="text-sm font-normal text-gray-600 ml-2">
-                    (<span id="codes-barcodes-count">{{ paniers.count }}</span> article<span id="codes-barcodes-plural">{{ paniers.count|pluralize }}</span>)
-                </span>
-            </h3>
+            <div class="flex items-center justify-between mb-2 section-title">
+                <h3 class="text-lg font-semibold">
+                    <i class="fas fa-barcode mr-3"></i>Codes-barres des Articles
+                    <span class="text-sm font-normal text-gray-600 ml-2">
+                        (<span id="codes-barcodes-count">{{ paniers.count }}</span> article<span id="codes-barcodes-plural">{{ paniers.count|pluralize }}</span>)
+                    </span>
+                </h3>
+                <button type="button" title="Afficher/Masquer la section" onclick="toggleSection('codesBarresBody', this)" aria-expanded="false" class="px-3 py-1.5 text-sm rounded-lg bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 text-blue-700 hover:from-blue-100 hover:to-blue-200 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-200">Afficher <span class="chevron ml-2 inline-block transition-transform duration-300"><i class="fas fa-chevron-down"></i></span></button>
+            </div>
+            <div class="text-xs text-blue-600 mb-4 flex items-center">
+                <i class="fas fa-info-circle mr-1 text-blue-500"></i>
+                Astuce : cliquez sur « Afficher/Masquer » pour dérouler ou replier cette section.
+            </div>
             
-            <div class="space-y-3">
+            <div id="codesBarresBody" class="hidden space-y-3 overflow-hidden transition-all duration-300 ease-out">
                 {% for panier in paniers %}
                 <div class="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 transition-colors">
                     <div class="flex items-start justify-between mb-2">
@@ -713,6 +728,48 @@
 
 {% block extra_js %}
 <script>
+function toggleSection(id, btn){
+  var el=document.getElementById(id);
+  if(!el) return;
+  var chevron = btn ? btn.querySelector('.chevron') : null;
+  var isHidden=el.classList.contains('hidden');
+  if(isHidden){
+    el.classList.remove('hidden');
+    el.style.opacity = '0';
+    el.style.maxHeight = '0px';
+    // force reflow
+    el.getBoundingClientRect();
+    el.style.opacity = '1';
+    el.style.maxHeight = el.scrollHeight + 'px';
+    if(btn){
+      btn.setAttribute('aria-expanded','true');
+      btn.firstChild && (btn.firstChild.textContent='Masquer');
+    }
+    if(chevron){ chevron.style.transform = 'rotate(180deg)'; }
+  } else {
+    el.style.opacity = '1';
+    el.style.maxHeight = el.scrollHeight + 'px';
+    // force reflow
+    el.getBoundingClientRect();
+    el.style.opacity = '0';
+    el.style.maxHeight = '0px';
+    if(btn){
+      btn.setAttribute('aria-expanded','false');
+      btn.firstChild && (btn.firstChild.textContent='Afficher');
+    }
+    if(chevron){ chevron.style.transform = 'rotate(0deg)'; }
+    // hide after transition ends
+    var onEnd = function(e){
+      if(e.propertyName === 'max-height'){
+        el.classList.add('hidden');
+        el.style.removeProperty('max-height');
+        el.style.removeProperty('opacity');
+        el.removeEventListener('transitionend', onEnd);
+      }
+    };
+    el.addEventListener('transitionend', onEnd);
+  }
+}
 // Scripts pour l'interface de supervision de préparation
 
 function showProblemModal() {

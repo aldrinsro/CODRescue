@@ -148,6 +148,43 @@
     .highlight-nouvelle-variante {
         animation: highlight 2s ease-in-out;
     }
+
+    /* Supervision theme alignments */
+    .btn-ajouter-variante {
+        background: linear-gradient(135deg, var(--preparation-primary), var(--preparation-light));
+        border: 2px solid var(--preparation-border-accent);
+    }
+    .btn-ajouter-variante:hover {
+        background: linear-gradient(135deg, var(--preparation-dark), var(--preparation-primary));
+    }
+
+    /* Harmoniser les têtes du tableau variantes avec le thème supervision */
+    .variantes-table thead th {
+        background: var(--preparation-primary) !important;
+        color: #fff !important;
+        border-color: var(--preparation-text-light) !important;
+    }
+    .variantes-table tbody td,
+    .variantes-table tbody th {
+        border-color: #e5e7eb !important;
+    }
+
+    /* Cartes/encarts alignés supervision */
+    .card-supervision {
+        border: 1px solid var(--preparation-border-accent) !important;
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    }
+
+    /* Bouton primaire supervision (Sauvegarder) */
+    .btn-primary-supervision {
+        background: linear-gradient(135deg, var(--preparation-primary), var(--preparation-light));
+        border: 2px solid var(--preparation-border-accent);
+        color: #fff;
+    }
+    .btn-primary-supervision:hover {
+        background: linear-gradient(135deg, var(--preparation-dark), var(--preparation-primary));
+    }
 </style>
 {% endblock %}
 
@@ -168,7 +205,7 @@
         </div>
     </div>
 
-    <div class="bg-white rounded-xl shadow-lg border p-6 mb-8" style="border-color: var(--preparation-border-accent);">
+    <div class="bg-white rounded-xl shadow-lg border p-6 mb-8 card-supervision" style="border-color: var(--preparation-border-accent);">
         <h2 class="text-2xl font-bold mb-6" style="color: var(--preparation-primary);">Formulaire de Modification</h2>
         
         <form method="post" enctype="multipart/form-data" id="articleForm" onsubmit="return handleFormSubmit(event)">
@@ -304,7 +341,7 @@
             </div>
 
             <!-- Section des variantes -->
-            <div class="bg-gray-50 p-6 rounded-lg border border-gray-200 mb-6">
+            <div class="bg-gray-50 p-6 rounded-lg border border-gray-200 mb-6 card-supervision">
                 <!-- En-tête de la section -->
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
                     <div class="mb-4 md:mb-0">
@@ -345,9 +382,9 @@
                 <!-- Variantes existantes -->
                 <div id="variantesExistantes" class="mb-6">
                     {% if article.variantes.all %}
-                        <div class="bg-white rounded-lg border shadow-sm overflow-hidden" style="border-color: #e6fffe;">
+                        <div class="bg-white rounded-lg border shadow-sm overflow-hidden card-supervision" style="border-color: var(--preparation-border-accent);">
                             <!-- En-tête du tableau -->
-                            <div class="bg-gray-50 px-6 py-4 border-b" style="border-color: #e6fffe;">
+                            <div class="bg-gray-50 px-6 py-4 border-b" style="border-color: var(--preparation-border-accent);">
                                 <h4 class="text-lg font-semibold flex items-center" style="color: #023535;">
                                     <i class="fas fa-layer-group mr-2 text-[#66cccc]"></i>
                                     Variantes existantes
@@ -362,15 +399,15 @@
                                 {% if tableau_matrice %}
                                     <table class="variantes-table w-full border-collapse">
                                         <thead>
-                                            <tr class="bg-gray-50">
+                                            <tr>
                                                 <!-- En-tête pour la colonne des pointures -->
-                                                <th class="p-3 text-center font-semibold border" style="color: #023535; border-color: #d1d5db; background: #66cccc; color: white;">
+                                                <th class="p-3 text-center font-semibold border">
                                                     <i class="fas fa-shoe-prints mr-2"></i>
                                                     Pointure
                                                 </th>
                                                 <!-- En-têtes des couleurs -->
                                                 {% for couleur in couleurs_uniques %}
-                                                <th class="p-3 text-center font-semibold border min-w-24" style="border-color: #d1d5db; background: #66cccc; color: white;">
+                                                <th class="p-3 text-center font-semibold border min-w-24">
                                                     <div class="flex flex-col items-center space-y-1">
                                                         <i class="fas fa-palette text-sm"></i>
                                                         <span class="text-sm font-medium">{{ couleur }}</span>
@@ -383,14 +420,14 @@
                                             {% for ligne in tableau_matrice %}
                                             <tr class="hover:bg-gray-50 transition-all duration-200">
                                                 <!-- Colonne Pointure -->
-                                                <td class="p-3 text-center font-semibold border" style="border-color: #d1d5db; background: #66cccc; color: white;">
+                                                <td class="p-3 text-center font-semibold border">
                                                     {{ ligne.pointure }}
                                                 </td>
                                                 
                                                 <!-- Colonnes pour chaque couleur -->
                                                 {% for cellule in ligne.cellules %}
                                                     {% if cellule.existe %}
-                                                        <td class="p-2 text-center border" style="border-color: #d1d5db;" data-variante-id="{{ cellule.id }}">
+                                                        <td class="p-2 text-center border" data-variante-id="{{ cellule.id }}">
                                                             <div class="flex flex-col items-center space-y-1">
                                                                 <!-- Indicateur de statut -->
                                                                 {% if cellule.status == 'normal' %}
@@ -427,7 +464,7 @@
                                                         </td>
                                                     {% else %}
                                                         <!-- Cellule vide -->
-                                                        <td class="p-2 text-center border bg-gray-50" style="border-color: #d1d5db;">
+                                                        <td class="p-2 text-center border bg-gray-50">
                                                             <div class="flex flex-col items-center space-y-1">
                                                                 <span class="text-gray-400 text-xs">-</span>
                                                             </div>
@@ -494,10 +531,16 @@
                 </div>
             </div>
             
-            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
-                <h3 class="text-lg font-semibold mb-3" style="color: #023535;">Prix de substitution (Upsell)</h3>
-                <p class="text-sm text-gray-600 mb-4">Vous pouvez définir jusqu'à 4 prix alternatifs pour cet article</p>
-                
+            <div class="p-4 rounded-xl mb-6 card-supervision" style="background: linear-gradient(0deg, #ffffff, #ffffff);">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-lg font-semibold flex items-center" style="color: var(--preparation-primary);">
+                        <i class="fas fa-tags mr-2" style="color: var(--preparation-border-accent);"></i>
+                        Prix de substitution (Upsell)
+                    </h3>
+                    <span class="text-xs px-2 py-1 rounded-full" style="background:#eef2ff; color:#3730a3; border:1px solid #c7d2fe;">Optionnel</span>
+                </div>
+                <p class="text-sm text-gray-600 mb-4">Définissez jusqu'à 4 prix alternatifs. Utilisés selon vos stratégies commerciales.</p>
+
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label for="id_prix_upsell_1" class="block text-sm font-semibold mb-2" style="color: #023535;">Prix upsell 1 (DH):</label>
@@ -534,8 +577,8 @@
                 </div>
                 
                 <!-- Nouveaux champs pour prix_uspell_final et Prix_liquidation -->
-                <div class="mt-6 pt-4 border-t border-gray-300">
-                    <h4 class="text-md font-semibold mb-3" style="color: #023535;">Prix spéciaux</h4>
+                <div class="mt-6 pt-4 border-t" style="border-color: var(--preparation-text-light);">
+                    <h4 class="text-md font-semibold mb-3" style="color: var(--preparation-primary);">Prix spéciaux</h4>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label for="id_prix_uspell_final" class="block text-sm font-semibold mb-2" style="color: #023535;">Prix gros (DH):</label>
@@ -563,7 +606,7 @@
             <input type="hidden" name="phase" id="id_phase" value="{% if form_data.phase %}{{ form_data.phase }}{% else %}{{ article.phase|default:'EN_COURS' }}{% endif %}">
 
             <div class="flex flex-wrap justify-end gap-3 mt-8">
-                <button type="submit" class="inline-flex items-center text-white px-5 py-3 rounded-lg text-lg font-medium transition-all shadow-md hover:shadow-lg transform hover:scale-105" style="background-color: #023535; hover:background-color: #034a4a;">
+                <button type="submit" class="inline-flex items-center px-5 py-3 rounded-lg text-lg font-medium transition-all shadow-md hover:shadow-lg transform hover:scale-105 btn-primary-supervision">
                     <i class="fas fa-save mr-2"></i>Sauvegarder
                 </button>
                 <div class="flex flex-wrap gap-2">

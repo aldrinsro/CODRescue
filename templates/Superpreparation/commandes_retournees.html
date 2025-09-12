@@ -36,6 +36,88 @@
     .compact-page #cmdTable th:nth-child(10), .compact-page #cmdTable td:nth-child(10) { width: 90px; min-width: 90px; }
     .compact-page #cmdTable th:nth-child(11), .compact-page #cmdTable td:nth-child(11) { width: 110px; min-width: 110px; }
     .compact-page #cmdTable th:nth-child(12), .compact-page #cmdTable td:nth-child(12) { width: 110px; min-width: 110px; }
+
+    /* Cartes statistiques unifiées (mêmes dimensions/design que Suivi Général) */
+    .stats-card {
+        background: white;
+        border: 2px solid var(--preparation-text-light);
+        border-radius: 16px;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        position: relative;
+        overflow: hidden;
+        padding: 24px;
+    }
+    .stats-card::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, var(--preparation-primary), var(--preparation-light));
+        transform: scaleX(0);
+        transition: transform 0.3s ease;
+    }
+    .stats-card:hover {
+        border-color: var(--preparation-border-accent);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        transform: translateY(-5px);
+    }
+    .stats-card:hover::before { transform: scaleX(1); }
+    .stats-icon {
+        background: linear-gradient(135deg, var(--preparation-primary) 0%, var(--preparation-light) 100%);
+        color: white;
+        border-radius: 50%;
+        width: 60px; height: 60px;
+        display: flex; align-items: center; justify-content: center;
+        transition: all 0.3s ease;
+    }
+    .stats-card:hover .stats-icon {
+        background: linear-gradient(135deg, var(--preparation-light) 0%, var(--preparation-primary) 100%);
+        transform: scale(1.1);
+    }
+    /* Section Informations (alignée sur la page Confirmées) */
+    .info-section {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+        padding: 12px 16px;
+    }
+    .section-title {
+        font-weight: 600;
+        color: #111827;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #f3f4f6;
+    }
+    .info-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 12px;
+        transition: all 0.3s ease;
+        opacity: 0;
+        animation: fadeInUp 0.5s ease-out forwards;
+    }
+    .info-item:nth-child(1) { animation-delay: .05s; }
+    .info-item:nth-child(2) { animation-delay: .15s; }
+    .info-item:nth-child(3) { animation-delay: .25s; }
+    .info-item:hover { background: #f3f4f6; box-shadow: inset 0 0 0 1px #e5e7eb; }
+    .info-icon {
+        width: 40px; height: 40px;
+        border-radius: 9999px;
+        display: flex; align-items: center; justify-content: center;
+        color: #ffffff;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+    }
+    .info-icon.green { background: linear-gradient(135deg, #10b981, #059669); }
+    .info-icon.blue { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+    .info-icon.purple { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+    .info-icon.orange { background: linear-gradient(135deg, #f59e0b, #d97706); }
+    .info-section:hover { border-color: var(--preparation-border-accent); box-shadow: 0 4px 10px rgba(0,0,0,0.08); }
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
     </style>
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 text-white p-6 rounded-xl shadow-lg"
          style="background: linear-gradient(to right, var(--preparation-primary), var(--preparation-dark));">
@@ -66,64 +148,49 @@
         </div>
     </div>
 
-    <!-- Statistiques rapides -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-        <!-- Commandes actives -->
-        <div class="group bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:shadow-2xl hover:scale-105 border border-gray-100" style="border-color: var(--preparation-border-accent);">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center">
-                    <div class="p-4 rounded-full bg-gradient-to-r from-red-100 to-red-200 text-red-600 transition-all duration-300 group-hover:from-red-500 group-hover:to-red-600 group-hover:text-white group-hover:scale-110">
-                        <i class="fas fa-clock text-2xl"></i>
-                    </div>
-                    <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-600 group-hover:text-gray-700 transition-colors duration-300">À traiter</p>
-                        <p class="text-3xl font-bold text-gray-900 transition-all duration-300 group-hover:text-red-600">{{ stats.total_actives }}</p>
-                    </div>
+    <!-- Statistiques (composants réutilisables) -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        {% include 'Superpreparation/includes/stats-card.html' with icon='fa-clock' label='À traiter' value=stats.total_actives|default:0 delay=0.1 %}
+        {% include 'Superpreparation/includes/stats-card.html' with icon='fa-check-circle' label='Traitées' value=stats.total_traitees|default:0 delay=0.2 %}
+        {% include 'Superpreparation/includes/stats-card.html' with icon='fa-coins' label='Valeur Actives' value=stats.valeur_actives|floatformat:0|add:' DH' delay=0.3 %}
+        {% include 'Superpreparation/includes/stats-card.html' with icon='fa-coins' label='Valeur Traitées' value=stats.valeur_traitees|floatformat:0|add:' DH' delay=0.4 %}
+    </div>
+
+    <!-- Informations générales (même style que page Confirmées) -->
+    <div class="info-section mb-4">
+        <h2 class="section-title flex items-center justify-between cursor-pointer select-none" id="infoSectionToggle" aria-expanded="true">
+            <span class="flex items-center">
+                <i class="fas fa-info-circle text-blue-600"></i>
+                <span class="ml-2">Informations générales</span>
+            </span>
+            <i class="fas fa-chevron-up text-gray-500 transition-transform duration-200" id="infoSectionChevron"></i>
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="infoSectionBody">
+            <div class="info-item">
+                <div class="info-icon orange">
+                    <i class="fas fa-undo"></i>
+                </div>
+                <div>
+                    <h3 class="font-semibold text-gray-900 text-sm">Commandes retournées</h3>
+                    <p class="text-xs text-gray-600">Suivi des retours à traiter et déjà traités</p>
                 </div>
             </div>
-        </div>
-
-        <!-- Commandes traitées -->
-        <div class="group bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:shadow-2xl hover:scale-105 border border-gray-100" style="border-color: var(--preparation-border-accent);">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center">
-                    <div class="p-4 rounded-full bg-gradient-to-r from-green-100 to-green-200 text-green-600 transition-all duration-300 group-hover:from-green-500 group-hover:to-green-600 group-hover:text-white group-hover:scale-110">
-                        <i class="fas fa-check-circle text-2xl"></i>
-                    </div>
-                    <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-600 group-hover:text-gray-700 transition-colors duration-300">Traitées</p>
-                        <p class="text-3xl font-bold text-gray-900 transition-all duration-300 group-hover:text-green-600">{{ stats.total_traitees }}</p>
-                    </div>
+            <div class="info-item">
+                <div class="info-icon green">
+                    <i class="fas fa-boxes"></i>
+                </div>
+                <div>
+                    <h3 class="font-semibold text-gray-900 text-sm">Gestion de stock</h3>
+                    <p class="text-xs text-gray-600">Réincrémentation ou marquage défectueux selon l'état</p>
                 </div>
             </div>
-        </div>
-
-        <!-- Valeur actives -->
-        <div class="group bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:shadow-2xl hover:scale-105 border border-gray-100" style="border-color: var(--preparation-border-accent);">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center">
-                    <div class="p-4 rounded-full bg-gradient-to-r from-orange-100 to-orange-200 text-orange-600 transition-all duration-300 group-hover:from-orange-500 group-hover:to-orange-600 group-hover:text-white group-hover:scale-110">
-                        <i class="fas fa-coins text-2xl"></i>
-                    </div>
-                    <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-600 group-hover:text-gray-700 transition-colors duration-300">Valeur Actives</p>
-                        <p class="text-3xl font-bold text-gray-900 transition-all duration-300 group-hover:text-orange-600">{{ stats.valeur_actives|floatformat:0 }} DH</p>
-                    </div>
+            <div class="info-item">
+                <div class="info-icon blue">
+                    <i class="fas fa-user-check"></i>
                 </div>
-            </div>
-        </div>
-
-        <!-- Valeur traitées -->
-        <div class="group bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:shadow-2xl hover:scale-105 border border-gray-100" style="border-color: var(--preparation-border-accent);">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center">
-                    <div class="p-4 rounded-full bg-gradient-to-r from-blue-100 to-blue-200 text-blue-600 transition-all duration-300 group-hover:from-blue-500 group-hover:to-blue-600 group-hover:text-white group-hover:scale-110">
-                        <i class="fas fa-coins text-2xl"></i>
-                    </div>
-                    <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-600 group-hover:text-gray-700 transition-colors duration-300">Valeur Traitées</p>
-                        <p class="text-3xl font-bold text-gray-900 transition-all duration-300 group-hover:text-blue-600">{{ stats.valeur_traitees|floatformat:0 }} DH</p>
-                    </div>
+                <div>
+                    <h3 class="font-semibold text-gray-900 text-sm">Traçabilité opérateur</h3>
+                    <p class="text-xs text-gray-600">Historique du traitement et opérateur responsable</p>
                 </div>
             </div>
         </div>
@@ -570,6 +637,38 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
+<!-- Info section repliable avec persistance (alignée sur Confirmées) -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const toggle = document.getElementById('infoSectionToggle');
+    const body = document.getElementById('infoSectionBody');
+    const chevron = document.getElementById('infoSectionChevron');
+    const STORAGE_KEY = 'yz.infoSection.retours.open';
+    if (!toggle || !body || !chevron) return;
+
+    function setOpen(open) {
+        if (open) {
+            body.classList.remove('hidden');
+            toggle.setAttribute('aria-expanded', 'true');
+            chevron.style.transform = 'rotate(0deg)';
+            localStorage.setItem(STORAGE_KEY, '1');
+        } else {
+            body.classList.add('hidden');
+            toggle.setAttribute('aria-expanded', 'false');
+            chevron.style.transform = 'rotate(180deg)';
+            localStorage.setItem(STORAGE_KEY, '0');
+        }
+    }
+
+    const saved = localStorage.getItem(STORAGE_KEY);
+    setOpen(saved !== '0');
+
+    toggle.addEventListener('click', () => {
+        const isOpen = toggle.getAttribute('aria-expanded') === 'true';
+        setOpen(!isOpen);
+    });
+});
+</script>
 <!-- Script de recherche intelligente -->
 <script src="{% static 'js/Superpreparation/Suivi_des_Commandes/suivi-commandes-smart-search.js' %}"></script>
 <script>

@@ -13,6 +13,59 @@
     /* Mode compact local pour cette page */
     .compact-page #cmdTable { font-size: 12px; }
     .compact-page #cmdTable th, .compact-page #cmdTable td { padding: 6px 8px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
+
+    /* Cartes statistiques unifiées */
+    .stats-card {
+        background: white;
+        border: 2px solid var(--preparation-text-light);
+        border-radius: 16px;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        position: relative;
+        overflow: hidden;
+        padding: 24px;
+    }
+    .stats-card::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, var(--preparation-primary), var(--preparation-light));
+        transform: scaleX(0);
+        transition: transform 0.3s ease;
+    }
+    .stats-card:hover {
+        border-color: var(--preparation-border-accent);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        transform: translateY(-5px);
+    }
+    .stats-card:hover::before { transform: scaleX(1); }
+    .stats-icon {
+        background: linear-gradient(135deg, var(--preparation-primary) 0%, var(--preparation-light) 100%);
+        color: white;
+        border-radius: 50%;
+        width: 60px; height: 60px;
+        display: flex; align-items: center; justify-content: center;
+        transition: all 0.3s ease;
+    }
+    .stats-card:hover .stats-icon {
+        background: linear-gradient(135deg, var(--preparation-light) 0%, var(--preparation-primary) 100%);
+        transform: scale(1.1);
+    }
+
+    /* Informations générales — aligné avec Retournées/Livrées Partiellement */
+    .info-section { background:#fff; border:1px solid #e5e7eb; border-radius:12px; box-shadow:0 1px 2px rgba(0,0,0,.04); padding:12px 16px; }
+    .section-title { font-weight:600; color:#111827; padding-bottom:8px; border-bottom:1px solid #f3f4f6; }
+    .info-item { display:flex; align-items:center; gap:12px; background:#f9fafb; border:1px solid #e5e7eb; border-radius:10px; padding:12px; transition:all .3s ease; opacity:0; animation: fadeInUp .5s ease-out forwards; }
+    .info-item:nth-child(1){animation-delay:.05s} .info-item:nth-child(2){animation-delay:.15s} .info-item:nth-child(3){animation-delay:.25s}
+    .info-item:hover { background:#f3f4f6; box-shadow: inset 0 0 0 1px #e5e7eb; }
+    .info-icon { width:40px; height:40px; border-radius:9999px; display:flex; align-items:center; justify-content:center; color:#fff; box-shadow:0 4px 10px rgba(0,0,0,.12); font-size:1rem; }
+    .info-icon.green { background:linear-gradient(135deg,#10b981,#059669); }
+    .info-icon.blue { background:linear-gradient(135deg,#3b82f6,#2563eb); }
+    .info-icon.purple { background:linear-gradient(135deg,#8b5cf6,#7c3aed); }
+    .info-icon.orange { background:linear-gradient(135deg,#f59e0b,#d97706); }
+    .info-section:hover { border-color: var(--preparation-border-accent); box-shadow: 0 4px 10px rgba(0,0,0,.08); }
+    @keyframes fadeInUp { from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:translateY(0)} }
     </style>
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 text-white p-6 rounded-xl shadow-lg"
          style="background: linear-gradient(to right, var(--preparation-primary), var(--preparation-dark));">
@@ -25,49 +78,42 @@
         </div>
     </div>
 
-    <!-- Statistiques rapides -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-        <!-- Total des commandes -->
-        <div class="group bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:shadow-2xl hover:scale-105 border border-gray-100" style="border-color: var(--preparation-border-accent);">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center">
-                    <div class="p-4 rounded-full bg-gradient-to-r from-purple-100 to-purple-200 text-purple-600 transition-all duration-300 group-hover:from-purple-500 group-hover:to-purple-600 group-hover:text-white group-hover:scale-110">
-                        <i class="fas fa-boxes text-2xl"></i>
-                    </div>
-                    <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-600 group-hover:text-gray-700 transition-colors duration-300">Emballées</p>
-                        <p class="text-3xl font-bold text-gray-900 transition-all duration-300 group-hover:text-purple-600">{{ stats.total_commandes }}</p>
-                    </div>
+    <!-- Statistiques (composants réutilisables) -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        {% include 'Superpreparation/includes/stats-card.html' with icon='fa-boxes' label='Emballées' value=stats.total_commandes|default:0 delay=0.1 %}
+        {% include 'Superpreparation/includes/stats-card.html' with icon='fa-coins' label='Valeur Totale' value=stats.valeur_totale|floatformat:0|add:' DH' delay=0.2 %}
+        {% include 'Superpreparation/includes/stats-card.html' with icon='fa-exclamation-triangle' label='Urgentes' value=stats.commandes_urgentes|default:0 delay=0.3 %}
+    </div>
+
+    <!-- Informations générales (même design) -->
+    <div class="info-section mb-4">
+        <h2 class="section-title flex items-center justify-between cursor-pointer select-none" id="infoSectionToggle" aria-expanded="true">
+            <span class="flex items-center">
+                <i class="fas fa-info-circle text-blue-600"></i>
+                <span class="ml-2">Informations générales</span>
+            </span>
+            <i class="fas fa-chevron-up text-gray-500 transition-transform duration-200" id="infoSectionChevron"></i>
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="infoSectionBody">
+            <div class="info-item">
+                <div class="info-icon purple"><i class="fas fa-boxes"></i></div>
+                <div>
+                    <h3 class="font-semibold text-gray-900 text-sm">Commandes emballées</h3>
+                    <p class="text-xs text-gray-600">Prêtes pour la finalisation et l'étape suivante</p>
                 </div>
             </div>
-        </div>
-
-        <!-- Valeur totale -->
-        <div class="group bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:shadow-2xl hover:scale-105 border border-gray-100" style="border-color: var(--preparation-border-accent);">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center">
-                    <div class="p-4 rounded-full bg-gradient-to-r from-green-100 to-green-200 text-green-600 transition-all duration-300 group-hover:from-green-500 group-hover:to-green-600 group-hover:text-white group-hover:scale-110">
-                        <i class="fas fa-coins text-2xl"></i>
-                    </div>
-                    <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-600 group-hover:text-gray-700 transition-colors duration-300">Valeur Totale</p>
-                        <p class="text-3xl font-bold text-gray-900 transition-all duration-300 group-hover:text-green-600">{{ stats.valeur_totale|floatformat:0 }} DH</p>
-                    </div>
+            <div class="info-item">
+                <div class="info-icon blue"><i class="fas fa-search"></i></div>
+                <div>
+                    <h3 class="font-semibold text-gray-900 text-sm">Contrôle qualité</h3>
+                    <p class="text-xs text-gray-600">Vérifiez les articles, quantités et étiquettes</p>
                 </div>
             </div>
-        </div>
-
-        <!-- Commandes urgentes -->
-        <div class="group bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:shadow-2xl hover:scale-105 border border-gray-100" style="border-color: var(--preparation-border-accent);">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center">
-                    <div class="p-4 rounded-full bg-gradient-to-r from-red-100 to-red-200 transition-all duration-300 group-hover:from-red-500 group-hover:to-red-600 group-hover:text-white group-hover:scale-110" style="color: var(--preparation-primary);">
-                        <i class="fas fa-exclamation-triangle text-2xl"></i>
-                    </div>
-                    <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-600 group-hover:text-gray-700 transition-colors duration-300">Urgentes</p>
-                        <p class="text-3xl font-bold text-gray-900 transition-all duration-300" style="group-hover:color: var(--preparation-primary);">{{ stats.commandes_urgentes }}</p>
-                    </div>
+            <div class="info-item">
+                <div class="info-icon green"><i class="fas fa-check-circle"></i></div>
+                <div>
+                    <h3 class="font-semibold text-gray-900 text-sm">Finalisation multiple</h3>
+                    <p class="text-xs text-gray-600">Validez une sélection ou toutes les lignes visibles</p>
                 </div>
             </div>
         </div>
@@ -81,25 +127,7 @@
                 <input type="hidden" name="search" value="{{ search_query }}">
             {% endif %}
             
-            <div class="flex items-center bg-white rounded-xl shadow-sm border border-gray-200 px-4 py-2 hover:shadow-md transition-all duration-300 group">
-                <div class="mr-3 p-1.5 rounded-lg bg-gradient-to-r from-purple-50 to-indigo-50 group-hover:from-purple-100 group-hover:to-indigo-100 transition-all duration-300">
-                    <i class="fas fa-list-ol text-purple-600 text-sm"></i>
-                </div>
-                
-                <label for="itemsPerPage" class="mr-3 text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors duration-300">
-                    Éléments/page
-                </label>
-                
-                <div class="w-px h-6 bg-gray-300 mx-2"></div>
-                
-                <select id="itemsPerPage" name="items_per_page" onchange="this.form.submit()" 
-                        class="px-3 py-1.5 text-sm font-semibold text-purple-600 hover:text-purple-700 transition-colors duration-300 cursor-pointer">
-                    <option value="10" {% if items_per_page|default:10 == 10 %}selected{% endif %}>10</option>
-                    <option value="25" {% if items_per_page == 25 %}selected{% endif %}>25</option>
-                    <option value="50" {% if items_per_page == 50 %}selected{% endif %}>50</option>
-                    <option value="100" {% if items_per_page == 100 %}selected{% endif %}>100</option>
-                </select>
-            </div>
+         
         </form>
 
         <!-- Barre de recherche intelligente -->
@@ -125,12 +153,26 @@
                 </button>
             </div>
         </div>
+        <!-- Actions groupées -->
+        <div class="flex items-center ml-2">
+            <button id="bulkFinalizeBtn"
+                    onclick="bulkFinaliserSelection()"
+                    class="inline-flex items-center px-3 py-2 rounded-md shadow-sm text-white transition-all hover:shadow-lg h-10"
+                    style="background-color: #10b981; hover:background-color: #059669;"
+                    title="Finaliser la préparation pour la sélection (si aucune sélection, toutes les lignes visibles)">
+                <i class="fas fa-check mr-2"></i>
+                Finaliser la sélection <span id="bulkCount" class="ml-1 opacity-80">(0)</span>
+            </button>
+        </div>
     </div>
         
     <div class="overflow-x-auto rounded-lg shadow-sm border border-gray-200" id="tableScrollContainer">
         <table id="cmdTable" class="min-w-full divide-y divide-gray-200 text-xs sm:text-sm" style="table-layout:auto;">
             <thead class="sticky top-0 z-10" style="background-color: var(--preparation-primary);">
                 <tr>
+                    <th scope="col" class="px-4 py-3 text-center text-xs font-medium text-white uppercase tracking-wider">
+                        <input type="checkbox" id="selectAll" class="form-checkbox h-4 w-4 text-purple-600" title="Tout sélectionner">
+                    </th>
                     <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Numéro</th>
                     <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">N° Ext.</th>
                     <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Client</th>
@@ -161,6 +203,9 @@
                         data-total="{{ commande.total_cmd }}"
                         data-etat="{% with etat_actuel=commande.etat_actuel %}{% if etat_actuel %}{{ etat_actuel.enum_etat.libelle }}{% endif %}{% endwith %}"
                         data-operateur="{% with etat_actuel=commande.etat_actuel %}{% if etat_actuel and etat_actuel.operateur %}{{ etat_actuel.operateur.prenom }} {{ etat_actuel.operateur.nom }}{% endif %}{% endwith %}">
+                        <td class="px-4 py-4 whitespace-nowrap text-center">
+                            <input type="checkbox" class="row-select form-checkbox h-4 w-4 text-purple-600" data-id="{{ commande.id }}">
+                        </td>
                         <td class="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                             {{ commande.id_yz }}
                         </td>
@@ -331,7 +376,7 @@
                     {% endfor %}
                 {% else %}
                     <tr>
-                        <td colspan="12" class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">
+                        <td colspan="13" class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">
                             <div class="flex flex-col items-center py-8">
                                 <i class="fas fa-boxes text-4xl text-gray-300 mb-4"></i>
                                 <h3 class="text-lg font-medium text-gray-600 mb-2">Aucune commande emballée</h3>
@@ -404,6 +449,96 @@ function openPanierModal(commandeId) {
         document.getElementById('panierModal').classList.remove('hidden');
       })
       .catch(() => showToast('Erreur réseau', 'error'));
+}
+
+// Sélection globale
+document.addEventListener('DOMContentLoaded', () => {
+    const selectAll = document.getElementById('selectAll');
+    const bulkCountEl = document.getElementById('bulkCount');
+    const updateBulkCount = () => {
+        const selected = document.querySelectorAll('.row-select:checked').length;
+        if (selected > 0) {
+            bulkCountEl.textContent = `(${selected})`;
+        } else {
+            // aucune sélection → indiquer le nombre de lignes visibles
+            const visibles = document.querySelectorAll('tbody tr').length;
+            bulkCountEl.textContent = `(${visibles})`;
+        }
+    };
+
+    updateBulkCount();
+    if (selectAll) {
+        selectAll.addEventListener('change', (e) => {
+            document.querySelectorAll('.row-select').forEach(cb => { cb.checked = e.target.checked; });
+            updateBulkCount();
+        });
+    }
+    document.addEventListener('change', (e) => {
+        if (e.target && e.target.classList && e.target.classList.contains('row-select')) {
+            // décoche le selectAll si nécessaire
+            if (!e.target.checked && selectAll) selectAll.checked = false;
+            updateBulkCount();
+        }
+    });
+});
+
+// Finalisation groupée
+async function bulkFinaliserSelection() {
+    let ids = Array.from(document.querySelectorAll('.row-select:checked'))
+        .map(cb => cb.getAttribute('data-id'));
+    // Si aucune sélection, prendre toutes les commandes visibles du tableau
+    if (ids.length === 0) {
+        ids = Array.from(document.querySelectorAll('tbody tr'))
+            .map(tr => tr.querySelector('.row-select')?.getAttribute('data-id'))
+            .filter(Boolean);
+        if (ids.length === 0) {
+            return showToast('Aucune commande à finaliser', 'info');
+        }
+    }
+
+    const confirm = await Swal.fire({
+        title: 'Finaliser la sélection',
+        text: `Voulez-vous finaliser ${ids.length} commande(s) ?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#10b981',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: 'Oui, finaliser',
+        cancelButtonText: 'Annuler'
+    });
+    if (!confirm.isConfirmed) return;
+
+    Swal.fire({
+        title: 'Finalisation en cours...',
+        html: '<div id="bulkProgress">0 / ' + ids.length + '</div>',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+    });
+
+    let done = 0, errors = 0;
+    for (const id of ids) {
+        try {
+            const res = await fetch(`/Superpreparation/api/commande/${id}/finaliser/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/json',
+                }
+            });
+            const data = await res.json();
+            if (!data.success) errors++;
+        } catch (_) { errors++; }
+        done++;
+        const el = document.getElementById('bulkProgress');
+        if (el) el.textContent = `${done} / ${ids.length}`;
+    }
+
+    Swal.fire({
+        title: errors === 0 ? 'Succès' : 'Terminé avec erreurs',
+        text: errors === 0 ? 'Toutes les commandes ont été finalisées.' : `${errors} commande(s) n'ont pas pu être finalisées.`,
+        icon: errors === 0 ? 'success' : 'warning',
+        confirmButtonColor: '#10b981'
+    }).then(() => window.location.reload());
 }
 
 // Fonction pour finaliser une commande depuis la liste
@@ -489,6 +624,39 @@ function showToast(message, type = 'info', duration = 3000) {
     setTimeout(()=> toast.classList.add('show'), 50);
     setTimeout(()=> { toast.classList.remove('show'); setTimeout(()=> toast.remove(), 300); }, duration);
 }
+</script>
+
+<!-- Info section repliable avec persistance -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const toggle = document.getElementById('infoSectionToggle');
+    const body = document.getElementById('infoSectionBody');
+    const chevron = document.getElementById('infoSectionChevron');
+    const STORAGE_KEY = 'yz.infoSection.emballees.open';
+    if (!toggle || !body || !chevron) return;
+
+    function setOpen(open) {
+        if (open) {
+            body.classList.remove('hidden');
+            toggle.setAttribute('aria-expanded', 'true');
+            chevron.style.transform = 'rotate(0deg)';
+            localStorage.setItem(STORAGE_KEY, '1');
+        } else {
+            body.classList.add('hidden');
+            toggle.setAttribute('aria-expanded', 'false');
+            chevron.style.transform = 'rotate(180deg)';
+            localStorage.setItem(STORAGE_KEY, '0');
+        }
+    }
+
+    const saved = localStorage.getItem(STORAGE_KEY);
+    setOpen(saved !== '0');
+
+    toggle.addEventListener('click', () => {
+        const isOpen = toggle.getAttribute('aria-expanded') === 'true';
+        setOpen(!isOpen);
+    });
+});
 </script>
 
 <!-- Modal panier -->

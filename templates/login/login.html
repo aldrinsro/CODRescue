@@ -245,6 +245,55 @@
             animation: fadeIn 1.6s ease-out;
         }
 
+        .credits {
+            margin-top: 0.75rem;
+            font-size: 12px;
+            letter-spacing: 0.3px;
+            color: rgba(255, 255, 255, 0.7);
+            animation: fadeIn 1.8s ease-out;
+        }
+
+        /* Animated rectangular gradient border around the logo card */
+        .logo-ring {
+            position: relative;
+        }
+        .logo-ring::before {
+            content: '';
+            position: absolute;
+            inset: -3px;
+            border-radius: 20px;
+            padding: 3px;
+            background: linear-gradient(90deg,
+                rgba(255,255,255,0.05) 0%,
+                rgba(255,255,255,0.6) 25%,
+                rgba(255,255,255,0.15) 50%,
+                rgba(255,255,255,0.6) 75%,
+                rgba(255,255,255,0.05) 100%
+            );
+            background-size: 300% 100%;
+            -webkit-mask:
+                linear-gradient(#000 0 0) content-box,
+                linear-gradient(#000 0 0);
+            -webkit-mask-composite: xor;
+                    mask-composite: exclude;
+            animation: stripe 6s linear infinite;
+            pointer-events: none;
+        }
+        .logo-ring::after {
+            content: '';
+            position: absolute;
+            inset: -8px;
+            border-radius: 22px;
+            background: radial-gradient(closest-side, rgba(255,255,255,0.12), transparent 70%);
+            filter: blur(6px);
+            z-index: -1;
+            pointer-events: none;
+        }
+        @keyframes stripe {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 300% 50%; }
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 15px;
@@ -316,6 +365,12 @@
                 <div class="banner-content">
                     <h1 class="wel_text">Bienvenue <br /> COD RESCUE</h1>
                     <p class="para">Votre plateforme de gestion des commandes intelligente et efficace.</p>
+                    <div style="display: flex; justify-content: center; margin-top: 1rem;">
+                        <div class="logo-ring" style="display: inline-block; padding: 12px 14px; border-radius: 20px; background: rgba(255,255,255,0.08); backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.25); box-shadow: 0 12px 32px rgba(0,0,0,0.35), inset 0 0 0 6px rgba(255,255,255,0.06);">
+                            <img src="{% static 'logo-tickets/loging_logo.png' %}" alt="Logo COD RESCUE" style="display: block; max-width: 180px; width: 100%; height: auto; border-radius: 12px;">
+                        </div>
+                    </div>
+                    <p class="credits">Created by COD$uite Team with YZ-PRESTATION</p>
                 </div>
             </div>
         </div>

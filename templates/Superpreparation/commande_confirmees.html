@@ -61,12 +61,62 @@
         display: table-cell;
     }
 }
+
+/* Affinage compact du tableau (espaces lignes/colonnes réduits) */
+#cmdTable th, #cmdTable td { padding: 6px 8px !important; line-height: 1.2; }
+#cmdTable th { font-size: 0.75rem; }
+#cmdTable td { font-size: 0.75rem; }
+#cmdTable .action-button { padding: 4px 8px; font-size: 0.75rem; }
+#cmdTable .status-badge, #cmdTable .etat-badge { padding: 2px 6px; font-size: 0.65rem; }
+@media (max-width: 1024px){
+    #cmdTable th, #cmdTable td { padding: 4px 6px !important; font-size: 0.7rem; }
+}
+
+/* Cartes statistiques (design unifié envois) */
+.stats-card {
+    background: white;
+    border: 2px solid var(--preparation-text-light);
+    border-radius: 16px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    position: relative;
+    overflow: hidden;
+    padding: 24px;
+}
+.stats-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--preparation-primary), var(--preparation-light));
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+.stats-card:hover {
+    border-color: var(--preparation-border-accent);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    transform: translateY(-5px);
+}
+.stats-card:hover::before { transform: scaleX(1); }
+
+.stats-icon {
+    background: linear-gradient(135deg, var(--preparation-primary) 0%, var(--preparation-light) 100%);
+    color: white;
+    border-radius: 50%;
+    width: 60px; height: 60px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.3s ease;
+}
+.stats-card:hover .stats-icon {
+    background: linear-gradient(135deg, var(--preparation-light) 0%, var(--preparation-primary) 100%);
+    transform: scale(1.1);
+}
 </style>
 {% endblock %}
 
 {% block content %}
 {% csrf_token %}
-<div class="main-content transition-all duration-300 max-w-screen-2xl xl:max-w-[1440px] mx-auto px-3 sm:px-4 lg:px-6 compact-page" id="mainContent">
+<div class="main-content transition-all duration-300 max-w-full 2xl:max-w-[1600px] mx-auto px-3 sm:px-4 lg:px-6 compact-page" id="mainContent">
     <!-- Toast notifications container -->
     <div class="toast-container" id="toastContainer"></div>
 
@@ -93,57 +143,13 @@
         </div>
     </div>
 
-    <!-- Statistiques -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-        <!-- Aujourd'hui -->
-        <div class="stats-card group rounded-xl shadow-lg p-4 transition-all duration-300 hover:shadow-2xl border animate-slideInUp" style="animation-delay: 0.1s;">
-                <div class="flex items-center">
-                <div class="stats-icon group-hover:scale-110 transition-all duration-300">
-                        <i class="fas fa-calendar-day text-xl"></i>
-            </div>
-                    <div class="ml-3">
-                    <p class="text-xs font-medium text-gray-600">Aujourd'hui</p>
-                    <p class="text-2xl font-bold text-gray-900 group-hover:text-green-600 transition-colors">{{ confirmees_aujourd_hui|default:0 }}</p>
-            </div>
-        </div>
-            </div>
-        <!-- Cette semaine -->
-        <div class="stats-card group rounded-xl shadow-lg p-4 transition-all duration-300 hover:shadow-2xl border animate-slideInUp" style="animation-delay: 0.2s;">
-                <div class="flex items-center">
-                <div class="stats-icon group-hover:scale-110 transition-all duration-300">
-                        <i class="fas fa-calendar-week text-xl"></i>
-            </div>
-                    <div class="ml-3">
-                    <p class="text-xs font-medium text-gray-600">Cette semaine</p>
-                    <p class="text-2xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">{{ confirmees_semaine|default:0 }}</p>
-        </div>
-            </div>
-        </div>
-        <!-- Ce mois -->
-        <div class="stats-card group rounded-xl shadow-lg p-4 transition-all duration-300 hover:shadow-2xl border animate-slideInUp" style="animation-delay: 0.3s;">
-                <div class="flex items-center">
-                <div class="stats-icon group-hover:scale-110 transition-all duration-300">
-                        <i class="fas fa-calendar-alt text-xl"></i>
-                    </div>
-                    <div class="ml-3">
-                    <p class="text-xs font-medium text-gray-600">Ce mois</p>
-                    <p class="text-2xl font-bold text-gray-900 group-hover:text-purple-600 transition-colors">{{ confirmees_mois|default:0 }}</p>
-                </div>
-            </div>
-        </div>
-        <!-- Total -->
-        <div class="stats-card group rounded-xl shadow-lg p-4 transition-all duration-300 hover:shadow-2xl border animate-slideInUp" style="animation-delay: 0.4s;">
-                <div class="flex items-center">
-                <div class="stats-icon group-hover:scale-110 transition-all duration-300">
-                    <i class="fas fa-check-double text-xl"></i>
-                    </div>
-                    <div class="ml-3">
-                    <p class="text-xs font-medium text-gray-600">Total Confirmées</p>
-                    <p class="text-2xl font-bold text-gray-900 group-hover:text-yellow-600 transition-colors">{{ total_confirmees|default:0 }}</p>
-                </div>
-            </div>
-            </div>
-        </div>
+    <!-- Statistiques (composant unifié) -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        {% include 'Superpreparation/includes/stats-card.html' with icon='fa-calendar-day' label="Aujourd'hui" value=confirmees_aujourd_hui|default:0 delay=0.1 %}
+        {% include 'Superpreparation/includes/stats-card.html' with icon='fa-calendar-week' label='Cette semaine' value=confirmees_semaine|default:0 delay=0.2 %}
+        {% include 'Superpreparation/includes/stats-card.html' with icon='fa-calendar-alt' label='Ce mois' value=confirmees_mois|default:0 delay=0.3 %}
+        {% include 'Superpreparation/includes/stats-card.html' with icon='fa-check-double' label='Total Confirmées' value=total_confirmees|default:0 delay=0.4 %}
+    </div>
 
         <!-- Section d'informations -->
     <div class="info-section mb-4">
@@ -244,8 +250,8 @@
 
     <!-- Tableau des commandes confirmées -->
     {% if page_obj.object_list %}
-    <div class="table-responsive mb-6 theme-card rounded-xl shadow-lg overflow-x-auto" id="tableScrollContainer">
-        <table id="cmdTable" class="min-w-full divide-y divide-gray-200 min-w-[1000px] lg:min-w-[1200px] xl:min-w-[1400px] text-xs sm:text-sm">
+    <div class="table-responsive mb-6 theme-card rounded-xl shadow-lg overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0" id="tableScrollContainer">
+        <table id="cmdTable" class="min-w-full divide-y divide-gray-200 text-xs sm:text-sm">
             <thead class="bg-[var(--preparation-primary)] border-b-[3px] border-[var(--preparation-primary)] text-white sticky top-0 z-10">
                 <tr>
                     <th class="px-3 py-2 text-left column-select">
@@ -794,70 +800,7 @@
         initSuiviCommandesSearch('confirmées');
     });
 
-// Script d'adaptation du tableau selon l'état de la sidebar
-document.addEventListener('DOMContentLoaded', function() {
-    const body = document.body;
-    const sidebar = document.getElementById('sidebar');
-    
-    // Fonction pour adapter le tableau selon l'état de la sidebar
-    function adaptTableToSidebar() {
-        const table = document.querySelector('.table-responsive table');
-        if (table) {
-            if (body.classList.contains('sidebar-collapsed')) {
-                // Sidebar fermée - plus d'espace disponible
-                table.style.minWidth = '1400px';
-                console.log('📊 Tableau adapté: sidebar fermée (1400px)');
-            } else {
-                // Sidebar ouverte - espace réduit
-                table.style.minWidth = '1200px';
-                console.log('📊 Tableau adapté: sidebar ouverte (1200px)');
-            }
-        }
-    }
-    
-    // Observer les changements de classes du body pour détecter tout changement de la sidebar
-    const bodyClassObserver = new MutationObserver((mutations) => {
-        for (const mutation of mutations) {
-            if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-                setTimeout(adaptTableToSidebar, 50);
-            }
-        }
-    });
-    bodyClassObserver.observe(body, { attributes: true });
-
-    // Écouter la fin de transition de la sidebar (largeur/transform) pour recalculer
-    if (sidebar) {
-        sidebar.addEventListener('transitionend', (e) => {
-            if (e.propertyName === 'width' || e.propertyName === 'transform' || e.propertyName === 'left') {
-                setTimeout(adaptTableToSidebar, 50);
-            }
-        });
-    }
-    
-    // Gestion du redimensionnement
-    window.addEventListener('resize', () => {
-        console.log('📐 Redimensionnement détecté:', window.innerWidth);
-        if (window.innerWidth > 1023) {
-            body.classList.add('sidebar-open');
-            body.classList.remove('sidebar-collapsed');
-            console.log('🖥️ Redimensionnement: mode desktop');
-        } else {
-            body.classList.add('sidebar-collapsed');
-            body.classList.remove('sidebar-open');
-            console.log('📱 Redimensionnement: mode mobile');
-        }
-        
-        // Adapter le tableau après le redimensionnement
-        setTimeout(adaptTableToSidebar, 100);
-    });
-    
-    // Initialiser l'adaptation du tableau
-    adaptTableToSidebar();
-    
-    console.log('✅ Script de sidebar initialisé pour commandes-confirmees avec adaptation du tableau');
-    
-    // Code d'impression multiple supprimé - système d'impression unifié
-});
+// Suppression de l'adaptation JS forcée aux largeurs de sidebar: la table est fluide et gérée par CSS
 
 // Ombres directionnelles lors du scroll horizontal (UX dashboard)
 document.addEventListener('DOMContentLoaded', function() {
@@ -1593,12 +1536,9 @@ function startAutoRefresh() {
     }, 30000);
     }
 
-    // Start auto-refresh when page loads
+    // Start auto-refresh when page loads (welcome toast removed)
     document.addEventListener('DOMContentLoaded', function() {
-        // Show welcome message
-        setTimeout(() => {
-        showToast('Bienvenue dans la gestion des commandes confirmées !', 'info', 3000);
-    }, 1000);
+        // Intentionally left blank: no automatic welcome notifications
     });
 
     // Keyboard shortcuts

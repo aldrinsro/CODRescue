@@ -148,9 +148,15 @@
     }
 
     .info-section {
-        padding: 1.5rem;
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+        padding: 12px 16px;
         margin-bottom: 1.5rem;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
     }
+    .info-section:hover { border-color: var(--preparation-border-accent); box-shadow: 0 4px 10px rgba(0,0,0,0.08); }
     
     /* Adaptations pour sidebar */
     body.sidebar-open .info-section {
@@ -191,12 +197,13 @@
 
     /* Optimisation des marges et paddings */
     .section-title {
-        color: var(--preparation-primary);
-        font-size: 1.5rem;
-        font-weight: bold;
-        margin-bottom: 16px;
+        font-weight: 600;
+        color: #111827;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #f3f4f6;
         display: flex;
         align-items: center;
+        justify-content: space-between;
         gap: 12px;
     }
 
@@ -204,41 +211,31 @@
         display: flex;
         align-items: center;
         gap: 12px;
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
         padding: 12px;
-        background: #f8fafc;
-        border-radius: 12px;
-        border: 1px solid #e2e8f0;
         transition: all 0.3s ease;
+        opacity: 0;
+        animation: fadeInUp 0.5s ease-out forwards;
     }
-
-    .info-item:hover {
-        background: #f1f5f9;
-        border-color: var(--preparation-border-accent);
-        transform: translateY(-2px);
-    }
+    .info-item:nth-child(1) { animation-delay: .05s; }
+    .info-item:nth-child(2) { animation-delay: .15s; }
+    .info-item:nth-child(3) { animation-delay: .25s; }
+    .info-item:hover { background: #f3f4f6; box-shadow: inset 0 0 0 1px #e5e7eb; }
 
     .info-icon {
-        width: 48px;
-        height: 48px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.25rem;
-        color: white;
+        width: 40px; height: 40px;
+        border-radius: 9999px;
+        display: flex; align-items: center; justify-content: center;
+        color: #ffffff;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+        font-size: 1rem;
     }
-
-    .info-icon.blue {
-        background: linear-gradient(135deg, var(--preparation-primary) 0%, var(--preparation-light) 100%);
-    }
-
-    .info-icon.green {
-        background: linear-gradient(135deg, #059669 0%, var(--preparation-success) 100%);
-    }
-
-    .info-icon.orange {
-        background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
-    }
+    .info-icon.green { background: linear-gradient(135deg, #10b981, #059669); }
+    .info-icon.blue { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+    .info-icon.orange { background: linear-gradient(135deg, #f59e0b, #d97706); }
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
     /* Styles pour le tableau */
     .table-container {
@@ -730,13 +727,16 @@
         </div>
     </div>
 
-    <!-- Section d'informations -->
+    <!-- Section d'informations (alignée sur Retournées) -->
     <div class="info-section mb-4">
-        <h2 class="section-title">
-            <i class="fas fa-info-circle text-blue-600"></i>
-            Informations générales
+        <h2 class="section-title flex items-center justify-between cursor-pointer select-none" id="infoSectionTogglePrepa" aria-expanded="true">
+            <span class="flex items-center">
+                <i class="fas fa-info-circle text-blue-600"></i>
+                <span class="ml-2">Informations générales</span>
+            </span>
+            <i class="fas fa-chevron-up text-gray-500 transition-transform duration-200" id="infoSectionChevronPrepa"></i>
         </h2>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 hidden" id="infoSectionBodyPrepa">
             <div class="info-item">
                 <div class="info-icon blue">
                     <i class="fas fa-box-open"></i>
@@ -818,7 +818,7 @@
         <table id="cmdTable" class="min-w-full divide-y divide-gray-200 text-xs sm:text-sm min-w-[1000px] lg:min-w-[1200px] xl|min-w-[1400px]" style="table-layout:auto;">
             <thead class="bg-[var(--preparation-primary)] border-b-[3px] border-[var(--preparation-primary)] text-white sticky top-0 z-10">
                 <tr>
-                    <th class="px-3 py-2 text-left text-xs font-medium text-white uppercase tracking-wider">Numéro</th>
+                    <th class="px-3 py-2 text-left text-xs font-medium text-white uppercase tracking-wider">ID Commande</th>
                     <th class="px-3 py-2 text-left text-xs font-medium text-white uppercase tracking-wider">N° Ext.</th>
                     <th class="px-3 py-2 text-left text-xs font-medium text-white uppercase tracking-wider">Client</th>
                     <th class="px-3 py-2 text-left text-xs font-medium text-white uppercase tracking-wider">Téléphone</th>
@@ -1117,10 +1117,38 @@
             }, 100);
         });
         
-        // Show welcome message
-        setTimeout(() => {
-            showToast('Bienvenue dans le suivi des commandes en préparation !', 'info', 3000);
-        }, 1000);
+        // Welcome toast removed
+    });
+
+    // Info section repliable avec persistance (même comportement que Retournées)
+    document.addEventListener('DOMContentLoaded', function() {
+        const toggle = document.getElementById('infoSectionTogglePrepa');
+        const bodyEl = document.getElementById('infoSectionBodyPrepa');
+        const chevron = document.getElementById('infoSectionChevronPrepa');
+        const STORAGE_KEY = 'yz.infoSection.preparation.open';
+        if (!toggle || !bodyEl || !chevron) return;
+
+        function setOpen(open) {
+            if (open) {
+                bodyEl.classList.remove('hidden');
+                toggle.setAttribute('aria-expanded', 'true');
+                chevron.style.transform = 'rotate(0deg)';
+                localStorage.setItem(STORAGE_KEY, '1');
+            } else {
+                bodyEl.classList.add('hidden');
+                toggle.setAttribute('aria-expanded', 'false');
+                chevron.style.transform = 'rotate(180deg)';
+                localStorage.setItem(STORAGE_KEY, '0');
+            }
+        }
+
+        const saved = localStorage.getItem(STORAGE_KEY);
+        setOpen(saved === '1');
+
+        toggle.addEventListener('click', () => {
+            const isOpen = toggle.getAttribute('aria-expanded') === 'true';
+            setOpen(!isOpen);
+        });
     });
 
     // Keyboard shortcuts

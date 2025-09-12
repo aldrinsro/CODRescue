@@ -401,10 +401,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     startAutoRefresh();
     
-    // Show welcome message
-    setTimeout(() => {
-        showToast('Bienvenue dans l\'historique des envois !', 'info', 3000);
-    }, 1000);
+    // Welcome toast supprimé
 
     // Show filter status
     const hasFilters = selectedPeriode || selectedRegion;

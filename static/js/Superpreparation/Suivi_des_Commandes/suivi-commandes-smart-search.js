@@ -116,7 +116,7 @@ class SuiviCommandesSmartSearch {
             'filterEmail', 'filterVilleClient', 'filterVilleRegion', 'filterAdresse',
             'filterDateCommande', 'filterDateConfirmation', 'filterDateAffectation',
             'filterDatePreparation', 'filterDateLivraison', 'filterTotalMin', 
-            'filterTotalMax', 'filterEtat', 'filterOperateur', 'filterStatut'
+            'filterTotalMax', 'filterEtat', 'filterOperateur', 'filterEtat'
         ];
         
         filterInputs.forEach(id => {
@@ -148,7 +148,7 @@ class SuiviCommandesSmartSearch {
             totalMax: parseFloat(this.getInputValue('filterTotalMax')) || Infinity,
             etat: this.getInputValue('filterEtat').toLowerCase(),
             operateur: this.getInputValue('filterOperateur').toLowerCase(),
-            statut: this.getInputValue('filterStatut').toLowerCase()
+            statut: this.getInputValue('filterEtat').toLowerCase()
         };
         
         this.applyAllFilters();
@@ -304,7 +304,7 @@ class SuiviCommandesSmartSearch {
             'filterEmail', 'filterVilleClient', 'filterVilleRegion', 'filterAdresse',
             'filterDateCommande', 'filterDateConfirmation', 'filterDateAffectation',
             'filterDatePreparation', 'filterDateLivraison', 'filterTotalMin', 
-            'filterTotalMax', 'filterEtat', 'filterOperateur', 'filterStatut'
+            'filterTotalMax', 'filterEtat', 'filterOperateur', 'filterEtat'
         ];
         
         filterInputs.forEach(id => {

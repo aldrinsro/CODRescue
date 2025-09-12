@@ -1,0 +1,26 @@
+{% comment %}
+Reusable statistics cards component.
+Expect context:
+- cards: list of { icon, label, value, delay }
+- cols: number of columns at md breakpoint (default 4)
+{% endcomment %}
+
+{% with grid_cols=cols|default:4 %}
+<div class="grid grid-cols-1 md:grid-cols-{{ grid_cols }} gap-6 mb-8">
+    {% for c in cards %}
+    <div class="stats-card animate-slideInUp" style="animation-delay: {{ c.delay|default:0 }}s;">
+        <div class="flex items-center">
+            <div class="stats-icon">
+                <i class="fas {{ c.icon }} text-2xl"></i>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-600">{{ c.label }}</p>
+                <p class="text-3xl font-bold text-gray-900">{{ c.value|default:0 }}</p>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endwith %}
+
+

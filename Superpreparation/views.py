@@ -248,21 +248,44 @@ def home_view(request):
 
 def _get_commandes_en_preparation():
     """Récupère toutes les commandes en préparation sans doublons"""
-    from django.db.models import Q
+    from django.db.models import Q, Max
+    from django.db.models import Prefetch
     
     # États de préparation valides
     etats_preparation = ['En préparation', 'Collectée', 'Emballée', 'Préparée']
     
-    # Récupérer les IDs des commandes en préparation
-    commandes_ids = Commande.objects.filter(
-        Q(etats__enum_etat__libelle__in=etats_preparation),
-        etats__date_fin__isnull=True
-    ).values_list('id', flat=True).distinct()
-    
-    # Récupérer les commandes avec leurs relations
-    return Commande.objects.filter(
-        id__in=commandes_ids
-    ).select_related('client', 'ville', 'ville__region').prefetch_related('paniers__article', 'etats')
+    # Préparer un Prefetch optimisé pour les états
+    etats_qs = (
+        EtatCommande.objects.only('id', 'commande_id', 'date_debut', 'date_fin', 'enum_etat_id', 'operateur_id')
+            .select_related('enum_etat', 'operateur')
+            .order_by('date_debut')
+    )
+
+    # Récupérer les commandes en une seule requête avec annotations pour trier côté DB
+    # current_etat_date = date_debut max des états actifs de préparation
+    qs = (
+        Commande.objects.filter(
+            Q(etats__enum_etat__libelle__in=etats_preparation),
+            etats__date_fin__isnull=True
+        )
+        .select_related('client', 'ville', 'ville__region')
+        .prefetch_related(
+            Prefetch('etats', queryset=etats_qs),
+            'paniers__article'
+        )
+        .annotate(
+            current_etat_date=Max(
+                'etats__date_debut',
+                filter=Q(etats__enum_etat__libelle__in=etats_preparation, etats__date_fin__isnull=True)
+            )
+        )
+        .order_by('-current_etat_date', '-id')
+        .distinct()
+    )
+
+    # Limiter les colonnes ramenées par Commande (évite de gros transferts)
+    qs = qs.only('id', 'id_yz', 'num_cmd', 'total_cmd', 'client', 'ville')
+    return qs
 
 
 def _get_etat_actuel_preparation(commande):
@@ -481,6 +504,7 @@ def liste_prepa(request):
     filter_type = request.GET.get('filter', 'all')
     search_query = request.GET.get('search', '')
     items_per_page = int(request.GET.get('items_per_page', 10))
+    etat_param = request.GET.get('etat', '').strip()
     
     # Récupérer et filtrer les commandes
     commandes = _get_commandes_en_preparation()
@@ -497,11 +521,18 @@ def liste_prepa(request):
             search_query.lower() in (cmd.client.numero_tel or '').lower()
         ]
     
-    # Enrichir les commandes
-    commandes_enrichies = [_enrichir_commande(cmd) for cmd in commandes_filtrees]
+    # Filtre serveur par État (actif)
+    if etat_param:
+        etat_lower = etat_param.lower()
+        filtered_by_state = []
+        for cmd in commandes_filtrees:
+            etat_actif = cmd.etats.filter(date_fin__isnull=True).select_related('enum_etat').first()
+            if etat_actif and etat_lower in etat_actif.enum_etat.libelle.lower():
+                filtered_by_state.append(cmd)
+        commandes_filtrees = filtered_by_state
     
-    # Trier par date d'affectation
-    commandes_enrichies.sort(
+    # Trier par date d'affectation sur la liste brute (avant enrichissement)
+    commandes_filtrees.sort(
         key=lambda x: x.etats.filter(date_fin__isnull=True).first().date_debut 
         if x.etats.filter(date_fin__isnull=True).first() 
         else timezone.now(), 
@@ -512,15 +543,32 @@ def liste_prepa(request):
     stats_par_type = _calculer_statistiques(operateur_profile)
     
     # Statistiques générales
-    total_affectees = len(commandes_enrichies)
-    valeur_totale = sum(cmd.total_cmd or 0 for cmd in commandes_enrichies)
+    total_affectees = len(commandes_filtrees)
+    valeur_totale = sum(getattr(cmd, 'total_cmd', 0) or 0 for cmd in commandes_filtrees)
     date_limite_urgence = timezone.now() - timedelta(days=1)
-    commandes_urgentes = sum(1 for cmd in commandes_enrichies if 
+    commandes_urgentes = sum(1 for cmd in commandes_filtrees if 
         cmd.etats.filter(date_debut__lt=date_limite_urgence).exists()
     )
     
-    # Pagination côté serveur supprimée → on renvoie toutes les lignes pour pagination client
-    commandes_page = commandes_enrichies
+    # Pagination côté serveur
+    from django.core.paginator import Paginator
+    try:
+        items_per_page = int(items_per_page)
+        if items_per_page <= 0:
+            items_per_page = 10
+    except (ValueError, TypeError):
+        items_per_page = 10
+    paginator = Paginator(commandes_filtrees, items_per_page)
+    page_number = request.GET.get('page', 1)
+    commandes_page = paginator.get_page(page_number)
+    
+    # Enrichir uniquement la page courante (optimisation mémoire/CPU)
+    try:
+        current_list = list(commandes_page.object_list)
+        enriched_current = [_enrichir_commande(cmd) for cmd in current_list]
+        commandes_page.object_list = enriched_current
+    except Exception:
+        pass
     
     # Contexte
     context = {
@@ -529,6 +577,9 @@ def liste_prepa(request):
         'commandes_affectees': commandes_page,
         'search_query': search_query,
         'filter_type': filter_type,
+        'items_per_page': items_per_page,
+        'etat': etat_param,
+        'page_obj': commandes_page,
         'stats': {
             'total_affectees': total_affectees,
             'valeur_totale': valeur_totale,
@@ -6090,19 +6141,44 @@ def export_commandes_envoi_excel(request, envoi_id):
             print(f"🚫 ERREUR - Création workbook échouée: {wb_error}")
             raise wb_error
         
-        # TEST SIMPLE: Ajoutons juste quelques données de base
+        # Ajout structuré et stylé des données dans le fichier Excel
         try:
-            # En-tête simple
-            ws['A1'] = f"EXPORT COMMANDES - ENVOI {envoi.numero_envoi}"
+            # En-tête global
+            title_cell = ws['A1']
+            title_cell.value = f"EXPORT COMMANDES - ENVOI {envoi.numero_envoi}"
+            title_cell.font = Font(size=14, bold=True)
             ws['A2'] = f"Région: {envoi.region.nom_region}"
             ws['A3'] = f"Date: {timezone.now().strftime('%d/%m/%Y %H:%M')}"
-            
-            # En-têtes des colonnes
-            headers = ['N° Commande', 'Client', 'Téléphone', 'Adresse', 'Ville', 'Région', 'Total', 'Panier']
+
+            # En-têtes des colonnes (structuré)
+            # Demande: supprimer "ID YZ" et "N° Externe", renommer "Articles" en "Panier"
+            headers = ['N° Commande', 'Client', 'Téléphone', 'Adresse', 'Ville', 'Région', 'Total (DH)', 'Panier']
+            header_fill = PatternFill("solid", fgColor="1E3A8A")  # var(--preparation-border-accent) approchée
+            header_font = Font(color="FFFFFF", bold=True)
+            center = Alignment(horizontal='center', vertical='center')
+            wrap = Alignment(wrap_text=True, vertical='top')
+
             for col, header in enumerate(headers, 1):
-                ws.cell(row=5, column=col, value=header)
+                cell = ws.cell(row=5, column=col, value=header)
+                cell.fill = header_fill
+                cell.font = header_font
+                cell.alignment = center
             
             print(f"🔍 DEBUG - En-têtes ajoutés")
+
+            # Largeurs de colonnes lisibles
+            col_widths = {
+                1: 16,  # N° Commande
+                2: 28,  # Client
+                3: 16,  # Téléphone
+                4: 40,  # Adresse
+                5: 18,  # Ville
+                6: 18,  # Région
+                7: 14,  # Total (DH)
+                8: 80,  # Panier
+            }
+            for idx, width in col_widths.items():
+                ws.column_dimensions[openpyxl.utils.get_column_letter(idx)].width = width
             
             # Données simplifiées des commandes
             row = 6
@@ -6135,19 +6211,37 @@ def export_commandes_envoi_excel(request, envoi_id):
                         except Exception as p_err:
                             print(f"⚠️ ERREUR panier commande {commande.id}: {p_err}")
                             continue
-                    panier_str = "\n".join(items_texts) if items_texts else ""
+                    # Articles sur la même ligne, séparateur lisible
+                    panier_str = " | ".join(items_texts) if items_texts else ""
 
                     # Ecrire la ligne
-                    ws.cell(row=row, column=1, value=commande.num_cmd)
+                    thin = Side(border_style="thin", color="E5E7EB")
+                    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+                    ws.cell(row=row, column=1, value=str(getattr(commande, 'id', '')))  # N° Commande (ID interne)
                     ws.cell(row=row, column=2, value=client_nom)
                     ws.cell(row=row, column=3, value=getattr(commande.client, 'numero_tel', '') if commande.client else '')
                     ws.cell(row=row, column=4, value=adresse_livraison)
                     ws.cell(row=row, column=5, value=ville_nom)
                     ws.cell(row=row, column=6, value=region_nom)
-                    # Total commande (montant total des articles)
-                    ws.cell(row=row, column=7, value=float(getattr(commande, 'total_cmd', 0) or 0))
+                    # Total commande (montant total)
+                    total_cell = ws.cell(row=row, column=7, value=float(getattr(commande, 'total_cmd', 0) or 0))
+                    total_cell.number_format = '#,##0.00'
                     panier_cell = ws.cell(row=row, column=8, value=panier_str)
-                    panier_cell.alignment = Alignment(wrap_text=True, vertical='top')
+                    # Pas de retour à la ligne: une seule ligne pour tout le panier
+                    panier_cell.alignment = Alignment(wrap_text=False, vertical='top')
+
+                    # Appliquer bordures et alignements par défaut
+                    for col in range(1, 9):
+                        c = ws.cell(row=row, column=col)
+                        c.border = border
+                        if col in (1, 3, 5, 6, 7):
+                            c.alignment = center
+                        else:
+                            if col in (4, 8):
+                                c.alignment = wrap
+                            else:
+                                c.alignment = Alignment(vertical='center')
 
                     row += 1
 
@@ -6156,6 +6250,10 @@ def export_commandes_envoi_excel(request, envoi_id):
                     continue
             
             print(f"🔍 DEBUG - {row-6} lignes de données ajoutées")
+
+            # Auto-filter et freeze header
+            ws.auto_filter.ref = f"A5:H{max(5, row-1)}"
+            ws.freeze_panes = 'A6'
             
         except Exception as data_error:
             print(f"🚫 ERREUR - Ajout des données: {data_error}")

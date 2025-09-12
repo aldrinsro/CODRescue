@@ -1,0 +1,14 @@
+{# Single statistics card component #}
+<div class="stats-card animate-slideInUp" style="animation-delay: {{ delay|default:0 }}s;">
+    <div class="flex items-center">
+        <div class="stats-icon">
+            <i class="fas {{ icon }} text-2xl"></i>
+        </div>
+        <div class="ml-4">
+            <p class="text-sm font-medium text-gray-600">{{ label }}</p>
+            <p class="text-3xl font-bold text-gray-900">{{ value|default:0 }}</p>
+        </div>
+    </div>
+</div>
+
+
