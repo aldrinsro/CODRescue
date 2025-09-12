@@ -300,20 +300,7 @@ function scrollToTop() {
     showToast('Retour en haut de page', 'info');
 }
 
-function showKeyboardShortcuts() {
-    const shortcuts = [
-        'Ctrl+R : Actualiser la page',
-        'Ctrl+N : Navigation rapide',
-        'Ctrl+F : Recherche',
-        'Echap : Fermer les modales'
-    ];
-    
-    showToast('Raccourcis clavier disponibles', 'info', 5000);
-    
-    // Show detailed shortcuts in console for now
-    console.log('Raccourcis clavier:');
-    shortcuts.forEach(shortcut => console.log('- ' + shortcut));
-}
+// Fonction showKeyboardShortcuts supprimée (plus de toast ni d'affichage)
 
 function resetFilters() {
     window.location.href = "/Superpreparation/envois/historique/";
@@ -467,7 +454,6 @@ document.addEventListener('keydown', function(e) {
                 if (periodeSelect) {
                     periodeSelect.focus();
                 }
-                showToast('Recherche par filtres', 'info');
                 break;
             case 'n':
                 e.preventDefault();
