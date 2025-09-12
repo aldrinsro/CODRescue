@@ -1,4 +1,5 @@
 {% extends 'composant_generale/operatPrepa/base.html' %}
+{% load static %}
 
 {% block title %}{{ page_title }} - YZ-CMD{% endblock %}
 
@@ -135,23 +136,31 @@
                 {% endif %}
             </div>
             <div class="w-full">
-                <form method="GET" class="flex">
-                    {% if filter_type != 'all' %}
-                        <input type="hidden" name="filter" value="{{ filter_type }}">
-                    {% endif %}
-                    <input type="text" name="search" value="{{ search_query }}" 
-                           placeholder="Rechercher par ID, nom, téléphone..." 
-                           class="flex-1 block px-3 py-2 border border-gray-300 rounded-l-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
-                    <button type="submit" class="inline-flex items-center px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium rounded-r-md border border-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 touch-manipulation">
-                        <i class="fas fa-search"></i>
+                <div class="flex gap-2">
+                    <form method="GET" class="flex flex-1">
+                        {% if filter_type != 'all' %}
+                            <input type="hidden" name="filter" value="{{ filter_type }}">
+                        {% endif %}
+                        <input type="text" name="search" value="{{ search_query }}" 
+                               placeholder="Rechercher par ID, nom, téléphone..." 
+                               class="flex-1 block px-3 py-2 border border-gray-300 rounded-l-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
+                        <button type="submit" class="inline-flex items-center px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium rounded-r-md border border-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 touch-manipulation">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </form>
+                    <button id="columnToggle" onclick="toggleColumnVisibility()" 
+                            class="inline-flex items-center px-3 py-2 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium rounded-md transition-colors h-10" 
+                            title="Sélectionner les colonnes">
+                        <i class="fas fa-columns mr-2 text-gray-500"></i>
+                        Colonnes
                     </button>
-                </form>
+                </div>
             </div>
         </div>
         
         <!-- Vue Desktop/Tablette -->
         <div class="hidden lg:block overflow-x-auto rounded-lg shadow-sm border border-gray-200">
-            <table class="min-w-full divide-y divide-gray-200">
+            <table id="cmdTable" class="min-w-full divide-y divide-gray-200">
                 <thead style="background-color: var(--preparation-primary);">
                     <tr>
                         <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">ID YZ</th>
@@ -1044,25 +1053,48 @@ function updateCommandeEtat(commandeId, nouvelEtat) {
     }
     
     // Mettre à jour la colonne État Préparation
-    const etatPreparationCell = row.querySelector('td:nth-child(11)'); // Colonne État Préparation (11ème colonne)
+    const etatPreparationCell = row.querySelector('td:nth-child(10)'); // Colonne État Préparation (10ème colonne)
     console.log('🔍 Recherche de la cellule État Préparation:', etatPreparationCell);
     
     if (etatPreparationCell) {
-        const etapes = etatPreparationCell.querySelectorAll('.flex.items-center');
-        console.log('📊 Nombre d\'étapes trouvées:', etapes.length);
-        
+        // Mettre à jour toute la structure de la colonne État Préparation
         if (nouvelEtat === 'Collectée') {
             console.log('🔄 Mise à jour vers Collectée');
-            // Activer l'étape Collectée
-            if (etapes[1]) {
-                console.log('✅ Étape Collectée trouvée, mise à jour...');
-                etapes[1].innerHTML = `
-                    <span class="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center mr-2">
-                        <i class="fas fa-check text-white text-xs"></i>
-                    </span>
-                    <span class="text-xs text-green-600 font-medium">Collectée</span>
-                `;
-            }
+            etatPreparationCell.innerHTML = `
+                <div class="flex flex-col space-y-1">
+                    <!-- Étape 1: En préparation (toujours active) -->
+                    <div class="flex items-center">
+                        <span class="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center mr-2">
+                            <i class="fas fa-check text-white text-xs"></i>
+                        </span>
+                        <span class="text-xs text-blue-600 font-medium">En préparation</span>
+                    </div>
+                    
+                    <!-- Étape 2: Collectée (maintenant active) -->
+                    <div class="flex items-center">
+                        <span class="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center mr-2">
+                            <i class="fas fa-check text-white text-xs"></i>
+                        </span>
+                        <span class="text-xs text-green-600 font-medium">Collectée</span>
+                    </div>
+                    
+                    <!-- Étape 3: Emballée (en attente) -->
+                    <div class="flex items-center">
+                        <span class="w-4 h-4 rounded-full bg-gray-300 flex items-center justify-center mr-2">
+                            <i class="fas fa-circle text-gray-400 text-xs"></i>
+                        </span>
+                        <span class="text-xs text-gray-400">Emballée</span>
+                    </div>
+                    
+                    <!-- Étape 4: Préparée (en attente) -->
+                    <div class="flex items-center">
+                        <span class="w-4 h-4 rounded-full bg-gray-300 flex items-center justify-center mr-2">
+                            <i class="fas fa-circle text-gray-400 text-xs"></i>
+                        </span>
+                        <span class="text-xs text-gray-400">Préparée</span>
+                    </div>
+                </div>
+            `;
             
             // Remplacer le bouton Collecter par un badge
             const btnCollecter = document.getElementById(`btn-collecter-${commandeId}`);
@@ -1088,16 +1120,41 @@ function updateCommandeEtat(commandeId, nouvelEtat) {
             }
         } else if (nouvelEtat === 'Emballée') {
             console.log('🔄 Mise à jour vers Emballée');
-            // Activer l'étape Emballée
-            if (etapes[2]) {
-                console.log('✅ Étape Emballée trouvée, mise à jour...');
-                etapes[2].innerHTML = `
-                    <span class="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center mr-2">
-                        <i class="fas fa-check text-white text-xs"></i>
-                    </span>
-                    <span class="text-xs text-green-600 font-medium">Emballée</span>
-                `;
-            }
+            etatPreparationCell.innerHTML = `
+                <div class="flex flex-col space-y-1">
+                    <!-- Étape 1: En préparation (toujours active) -->
+                    <div class="flex items-center">
+                        <span class="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center mr-2">
+                            <i class="fas fa-check text-white text-xs"></i>
+                        </span>
+                        <span class="text-xs text-blue-600 font-medium">En préparation</span>
+                    </div>
+                    
+                    <!-- Étape 2: Collectée (active) -->
+                    <div class="flex items-center">
+                        <span class="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center mr-2">
+                            <i class="fas fa-check text-white text-xs"></i>
+                        </span>
+                        <span class="text-xs text-green-600 font-medium">Collectée</span>
+                    </div>
+                    
+                    <!-- Étape 3: Emballée (maintenant active) -->
+                    <div class="flex items-center">
+                        <span class="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center mr-2">
+                            <i class="fas fa-check text-white text-xs"></i>
+                        </span>
+                        <span class="text-xs text-green-600 font-medium">Emballée</span>
+                    </div>
+                    
+                    <!-- Étape 4: Préparée (en attente) -->
+                    <div class="flex items-center">
+                        <span class="w-4 h-4 rounded-full bg-gray-300 flex items-center justify-center mr-2">
+                            <i class="fas fa-circle text-gray-400 text-xs"></i>
+                        </span>
+                        <span class="text-xs text-gray-400">Préparée</span>
+                    </div>
+                </div>
+            `;
             
             // Remplacer le bouton Emballer par un badge
             const btnEmballer = document.getElementById(`btn-emballer-${commandeId}`);
@@ -1112,4 +1169,7 @@ function updateCommandeEtat(commandeId, nouvelEtat) {
     }
 }
 </script>
+
+<!-- Script de sélection de colonnes -->
+<script src="{% static 'js/operatPrepa/column-selector.js' %}"></script>
 {% endblock %} 

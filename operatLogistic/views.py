@@ -1616,7 +1616,7 @@ def livraison_partielle(request, commande_id):
             Operation.objects.create(
                 commande=commande,
                 type_operation='LIVRAISON_PARTIELLE',
-                conclusion=json.dumps(operation_conclusion_data),
+                conclusion=json.dumps(operation_conclusion_data, ensure_ascii=False),
                 operateur=operateur
             )
             

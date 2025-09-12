@@ -173,12 +173,13 @@ def search_exports_preparation(query):
     exports = []
     
     # Recherche par mots-clés d'export
+    # Note: Les URLs d'export consolidées ne sont pas encore implémentées
     keywords = {
-        'export': {'title': 'Exports Consolidés', 'url': reverse('Prepacommande:export_commandes_consolidees_csv'), 'icon': 'fas fa-file-export'},
-        'csv': {'title': 'Export CSV Consolidé', 'url': reverse('Prepacommande:export_commandes_consolidees_csv'), 'icon': 'fas fa-file-csv'},
-        'excel': {'title': 'Export Excel Consolidé', 'url': reverse('Prepacommande:export_commandes_consolidees_excel'), 'icon': 'fas fa-file-excel'},
-        'rapport': {'title': 'Rapports Consolidés', 'url': reverse('Prepacommande:export_commandes_consolidees_excel'), 'icon': 'fas fa-chart-bar'},
-        'consolide': {'title': 'Données Consolidées', 'url': reverse('Prepacommande:export_commandes_consolidees_csv'), 'icon': 'fas fa-database'},
+        # 'export': {'title': 'Exports Consolidés', 'url': reverse('Prepacommande:export_commandes_consolidees_csv'), 'icon': 'fas fa-file-export'},
+        # 'csv': {'title': 'Export CSV Consolidé', 'url': reverse('Prepacommande:export_commandes_consolidees_csv'), 'icon': 'fas fa-file-csv'},
+        # 'excel': {'title': 'Export Excel Consolidé', 'url': reverse('Prepacommande:export_commandes_consolidees_excel'), 'icon': 'fas fa-file-excel'},
+        # 'rapport': {'title': 'Rapports Consolidés', 'url': reverse('Prepacommande:export_commandes_consolidees_excel'), 'icon': 'fas fa-chart-bar'},
+        # 'consolide': {'title': 'Données Consolidées', 'url': reverse('Prepacommande:export_commandes_consolidees_csv'), 'icon': 'fas fa-database'},
     }
     
     for keyword, info in keywords.items():
@@ -207,7 +208,7 @@ def search_fonctionnalites_preparation(query):
         'confirmee': {'title': 'Commandes Confirmées', 'url': reverse('Prepacommande:liste_prepa'), 'icon': 'fas fa-check-circle'},
         'livree': {'title': 'Commandes Livrées Partiellement', 'url': reverse('Prepacommande:commandes_livrees_partiellement'), 'icon': 'fas fa-truck'},
         'retournee': {'title': 'Commandes Retournées', 'url': reverse('Prepacommande:commandes_retournees'), 'icon': 'fas fa-undo'},
-        'ticket': {'title': 'Impression Tickets', 'url': reverse('Prepacommande:imprimer_tickets_preparation'), 'icon': 'fas fa-print'},
+        # 'ticket': {'title': 'Impression Tickets', 'url': reverse('Prepacommande:imprimer_tickets_preparation'), 'icon': 'fas fa-print'}, # Fonctionnalité d'impression supprimée
         'statistiques': {'title': 'Statistiques Préparation', 'url': reverse('Prepacommande:home'), 'icon': 'fas fa-chart-bar'},
         'dashboard': {'title': 'Tableau de Bord', 'url': reverse('Prepacommande:home'), 'icon': 'fas fa-tachometer-alt'},
     }
@@ -438,7 +439,6 @@ def search_suggestions_api(request):
         "commandes en préparation",
         "commandes livrées partiellement",
         "commandes retournées",
-        "impression tickets",
         "export csv",
         "export excel",
         "statistiques préparation",

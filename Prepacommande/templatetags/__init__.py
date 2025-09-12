@@ -1,1 +1,1 @@
-# Module templatetags pour l'app Prepacommande 
+# Fichier vide pour faire du répertoire un package Python
