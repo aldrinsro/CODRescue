@@ -351,7 +351,7 @@
                     </div>
                     <div class="inp">
                         <input type="password" name="password" class="input" placeholder="Mot de passe" required id="password">
-                        <i class="fas fa-lock"></i>
+                        <i id="togglePassword" class="fas fa-eye" style="cursor: pointer;"></i>
                     </div>
                     <button type="submit" class="submit" id="submitBtn">Se connecter</button>
                 </form>
@@ -382,6 +382,7 @@
             const submitBtn = document.getElementById('submitBtn');
             const username = document.getElementById('username');
             const password = document.getElementById('password');
+            const togglePassword = document.getElementById('togglePassword');
 
             console.log('Login form loaded');
 
@@ -434,6 +435,16 @@
 
             // Mettre à jour le token CSRF au chargement
             updateCsrfToken();
+
+            // Afficher/masquer le mot de passe
+            if (togglePassword && password) {
+                togglePassword.addEventListener('click', function() {
+                    const isHidden = password.getAttribute('type') === 'password';
+                    password.setAttribute('type', isHidden ? 'text' : 'password');
+                    this.classList.toggle('fa-eye');
+                    this.classList.toggle('fa-eye-slash');
+                });
+            }
 
             form.addEventListener('submit', function(e) {
                 console.log('Form submission attempted');
