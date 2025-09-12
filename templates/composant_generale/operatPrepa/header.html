@@ -188,10 +188,22 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (menuToggle) {
         console.log('🔧 Sidebar gérée par base.html (delegation)');
-        menuToggle.addEventListener('click', function() {
-            if (typeof window.toggleSidebar === 'function') {
-                window.toggleSidebar();
-            }
+        menuToggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Attendre que la fonction soit disponible
+            const tryToggle = () => {
+                if (typeof window.toggleSidebar === 'function') {
+                    console.log('✅ Fonction toggleSidebar trouvée, exécution...');
+                    window.toggleSidebar();
+                } else {
+                    console.warn('⚠️ Fonction toggleSidebar pas encore disponible, nouvelle tentative...');
+                    setTimeout(tryToggle, 50);
+                }
+            };
+            
+            tryToggle();
         });
     } else {
         console.error('❌ Bouton menu-toggle non trouvé');

@@ -262,6 +262,9 @@
             </div>
         </div>
     </div>
+
+    <!-- Pagination -->
+    {% include 'Prepacommande/includes/pagination.html' %}
 </div>
 
 {% endblock %}
@@ -269,6 +272,16 @@
 {% block extra_js %}
 <!-- Token CSRF pour les requêtes AJAX -->
 <meta name="csrf-token" content="{{ csrf_token }}">
+
+<script>
+// Fonction pour changer le nombre d'éléments par page
+function changePerPage(perPage) {
+    const url = new URL(window.location);
+    url.searchParams.set('per_page', perPage);
+    url.searchParams.set('page', '1'); // Retourner à la première page
+    window.location.href = url.toString();
+}
+</script>
 
 <!-- Système de notifications toast -->
 <div id="notificationContainer" class="fixed top-4 right-4 z-50 space-y-2"></div>

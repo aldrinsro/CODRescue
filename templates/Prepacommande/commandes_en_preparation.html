@@ -39,7 +39,7 @@
                     {% for commande in commandes %}
                     <tr class="hover:bg-gray-50 transition-colors">
                         <td class="px-4 py-4 whitespace-nowrap">
-                            <input type="checkbox" class="commande-checkbox rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50" value="{{ commande.pk }}" onchange="updatePrintButton()">
+                            <input type="checkbox" class="commande-checkbox rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50" value="{{ commande.pk }}">
                         </td>
                         <td class="px-4 py-4 whitespace-nowrap">
                             <a href="{% url 'Prepacommande:detail_prepa' commande.pk %}" class="text-sm font-medium hover:underline" style="color: var(--preparation-primary);">
@@ -80,9 +80,6 @@
                                 <a href="{% url 'Prepacommande:detail_prepa' commande.pk %}" class="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md shadow-sm text-white" style="background-color: var(--preparation-primary);" title="Finaliser la préparation">
                                     <i class="fas fa-boxes mr-1"></i> Préparer
                                 </a>
-                                <button onclick="imprimerTicket({{ commande.pk }})" class="inline-flex items-center px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors" title="Imprimer le ticket de préparation">
-                                    <i class="fas fa-print mr-1"></i> Ticket
-                                </button>
                             </div>
                         </td>
                     </tr>
@@ -97,22 +94,24 @@
             </table>
         </div>
         
-        <!-- Boutons d'actions groupées -->
-        {% if commandes %}
-        <div class="mt-6 flex flex-wrap gap-3">
-            <button id="printSelectedBtn" onclick="imprimerTicketsSelectionnes()" disabled class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
-                <i class="fas fa-print mr-2"></i>
-                Imprimer Sélection (<span id="selectedCount">0</span>)
-            </button>
-        </div>
-        {% endif %}
     </div>
+
+    <!-- Pagination -->
+    {% include 'Prepacommande/includes/pagination.html' %}
 </div>
 
 {% endblock %}
 
 {% block extra_js %}
 <script>
+// Fonction pour changer le nombre d'éléments par page
+function changePerPage(perPage) {
+    const url = new URL(window.location);
+    url.searchParams.set('per_page', perPage);
+    url.searchParams.set('page', '1'); // Retourner à la première page
+    window.location.href = url.toString();
+}
+
 // Gestion des cases à cocher
 function toggleAllCheckboxes() {
     const selectAll = document.getElementById('selectAll');
@@ -121,55 +120,25 @@ function toggleAllCheckboxes() {
     checkboxes.forEach(checkbox => {
         checkbox.checked = selectAll.checked;
     });
-    
-    updatePrintButton();
 }
 
-function updatePrintButton() {
-    const checkboxes = document.querySelectorAll('.commande-checkbox:checked');
-    const printBtn = document.getElementById('printSelectedBtn');
-    const countSpan = document.getElementById('selectedCount');
-    
-    if (countSpan) {
-        countSpan.textContent = checkboxes.length;
+// Mettre à jour l'état de "Tout sélectionner" quand les cases à cocher changent
+document.addEventListener('change', function(e) {
+    if (e.target.classList.contains('commande-checkbox')) {
+        const allCheckboxes = document.querySelectorAll('.commande-checkbox');
+        const checkedCheckboxes = document.querySelectorAll('.commande-checkbox:checked');
+        const selectAll = document.getElementById('selectAll');
+        
+        if (selectAll && allCheckboxes.length > 0) {
+            selectAll.checked = checkedCheckboxes.length === allCheckboxes.length;
+            selectAll.indeterminate = checkedCheckboxes.length > 0 && checkedCheckboxes.length < allCheckboxes.length;
+        }
     }
-    
-    if (printBtn) {
-        printBtn.disabled = checkboxes.length === 0;
-    }
-    
-    // Mettre à jour l'état de "Tout sélectionner"
-    const allCheckboxes = document.querySelectorAll('.commande-checkbox');
-    const selectAll = document.getElementById('selectAll');
-    if (selectAll && allCheckboxes.length > 0) {
-        selectAll.checked = checkboxes.length === allCheckboxes.length;
-        selectAll.indeterminate = checkboxes.length > 0 && checkboxes.length < allCheckboxes.length;
-    }
-}
+});
 
-// Fonctions d'impression
-function imprimerTicket(commandeId) {
-    const url = "{% url 'Prepacommande:imprimer_tickets_preparation' %}?ids=" + commandeId;
-    window.open(url, '_blank');
-}
-
-function imprimerTicketsSelectionnes() {
-    const checkboxes = document.querySelectorAll('.commande-checkbox:checked');
-    const ids = Array.from(checkboxes).map(cb => cb.value);
-    
-    if (ids.length === 0) {
-        alert('Veuillez sélectionner au moins une commande.');
-        return;
-    }
-    
-    const url = "{% url 'Prepacommande:imprimer_tickets_preparation' %}?ids=" + ids.join(',');
-    window.open(url, '_blank');
-}
-
-
-// Initialiser les boutons au chargement de la page
+// Initialiser la page au chargement
 document.addEventListener('DOMContentLoaded', function() {
-    updatePrintButton();
+    console.log('Page de commandes en préparation chargée');
 });
 </script>
 {% endblock %} 

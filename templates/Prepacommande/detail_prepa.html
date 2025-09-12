@@ -548,36 +548,7 @@
 
     <!-- Section 5: Actions de Préparation -->
     {% if etat_preparation and not etat_preparation.date_fin %}
-        {% if etat_preparation.enum_etat.libelle == 'À imprimer' %}
-        <div class="bg-white rounded-xl shadow-lg border p-6 md:p-8 mb-6" style="border-color: var(--preparation-border-accent);">
-            <h2 class="text-2xl font-bold flex items-center mb-6" style="color: var(--preparation-primary);">
-                <i class="fas fa-print mr-2"></i>Impression et Préparation
-            </h2>
-            
-            <div class="bg-orange-50 p-4 rounded-lg border border-orange-200 mb-6">
-                <div class="flex items-center">
-                    <i class="fas fa-print text-orange-600 mr-3 text-xl"></i>
-                    <div>
-                        <h3 class="font-semibold text-orange-800">Étape 1 : Impression</h3>
-                        <p class="text-sm text-orange-600">Imprimez d'abord l'étiquette de préparation, puis cliquez sur "Commencer la Préparation".</p>
-                    </div>
-                </div>
-            </div>
-
-            <form method="POST" class="flex flex-col sm:flex-row gap-4">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="commencer_preparation">
-                <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors shadow-sm flex items-center justify-center">
-                    <i class="fas fa-play mr-2"></i>
-                    Commencer la Préparation
-                </button>
-                <a href="{% url 'Prepacommande:liste_prepa' %}" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-medium transition-colors shadow-sm flex items-center justify-center">
-                    <i class="fas fa-arrow-left mr-2"></i>
-                    Retour à la liste
-                </a>
-            </form>
-        </div>
-        {% elif etat_preparation.enum_etat.libelle == 'En préparation' %}
+        {% if etat_preparation.enum_etat.libelle == 'En préparation' %}
         <div class="bg-white rounded-xl shadow-lg mt-4 border p-6 md:p-8 mb-6" style="border-color: var(--preparation-border-accent);">
             <h2 class="text-2xl font-bold flex items-center mb-6" style="color: var(--preparation-primary);">
                 <i class="fas fa-boxes mr-2"></i>Nouveau Workflow de Préparation

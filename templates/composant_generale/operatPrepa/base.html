@@ -177,7 +177,64 @@
 
     <!-- Système de notifications préparation supprimé -->
     
-
+    <!-- Fonction globale pour le toggle de la sidebar (définie tôt pour éviter les conflits) -->
+    <script>
+    // Fonction globale pour le toggle de la sidebar (manquante dans operatPrepa)
+    window.toggleSidebar = function() {
+        console.log('🍔 [OperatPrepa] toggleSidebar appelée');
+        
+        const body = document.body;
+        const sidebar = document.getElementById('sidebar');
+        const menuToggle = document.getElementById('menu-toggle');
+        
+        if (!body || !sidebar) {
+            console.error('❌ [OperatPrepa] Éléments manquants pour toggleSidebar');
+            return;
+        }
+        
+        // État avant
+        const before = {
+            hasOpen: body.classList.contains('sidebar-open'),
+            hasCollapsed: body.classList.contains('sidebar-collapsed'),
+            windowWidth: window.innerWidth
+        };
+        
+        console.log('📊 [OperatPrepa] État avant toggle:', before);
+        
+        // Toggle des classes
+        body.classList.toggle('sidebar-open');
+        body.classList.toggle('sidebar-collapsed');
+        
+        // Animation du bouton hamburger
+        if (menuToggle) {
+            menuToggle.classList.toggle('hamburger-active');
+        }
+        
+        // Gestion de l'overlay sur mobile
+        const contentOverlay = document.getElementById('content-overlay');
+        if (contentOverlay) {
+            if (body.classList.contains('sidebar-open') && window.innerWidth <= 1023) {
+                contentOverlay.style.display = 'block';
+                setTimeout(() => {
+                    contentOverlay.style.opacity = '1';
+                }, 10);
+            } else {
+                contentOverlay.style.opacity = '0';
+                setTimeout(() => {
+                    contentOverlay.style.display = 'none';
+                }, 300);
+            }
+        }
+        
+        // État après
+        const after = {
+            hasOpen: body.classList.contains('sidebar-open'),
+            hasCollapsed: body.classList.contains('sidebar-collapsed')
+        };
+        
+        console.log('📊 [OperatPrepa] État après toggle:', after);
+    };
+    </script>
 
     {% block extra_js %}
     <script>
@@ -222,6 +279,19 @@
                 if (window.innerWidth <= 1023) {
                     body.classList.add('sidebar-collapsed');
                     body.classList.remove('sidebar-open');
+                    // Fermer l'overlay
+                    const contentOverlay = document.getElementById('content-overlay');
+                    if (contentOverlay) {
+                        contentOverlay.style.opacity = '0';
+                        setTimeout(() => {
+                            contentOverlay.style.display = 'none';
+                        }, 300);
+                    }
+                    // Réinitialiser l'animation du hamburger
+                    const menuToggle = document.getElementById('menu-toggle');
+                    if (menuToggle) {
+                        menuToggle.classList.remove('hamburger-active');
+                    }
                 }
             });
         }
@@ -239,11 +309,36 @@
             });
         });
 
+        // Gestion de l'overlay pour fermer la sidebar sur mobile
+        const contentOverlay = document.getElementById('content-overlay');
+        if (contentOverlay) {
+            contentOverlay.addEventListener('click', function() {
+                if (window.innerWidth <= 1023) {
+                    body.classList.add('sidebar-collapsed');
+                    body.classList.remove('sidebar-open');
+                    // Fermer l'overlay
+                    contentOverlay.style.opacity = '0';
+                    setTimeout(() => {
+                        contentOverlay.style.display = 'none';
+                    }, 300);
+                    // Réinitialiser l'animation du hamburger
+                    const menuToggle = document.getElementById('menu-toggle');
+                    if (menuToggle) {
+                        menuToggle.classList.remove('hamburger-active');
+                    }
+                }
+            });
+        }
+
         // Gestion du redimensionnement de la fenêtre
         window.addEventListener('resize', () => {
             if (window.innerWidth > 1023) {
                 body.classList.add('sidebar-open');
                 body.classList.remove('sidebar-collapsed');
+                // Cacher l'overlay sur desktop
+                if (contentOverlay) {
+                    contentOverlay.style.display = 'none';
+                }
             } else {
                 body.classList.add('sidebar-collapsed');
                 body.classList.remove('sidebar-open');

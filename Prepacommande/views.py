@@ -208,6 +208,7 @@ def home_view(request):
 def liste_prepa(request):
     """Liste des commandes à préparer pour les opérateurs de préparation"""
     from commande.models import Operation
+    from django.core.paginator import Paginator
     
     try:
         operateur_profile = request.user.profil_operateur
@@ -944,10 +945,24 @@ def liste_prepa(request):
             }
         )
 
+    # Pagination côté serveur
+    items_per_page = int(request.GET.get('per_page', 10))  # Par défaut 10 éléments par page
+    page_number = request.GET.get('page', 1)
+    
+    # Créer le paginator avec la liste des commandes
+    paginator = Paginator(commandes_affectees, items_per_page)
+    
+    try:
+        commandes_paginated = paginator.page(page_number)
+    except (Paginator.EmptyPage, ValueError):
+        # Si la page demandée n'existe pas ou n'est pas un nombre valide, afficher la première page
+        commandes_paginated = paginator.page(1)
+        page_number = 1
+
     context = {
         "page_title": "Mes Commandes à Préparer",
         "page_subtitle": f"Vous avez {total_affectees} commande(s) affectée(s)",
-        "commandes_affectees": commandes_affectees,
+        "commandes_affectees": commandes_paginated,  # Utiliser les commandes paginées
         "search_query": search_query,
         "filter_type": filter_type,
         "stats": {
@@ -960,6 +975,16 @@ def liste_prepa(request):
         "api_produits_url_base": reverse(
             "Prepacommande:api_commande_produits", args=[99999999]
         ),
+        # Informations de pagination
+        "paginator": paginator,
+        "page_obj": commandes_paginated,
+        "items_per_page": items_per_page,
+        "current_page": page_number,
+        "total_pages": paginator.num_pages,
+        "has_previous": commandes_paginated.has_previous(),
+        "has_next": commandes_paginated.has_next(),
+        "previous_page_number": commandes_paginated.previous_page_number() if commandes_paginated.has_previous() else None,
+        "next_page_number": commandes_paginated.next_page_number() if commandes_paginated.has_next() else None,
     }
     return render(request, "Prepacommande/liste_prepa.html", context)
 
@@ -967,6 +992,8 @@ def liste_prepa(request):
 @login_required
 def commandes_en_preparation(request):
     """Liste des commandes en cours de préparation pour les opérateurs de préparation"""
+    from django.core.paginator import Paginator
+    
     try:
         operateur_profile = request.user.profil_operateur
         
@@ -994,12 +1021,36 @@ def commandes_en_preparation(request):
         .distinct()
     )
 
+    # Pagination côté serveur
+    items_per_page = int(request.GET.get('per_page', 10))  # Par défaut 10 éléments par page
+    page_number = request.GET.get('page', 1)
+    
+    # Créer le paginator avec la liste des commandes
+    paginator = Paginator(commandes_en_preparation, items_per_page)
+    
+    try:
+        commandes_paginated = paginator.page(page_number)
+    except (Paginator.EmptyPage, ValueError):
+        # Si la page demandée n'existe pas ou n'est pas un nombre valide, afficher la première page
+        commandes_paginated = paginator.page(1)
+        page_number = 1
+
     context = {
         "page_title": "Commandes en Préparation",
         "page_subtitle": "Interface Opérateur de Préparation",
         "profile": operateur_profile,
-        "commandes": commandes_en_preparation,
+        "commandes": commandes_paginated,  # Utiliser les commandes paginées
         "active_tab": "en_preparation",
+        # Informations de pagination
+        "paginator": paginator,
+        "page_obj": commandes_paginated,
+        "items_per_page": items_per_page,
+        "current_page": page_number,
+        "total_pages": paginator.num_pages,
+        "has_previous": commandes_paginated.has_previous(),
+        "has_next": commandes_paginated.has_next(),
+        "previous_page_number": commandes_paginated.previous_page_number() if commandes_paginated.has_previous() else None,
+        "next_page_number": commandes_paginated.next_page_number() if commandes_paginated.has_next() else None,
     }
     return render(request, "Prepacommande/commandes_en_preparation.html", context)
 
@@ -1007,6 +1058,8 @@ def commandes_en_preparation(request):
 @login_required
 def commandes_livrees_partiellement(request):
     """Liste des commandes livrées partiellement renvoyées en préparation"""
+    from django.core.paginator import Paginator
+    
     try:
         operateur_profile = request.user.profil_operateur
         
@@ -1075,13 +1128,37 @@ def commandes_livrees_partiellement(request):
                 commande.commande_renvoi_num = commande.commande_renvoi.num_cmd
                 commande.commande_renvoi_id_yz = commande.commande_renvoi.id_yz
 
+    # Pagination côté serveur
+    items_per_page = int(request.GET.get('per_page', 10))  # Par défaut 10 éléments par page
+    page_number = request.GET.get('page', 1)
+    
+    # Créer le paginator avec la liste des commandes
+    paginator = Paginator(commandes_livrees_partiellement, items_per_page)
+    
+    try:
+        commandes_paginated = paginator.page(page_number)
+    except (Paginator.EmptyPage, ValueError):
+        # Si la page demandée n'existe pas ou n'est pas un nombre valide, afficher la première page
+        commandes_paginated = paginator.page(1)
+        page_number = 1
+
     context = {
         "page_title": "Commandes Livrées Partiellement",
         "page_subtitle": "Interface Opérateur de Préparation",
         "profile": operateur_profile,
-        "commandes_livrees_partiellement": commandes_livrees_partiellement,
+        "commandes_livrees_partiellement": commandes_paginated,  # Utiliser les commandes paginées
         "commandes_count": len(commandes_livrees_partiellement),
         "active_tab": "livrees_partiellement",
+        # Informations de pagination
+        "paginator": paginator,
+        "page_obj": commandes_paginated,
+        "items_per_page": items_per_page,
+        "current_page": page_number,
+        "total_pages": paginator.num_pages,
+        "has_previous": commandes_paginated.has_previous(),
+        "has_next": commandes_paginated.has_next(),
+        "previous_page_number": commandes_paginated.previous_page_number() if commandes_paginated.has_previous() else None,
+        "next_page_number": commandes_paginated.next_page_number() if commandes_paginated.has_next() else None,
     }
     return render(
         request, "Prepacommande/commandes_livrees_partiellement.html", context
@@ -1091,6 +1168,8 @@ def commandes_livrees_partiellement(request):
 @login_required
 def commandes_retournees(request):
     """Liste des commandes retournées (état actuel 'Retournée') préparées initialement par l'opérateur courant"""
+    from django.core.paginator import Paginator
+    
     try:
         operateur_profile = request.user.profil_operateur
         if not operateur_profile.is_preparation:
@@ -1133,13 +1212,37 @@ def commandes_retournees(request):
             commande.commentaire_retournee = etat_retour.commentaire
             commande.operateur_retour = etat_retour.operateur
 
+    # Pagination côté serveur
+    items_per_page = int(request.GET.get('per_page', 10))  # Par défaut 10 éléments par page
+    page_number = request.GET.get('page', 1)
+    
+    # Créer le paginator avec la liste des commandes
+    paginator = Paginator(commandes, items_per_page)
+    
+    try:
+        commandes_paginated = paginator.page(page_number)
+    except (Paginator.EmptyPage, ValueError):
+        # Si la page demandée n'existe pas ou n'est pas un nombre valide, afficher la première page
+        commandes_paginated = paginator.page(1)
+        page_number = 1
+
     context = {
         "page_title": "Commandes Retournées",
         "page_subtitle": "Commandes renvoyées à la préparation (état 'Retournée')",
         "profile": operateur_profile,
-        "commandes_retournees": commandes,
+        "commandes_retournees": commandes_paginated,  # Utiliser les commandes paginées
         "commandes_count": len(commandes),
         "active_tab": "retournees",
+        # Informations de pagination
+        "paginator": paginator,
+        "page_obj": commandes_paginated,
+        "items_per_page": items_per_page,
+        "current_page": page_number,
+        "total_pages": paginator.num_pages,
+        "has_previous": commandes_paginated.has_previous(),
+        "has_next": commandes_paginated.has_next(),
+        "previous_page_number": commandes_paginated.previous_page_number() if commandes_paginated.has_previous() else None,
+        "next_page_number": commandes_paginated.next_page_number() if commandes_paginated.has_next() else None,
     }
     return render(request, "Prepacommande/commandes_retournees.html", context)
 
@@ -3308,71 +3411,6 @@ def api_panier_commande_prepa(request, commande_id):
     )
 
 
-@login_required
-def imprimer_tickets_preparation(request):
-    """
-    Vue pour imprimer les tickets de préparation SANS changer l'état des commandes.
-    Permet d'imprimer ou de réimprimer des tickets pour les commandes en préparation.
-    """
-    try:
-        operateur_profile = request.user.profil_operateur
-        if not operateur_profile.is_preparation:
-            return HttpResponse("Accès non autorisé.", status=403)
-    except Operateur.DoesNotExist:
-        return HttpResponse("Profil opérateur non trouvé.", status=403)
-
-    commande_ids_str = request.GET.get("ids")
-    if not commande_ids_str:
-        return HttpResponse("Aucun ID de commande fourni.", status=400)
-
-    try:
-        commande_ids = [int(id) for id in commande_ids_str.split(",") if id.isdigit()]
-    except ValueError:
-        return HttpResponse("IDs de commande invalides.", status=400)
-    
-    # Récupérer les commandes en préparation affectées à cet opérateur
-    commandes = Commande.objects.filter(
-        id__in=commande_ids,
-        etats__operateur=operateur_profile,
-        etats__enum_etat__libelle="En préparation",
-        etats__date_fin__isnull=True,
-    ).distinct()
-
-    if not commandes.exists():
-        return HttpResponse(
-            "Aucune commande en préparation trouvée pour cet opérateur.", status=404
-        )
-
-    # Génération du code-barres pour chaque commande (sans transition d'état)
-    code128 = barcode.get_barcode_class("code128")
-    
-    for commande in commandes:
-        # Générer le code-barres uniquement si pas déjà présent
-        if not hasattr(commande, "barcode_base64") or not commande.barcode_base64:
-            barcode_instance = code128(str(commande.id_yz), writer=ImageWriter())
-            buffer = BytesIO()
-            barcode_instance.write(
-                buffer,
-                options={
-                    "write_text": False,
-                    "module_height": 15.0,
-                    "module_width": 0.3,
-                },
-            )
-            barcode_base64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
-            commande.barcode_base64 = barcode_base64
-        
-        # Définir la date de préparation pour l'affichage (sans sauvegarder en DB)
-        if not hasattr(commande, "date_preparation") or not commande.date_preparation:
-            commande.date_preparation = timezone.now()
-
-    context = {
-        "commandes": commandes,
-        "is_reprint": True,  # Indicateur pour différencier des impressions initiales
-    }
-    
-    return render(request, "Prepacommande/tickets_preparation.html", context)
-
 # === NOUVELLES FONCTIONNALITÉS : GESTION DE STOCK ===
 
 # === FONCTION SUPPRIMÉE : GESTION DE STOCK DÉPLACÉE VERS ADMIN ===
@@ -4586,16 +4624,6 @@ def details_region_view(request):
     return render(request, "Prepacommande/details_region.html", context)
 
 
-@login_required
-def imprimer_commande(request, commande_id):
-    """
-    Imprime une commande spécifique.
-    """
-    commande = get_object_or_404(Commande, id=commande_id)
-    # Assurez-vous que l'opérateur a le droit de voir cette commande si nécessaire
-    return render(
-        request, "Prepacommande/impression_commande.html", {"commande": commande}
-    )
 
 
 @login_required 
@@ -4609,13 +4637,6 @@ def exporter_etats_pdf(request):
     )
 
 
-@login_required
-def imprimer_envoi(request, envoi_id):
-    """
-    Imprime les détails d'un envoi.
-    """
-    envoi = get_object_or_404(Envoi, id=envoi_id)
-    return render(request, "Prepacommande/impression_envoi.html", {"envoi": envoi})
 
 
 @login_required
