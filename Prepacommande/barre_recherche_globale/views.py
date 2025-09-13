@@ -80,10 +80,56 @@ def search_commandes_preparation(query, request=None):
     """Recherche dans les commandes pour préparation"""
     commandes = []
     
-    # Recherche par ID numérique
-    if query.isdigit():
+    try:
+        # Recherche par ID numérique
+        if query.isdigit():
+            try:
+                cmd = Commande.objects.get(id=int(query))
+                commandes.append({
+                    'id': cmd.id,
+                    'type': 'commande',
+                    'title': f'Commande #{cmd.id} ({cmd.num_cmd})',
+                    'subtitle': f'Client: {cmd.client.nom if cmd.client else "N/A"} - {cmd.total_cmd} DH',
+                    'status': get_commande_status(cmd),
+                    'url': reverse('Prepacommande:detail_prepa', kwargs={'pk': cmd.id}),
+                    'icon': 'fas fa-shopping-cart',
+                    'priority': 1
+                })
+            except Commande.DoesNotExist:
+                pass
+            except Exception as e:
+                print(f"Erreur lors de la recherche par ID: {e}")
+                pass
+    
+        # Recherche par numéro externe
         try:
-            cmd = Commande.objects.get(id=int(query))
+            cmd_externe = Commande.objects.get(num_cmd__icontains=query)
+            commandes.append({
+                'id': cmd_externe.id,
+                'type': 'commande',
+                'title': f'Commande #{cmd_externe.id} ({cmd_externe.num_cmd})',
+                'subtitle': f'Client: {cmd_externe.client.nom if cmd_externe.client else "N/A"} - {cmd_externe.total_cmd} DH',
+                'status': get_commande_status(cmd_externe),
+                'url': reverse('Prepacommande:detail_prepa', kwargs={'pk': cmd_externe.id}),
+                'icon': 'fas fa-shopping-cart',
+                'priority': 1
+            })
+        except Commande.DoesNotExist:
+            pass
+        except Exception as e:
+            print(f"Erreur lors de la recherche par numéro externe: {e}")
+            pass
+        
+        # Recherche par client
+        commandes_client = Commande.objects.filter(
+            Q(client__nom__icontains=query) |
+            Q(client__prenom__icontains=query) |
+            Q(client__email__icontains=query)
+        ).exclude(
+            num_cmd__icontains=query
+        )[:10]
+        
+        for cmd in commandes_client:
             commandes.append({
                 'id': cmd.id,
                 'type': 'commande',
@@ -92,80 +138,45 @@ def search_commandes_preparation(query, request=None):
                 'status': get_commande_status(cmd),
                 'url': reverse('Prepacommande:detail_prepa', kwargs={'pk': cmd.id}),
                 'icon': 'fas fa-shopping-cart',
-                'priority': 1
+                'priority': 2
             })
-        except Commande.DoesNotExist:
-            pass
+        
+        # Recherche par région/ville
+        commandes_geo = Commande.objects.filter(
+            Q(ville__nom__icontains=query) |
+            Q(ville__region__nom_region__icontains=query) |
+            Q(ville_init__icontains=query)
+        ).exclude(
+            Q(num_cmd__icontains=query) |
+            Q(client__nom__icontains=query) |
+            Q(client__prenom__icontains=query)
+        )[:10]
+        
+        for cmd in commandes_geo:
+            commandes.append({
+                'id': cmd.id,
+                'type': 'commande',
+                'title': f'Commande #{cmd.id} ({cmd.num_cmd})',
+                'subtitle': f'Client: {cmd.client.nom if cmd.client else "N/A"} - {cmd.total_cmd} DH',
+                'status': get_commande_status(cmd),
+                'url': reverse('Prepacommande:detail_prepa', kwargs={'pk': cmd.id}),
+                'icon': 'fas fa-shopping-cart',
+                'priority': 3
+            })
     
-    # Recherche par numéro externe
-    try:
-        cmd_externe = Commande.objects.get(num_cmd__icontains=query)
-        commandes.append({
-            'id': cmd_externe.id,
-            'type': 'commande',
-            'title': f'Commande #{cmd_externe.id} ({cmd_externe.num_cmd})',
-            'subtitle': f'Client: {cmd_externe.client.nom if cmd_externe.client else "N/A"} - {cmd_externe.total_cmd} DH',
-            'status': get_commande_status(cmd_externe),
-            'url': reverse('Prepacommande:detail_prepa', kwargs={'pk': cmd_externe.id}),
-            'icon': 'fas fa-shopping-cart',
-            'priority': 1
-        })
-    except Commande.DoesNotExist:
-        pass
+        # Éliminer les doublons
+        commandes_uniques = []
+        seen_ids = set()
+        for cmd in commandes:
+            if cmd['id'] not in seen_ids:
+                commandes_uniques.append(cmd)
+                seen_ids.add(cmd['id'])
+        
+        return commandes_uniques[:10]
     
-    # Recherche par client
-    commandes_client = Commande.objects.filter(
-        Q(client__nom__icontains=query) |
-        Q(client__prenom__icontains=query) |
-        Q(client__email__icontains=query)
-    ).exclude(
-        num_cmd__icontains=query
-    )[:10]
-    
-    for cmd in commandes_client:
-        commandes.append({
-            'id': cmd.id,
-            'type': 'commande',
-            'title': f'Commande #{cmd.id} ({cmd.num_cmd})',
-            'subtitle': f'Client: {cmd.client.nom if cmd.client else "N/A"} - {cmd.total_cmd} DH',
-            'status': get_commande_status(cmd),
-            'url': reverse('Prepacommande:detail_prepa', kwargs={'pk': cmd.id}),
-            'icon': 'fas fa-shopping-cart',
-            'priority': 2
-        })
-    
-    # Recherche par région/ville
-    commandes_geo = Commande.objects.filter(
-        Q(ville__nom__icontains=query) |
-        Q(ville__region__nom_region__icontains=query) |
-        Q(ville_init__icontains=query)
-    ).exclude(
-        Q(num_cmd__icontains=query) |
-        Q(client__nom__icontains=query) |
-        Q(client__prenom__icontains=query)
-    )[:10]
-    
-    for cmd in commandes_geo:
-        commandes.append({
-            'id': cmd.id,
-            'type': 'commande',
-            'title': f'Commande #{cmd.id} ({cmd.num_cmd})',
-            'subtitle': f'Client: {cmd.client.nom if cmd.client else "N/A"} - {cmd.total_cmd} DH',
-            'status': get_commande_status(cmd),
-            'url': reverse('Prepacommande:detail_prepa', kwargs={'pk': cmd.id}),
-            'icon': 'fas fa-shopping-cart',
-            'priority': 3
-        })
-    
-    # Éliminer les doublons
-    commandes_uniques = []
-    seen_ids = set()
-    for cmd in commandes:
-        if cmd['id'] not in seen_ids:
-            commandes_uniques.append(cmd)
-            seen_ids.add(cmd['id'])
-    
-    return commandes_uniques[:10]
+    except Exception as e:
+        print(f"Erreur générale dans search_commandes_preparation: {e}")
+        return []
 
 
 def search_exports_preparation(query):
@@ -262,148 +273,153 @@ def search_articles_panier_preparation(query):
     """Recherche dans les articles du panier des commandes en préparation"""
     articles_panier = []
     
-    # Rechercher dans les commandes avec états : En préparation, Collectée, Emballée
-    commandes_preparation = Commande.objects.filter(
-        etats__enum_etat__libelle__in=["En préparation", "Collectée", "Emballée"],
-        etats__date_fin__isnull=True
-    ).distinct()
-    
-    # Rechercher les articles du panier qui correspondent à la requête
-    paniers_match = Panier.objects.filter(
-        commande__in=commandes_preparation,
-        article__nom__icontains=query
-    ).select_related('article', 'commande')[:10]
-    
-    for panier in paniers_match:
-        # Obtenir l'état actuel de la commande
-        etat_actuel = panier.commande.etats.filter(date_fin__isnull=True).first()
-        etat_libelle = etat_actuel.enum_etat.libelle if etat_actuel else "N/A"
+    try:
+        # Rechercher dans les commandes avec états : En préparation, Collectée, Emballée
+        commandes_preparation = Commande.objects.filter(
+            etats__enum_etat__libelle__in=["En préparation", "Collectée", "Emballée"],
+            etats__date_fin__isnull=True
+        ).distinct()
         
-        articles_panier.append({
-            'id': f"panier_{panier.id}",
-            'type': 'article_panier',
-            'title': panier.article.nom,
-            'subtitle': f'Commande #{panier.commande.id} - Qté: {panier.quantite} - État: {etat_libelle}',
-            'status': etat_libelle,
-            'url': reverse('Prepacommande:detail_prepa', kwargs={'pk': panier.commande.id}),
-            'icon': 'fas fa-shopping-basket',
-            'priority': 1
-        })
-    
-    # Rechercher aussi par référence d'article
-    paniers_ref = Panier.objects.filter(
-        commande__in=commandes_preparation,
-        article__reference__icontains=query
-    ).select_related('article', 'commande').exclude(
-        article__nom__icontains=query
-    )[:5]
-    
-    for panier in paniers_ref:
-        etat_actuel = panier.commande.etats.filter(date_fin__isnull=True).first()
-        etat_libelle = etat_actuel.enum_etat.libelle if etat_actuel else "N/A"
+        # Rechercher les articles du panier qui correspondent à la requête
+        paniers_match = Panier.objects.filter(
+            commande__in=commandes_preparation,
+            article__nom__icontains=query
+        ).select_related('article', 'commande')[:10]
         
-        articles_panier.append({
-            'id': f"panier_ref_{panier.id}",
-            'type': 'article_panier',
-            'title': f"{panier.article.nom} (Réf: {panier.article.reference})",
-            'subtitle': f'Commande #{panier.commande.id} - Qté: {panier.quantite} - État: {etat_libelle}',
-            'status': etat_libelle,
-            'url': reverse('Prepacommande:detail_prepa', kwargs={'pk': panier.commande.id}),
-            'icon': 'fas fa-shopping-basket',
-            'priority': 2
-        })
-    
-    # Rechercher par référence de variante
-    paniers_ref_variante = Panier.objects.filter(
-        commande__in=commandes_preparation,
-        variante__reference_variante__icontains=query
-    ).select_related('article', 'commande', 'variante').exclude(
-        Q(article__nom__icontains=query) | Q(article__reference__icontains=query)
-    )[:3]
-    
-    for panier in paniers_ref_variante:
-        etat_actuel = panier.commande.etats.filter(date_fin__isnull=True).first()
-        etat_libelle = etat_actuel.enum_etat.libelle if etat_actuel else "N/A"
+        for panier in paniers_match:
+            # Obtenir l'état actuel de la commande
+            etat_actuel = panier.commande.etats.filter(date_fin__isnull=True).first()
+            etat_libelle = etat_actuel.enum_etat.libelle if etat_actuel else "N/A"
+            
+            articles_panier.append({
+                'id': f"panier_{panier.id}",
+                'type': 'article_panier',
+                'title': panier.article.nom,
+                'subtitle': f'Commande #{panier.commande.id} - Qté: {panier.quantite} - État: {etat_libelle}',
+                'status': etat_libelle,
+                'url': reverse('Prepacommande:detail_prepa', kwargs={'pk': panier.commande.id}),
+                'icon': 'fas fa-shopping-basket',
+                'priority': 1
+            })
         
-        variante_info = ""
-        if panier.variante:
-            if panier.variante.couleur and panier.variante.pointure:
-                variante_info = f" - {panier.variante.couleur.nom} {panier.variante.pointure.pointure}"
-            elif panier.variante.couleur:
-                variante_info = f" - {panier.variante.couleur.nom}"
-            elif panier.variante.pointure:
-                variante_info = f" - {panier.variante.pointure.pointure}"
+        # Rechercher aussi par référence d'article
+        paniers_ref = Panier.objects.filter(
+            commande__in=commandes_preparation,
+            article__reference__icontains=query
+        ).select_related('article', 'commande').exclude(
+            article__nom__icontains=query
+        )[:5]
         
-        articles_panier.append({
-            'id': f"panier_ref_var_{panier.id}",
-            'type': 'article_panier',
-            'title': f"{panier.article.nom}{variante_info} (Réf: {panier.variante.reference_variante})",
-            'subtitle': f'Commande #{panier.commande.id} - Qté: {panier.quantite} - État: {etat_libelle}',
-            'status': etat_libelle,
-            'url': reverse('Prepacommande:detail_prepa', kwargs={'pk': panier.commande.id}),
-            'icon': 'fas fa-shopping-basket',
-            'priority': 2
-        })
-    
-    # Rechercher par couleur/pointure si c'est une variante
-    paniers_variante = Panier.objects.filter(
-        commande__in=commandes_preparation,
-        variante__couleur__nom__icontains=query
-    ).select_related('article', 'commande', 'variante__couleur', 'variante__pointure').exclude(
-        Q(article__nom__icontains=query) | Q(article__reference__icontains=query) | Q(variante__reference_variante__icontains=query)
-    )[:5]
-    
-    for panier in paniers_variante:
-        etat_actuel = panier.commande.etats.filter(date_fin__isnull=True).first()
-        etat_libelle = etat_actuel.enum_etat.libelle if etat_actuel else "N/A"
+        for panier in paniers_ref:
+            etat_actuel = panier.commande.etats.filter(date_fin__isnull=True).first()
+            etat_libelle = etat_actuel.enum_etat.libelle if etat_actuel else "N/A"
+            
+            articles_panier.append({
+                'id': f"panier_ref_{panier.id}",
+                'type': 'article_panier',
+                'title': f"{panier.article.nom} (Réf: {panier.article.reference})",
+                'subtitle': f'Commande #{panier.commande.id} - Qté: {panier.quantite} - État: {etat_libelle}',
+                'status': etat_libelle,
+                'url': reverse('Prepacommande:detail_prepa', kwargs={'pk': panier.commande.id}),
+                'icon': 'fas fa-shopping-basket',
+                'priority': 2
+            })
         
-        variante_info = f" - {panier.variante.couleur.nom}" if panier.variante and panier.variante.couleur else ""
+        # Rechercher par référence de variante
+        paniers_ref_variante = Panier.objects.filter(
+            commande__in=commandes_preparation,
+            variante__reference_variante__icontains=query
+        ).select_related('article', 'commande', 'variante').exclude(
+            Q(article__nom__icontains=query) | Q(article__reference__icontains=query)
+        )[:3]
         
-        articles_panier.append({
-            'id': f"panier_var_{panier.id}",
-            'type': 'article_panier',
-            'title': f"{panier.article.nom}{variante_info}",
-            'subtitle': f'Commande #{panier.commande.id} - Qté: {panier.quantite} - État: {etat_libelle}',
-            'status': etat_libelle,
-            'url': reverse('Prepacommande:detail_prepa', kwargs={'pk': panier.commande.id}),
-            'icon': 'fas fa-shopping-basket',
-            'priority': 3
-        })
-    
-    # Rechercher aussi par pointure si c'est une variante
-    paniers_pointure = Panier.objects.filter(
-        commande__in=commandes_preparation,
-        variante__pointure__pointure__icontains=query
-    ).select_related('article', 'commande', 'variante__couleur', 'variante__pointure').exclude(
-        Q(article__nom__icontains=query) | Q(article__reference__icontains=query) | Q(variante__couleur__nom__icontains=query) | Q(variante__reference_variante__icontains=query)
-    )[:3]
-    
-    for panier in paniers_pointure:
-        etat_actuel = panier.commande.etats.filter(date_fin__isnull=True).first()
-        etat_libelle = etat_actuel.enum_etat.libelle if etat_actuel else "N/A"
+        for panier in paniers_ref_variante:
+            etat_actuel = panier.commande.etats.filter(date_fin__isnull=True).first()
+            etat_libelle = etat_actuel.enum_etat.libelle if etat_actuel else "N/A"
+            
+            variante_info = ""
+            if panier.variante:
+                if panier.variante.couleur and panier.variante.pointure:
+                    variante_info = f" - {panier.variante.couleur.nom} {panier.variante.pointure.pointure}"
+                elif panier.variante.couleur:
+                    variante_info = f" - {panier.variante.couleur.nom}"
+                elif panier.variante.pointure:
+                    variante_info = f" - {panier.variante.pointure.pointure}"
+            
+            articles_panier.append({
+                'id': f"panier_ref_var_{panier.id}",
+                'type': 'article_panier',
+                'title': f"{panier.article.nom}{variante_info} (Réf: {panier.variante.reference_variante})",
+                'subtitle': f'Commande #{panier.commande.id} - Qté: {panier.quantite} - État: {etat_libelle}',
+                'status': etat_libelle,
+                'url': reverse('Prepacommande:detail_prepa', kwargs={'pk': panier.commande.id}),
+                'icon': 'fas fa-shopping-basket',
+                'priority': 2
+            })
         
-        variante_info = f" - {panier.variante.pointure.pointure}" if panier.variante and panier.variante.pointure else ""
+        # Rechercher par couleur/pointure si c'est une variante
+        paniers_variante = Panier.objects.filter(
+            commande__in=commandes_preparation,
+            variante__couleur__nom__icontains=query
+        ).select_related('article', 'commande', 'variante__couleur', 'variante__pointure').exclude(
+            Q(article__nom__icontains=query) | Q(article__reference__icontains=query) | Q(variante__reference_variante__icontains=query)
+        )[:5]
         
-        articles_panier.append({
-            'id': f"panier_pointure_{panier.id}",
-            'type': 'article_panier',
-            'title': f"{panier.article.nom}{variante_info}",
-            'subtitle': f'Commande #{panier.commande.id} - Qté: {panier.quantite} - État: {etat_libelle}',
-            'status': etat_libelle,
-            'url': reverse('Prepacommande:detail_prepa', kwargs={'pk': panier.commande.id}),
-            'icon': 'fas fa-shopping-basket',
-            'priority': 4
-        })
+        for panier in paniers_variante:
+            etat_actuel = panier.commande.etats.filter(date_fin__isnull=True).first()
+            etat_libelle = etat_actuel.enum_etat.libelle if etat_actuel else "N/A"
+            
+            variante_info = f" - {panier.variante.couleur.nom}" if panier.variante and panier.variante.couleur else ""
+            
+            articles_panier.append({
+                'id': f"panier_var_{panier.id}",
+                'type': 'article_panier',
+                'title': f"{panier.article.nom}{variante_info}",
+                'subtitle': f'Commande #{panier.commande.id} - Qté: {panier.quantite} - État: {etat_libelle}',
+                'status': etat_libelle,
+                'url': reverse('Prepacommande:detail_prepa', kwargs={'pk': panier.commande.id}),
+                'icon': 'fas fa-shopping-basket',
+                'priority': 3
+            })
+        
+        # Rechercher aussi par pointure si c'est une variante
+        paniers_pointure = Panier.objects.filter(
+            commande__in=commandes_preparation,
+            variante__pointure__pointure__icontains=query
+        ).select_related('article', 'commande', 'variante__couleur', 'variante__pointure').exclude(
+            Q(article__nom__icontains=query) | Q(article__reference__icontains=query) | Q(variante__couleur__nom__icontains=query) | Q(variante__reference_variante__icontains=query)
+        )[:3]
+        
+        for panier in paniers_pointure:
+            etat_actuel = panier.commande.etats.filter(date_fin__isnull=True).first()
+            etat_libelle = etat_actuel.enum_etat.libelle if etat_actuel else "N/A"
+            
+            variante_info = f" - {panier.variante.pointure.pointure}" if panier.variante and panier.variante.pointure else ""
+            
+            articles_panier.append({
+                'id': f"panier_pointure_{panier.id}",
+                'type': 'article_panier',
+                'title': f"{panier.article.nom}{variante_info}",
+                'subtitle': f'Commande #{panier.commande.id} - Qté: {panier.quantite} - État: {etat_libelle}',
+                'status': etat_libelle,
+                'url': reverse('Prepacommande:detail_prepa', kwargs={'pk': panier.commande.id}),
+                'icon': 'fas fa-shopping-basket',
+                'priority': 4
+            })
+        
+        # Éliminer les doublons
+        articles_uniques = []
+        seen_ids = set()
+        for article in articles_panier:
+            if article['id'] not in seen_ids:
+                articles_uniques.append(article)
+                seen_ids.add(article['id'])
+        
+        return articles_uniques[:10]
     
-    # Éliminer les doublons
-    articles_uniques = []
-    seen_ids = set()
-    for article in articles_panier:
-        if article['id'] not in seen_ids:
-            articles_uniques.append(article)
-            seen_ids.add(article['id'])
-    
-    return articles_uniques[:10]
+    except Exception as e:
+        print(f"Erreur dans search_articles_panier_preparation: {e}")
+        return []
 
 
 def is_commande_for_preparation(commande, request=None):
