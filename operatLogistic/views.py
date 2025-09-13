@@ -813,17 +813,10 @@ def livraison_partielle(request, commande_id):
                         print(f"❌ ERREUR: Quantité livrée ({quantite_livree}) > Quantité originale ({quantite_originale}) pour panier {panier_id}")
                         continue
                     
-                    # Calculer le prix unitaire actuel (avec upsell si applicable)
-                    prix_unitaire_actuel = panier.article.prix_unitaire
-                    if commande.compteur > 0 and getattr(panier.article, 'isUpsell', False):
-                        if commande.compteur == 1 and getattr(panier.article, 'prix_upsell_1', None):
-                            prix_unitaire_actuel = panier.article.prix_upsell_1
-                        elif commande.compteur == 2 and getattr(panier.article, 'prix_upsell_2', None):
-                            prix_unitaire_actuel = panier.article.prix_upsell_2
-                        elif commande.compteur == 3 and getattr(panier.article, 'prix_upsell_3', None):
-                            prix_unitaire_actuel = panier.article.prix_upsell_3
-                        elif commande.compteur >= 4 and getattr(panier.article, 'prix_upsell_4', None):
-                            prix_unitaire_actuel = panier.article.prix_upsell_4
+                    # Calculer le prix unitaire effectif (avec remises, upsells, etc.)
+                    from commande.templatetags.remise_filters import get_prix_effectif_panier
+                    prix_info = get_prix_effectif_panier(panier)
+                    prix_unitaire_actuel = prix_info['prix_unitaire']
                     
                     # Créer un enregistrement de retour si une partie n'est pas livrée
                     if quantite_retournee > 0:
@@ -860,17 +853,10 @@ def livraison_partielle(request, commande_id):
                         try:
                             panier = commande.paniers.get(id=panier_id)
                             
-                            # Calculer le prix unitaire au moment du retour (avec upsell si applicable)
-                            prix_unitaire_retour = panier.article.prix_unitaire
-                            if commande.compteur > 0 and getattr(panier.article, 'isUpsell', False):
-                                if commande.compteur == 1 and getattr(panier.article, 'prix_upsell_1', None):
-                                    prix_unitaire_retour = panier.article.prix_upsell_1
-                                elif commande.compteur == 2 and getattr(panier.article, 'prix_upsell_2', None):
-                                    prix_unitaire_retour = panier.article.prix_upsell_2
-                                elif commande.compteur == 3 and getattr(panier.article, 'prix_upsell_3', None):
-                                    prix_unitaire_retour = panier.article.prix_upsell_3
-                                elif commande.compteur >= 4 and getattr(panier.article, 'prix_upsell_4', None):
-                                    prix_unitaire_retour = panier.article.prix_upsell_4
+                            # Calculer le prix unitaire effectif au moment du retour (avec remises, upsells, etc.)
+                            from commande.templatetags.remise_filters import get_prix_effectif_panier
+                            prix_info_retour = get_prix_effectif_panier(panier)
+                            prix_unitaire_retour = prix_info_retour['prix_unitaire']
                             
                             # Créer l'enregistrement de retour complet
                             article_retourne = ArticleRetourne.objects.create(
