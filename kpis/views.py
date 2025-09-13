@@ -1,7 +1,8 @@
 from django.shortcuts import render
 from django.http import JsonResponse, HttpResponse
 from django.contrib.auth.decorators import login_required
-from django.db.models import Sum, Count, Avg, Q, F, Min, Max, Subquery, OuterRef
+from django.db.models import Sum, Count, Avg, Q, F, Min, Max, Subquery, OuterRef, Value
+from django.db import models
 from django.utils import timezone
 from datetime import datetime, timedelta
 from decimal import Decimal
@@ -1101,15 +1102,10 @@ def performance_operateurs_data(request):
                 'etats_modifies__commande__total_cmd',
                 filter=Q(etats_modifies__enum_etat__libelle__iexact='Confirmée')
             ),
-            upsell_count=Count(
-                'etats_modifies__commande',
-                filter=Q(etats_modifies__enum_etat__libelle__iexact='Confirmée', etats_modifies__commande__is_upsell=True),
-                distinct=True
-            ),
-            upsell_amount=Sum(
-                'etats_modifies__commande__total_cmd',
-                filter=Q(etats_modifies__enum_etat__libelle__iexact='Confirmée', etats_modifies__commande__is_upsell=True)
-            ),
+            # Note: is_upsell a été supprimé du modèle Commande
+            # Les métriques upsell ne sont plus disponibles au niveau commande
+            upsell_count=Value(0, output_field=models.IntegerField()),
+            upsell_amount=Value(0, output_field=models.DecimalField(max_digits=10, decimal_places=2)),
             
             # --- Métriques sur les OPERATIONS (30 derniers jours) ---
             total_actions_30j=Count(
@@ -1254,15 +1250,10 @@ def export_performance_operateurs_excel(request):
                 'etats_modifies__commande__total_cmd',
                 filter=Q(etats_modifies__enum_etat__libelle__iexact='Confirmée')
             ),
-            upsell_count=Count(
-                'etats_modifies__commande',
-                filter=Q(etats_modifies__enum_etat__libelle__iexact='Confirmée', etats_modifies__commande__is_upsell=True),
-                distinct=True
-            ),
-            upsell_amount=Sum(
-                'etats_modifies__commande__total_cmd',
-                filter=Q(etats_modifies__enum_etat__libelle__iexact='Confirmée', etats_modifies__commande__is_upsell=True)
-            ),
+            # Note: is_upsell a été supprimé du modèle Commande
+            # Les métriques upsell ne sont plus disponibles au niveau commande
+            upsell_count=Value(0, output_field=models.IntegerField()),
+            upsell_amount=Value(0, output_field=models.DecimalField(max_digits=10, decimal_places=2)),
             
             # --- Métriques sur les OPERATIONS (30 derniers jours) ---
             total_actions_30j=Count(
