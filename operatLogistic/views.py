@@ -105,7 +105,7 @@ def liste_commandes(request):
             # Lundi de cette semaine
             monday = today - timedelta(days=today.weekday())
             commandes_list = commandes_list.filter(
-                etats__enum_etat__libelle__in=['En cours de livraison', 'En livraison','Mise enn distribution'],
+                etats__enum_etat__libelle__in=['En cours de livraison', 'En livraison','Mise en distribution'],
                 etats__date_debut__date__gte=monday
             )
         elif preset == 'last_week':
@@ -467,9 +467,9 @@ def changer_etat_sav(request, commande_id):
 def rafraichir_articles(request, commande_id):
     """Rafraîchir la section des articles d'une commande."""
     try:
-        commande = get_object_or_404(Commande, id=commande_id)   
+        commande = get_object_or_404(Commande, id=commande_id)
         # S'assurer que les totaux sont à jour
-        commande.recalculer_totaux_upsell() 
+        commande.recalculer_totaux_upsell()
         context = {
             'commande': commande
         }
@@ -517,24 +517,24 @@ def api_articles(request):
                 
                 article_data = {
                     'id': article.id,
-                'nom': article.nom,
-                'reference': article.reference,
-                'description': article.description,
-                'prix_unitaire': float(article.prix_unitaire),
-                'prix_actuel': float(article.prix_unitaire),  # Prix de base
-                'qte_disponible': article.qte_disponible,
-                'categorie': article.categorie if article.categorie else None,
-                'couleur': article.couleur,
-                'pointure': article.pointure,
-                'phase': article.phase,
-                'isUpsell': article.isUpsell,
+                    'nom': article.nom,
+                    'reference': article.reference,
+                    'description': article.description,
+                    'prix_unitaire': float(article.prix_unitaire),
+                    'prix_actuel': float(article.prix_unitaire),  # Prix de base
+                    'qte_disponible': article.qte_disponible,
+                    'categorie': article.categorie if article.categorie else None,
+                    'couleur': article.couleur,
+                    'pointure': article.pointure,
+                    'phase': article.phase,
+                    'isUpsell': article.isUpsell,
                     'has_promo_active': has_promo_active,
-                # Prix upsell si disponibles
-                'prix_upsell_1': float(article.prix_upsell_1) if article.prix_upsell_1 else None,
-                'prix_upsell_2': float(article.prix_upsell_2) if article.prix_upsell_2 else None,
-                'prix_upsell_3': float(article.prix_upsell_3) if article.prix_upsell_3 else None,
-                'prix_upsell_4': float(article.prix_upsell_4) if article.prix_upsell_4 else None,
-            }
+                    # Prix upsell si disponibles
+                    'prix_upsell_1': float(article.prix_upsell_1) if article.prix_upsell_1 else None,
+                    'prix_upsell_2': float(article.prix_upsell_2) if article.prix_upsell_2 else None,
+                    'prix_upsell_3': float(article.prix_upsell_3) if article.prix_upsell_3 else None,
+                    'prix_upsell_4': float(article.prix_upsell_4) if article.prix_upsell_4 else None,
+                }
                 articles_data.append(article_data)
         
         return JsonResponse({
@@ -615,7 +615,7 @@ def ajouter_article(request, commande_id):
             sous_total=float(prix_unitaire * quantite)
         )
             
-            # Recalculer le total de la commande
+        # Recalculer le total de la commande
         total_commande = commande.paniers.aggregate(
             total=Sum('sous_total')
         )['total'] or 0
@@ -705,7 +705,7 @@ def modifier_quantite_article(request, commande_id):
         
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
-
+    
 @login_required
 @require_POST
 def livraison_partielle(request, commande_id):
