@@ -5568,7 +5568,7 @@ function mettreAJourCompteursFiltre() {
             if (compteur > 0) {
                 const compteurElement = document.createElement('span');
                 compteurElement.className = 'article-count';
-                compteurElement.textContent = compteur;
+                compteurElement.textContent = `(${compteur})`;
                 badge.appendChild(compteurElement);
             }
         }

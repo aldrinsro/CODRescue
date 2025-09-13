@@ -625,7 +625,7 @@ function mettreAJourCompteurs() {
     Object.keys(counts).forEach(type => {
         const countElement = document.getElementById(`count-${type}`);
         if (countElement) {
-            countElement.textContent = counts[type];
+            countElement.textContent = `(${counts[type]})`;
         }
     });
     
