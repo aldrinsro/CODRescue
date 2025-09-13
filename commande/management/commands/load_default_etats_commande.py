@@ -28,11 +28,13 @@ class Command(BaseCommand):
             {'libelle': 'Collectée', 'couleur': '#6B7280', 'ordre': 7},
             {'libelle': 'Emballée', 'couleur': '#6B7280', 'ordre': 8},
             {'libelle': 'En livraison', 'couleur': '#8B5CF6', 'ordre': 9},
+            {'libelle': 'Mise en distribution', 'couleur':'#8B5CF6','ordre':20},
             {'libelle': 'Livrée', 'couleur': '#22C55E', 'ordre': 10},
             {'libelle': 'Retournée', 'couleur': '#EF4444', 'ordre': 11},
             {'libelle': 'Retour Confirmation', 'couleur': '#EF4444', 'ordre': 12},
             {'libelle': 'Reportée', 'couleur': '#6B7280', 'ordre': 13},
             {'libelle': 'Retournée', 'couleur': '#6B7280', 'ordre': 14},
+            {'libelle': 'Reporté de confirmation', 'couleur': '#6B7280', 'ordre': 15},
        
             # États d'erreur et annulation
             {'libelle': 'Annulée', 'couleur': '#EF4444', 'ordre': 11},

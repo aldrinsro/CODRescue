@@ -251,3 +251,96 @@ def get_phase_couleur(article):
     """
     info = get_prix_avec_phase_info(article, compteur=None)
     return info['couleur_classe']
+
+# Filtre utilitaire conservé pour d'autres usages
+@register.filter
+def safe_multiply(value1, value2):
+    """Multiplication sécurisée de deux valeurs"""
+    try:
+        return float(value1) * float(value2)
+    except (ValueError, TypeError):
+        return 0
+
+# Filtres pour la gestion des remises
+@register.filter
+def get_type_remise_appliquee(panier):
+    """
+    Détermine le type de remise appliquée en comparant le prix unitaire effectif
+    avec les prix de remise stockés dans l'article
+    """
+    from decimal import Decimal, ROUND_HALF_UP
+    
+    if not panier or panier.quantite == 0:
+        return None
+    
+    # Calculer le prix unitaire effectif à partir du sous-total
+    prix_unitaire_effectif = Decimal(str(panier.sous_total)) / Decimal(str(panier.quantite))
+    prix_unitaire_effectif = prix_unitaire_effectif.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+    
+    article = panier.article
+    
+    # Comparer avec les prix de remise stockés (avec tolérance de 0.01)
+    tolerance = Decimal('0.01')
+    
+    def prix_match(prix_article, prix_effectif):
+        if prix_article is None or prix_article == 0:
+            return False
+        prix_article_decimal = Decimal(str(prix_article)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        return abs(prix_article_decimal - prix_effectif) <= tolerance
+    
+    # Vérifier chaque type de remise
+    if prix_match(article.prix_remise_1, prix_unitaire_effectif):
+        return {
+            'type': 'prix_remise_1',
+            'libelle': 'Prix remise 1',
+            'couleur': 'text-purple-600',
+            'icone': 'fas fa-percent'
+        }
+    elif prix_match(article.prix_remise_2, prix_unitaire_effectif):
+        return {
+            'type': 'prix_remise_2', 
+            'libelle': 'Prix remise 2',
+            'couleur': 'text-purple-600',
+            'icone': 'fas fa-percent'
+        }
+    elif prix_match(article.prix_remise_3, prix_unitaire_effectif):
+        return {
+            'type': 'prix_remise_3',
+            'libelle': 'Prix remise 3', 
+            'couleur': 'text-purple-600',
+            'icone': 'fas fa-percent'
+        }
+    elif prix_match(article.prix_remise_4, prix_unitaire_effectif):
+        return {
+            'type': 'prix_remise_4',
+            'libelle': 'Prix remise 4',
+            'couleur': 'text-purple-600', 
+            'icone': 'fas fa-percent'
+        }
+    elif prix_match(article.Prix_liquidation, prix_unitaire_effectif):
+        return {
+            'type': 'Prix_liquidation',
+            'libelle': 'Prix liquidation',
+            'couleur': 'text-red-600',
+            'icone': 'fas fa-fire'
+        }
+    
+    # Vérifier si c'est vraiment une remise (prix inférieur au prix normal)
+    prix_normal = article.prix_actuel or article.prix_unitaire
+    if prix_normal and prix_unitaire_effectif < Decimal(str(prix_normal)):
+        return {
+            'type': 'personnalise',
+            'libelle': 'Prix remisé', 
+            'couleur': 'text-purple-600',
+            'icone': 'fas fa-percent'
+        }
+    
+    # Pas de remise détectée
+    return None
+
+@register.filter  
+def est_remise_appliquee(panier):
+    """
+    Vérifie si une remise a été appliquée sur ce panier
+    """
+    return get_type_remise_appliquee(panier) is not None

@@ -1,23 +1,282 @@
 {% load commande_filters %}
+{% load json_tags %}
+
+<!-- Section des articles livrés (sans en-tête sur demande) -->
+{% if commande.etat_actuel.enum_etat.libelle == 'Livrée Partiellement' %}
+
+    {% comment %}Récupérer UNE SEULE FOIS l'opération de livraison partielle{% endcomment %}
+    {% for operation in commande.operations.all %}
+        {% if operation.type_operation == 'LIVRAISON_PARTIELLE' %}
+            {% with operation.conclusion|parse_json as livraison_details %}
+                
+                {% comment %}Section des articles retournés pour cette opération spécifique{% endcomment %}
+                {% with operation.date_operation as operation_date %}
+                    {% comment %}Filtrer les articles retournés créés lors de cette opération (même date à quelques minutes près){% endcomment %}
+                    {% if commande.articles_retournes.exists %}
+                    <div class="mb-6">
+                        <h4 class="text-lg font-semibold text-orange-700 mb-4 flex items-center justify-between">
+                            <div class="flex items-center">
+                                <i class="fas fa-undo mr-2"></i>
+                                Articles Retournés lors de cette livraison
+                                <span class="ml-2 inline-flex items-center px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">
+                                    {% comment %}Comptage des articles retournés pour cette opération{% endcomment %}
+                                    <i class="fas fa-box mr-1"></i>
+                                    {% with articles_retournes_count=0 %}
+                                        {% for article_retourne in commande.articles_retournes.all %}
+                                            {% if article_retourne.date_retour.date == operation_date.date %}
+                                                {% with articles_retournes_count=articles_retournes_count|add:1 %}{% endwith %}
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% endwith %}
+                                    {{ commande.articles_retournes.count }} article{{ commande.articles_retournes.count|pluralize }}
+                                </span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs text-orange-600">
+                                    <i class="fas fa-clock mr-1"></i>{{ operation_date|date:"d/m/Y H:i" }}
+                                </span>
+                                <a href="{% url 'operatLogistic:liste_articles_retournes' %}" 
+                                   class="inline-flex items-center px-2 py-1 bg-orange-600 text-white rounded text-xs hover:bg-orange-700 transition-colors"
+                                   title="Gérer tous les articles retournés">
+                                    <i class="fas fa-cog mr-1"></i>Gérer
+                                </a>
+                            </div>
+                        </h4>
+                        <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                            <div class="space-y-4">
+                                {% for article_retourne in commande.articles_retournes.all %}
+                                    {% comment %}Filtrer par date de retour proche de la date d'opération (même jour){% endcomment %}
+                                    {% if article_retourne.date_retour.date == operation_date.date %}
+                            <div class="article-card p-4 bg-white border-orange-300 shadow-sm rounded-lg border hover:border-orange-400 transition-all">
+                                <!-- Indicateur de statut de retour avec plus d'informations -->
+                                <div class="mb-3 p-3 bg-orange-100 border-l-4 border-orange-500 rounded-r-lg">
+                                    <div class="flex items-start justify-between">
+                                        <div class="flex-1">
+                                            <div class="flex items-center mb-2">
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-600 text-white mr-2">
+                                                    <i class="fas fa-undo mr-1"></i>{{ article_retourne.get_statut_retour_display }}
+                                                </span>
+                                                <span class="text-sm font-medium text-orange-800">
+                                                    Quantité retournée : {{ article_retourne.quantite_retournee }}
+                                                </span>
+                                                <span class="ml-2 text-xs text-green-600 font-semibold">
+                                                    {{ article_retourne.valeur_retour|floatformat:2 }} €
+                                                </span>
+                                            </div>
+                                            {% if article_retourne.raison_retour %}
+                                            <div class="text-xs text-gray-600 mb-1">
+                                                <i class="fas fa-comment mr-1"></i>
+                                                <span class="font-medium">Raison :</span> {{ article_retourne.raison_retour|truncatechars:80 }}
+                                            </div>
+                                            {% endif %}
+                                            {% if article_retourne.operateur_retour %}
+                                            <div class="text-xs text-gray-600">
+                                                <i class="fas fa-user mr-1"></i>
+                                                <span class="font-medium">Opérateur :</span> {{ article_retourne.operateur_retour.prenom }} {{ article_retourne.operateur_retour.nom }}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="text-right text-xs text-orange-600 ml-4">
+                                            <div class="mb-1">
+                                                <i class="fas fa-calendar-times mr-1"></i>
+                                                {{ article_retourne.date_retour|date:"d/m/Y H:i" }}
+                                            </div>
+                                            {% if article_retourne.date_traitement %}
+                                            <div class="text-green-600">
+                                                <i class="fas fa-check-circle mr-1"></i>
+                                                Traité le {{ article_retourne.date_traitement|date:"d/m/Y" }}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex items-center justify-between">
+                                    <!-- Informations de l'article -->
+                                    <div class="flex-1">
+                                        <div class="flex items-center space-x-4">
+                                            <!-- Nom et référence -->
+                                            <div class="min-w-0 flex-1">
+                                                <div class="font-semibold text-lg text-orange-800">{{ article_retourne.article.nom }}</div>
+                                                <div class="text-sm text-gray-500">
+                                                    <i class="fas fa-hashtag mr-1"></i>ID Article: {{ article_retourne.article.id }}
+                                                </div>
+                                                <!-- Informations détaillées -->
+                                                <div class="mt-2 flex flex-wrap gap-2">
+                                                    {% comment %}Afficher les détails de la variante depuis le modèle{% endcomment %}
+                                                    {% if article_retourne.variante %}
+                                                        {% if article_retourne.variante.couleur %}
+                                                        <span class="inline-flex items-center px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">
+                                                            <i class="fas fa-palette mr-1"></i>{{ article_retourne.variante.couleur.nom }}
+                                                        </span>
+                                                        {% endif %}
+                                                        {% if article_retourne.variante.pointure %}
+                                                        <span class="inline-flex items-center px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+                                                            <i class="fas fa-ruler-vertical mr-1"></i>{{ article_retourne.variante.pointure.numero }}
+                                                        </span>
+                                                        {% endif %}
+                                                        {% if article_retourne.variante.reference %}
+                                                        <span class="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                                                            <i class="fas fa-hashtag mr-1"></i>{{ article_retourne.variante.reference }}
+                                                        </span>
+                                                        {% endif %}
+                                                        <span class="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">
+                                                            <i class="fas fa-fingerprint mr-1"></i>ID: {{ article_retourne.variante.id }}
+                                                        </span>
+                                                    {% endif %}
+                                                    
+                                                    <span class="inline-flex items-center px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">
+                                                        <i class="fas fa-boxes mr-1"></i>Quantité: {{ article_retourne.quantite_retournee }}
+                                                    </span>
+                                                    
+                                                    <span class="inline-flex items-center px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">
+                                                        <i class="fas fa-euro-sign mr-1"></i>{{ article_retourne.prix_unitaire_origine }}€
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Quantité -->
+                                            <div class="text-center min-w-0">
+                                                <div class="text-sm text-gray-500">Quantité Retournée</div>
+                                                <div class="w-16 text-center border-2 border-orange-400 bg-orange-50 rounded px-3 py-2 text-lg font-bold text-orange-700">
+                                                    {{ article_retourne.quantite_retournee }}
+                                                </div>
+                                                <div class="text-xs mt-1">
+                                                    <span class="text-orange-600 font-medium">
+                                                        <i class="fas fa-undo mr-1"></i>{{ article_retourne.get_statut_retour_display }}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Prix unitaire -->
+                                            <div class="text-center min-w-0">
+                                                <div class="text-sm text-gray-500">Prix unitaire</div>
+                                                <div class="font-medium text-gray-700">
+                                                    {{ article_retourne.prix_unitaire_origine|floatformat:2 }} €
+                                                </div>
+                                                <div class="text-xs text-gray-600 mt-1">
+                                                    Prix d'origine
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Sous-total -->
+                                            <div class="text-center min-w-0">
+                                                <div class="text-sm text-gray-500">Valeur retournée</div>
+                                                <div class="text-lg font-bold text-orange-600">
+                                                    {{ article_retourne.valeur_retour|floatformat:2 }} €
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- État de renvoi -->
+                                            <div class="text-center min-w-0">
+                                                <div class="text-sm text-gray-500">État</div>
+                                                <span class="inline-flex items-center px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">
+                                                    <i class="fas fa-undo mr-1"></i>Retourné
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Informations de renvoi -->
+                                    <div class="flex flex-col space-y-2 ml-4 text-right">
+                                        <div class="text-xs text-gray-500">
+                                            <i class="fas fa-arrow-left mr-1"></i>Destination
+                                        </div>
+                                        <div class="text-sm font-medium text-orange-700">
+                                            Retour en préparation
+                                        </div>
+                                        <div class="text-xs text-orange-600">
+                                            {% for etat in commande.etats.all %}
+                                                {% if etat.enum_etat.libelle == 'Livrée Partiellement' %}
+                                                    {{ etat.date_debut|date:"d/m/Y H:i" }}
+                                                {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                </div>
+                                    </div>
+                                    {% endif %}
+                                {% empty %}
+                                <div class="text-center py-8 text-gray-500">
+                                    <i class="fas fa-info-circle text-2xl mb-2 opacity-50"></i>
+                                    <p>Aucun article retourné pour cette opération de livraison.</p>
+                                </div>
+                                {% endfor %}
+                            </div>
+
+                            {% comment %}Section de résumé et actions pour les articles retournés{% endcomment %}
+                            {% if commande.articles_retournes.exists %}
+                            <div class="mt-4 p-4 bg-white border border-orange-200 rounded-lg">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                                        <div>
+                                            <div class="text-2xl font-bold text-orange-600">{{ commande.articles_retournes.count }}</div>
+                                            <div class="text-xs text-gray-600">Total retourné{{ commande.articles_retournes.count|pluralize }}</div>
+                                        </div>
+                                        <div>
+                                            <div class="text-2xl font-bold text-yellow-600">{{ commande.articles_retournes_en_attente.count }}</div>
+                                            <div class="text-xs text-gray-600">En attente</div>
+                                        </div>
+                                        <div>
+                                            <div class="text-2xl font-bold text-green-600">{{ commande.valeur_articles_retournes|floatformat:2 }} €</div>
+                                            <div class="text-xs text-gray-600">Valeur totale</div>
+                                        </div>
+                                    </div>
+                                    <div class="ml-6">
+                                        <a href="{% url 'operatLogistic:liste_articles_retournes' %}" 
+                                           class="inline-flex items-center px-3 py-2 bg-orange-600 text-white rounded-md text-sm hover:bg-orange-700 transition-colors">
+                                            <i class="fas fa-list mr-2"></i>Voir tous les retours
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                {% endwith %}
+                
+                {% comment %}Section "Articles avec Livraison Partielle" supprimée sur demande{% endcomment %}
+                
+                {% comment %}Section des articles livrés sans en-tête{% endcomment %}
+
+                
+            {% endwith %}
+        {% endif %}
+    {% endfor %}
+{% endif %}
 
 {% for panier in commande.paniers.all %}
-<div class="article-card p-4 {% if commande.etat_actuel.enum_etat.libelle == 'Livrée Partiellement' %}bg-green-50 border-green-300{% else %}bg-white border-gray-200{% endif %} rounded-lg border hover:border-gray-300 transition-all shadow-sm" 
+<div class="article-card p-4 {% if commande.etat_actuel.enum_etat.libelle == 'Livrée Partiellement' %}bg-white border-green-300 shadow-sm{% else %}bg-white border-gray-200{% endif %} rounded-lg border hover:border-gray-300 transition-all" 
     data-article-id="{{ panier.id }}"
     data-article='{"id": {{ panier.article.id }}, "nom": "{{ panier.article.nom }}", "reference": "{{ panier.article.reference }}", "prix_actuel": {{ panier.article.prix_actuel|default:0 }}, "prix_unitaire": {{ panier.article.prix_unitaire|default:0 }}, "prix_upsell_1": {{ panier.article.prix_upsell_1|default:0 }}, "prix_upsell_2": {{ panier.article.prix_upsell_2|default:0 }}, "prix_upsell_3": {{ panier.article.prix_upsell_3|default:0 }}, "prix_upsell_4": {{ panier.article.prix_upsell_4|default:0 }}, "isUpsell": {{ panier.article.isUpsell|yesno:"true,false" }}, "pointure": "{{ panier.article.pointure|default:'' }}", "couleur": "{{ panier.article.couleur|default:'' }}", "categorie": "{{ panier.article.categorie|default:'' }}", "qte_disponible": {{ panier.article.qte_disponible|default:0 }}, "phase": "{{ panier.article.phase|default:'' }}", "has_promo_active": {{ panier.article.has_promo_active|yesno:"true,false" }}}'>
     
-    <!-- Indicateur de livraison partielle -->
+    <!-- Indicateur de statut de livraison -->
     {% if commande.etat_actuel.enum_etat.libelle == 'Livrée Partiellement' %}
-    <div class="mb-3 p-2 bg-green-100 border border-green-300 rounded-lg">
-        <div class="flex items-center">
-            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-600 text-white mr-2">
-                <i class="fas fa-check-circle mr-1"></i>Livré Partiellement
-            </span>
-            <span class="text-sm text-green-800">
-                Cet article a été livré partiellement au client. La quantité affichée correspond à la quantité livrée.
-            </span>
+    <div class="mb-3 p-2 bg-green-100 border-l-4 border-green-500 rounded-r-lg">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-600 text-white mr-2">
+                    <i class="fas fa-truck mr-1"></i>LIVRÉ
+                </span>
+                <span class="text-sm font-medium text-green-800">
+                    Quantité livrée au client : {{ panier.quantite }}
+                </span>
+            </div>
+            <div class="text-xs text-green-600">
+                <i class="fas fa-calendar-check mr-1"></i>
+                {% with commande.etats.all as etats %}
+                    {% for etat in etats %}
+                        {% if etat.enum_etat.libelle == 'Livrée Partiellement' %}
+                            {{ etat.date_debut|date:"d/m/Y H:i" }}
+                        {% endif %}
+                    {% endfor %}
+                {% endwith %}
+            </div>
         </div>
     </div>
     {% endif %}
+    
     <div class="flex items-center justify-between">
         <!-- Informations de l'article -->
         <div class="flex-1">
@@ -30,33 +289,28 @@
                     </div>
                     <!-- Informations détaillées -->
                     <div class="mt-2 flex flex-wrap gap-2">
-                        {% if panier.article.pointure %}
+                        {% if panier.variante.pointure %}
                         <span class="inline-flex items-center px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
                             <i class="fas fa-ruler-vertical mr-1"></i>{{ panier.variante.pointure }}
                         </span>
-                        {% else %}
-                        <span class="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-xs">
-                            <i class="fas fa-ruler-vertical mr-1"></i>Taille N/A
-                        </span>
                         {% endif %}
                         
-                        {% if panier.article.couleur %}
+                        {% if panier.variante.couleur %}
                         <span class="inline-flex items-center px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">
                             <i class="fas fa-palette mr-1"></i>{{ panier.variante.couleur }}
                         </span>
-                        {% else %}
-                        <span class="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-xs">
-                            <i class="fas fa-palette mr-1"></i>Couleur N/A
+                        {% endif %}
+                        
+                        {% if panier.variante.reference_variante %}
+                        <span class="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                            <i class="fas fa-hashtag mr-1"></i>{{ panier.variante.reference_variante }}
                         </span>
                         {% endif %}
                         
+                      
                         {% if panier.article.categorie %}
                         <span class="inline-flex items-center px-2 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-medium">
                             <i class="fas fa-tag mr-1"></i>{{ panier.article.categorie }}
-                        </span>
-                        {% else %}
-                        <span class="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-xs">
-                            <i class="fas fa-tag mr-1"></i>Catégorie N/A
                         </span>
                         {% endif %}
                                             
@@ -84,36 +338,48 @@
                 <div class="text-center min-w-0">
                     <div class="text-sm text-gray-500">
                         {% if commande.etat_actuel.enum_etat.libelle == 'Livrée Partiellement' %}
-                            <span class="text-green-600 font-medium">Quantité Livrée</span>
+                            <span class="text-green-600 font-medium">
+                                <i class="fas fa-truck mr-1"></i>Quantité Livrée
+                            </span>
                         {% else %}
                             Quantité
                         {% endif %}
                     </div>
                     <div class="flex items-center justify-center space-x-2">
-                        <button type="button" 
-                                class="w-8 h-8 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center cursor-not-allowed"
-                                disabled
-                                title="Modification désactivée - Lecture seule">
-                            <i class="fas fa-minus text-xs"></i>
-                        </button>
-                        <input type="number" 
-                               value="{{ panier.quantite }}" 
-                               readonly
-                               class="w-16 text-center border border-gray-300 rounded px-2 py-1 text-sm font-medium bg-gray-50 cursor-not-allowed {% if commande.etat_actuel.enum_etat.libelle == 'Livrée Partiellement' %}bg-green-50 border-green-300{% endif %}"
-                               data-panier-id="{{ panier.id }}"
-                               title="Mode lecture seule">
-                        <button type="button" 
-                                class="w-8 h-8 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center cursor-not-allowed"
-                                disabled
-                                title="Modification désactivée - Lecture seule">
-                            <i class="fas fa-plus text-xs"></i>
-                        </button>
-                    </div>
-                    <div class="text-xs text-gray-500 mt-1">
                         {% if commande.etat_actuel.enum_etat.libelle == 'Livrée Partiellement' %}
-                            <i class="fas fa-check-circle mr-1 text-green-600"></i>Livrée au client
+                            <div class="w-16 text-center border-2 border-green-400 bg-green-50 rounded px-3 py-2 text-lg font-bold text-green-700">
+                                {{ panier.quantite }}
+                            </div>
                         {% else %}
-                            <i class="fas fa-lock mr-1"></i>Lecture seule
+                            <button type="button" 
+                                    class="w-8 h-8 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center cursor-not-allowed"
+                                    disabled
+                                    title="Modification désactivée - Lecture seule">
+                                <i class="fas fa-minus text-xs"></i>
+                            </button>
+                            <input type="number" 
+                                   value="{{ panier.quantite }}" 
+                                   readonly
+                                   class="w-16 text-center border border-gray-300 rounded px-2 py-1 text-sm font-medium bg-gray-50 cursor-not-allowed"
+                                   data-panier-id="{{ panier.id }}"
+                                   title="Mode lecture seule">
+                            <button type="button" 
+                                    class="w-8 h-8 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center cursor-not-allowed"
+                                    disabled
+                                    title="Modification désactivée - Lecture seule">
+                                <i class="fas fa-plus text-xs"></i>
+                            </button>
+                        {% endif %}
+                    </div>
+                    <div class="text-xs mt-1">
+                        {% if commande.etat_actuel.enum_etat.libelle == 'Livrée Partiellement' %}
+                            <span class="text-green-600 font-medium">
+                                <i class="fas fa-check-circle mr-1"></i>Confirmé livré
+                            </span>
+                        {% else %}
+                            <span class="text-gray-500">
+                                <i class="fas fa-lock mr-1"></i>Lecture seule
+                            </span>
                         {% endif %}
                     </div>
                 </div>
@@ -182,4 +448,4 @@
     <i class="fas fa-shopping-basket text-4xl text-gray-300 mb-4"></i>
     <p class="text-gray-500">Aucun article dans cette commande.</p>
 </div>
-{% endif %} 
+{% endif %}

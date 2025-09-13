@@ -24,6 +24,14 @@ urlpatterns = [
     path('profile/changer-mot-de-passe/', views.changer_mot_de_passe_confirme, name='changer_mot_de_passe'),
     path('commandes/<int:commande_id>/lancer-confirmation/', views.lancer_confirmation, name='lancer_confirmation'),
     path('commandes/<int:commande_id>/annuler-commande/', views.annuler_commande_confirmation, name='annuler_commande_confirmation'),
+
+
+
+
+
+
+    
+    path('commandes/<int:commande_id>/reporter-ajax/', views.reporter_commande_confirmation, name='reporter_commande_confirmation'),
     path('lancer-confirmations-masse/', views.lancer_confirmations_masse, name='lancer_confirmations_masse'),
     path('selectionner-operation/', views.selectionner_operation, name='selectionner_operation'),
     path('commandes/<int:commande_id>/modifier/', views.modifier_commande, name='modifier_commande'),
@@ -31,12 +39,15 @@ urlpatterns = [
     path('api/commentaires-disponibles/', views.api_commentaires_disponibles, name='api_commentaires_disponibles'),
     path('api/commandes/<int:commande_id>/operations/', views.api_operations_commande, name='api_operations_commande'),
     path('api/commande/<int:commande_id>/panier/', views.api_panier_commande, name='api_panier_commande'),
-    path('commandes/<int:commande_id>/diagnostiquer-compteur/', views.diagnostiquer_compteur_commande, name='diagnostiquer_compteur'),
     path('api/commande/<int:commande_id>/rafraichir-articles/', views.rafraichir_articles_section, name='api_rafraichir_articles'),
     path('api/recherche-client-tel/', views.api_recherche_client_tel, name='api_recherche_client_tel'),
     path('rechercher-client-telephone/', views.rechercher_client_telephone, name='rechercher_client_telephone'),
     path('api/recherche-article-ref/', views.api_recherche_article_ref, name='api_recherche_article_ref'),
     path('get-article-variants/<int:article_id>/', views.get_article_variants, name='get_article_variants'),
+    path('api/commande/<int:commande_id>/panier/<int:panier_id>/prix-remise/', views.get_prix_remise_article, name='get_prix_remise_article'),
+    path('api/panier/<int:panier_id>/activer-remise/', views.activer_remise_panier, name='activer_remise_panier'),
+    path('api/panier/<int:panier_id>/desactiver-remise/', views.desactiver_remise_panier, name='desactiver_remise_panier'),
+    path('api/corriger-remises-liquidation-promotion/', views.corriger_remises_liquidation_et_promotion, name='corriger_remises_liquidation_et_promotion'),
     
     # URLs pour la recherche globale
     path('recherche-globale/', search_views.global_search_view, name='global_search'),

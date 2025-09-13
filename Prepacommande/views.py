@@ -1685,12 +1685,7 @@ def detail_prepa(request, pk):
                 )
                 
                 # Log de l'opération
-                Operation.objects.create(
-                    commande=commande,
-                    type_operation="ARTICLES_COLLECTES",
-                    operateur=operateur_profile,
-                    conclusion=f"Articles collectés par {operateur_profile.nom_complet}.",
-                )
+           
 
             messages.success(
                 request,
@@ -1724,13 +1719,7 @@ def detail_prepa(request, pk):
                     operateur=operateur_profile,
                 )
 
-                # Log de l'opération
-                Operation.objects.create(
-                    commande=commande,
-                    type_operation="COMMANDE_EMBALLEE",
-                    operateur=operateur_profile,
-                    conclusion=f"Commande emballée par {operateur_profile.nom_complet}. Notification envoyée au superviseur.",
-                )
+             
 
                 # TODO: Ajouter ici la notification au superviseur
                 # Pour l'instant, on peut utiliser les messages Django ou créer un système de notification
@@ -1797,12 +1786,7 @@ def detail_prepa(request, pk):
                         f"La commande {commande.id_yz} a été renvoyée au pool de confirmation (opérateur d'origine non trouvé).",
                     )
 
-                Operation.objects.create(
-                    commande=commande,
-                    type_operation="PROBLEME_SIGNALÉ",
-                    operateur=operateur_profile,
-                    conclusion=log_conclusion,
-                )
+              
 
             return redirect("Prepacommande:liste_prepa")
     
@@ -2421,13 +2405,7 @@ def modifier_commande_prepa(request, commande_id):
                             }
                         )
                     
-                    # Créer la nouvelle opération
-                    operation = Operation.objects.create(
-                        commande=commande,
-                        type_operation=type_operation,
-                        conclusion=commentaire,
-                        operateur=operateur,
-                    )
+                 
 
                     return JsonResponse(
                         {
@@ -2486,13 +2464,7 @@ def modifier_commande_prepa(request, commande_id):
                     commande.total_cmd = float(total_commande)
                     commande.save()
                     
-                    # Créer une opération pour consigner la modification
-                    Operation.objects.create(
-                        commande=commande,
-                        type_operation="MODIFICATION_QUANTITES",
-                        conclusion=f"Modification en masse des quantités d'articles par l'opérateur de préparation.",
-                        operateur=operateur,
-                    )
+                
 
                     return JsonResponse(
                         {
@@ -2646,13 +2618,7 @@ def modifier_commande_prepa(request, commande_id):
                         articles_upsell.aggregate(total=Sum("quantite"))["total"] or 0
                     )
                     
-                    # Créer une opération pour consigner la modification
-                    Operation.objects.create(
-                        commande=commande,
-                        type_operation="MODIFICATION_QUANTITE",
-                        conclusion=f"Quantité d'article modifiée de {ancienne_quantite} à {nouvelle_quantite}.",
-                        operateur=operateur,
-                    )
+                   
 
                     return JsonResponse(
                         {
@@ -2699,13 +2665,7 @@ def modifier_commande_prepa(request, commande_id):
                     
                     commande.save()
                     
-                    # Créer une opération pour consigner la modification
-                    Operation.objects.create(
-                        commande=commande,
-                        type_operation="MODIFICATION_PREPA",
-                        conclusion=f"La commande a été modifiée par l'opérateur.",
-                        operateur=operateur,
-                    )
+                   
 
                     messages.success(
                         request, f"Commande {commande.id_yz} mise à jour avec succès."
@@ -2747,12 +2707,7 @@ def modifier_commande_prepa(request, commande_id):
                     commande.save()
 
                     # Créer une opération pour consigner la modification
-                    Operation.objects.create(
-                        commande=commande,
-                        type_operation="MODIFICATION_PREPA",
-                        conclusion=f"La commande a été modifiée par l'opérateur.",
-                        operateur=operateur,
-                    )
+              
 
                     messages.success(
                         request,

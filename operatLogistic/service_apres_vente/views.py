@@ -109,8 +109,34 @@ def _render_sav_list(request, commandes, page_title, page_subtitle):
 
 def _render_sav_list_custom(request, commandes, template_name):
     """Fonction utilitaire pour rendre la liste SAV avec un template personnalisé."""
+    from django.core.paginator import Paginator
+    
+    # Gestion de la pagination avec sélecteur
+    per_page = request.GET.get('per_page', '20')
+    try:
+        per_page = int(per_page)
+        if per_page not in [5, 10, 15, 20, 25, 30, 40, 50]:
+            per_page = 20
+    except (ValueError, TypeError):
+        per_page = 20
+    
+    # Calculer le total avant pagination
+    total_commandes = commandes.count()
+    
+    # Créer le paginateur
+    paginator = Paginator(commandes, per_page)
+    page_number = request.GET.get('page', 1)
+    
+    try:
+        commandes_page = paginator.get_page(page_number)
+    except:
+        commandes_page = paginator.get_page(1)
+    
     context = {
-        'commandes': commandes,
+        'commandes': commandes_page,
+        'paginator': paginator,
+        'per_page': per_page,
+        'total_commandes': total_commandes,
     }
     return render(request, f'operatLogistic/sav/{template_name}', context)
 
@@ -382,44 +408,6 @@ def commandes_livrees_partiellement(request):
 
     return _render_sav_list_custom(request, commandes, 'commandes_livrees_partiellement.html')
 
-@login_required
-def commandes_livrees_avec_changement(request):
-    """Affiche les commandes livrées avec des changements."""
-    commandes = Commande.objects.filter(
-        etats__enum_etat__libelle='Livrée avec changement',
-        etats__date_fin__isnull=True
-    ).select_related('client', 'ville', 'ville__region').prefetch_related(
-        'etats__enum_etat', 'etats__operateur',
-        'envois', 'paniers__article'
-    ).order_by('-etats__date_debut').distinct()
-    
-    # Enrichir les données pour chaque commande
-    for commande in commandes:
-        # Trouver l'état actuel
-        commande.etat_actuel_sav = commande.etats.filter(
-            enum_etat__libelle='Livrée avec changement',
-            date_fin__isnull=True
-        ).first()
-        
-        # Calculer le nombre d'articles dans la commande
-        commande.nombre_articles = commande.paniers.count()
-        
-        # Préparer les articles pour la modale (même logique que pour les livraisons partielles)
-        commande.articles_livres_partiellement = [
-            {
-                'article_id': panier.article.id,
-                'nom': panier.article.nom,
-                'reference': panier.article.reference,
-                'pointure': getattr(panier.article, 'pointure', ''),
-                'couleur': getattr(panier.article, 'couleur', ''),
-                'quantite_livree': panier.quantite,
-                'prix_unitaire': float(getattr(panier.article, 'prix_unitaire', 0.0) or 0.0)
-            }
-            for panier in commande.paniers.all()
-        ]
-        commande.articles_renvoyes = []
-    
-    return _render_sav_list_custom(request, commandes, 'commandes_livrees_avec_changement.html')
 
 @login_required
 def commandes_retournees(request):
@@ -627,14 +615,6 @@ def marquer_commande_payee(request, commande_id):
             ancien_statut = commande.payement
             commande.payement = nouveau_statut
             commande.save()
-            
-            # Créer une opération pour tracer l'action
-            Operation.objects.create(
-                commande=commande,
-                type_operation='CHANGEMENT_STATUT_PAIEMENT',
-                conclusion=f"Statut de paiement changé de '{ancien_statut}' vers '{nouveau_statut}'",
-                operateur=operateur
-            )
             return JsonResponse({
                 'success': True,
                 'message': f'Statut de paiement mis à jour vers {nouveau_statut} avec succès',
