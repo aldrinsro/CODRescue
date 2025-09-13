@@ -8,11 +8,15 @@ def get_prix_affichage_remise(article, quantite=1):
     """
     Détermine le prix d'affichage selon la phase de l'article et les remises disponibles.
     Remplace les conditions complexes dans les templates.
-    
+
+    IMPORTANT: Cette fonction ne doit PAS appliquer automatiquement les prix de remise.
+    Les prix de remise ne sont appliqués que si remise_appliquer = True dans le panier.
+    Utilisez get_prix_effectif_panier pour les paniers avec remises appliquées.
+
     Args:
         article: L'objet Article
         quantite: La quantité (défaut 1)
-        
+
     Returns:
         dict: {
             'prix': prix à afficher,
@@ -30,7 +34,7 @@ def get_prix_affichage_remise(article, quantite=1):
             'icone': 'fas fa-question',
             'type': 'error'
         }
-    
+
     # Promotion active - priorité maximale
     if hasattr(article, 'has_promo_active') and article.has_promo_active:
         prix = article.prix_actuel or article.prix_unitaire
@@ -41,25 +45,7 @@ def get_prix_affichage_remise(article, quantite=1):
             'icone': 'fas fa-fire',
             'type': 'promotion'
         }
-    
-    # Vérifier d'abord si un prix de remise est applicable
-    # Les prix de remise ont priorité sur les upsells
-    prix_remise_trouve = None
-    for niveau in [1, 2, 3, 4]:
-        prix_remise = get_prix_remise_applicable(article, niveau)
-        if prix_remise and prix_remise > 0:
-            prix_remise_trouve = {
-                'prix': prix_remise,
-                'libelle': f'Prix remise {niveau}',
-                'couleur_classe': 'text-purple-600',
-                'icone': 'fas fa-percent',
-                'type': f'remise_{niveau}'
-            }
-            break
-    
-    if prix_remise_trouve:
-        return prix_remise_trouve
-    
+
     # Phase liquidation - utilise Prix_liquidation si disponible
     if article.phase == 'LIQUIDATION':
         prix = article.Prix_liquidation if hasattr(article, 'Prix_liquidation') and article.Prix_liquidation else article.prix_actuel or article.prix_unitaire
@@ -70,7 +56,7 @@ def get_prix_affichage_remise(article, quantite=1):
             'icone': 'fas fa-tags',
             'type': 'liquidation'
         }
-    
+
     # Phase test
     if article.phase == 'EN_TEST':
         prix = article.prix_actuel or article.prix_unitaire
@@ -81,8 +67,8 @@ def get_prix_affichage_remise(article, quantite=1):
             'icone': 'fas fa-flask',
             'type': 'test'
         }
-    
-    # Article upsell - gestion des prix par quantité (seulement si pas de remise)
+
+    # Article upsell - gestion des prix par quantité
     if hasattr(article, 'isUpsell') and article.isUpsell:
         if quantite <= 1:
             prix = article.prix_actuel or article.prix_unitaire
@@ -102,7 +88,7 @@ def get_prix_affichage_remise(article, quantite=1):
         else:
             prix = article.prix_actuel or article.prix_unitaire
             libelle = 'Prix normal'
-        
+
         return {
             'prix': prix,
             'libelle': libelle,
@@ -110,7 +96,7 @@ def get_prix_affichage_remise(article, quantite=1):
             'icone': 'fas fa-arrow-up',
             'type': 'upsell'
         }
-    
+
     # Prix normal par défaut
     prix = article.prix_actuel or article.prix_unitaire
     return {
