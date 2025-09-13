@@ -136,9 +136,7 @@ def get_prix_remise_applicable(article, niveau_remise):
     if not article:
         return None
         
-    if niveau_remise == 'liquidation':
-        return getattr(article, 'Prix_liquidation', None)
-    elif niveau_remise == 1:
+    if niveau_remise == 1:
         return getattr(article, 'prix_remise_1', None)
     elif niveau_remise == 2:
         return getattr(article, 'prix_remise_2', None)
@@ -238,7 +236,9 @@ def get_prix_effectif_panier(panier):
     prix_unitaire_effectif = sous_total_actuel / Decimal(str(quantite))
     
     # Vérifier si une remise a été explicitement appliquée
-    if hasattr(panier, 'remise_appliquer') and panier.remise_appliquer:
+    # PROTECTION: Les articles en liquidation et en promotion ne doivent jamais être traités comme ayant une remise
+    article_en_promotion = hasattr(article, 'has_promo_active') and article.has_promo_active
+    if hasattr(panier, 'remise_appliquer') and panier.remise_appliquer and article.phase != 'LIQUIDATION' and not article_en_promotion:
         type_remise = getattr(panier, 'type_remise_appliquee', '')
         
         # Retourner le prix avec le libellé approprié selon le type de remise
@@ -276,15 +276,6 @@ def get_prix_effectif_panier(panier):
                 'libelle': 'Prix remise 4 appliquée',
                 'couleur_classe': 'text-purple-600',
                 'icone': 'fas fa-percent',
-                'est_remise': True
-            }
-        elif type_remise == 'liquidation':
-            return {
-                'prix_unitaire': float(prix_unitaire_effectif),
-                'sous_total': float(sous_total_actuel),
-                'libelle': 'Prix liquidation appliqué',
-                'couleur_classe': 'text-red-600',
-                'icone': 'fas fa-fire',
                 'est_remise': True
             }
         else:
@@ -357,8 +348,7 @@ def has_prix_remise_disponible(article):
         getattr(article, 'prix_remise_1', None),
         getattr(article, 'prix_remise_2', None),
         getattr(article, 'prix_remise_3', None),
-        getattr(article, 'prix_remise_4', None),
-        getattr(article, 'Prix_liquidation', None)
+        getattr(article, 'prix_remise_4', None)
     ]
     
     return any(prix for prix in prix_remises if prix and prix > 0)
@@ -385,14 +375,6 @@ def get_meilleur_prix_remise(article):
                 'libelle': f'Prix remise {niveau}'
             })
     
-    # Ajouter prix de liquidation
-    prix_liquidation = get_prix_remise_applicable(article, 'liquidation')
-    if prix_liquidation and prix_liquidation > 0:
-        prix_remises.append({
-            'prix': prix_liquidation,
-            'niveau': 'liquidation',
-            'libelle': 'Prix liquidation'
-        })
     
     if not prix_remises:
         return None

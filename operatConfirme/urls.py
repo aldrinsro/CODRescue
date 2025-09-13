@@ -47,6 +47,7 @@ urlpatterns = [
     path('api/commande/<int:commande_id>/panier/<int:panier_id>/prix-remise/', views.get_prix_remise_article, name='get_prix_remise_article'),
     path('api/panier/<int:panier_id>/activer-remise/', views.activer_remise_panier, name='activer_remise_panier'),
     path('api/panier/<int:panier_id>/desactiver-remise/', views.desactiver_remise_panier, name='desactiver_remise_panier'),
+    path('api/corriger-remises-liquidation-promotion/', views.corriger_remises_liquidation_et_promotion, name='corriger_remises_liquidation_et_promotion'),
     
     # URLs pour la recherche globale
     path('recherche-globale/', search_views.global_search_view, name='global_search'),

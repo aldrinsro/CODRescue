@@ -257,11 +257,57 @@ class Commande(models.Model):
         """Retourne le total articles + frais de livraison"""
         return float(self.sous_total_articles) + float(self.montant_frais_livraison)
     
+    def corriger_paniers_liquidation_et_promotion(self):
+        """
+        Corrige automatiquement tous les paniers d'articles en liquidation et en promotion
+        pour s'assurer qu'ils n'ont pas remise_appliquer = True
+        """
+        from django.db.models import Q
+        
+        # Corriger les paniers d'articles en liquidation
+        paniers_liquidation = self.paniers.filter(
+            article__phase='LIQUIDATION',
+            remise_appliquer=True
+        )
+        
+        for panier in paniers_liquidation:
+            print(f"🔧 Correction panier liquidation: {panier.article.nom}")
+            # Recalculer le sous-total avec le prix de liquidation
+            prix_liquidation = panier.article.Prix_liquidation or panier.article.prix_actuel or panier.article.prix_unitaire
+            panier.sous_total = float(prix_liquidation) * panier.quantite
+            panier.remise_appliquer = False
+            panier.type_remise_appliquee = ''
+            panier.save()
+        
+        # Corriger les paniers d'articles en promotion
+        # Utiliser une requête Django pour identifier les articles avec promotions actives
+        from django.utils import timezone
+        now = timezone.now()
+        
+        paniers_promotion = self.paniers.filter(
+            article__promotions__active=True,
+            article__promotions__date_debut__lte=now,
+            article__promotions__date_fin__gte=now,
+            remise_appliquer=True
+        ).distinct()
+        
+        for panier in paniers_promotion:
+            print(f"🔧 Correction panier promotion: {panier.article.nom}")
+            # Recalculer le sous-total avec le prix promotionnel
+            prix_promotion = panier.article.prix_actuel or panier.article.prix_unitaire
+            panier.sous_total = float(prix_promotion) * panier.quantite
+            panier.remise_appliquer = False
+            panier.type_remise_appliquee = ''
+            panier.save()
+
     def recalculer_total_avec_frais(self):
         """
         Recalcule le total de la commande en incluant les frais de livraison
         SEULEMENT si frais_livraison = True
         """
+        # Corriger d'abord les paniers en liquidation et en promotion
+        self.corriger_paniers_liquidation_et_promotion()
+        
         # Calculer le sous-total des articles
         sous_total_articles = sum(panier.sous_total for panier in self.paniers.all())
         
@@ -370,6 +416,20 @@ class Panier(models.Model):
             models.CheckConstraint(check=models.Q(quantite__gt=0), name='quantite_positive'),
             models.CheckConstraint(check=models.Q(sous_total__gte=0), name='sous_total_positif'),
         ]
+    
+    def save(self, *args, **kwargs):
+        # Protection : les articles en liquidation et en promotion ne peuvent pas avoir remise_appliquer = True
+        if self.article:
+            article_en_liquidation = self.article.phase == 'LIQUIDATION'
+            article_en_promotion = hasattr(self.article, 'has_promo_active') and self.article.has_promo_active
+            
+            if (article_en_liquidation or article_en_promotion) and self.remise_appliquer:
+                motif = "liquidation" if article_en_liquidation else "promotion"
+                print(f"⚠️ PROTECTION: Article {self.article.nom} en {motif} - remise_appliquer forcé à False")
+                self.remise_appliquer = False
+                self.type_remise_appliquee = ''
+        
+        super().save(*args, **kwargs)
     
     def __str__(self):
         return f"{self.commande.num_cmd} - {self.article.nom} (x{self.quantite})"

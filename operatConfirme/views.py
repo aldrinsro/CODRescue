@@ -1583,6 +1583,9 @@ def modifier_commande(request, commande_id):
     # Récupérer la commande
     commande = get_object_or_404(Commande, id=commande_id)
     
+    # Corriger automatiquement les paniers d'articles en liquidation et en promotion
+    commande.corriger_paniers_liquidation_et_promotion()
+    
     # Vérifier que la commande est affectée à cet opérateur
     etat_actuel = commande.etats.filter(
         operateur=operateur,
@@ -2145,6 +2148,21 @@ def modifier_commande(request, commande_id):
                     panier = Panier.objects.get(id=panier_id, commande=commande)
                     print(f"✅ DEBUG: Panier trouvé - Article: {panier.article.nom}, Variante: {panier.variante}")
                     
+                    # Vérifier si l'article est en phase LIQUIDATION ou en promotion
+                    if panier.article.phase == 'LIQUIDATION':
+                        print(f"❌ DEBUG: Tentative d'application de remise sur article en liquidation")
+                        return JsonResponse({
+                            'success': False, 
+                            'error': 'Les articles en liquidation ne peuvent pas avoir de remise appliquée'
+                        })
+                    
+                    if hasattr(panier.article, 'has_promo_active') and panier.article.has_promo_active:
+                        print(f"❌ DEBUG: Tentative d'application de remise sur article en promotion")
+                        return JsonResponse({
+                            'success': False, 
+                            'error': 'Les articles en promotion ne peuvent pas avoir de remise appliquée'
+                        })
+                    
                     # Valider le nouveau prix
                     try:
                         nouveau_prix_float = float(nouveau_prix)
@@ -2191,22 +2209,6 @@ def modifier_commande(request, commande_id):
                         else:
                             print(f"⚠️ DEBUG: Prix de remise {type_remise} non trouvé pour l'article {panier.article.nom}")
                     
-                    elif type_remise in ['liquidation', 'Prix_liquidation']:
-                        # Pour la liquidation, utiliser le Prix_liquidation s'il existe, sinon utiliser le nouveau prix fourni
-                        if hasattr(panier.article, 'Prix_liquidation') and panier.article.Prix_liquidation:
-                            # Prix liquidation configuré - l'utiliser
-                            ancien_prix_actuel = panier.article.prix_actuel
-                            panier.article.prix_actuel = panier.article.Prix_liquidation
-                            panier.article.save()
-                            print(f"💾 DEBUG: prix_actuel mis à jour avec prix liquidation configuré - Ancien: {ancien_prix_actuel}, Nouveau: {panier.article.Prix_liquidation}")
-                        else:
-                            # Pas de prix liquidation configuré - utiliser le nouveau prix comme prix liquidation personnalisé
-                            ancien_prix_actuel = panier.article.prix_actuel
-                            panier.article.prix_actuel = nouveau_prix_float
-                            # Optionnel: sauvegarder aussi comme Prix_liquidation pour futures utilisations
-                            panier.article.Prix_liquidation = nouveau_prix_float
-                            panier.article.save()
-                            print(f"💾 DEBUG: prix_actuel mis à jour avec prix liquidation personnalisé - Ancien: {ancien_prix_actuel}, Nouveau: {nouveau_prix_float}")
                     
                     panier.save()
                     print(f"💾 DEBUG: Prix unitaire remisé appliqué - Ancien sous-total: {ancien_sous_total}, Nouveau sous-total: {nouveau_sous_total} (prix unitaire: {nouveau_prix_float})")
@@ -3095,6 +3097,9 @@ def rafraichir_articles_section(request, commande_id):
     try:
         commande = get_object_or_404(Commande.objects.prefetch_related('paniers__article'), id=commande_id)
         
+        # Corriger automatiquement les paniers d'articles en liquidation et en promotion
+        commande.corriger_paniers_liquidation_et_promotion()
+        
         # S'assurer que les totaux et le compteur sont à jour
         commande.recalculer_totaux_upsell()
 
@@ -3471,15 +3476,6 @@ def get_prix_remise_article(request, commande_id, panier_id):
                 'couleur_classe': 'bg-red-100 text-red-800 border-red-300'
             })
         
-        # Prix de liquidation
-        if article.Prix_liquidation and article.Prix_liquidation > 0:
-            prix_remises.append({
-                'type': 'Prix_liquidation',
-                'label': 'Prix Liquidation',
-                'prix': float(article.Prix_liquidation),
-                'badge': 'Liquidation',
-                'couleur_classe': 'bg-orange-100 text-orange-800 border-orange-300'
-            })
         
         # Informations de l'article
         article_info = {
@@ -3519,6 +3515,65 @@ def get_prix_remise_article(request, commande_id, panier_id):
         }, status=500)
 
 @login_required
+def corriger_remises_liquidation_et_promotion(request):
+    """
+    Fonction utilitaire pour corriger les paniers d'articles en liquidation et en promotion
+    qui auraient remise_appliquer = True (ce qui ne devrait pas arriver)
+    """
+    if request.method == 'POST' and request.user.is_staff:
+        from commande.models import Panier
+        from django.db.models import Q
+        
+        # Corriger les paniers d'articles en liquidation
+        paniers_liquidation = Panier.objects.filter(
+            article__phase='LIQUIDATION',
+            remise_appliquer=True
+        )
+        
+        # Corriger les paniers d'articles en promotion
+        # Utiliser une requête Django pour identifier les articles avec promotions actives
+        from django.utils import timezone
+        now = timezone.now()
+        
+        paniers_promotion = Panier.objects.filter(
+            article__promotions__active=True,
+            article__promotions__date_debut__lte=now,
+            article__promotions__date_fin__gte=now,
+            remise_appliquer=True
+        ).distinct()
+        
+        count_liquidation = paniers_liquidation.count()
+        count_promotion = paniers_promotion.count()
+        total_count = count_liquidation + count_promotion
+        
+        if total_count > 0:
+            # Corriger les paniers de liquidation (requête bulk)
+            paniers_liquidation.update(
+                remise_appliquer=False,
+                type_remise_appliquee=''
+            )
+            
+            # Corriger les paniers de promotion (requête bulk)
+            paniers_promotion.update(
+                remise_appliquer=False,
+                type_remise_appliquee=''
+            )
+            
+            print(f"✅ Correction effectuée: {count_liquidation} paniers liquidation + {count_promotion} paniers promotion remis à remise_appliquer=False")
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'{count_liquidation} paniers d\'articles en liquidation et {count_promotion} paniers d\'articles en promotion corrigés'
+            })
+        else:
+            return JsonResponse({
+                'success': True,
+                'message': 'Aucun panier d\'article en liquidation ou promotion avec remise_appliquer=True trouvé'
+            })
+    
+    return JsonResponse({'success': False, 'message': 'Non autorisé'})
+
+@login_required
 def activer_remise_panier(request, panier_id):
     """Endpoint pour activer remise_appliquer à True pour un panier donné"""
     print(f"🔄 DEBUG: activer_remise_panier appelé avec panier_id={panier_id}")
@@ -3554,17 +3609,56 @@ def activer_remise_panier(request, panier_id):
                     'message': 'Cette commande ne vous est pas affectée'
                 })
             
-            # Activer la remise
+            # Vérifier si l'article est en phase LIQUIDATION ou en promotion
+            if panier.article.phase == 'LIQUIDATION':
+                print(f"❌ DEBUG: Tentative d'activation de remise sur article en liquidation")
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Les articles en liquidation ne peuvent pas avoir de remise appliquée'
+                })
+            
+            # Vérifier si l'article a une promotion active
+            from django.utils import timezone
+            now = timezone.now()
+            article_en_promotion = panier.article.promotions.filter(
+                active=True,
+                date_debut__lte=now,
+                date_fin__gte=now
+            ).exists()
+            
+            if article_en_promotion:
+                print(f"❌ DEBUG: Tentative d'activation de remise sur article en promotion")
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Les articles en promotion ne peuvent pas avoir de remise appliquée'
+                })
+            
+            # Activer la remise avec prix remise 1 par défaut
             print(f"✅ DEBUG: Activation de la remise pour panier {panier.id}")
+            
+            # Vérifier si l'article a un prix remise 1 configuré
+            prix_remise_1 = getattr(panier.article, 'prix_remise_1', None)
+            if prix_remise_1 and prix_remise_1 > 0:
+                # Appliquer le prix remise 1 et recalculer le sous-total
+                nouveau_sous_total = float(prix_remise_1) * panier.quantite
+                panier.sous_total = nouveau_sous_total
+                panier.type_remise_appliquee = 'remise_1'
+                print(f"✅ DEBUG: Prix remise 1 appliqué: {prix_remise_1} DH, nouveau sous-total: {nouveau_sous_total} DH")
+            else:
+                print(f"⚠️ DEBUG: Aucun prix remise 1 configuré pour cet article")
+            
             panier.remise_appliquer = True
-            panier.save(update_fields=['remise_appliquer'])
+            panier.save(update_fields=['remise_appliquer', 'sous_total', 'type_remise_appliquee'])
             print(f"✅ DEBUG: Remise activée avec succès")
             
             return JsonResponse({
                 'success': True,
-                'message': 'Remise activée avec succès',
+                'message': 'Prix remise 1 appliqué par défaut' if prix_remise_1 and prix_remise_1 > 0 else 'Remise activée avec succès',
                 'panier_id': panier.id,
-                'remise_appliquer': panier.remise_appliquer
+                'remise_appliquer': panier.remise_appliquer,
+                'type_remise_appliquee': panier.type_remise_appliquee,
+                'nouveau_sous_total': float(panier.sous_total),
+                'prix_unitaire': float(prix_remise_1) if prix_remise_1 and prix_remise_1 > 0 else None
             })
             
         except Panier.DoesNotExist:
@@ -3610,15 +3704,32 @@ def desactiver_remise_panier(request, panier_id):
                     'message': 'Cette commande ne vous est pas affectée'
                 })
             
-            # Désactiver la remise
+            # Vérifier si l'article est en phase LIQUIDATION (optionnel, car on peut désactiver)
+            if panier.article.phase == 'LIQUIDATION':
+                print(f"⚠️ DEBUG: Désactivation de remise sur article en liquidation (normalement pas possible)")
+            
+            # Désactiver la remise et recalculer le prix normal
+            print(f"✅ DEBUG: Désactivation de la remise pour panier {panier.id}")
+            
+            # Recalculer le sous-total avec le prix normal
+            prix_normal = panier.article.prix_actuel or panier.article.prix_unitaire
+            nouveau_sous_total = float(prix_normal) * panier.quantite
+            
             panier.remise_appliquer = False
-            panier.save(update_fields=['remise_appliquer'])
+            panier.type_remise_appliquee = ''
+            panier.sous_total = nouveau_sous_total
+            panier.save(update_fields=['remise_appliquer', 'type_remise_appliquee', 'sous_total'])
+            
+            print(f"✅ DEBUG: Prix normal restauré: {prix_normal} DH, nouveau sous-total: {nouveau_sous_total} DH")
             
             return JsonResponse({
                 'success': True,
-                'message': 'Remise désactivée avec succès',
+                'message': 'Remise désactivée, prix normal restauré',
                 'panier_id': panier.id,
-                'remise_appliquer': panier.remise_appliquer
+                'remise_appliquer': panier.remise_appliquer,
+                'type_remise_appliquee': panier.type_remise_appliquee,
+                'nouveau_sous_total': float(panier.sous_total),
+                'prix_unitaire': float(prix_normal)
             })
             
         except Panier.DoesNotExist:

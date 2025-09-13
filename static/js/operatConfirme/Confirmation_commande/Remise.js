@@ -3,7 +3,7 @@
  * 
  * Fonctionnalités:
  * - Ouverture de modale pour sélectionner un prix de remise
- * - Affichage des prix disponibles (Remise 1-4, Liquidation)
+ * - Affichage des prix disponibles (Remise 1-4)
  * - Application de la remise avec sauvegarde en base de données
  * - Mise à jour de l'interface utilisateur
  */
@@ -46,6 +46,19 @@ function ouvrirModalRemise(panierId) {
             
         articleData = JSON.parse(cleanDataStr);
         console.log('✅ Données article parsées:', articleData);
+        
+        // Vérifier si l'article est en phase LIQUIDATION ou en promotion
+        if (articleData.phase === 'LIQUIDATION') {
+            console.warn('⚠️ Tentative d\'ouverture de modale remise sur un article en liquidation');
+            alert('Les articles en liquidation ne peuvent pas avoir de remise appliquée.');
+            return;
+        }
+        
+        if (articleData.has_promo_active) {
+            console.warn('⚠️ Tentative d\'ouverture de modale remise sur un article en promotion');
+            alert('Les articles en promotion ne peuvent pas avoir de remise appliquée.');
+            return;
+        }
         
     } catch (error) {
         console.error('❌ Erreur lors du traitement des données article:', error);
@@ -167,17 +180,6 @@ function afficherPrixRemises(articleData) {
             badge: 'Remise 4',
             couleur: 'bg-orange-100 text-orange-800 border-orange-300',
             requiresValue: true
-        },
-        { 
-            label: 'Prix Liquidation', 
-            prix: parseFloat(articleData.Prix_liquidation || prixActuel), // Utiliser le prix actuel si non configuré
-            key: 'liquidation', // Changer la clé pour être cohérent
-            badge: 'Liquidation',
-            couleur: 'bg-red-100 text-red-800 border-red-300',
-            requiresValue: false, // Toujours afficher l'option liquidation
-            description: articleData.Prix_liquidation && articleData.Prix_liquidation > 0 ? 
-                'Prix configuré' : 'Cliquer pour personnaliser',
-            isPersonalizable: articleData.Prix_liquidation ? false : true // Permettre personnalisation si pas configuré
         }
     ];
     
@@ -186,7 +188,7 @@ function afficherPrixRemises(articleData) {
         if (item.requiresValue) {
             return item.prix > 0; // Les remises doivent avoir une valeur configurée
         } else {
-            return true; // Toujours inclure les options spéciales comme liquidation
+            return true; // Inclure les options sans validation de valeur
         }
     });
     
@@ -256,7 +258,7 @@ function selectionnerPrixRemise(typeRemise, nouveauPrix, isPersonalizable = fals
     
     // Si personnalisable, demander à l'utilisateur de saisir le prix
     if (isPersonalizable) {
-        const prixSaisi = prompt(`Saisissez le prix de liquidation personnalisé pour "${currentArticleRemise.nom}":\n\nPrix actuel: ${nouveauPrix.toFixed(2)} DH`, nouveauPrix.toFixed(2));
+        const prixSaisi = prompt(`Saisissez le prix de remise personnalisé pour "${currentArticleRemise.nom}":\n\nPrix actuel: ${nouveauPrix.toFixed(2)} DH`, nouveauPrix.toFixed(2));
         
         if (prixSaisi === null) {
             return; // Annulé par l'utilisateur
@@ -282,7 +284,7 @@ function selectionnerPrixRemise(typeRemise, nouveauPrix, isPersonalizable = fals
                           `➜ Nouveau prix unitaire: ${nouveauPrix.toFixed(2)} DH\n` +
                           `💰 ${economie >= 0 ? 'Économie' : 'Augmentation'} par unité: ${Math.abs(economie).toFixed(2)} DH\n\n` +
                           `Le prix actuel sera remplacé par le prix remisé.` +
-                          (isPersonalizable ? '\n\n🔧 Prix personnalisé appliqué.' : '');
+                          (isPersonalizable ? '\n\n🔧 Prix de remise personnalisé appliqué.' : '');
     
     if (confirm(confirmMessage)) {
         appliquerPrixRemise(typeRemise, nouveauPrix, economie);
@@ -437,6 +439,77 @@ function updatePanierDisplay(panierId, serverData) {
 }
 
 /**
+ * Recharge la section des articles pour mettre à jour l'affichage
+ */
+function rechargerSectionArticles() {
+    console.log('🔄 Rechargement de la section articles...');
+    
+    // Récupérer l'ID de la commande depuis l'URL ou une variable globale
+    const currentUrl = window.location.pathname;
+    const commandeIdMatch = currentUrl.match(/\/commandes\/(\d+)\//);
+    
+    if (!commandeIdMatch) {
+        console.error('❌ Impossible de trouver l\'ID de la commande dans l\'URL');
+        return;
+    }
+    
+    const commandeId = commandeIdMatch[1];
+    const url = `/operateur-confirme/api/commande/${commandeId}/rafraichir-articles/`;
+    
+    console.log('🌐 URL de rechargement:', url);
+    
+    fetch(url, {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (!data.success) {
+            throw new Error(data.error || 'Erreur lors du rechargement');
+        }
+        
+        console.log('✅ Section articles rechargée avec succès');
+        
+        // Trouver le conteneur des articles et le remplacer
+        const articlesContainer = document.getElementById('articles-container');
+        if (articlesContainer) {
+            articlesContainer.innerHTML = data.html;
+            
+            // Mettre à jour le compteur d'articles
+            const articlesCountElement = document.getElementById('articles-count');
+            if (articlesCountElement) {
+                articlesCountElement.textContent = data.articles_count;
+            }
+            
+            // Mettre à jour le total de la commande 
+            const totalCommandeElements = document.querySelectorAll('[id*="total_commande"], [id*="total-commande"]');
+            totalCommandeElements.forEach(element => {
+                element.textContent = `${data.total_commande.toFixed(2)} DH`;
+            });
+            
+            console.log('✅ Affichage mis à jour avec les nouvelles données');
+        } else {
+            console.error('❌ Conteneur des articles non trouvé');
+            // Fallback : recharger la page
+            window.location.reload();
+        }
+    })
+    .catch(error => {
+        console.error('❌ Erreur lors du rechargement de la section:', error);
+        // En cas d'erreur, recharger la page entière
+        console.log('🔄 Fallback: rechargement de la page entière');
+        window.location.reload();
+    });
+}
+
+/**
  * Met à jour l'interface après application de la remise
  */
 function updateUIAfterRemise(typeRemise, nouveauPrix, economie, serverData) {
@@ -462,16 +535,10 @@ function updateUIAfterRemise(typeRemise, nouveauPrix, economie, serverData) {
             }
         }, 3000);
         
-        // Marquer le panier comme ayant une remise appliquée
-        marquerPanierAvecRemise(currentPanierId);
-        
-        // Mettre à jour l'affichage du panier spécifique sans recharger toute la page
-        updatePanierDisplay(currentPanierId, serverData);
-        
-        // Optionnel: Recharger la page après un délai si nécessaire
-        // setTimeout(() => {
-        //     window.location.reload(true);
-        // }, 1500);
+        // Recharger la section des articles au lieu de mettre à jour manuellement
+        setTimeout(() => {
+            rechargerSectionArticles();
+        }, 500); // Petit délai pour que la notification soit visible
         
     } catch (error) {
         console.error('❌ Erreur lors de l\'application du prix de remise:', error);
@@ -538,6 +605,31 @@ document.addEventListener('DOMContentLoaded', function() {
  */
 function activerRemise(panierId) {
     console.log('🔄 Activation de la remise pour panier ID:', panierId);
+    
+    // Vérifier si l'article est en phase LIQUIDATION
+    const articleCard = document.querySelector(`[data-article-id="${panierId}"]`);
+    if (!articleCard) {
+        console.error('❌ Article non trouvé pour l\'ID:', panierId);
+        alert('Erreur: Article non trouvé.');
+        return;
+    }
+    
+    try {
+        const articleData = JSON.parse(articleCard.getAttribute('data-article'));
+        if (articleData.phase === 'LIQUIDATION') {
+            console.warn('⚠️ Tentative d\'activation de remise sur un article en liquidation');
+            alert('Les articles en liquidation ne peuvent pas avoir de remise appliquée.');
+            return;
+        }
+        
+        if (articleData.has_promo_active) {
+            console.warn('⚠️ Tentative d\'activation de remise sur un article en promotion');
+            alert('Les articles en promotion ne peuvent pas avoir de remise appliquée.');
+            return;
+        }
+    } catch (error) {
+        console.error('❌ Erreur lors de la lecture des données article:', error);
+    }
     
     // Vérifier le token CSRF
     const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
@@ -631,6 +723,29 @@ function activerRemise(panierId) {
                 badge.className = 'badge-remise inline-flex items-center px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium ml-2';
                 badge.innerHTML = '<i class="fas fa-percent mr-1"></i>Remise appliquée';
                 articleTitle.appendChild(badge);
+            }
+        }
+        
+        // Mettre à jour l'affichage des prix si les données sont disponibles
+        if (data.prix_unitaire && data.nouveau_sous_total) {
+            // Mettre à jour le prix unitaire
+            const prixUnitaireElement = document.getElementById(`prix-unitaire-${panierId}`);
+            if (prixUnitaireElement) {
+                prixUnitaireElement.textContent = `${data.prix_unitaire.toFixed(2)} DH`;
+                prixUnitaireElement.className = 'font-medium text-purple-600';
+            }
+            
+            // Mettre à jour le libellé du prix
+            const prixLibelleElement = document.getElementById(`prix-libelle-${panierId}`);
+            if (prixLibelleElement) {
+                prixLibelleElement.innerHTML = '<i class="fas fa-percent mr-1"></i>Prix remise 1 appliquée';
+                prixLibelleElement.className = 'text-xs text-purple-600 mt-1';
+            }
+            
+            // Mettre à jour le sous-total
+            const sousTotalElement = document.getElementById(`sous-total-${panierId}`);
+            if (sousTotalElement) {
+                sousTotalElement.textContent = `${data.nouveau_sous_total.toFixed(2)} DH`;
             }
         }
         
@@ -751,6 +866,29 @@ function desactiverRemise(panierId) {
         const badge = document.querySelector(`[data-article-id="${panierId}"] .badge-remise`);
         if (badge) {
             badge.remove();
+        }
+        
+        // Mettre à jour l'affichage des prix si les données sont disponibles
+        if (data.prix_unitaire && data.nouveau_sous_total) {
+            // Restaurer le prix unitaire normal
+            const prixUnitaireElement = document.getElementById(`prix-unitaire-${panierId}`);
+            if (prixUnitaireElement) {
+                prixUnitaireElement.textContent = `${data.prix_unitaire.toFixed(2)} DH`;
+                prixUnitaireElement.className = 'font-medium text-gray-600';
+            }
+            
+            // Restaurer le libellé du prix normal
+            const prixLibelleElement = document.getElementById(`prix-libelle-${panierId}`);
+            if (prixLibelleElement) {
+                prixLibelleElement.innerHTML = '<i class="fas fa-tag mr-1"></i>Prix normal';
+                prixLibelleElement.className = 'text-xs text-gray-600 mt-1';
+            }
+            
+            // Mettre à jour le sous-total
+            const sousTotalElement = document.getElementById(`sous-total-${panierId}`);
+            if (sousTotalElement) {
+                sousTotalElement.textContent = `${data.nouveau_sous_total.toFixed(2)} DH`;
+            }
         }
         
         // Notification de succès
