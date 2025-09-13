@@ -8,14 +8,14 @@
 <style>
     /* Styles pour les champs de quantité modifiés */
     .quantite-modifiee {
-        border-color: #f59e0b !important;
-        background-color: #fef3c7 !important;
-        box-shadow: 0 0 0 1px #f59e0b;
+        border-color: #034a4a !important;
+        background-color: var(--admin-light-accent) !important;
+        box-shadow: 0 0 0 1px #034a4a;
     }
     
     .quantite-modifiee:focus {
-        border-color: #d97706 !important;
-        box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
+        border-color: var(--admin-color) !important;
+        box-shadow: 0 0 0 2px var(--admin-light-accent);
     }
     
     /* Animation pour le statut de modification */
@@ -34,26 +34,32 @@
     }
     
     .quantite-input:hover {
-        border-color: #66cccc;
+        border-color: #034a4a;
+    }
+    
+    .quantite-input:focus {
+        border-color: #034a4a;
+        box-shadow: 0 0 0 1px #034a4a;
     }
     
     /* Styles pour le tableau des variantes */
     .variantes-table {
-        font-size: 0.875rem;
+        font-size: 0.75rem;
     }
     
     .variantes-table td {
         vertical-align: top;
-        padding: 0.75rem 0.5rem;
+        padding: 0.25rem 0.125rem;
     }
     
     .variantes-table th {
-        background: linear-gradient(to bottom, #f9fafb, #f3f4f6);
+        background: #034a4a;
+        color: var(--admin-color);
         font-weight: 600;
     }
     
     .variante-cell {
-        min-height: 120px;
+        min-height: 60px;
         display: flex;
         flex-direction: column;
         justify-content: center;
@@ -62,7 +68,7 @@
     
     /* Animation pour les cellules au hover */
     .variantes-table tbody tr:hover {
-        background-color: #f8fafc;
+        background-color: var(--admin-light-accent);
         transform: scale(1.002);
         transition: all 0.2s ease;
     }
@@ -79,13 +85,13 @@
     
     /* Styles pour la référence */
     .reference-badge {
-        background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
-        border: 1px solid #d1d5db;
+        background: linear-gradient(135deg, var(--admin-light-accent), #034a4a);
+        border: 1px solid #034a4a;
         font-family: 'Courier New', monospace;
         font-size: 0.6rem;
         padding: 0.125rem 0.25rem;
         border-radius: 0.25rem;
-        color: #4b5563;
+        color: var(--admin-color);
         max-width: 80px;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -140,8 +146,8 @@
     
     /* Animation de surbrillance pour les nouvelles variantes */
     @keyframes highlight {
-        0% { background-color: #fef3c7; }
-        50% { background-color: #fde68a; }
+        0% { background-color: var(--admin-light-accent); }
+        50% { background-color: #034a4a; }
         100% { background-color: transparent; }
     }
     
@@ -153,13 +159,13 @@
 
 {% block content %}
 <div class="main-content transition-all duration-300" id="mainContent">
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 text-white p-6 rounded-xl shadow-lg" style="background: linear-gradient(to right, #023535, #034a4a);">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 text-white p-6 rounded-xl shadow-lg" style="background: linear-gradient(to right, var(--admin-color), var(--admin-gradient-end));">
         <div>
             <h1 class="text-3xl font-bold flex items-center mb-2">
-                <i class="fas fa-edit mr-3" style="color: #66cccc;"></i>
+                <i class="fas fa-edit mr-3" style="color: #034a4a;"></i>
                 Modifier l'Article: {{ article.nom }}
             </h1>
-            <p style="color: #99dddd;">Mettez à jour les informations de l'article</p>
+            <p style="color: var(--admin-light-accent);">Mettez à jour les informations de l'article</p>
         </div>
         <div class="flex items-center gap-4 mt-4 md:mt-0">
             <a href="{% url 'article:detail' article.id %}" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-sm">
@@ -168,18 +174,18 @@
         </div>
     </div>
 
-    <div class="bg-white rounded-xl shadow-lg border p-6 mb-8" style="border-color: #66cccc;">
-        <h2 class="text-2xl font-bold mb-6" style="color: #023535;">Formulaire de Modification</h2>
+    <div class="bg-white rounded-xl shadow-lg border p-6 mb-8" style="border-color: #034a4a;">
+        <h2 class="text-2xl font-bold mb-6" style="color: var(--admin-color);">Formulaire de Modification</h2>
         
         <form method="post" enctype="multipart/form-data" id="articleForm" onsubmit="return handleFormSubmit(event)">
             {% csrf_token %}
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
-                    <label for="id_nom" class="block text-sm font-semibold mb-2" style="color: #023535;">Nom de l'article:</label>
-                    <input type="text" name="nom" id="id_nom" value="{% if form_data.nom %}{{ form_data.nom }}{% else %}{{ article.nom|default_if_none:'' }}{% endif %}" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200" placeholder="Ex: Nike Air Max, Adidas Stan Smith..." >
+                    <label for="id_nom" class="block text-sm font-semibold mb-2" style="color: var(--admin-color);">Nom de l'article:</label>
+                    <input type="text" name="nom" id="id_nom" value="{% if form_data.nom %}{{ form_data.nom }}{% else %}{{ article.nom|default_if_none:'' }}{% endif %}" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#034a4a] focus:border-transparent transition duration-200" placeholder="Ex: Nike Air Max, Adidas Stan Smith..." >
                 </div>
                 <div>
-                    <label for="id_reference" class="block text-sm font-semibold mb-2" style="color: #023535;">Référence:</label>
+                    <label for="id_reference" class="block text-sm font-semibold mb-2" style="color: var(--admin-color);">Référence:</label>
                     {% if article.reference %}
                         <div class="p-3 bg-green-50 border border-green-200 rounded-lg mb-2">
                             <p class="text-sm text-green-700">
@@ -199,8 +205,8 @@
                     </div>
                 </div>
                 <div>
-                    <label for="id_modele" class="block text-sm font-semibold mb-2" style="color: #023535;">Numéro du Modèle:</label>
-                    <input type="number" name="modele" id="id_modele" value="{% if form_data.modele %}{{ form_data.modele }}{% else %}{{ article.modele|default_if_none:'' }}{% endif %}" min="1" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200" placeholder="Ex: 1001, 2001, 3001...">
+                    <label for="id_modele" class="block text-sm font-semibold mb-2" style="color: var(--admin-color);">Numéro du Modèle:</label>
+                    <input type="number" name="modele" id="id_modele" value="{% if form_data.modele %}{{ form_data.modele }}{% else %}{{ article.modele|default_if_none:'' }}{% endif %}" min="1" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#034a4a] focus:border-transparent transition duration-200" placeholder="Ex: 1001, 2001, 3001...">
                     <small class="text-gray-600">Le numéro du modèle doit être unique et supérieur à 0</small>
                     {% if article.modele %}
                     <div class="mt-2 p-2 bg-blue-50 rounded-lg">
@@ -209,8 +215,8 @@
                     {% endif %}
                 </div>
                 <div>
-                    <label for="id_prix_unitaire" class="block text-sm font-semibold mb-2" style="color: #023535;">Prix Unitaire (DH):</label>
-                    <input type="number" name="prix_unitaire" id="id_prix_unitaire" value="{% if form_data.prix_unitaire %}{{ form_data.prix_unitaire }}{% else %}{{ article.prix_unitaire|stringformat:".2f" }}{% endif %}" step="0.01" min="0.01" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200" placeholder="Ex: 299.99, 450.00, 125.50..." required>
+                    <label for="id_prix_unitaire" class="block text-sm font-semibold mb-2" style="color: var(--admin-color);">Prix Unitaire (DH):</label>
+                    <input type="number" name="prix_unitaire" id="id_prix_unitaire" value="{% if form_data.prix_unitaire %}{{ form_data.prix_unitaire }}{% else %}{{ article.prix_unitaire|stringformat:".2f" }}{% endif %}" step="0.01" min="0.01" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#034a4a] focus:border-transparent transition duration-200" placeholder="Ex: 299.99, 450.00, 125.50..." required>
                     <small class="text-gray-600">Le prix doit être supérieur à 0 DH</small>
                     {% if article.has_promo_active or article.phase == 'LIQUIDATION' %}
                     <div class="mt-2 p-3 bg-gray-50 rounded-lg">
@@ -228,13 +234,13 @@
                     {% endif %}
                 </div>
                 <div>
-                    <label for="id_prix_achat" class="block text-sm font-semibold mb-2" style="color: #023535;">Prix d'Achat (DH):</label>
-                    <input type="number" name="prix_achat" id="id_prix_achat" value="{% if form_data.prix_achat %}{{ form_data.prix_achat }}{% else %}{{ article.prix_achat|stringformat:".2f"|default:0 }}{% endif %}" step="0.01" min="0.01" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200" placeholder="Ex: 150.00, 200.00, 75.00..." required>
+                    <label for="id_prix_achat" class="block text-sm font-semibold mb-2" style="color: var(--admin-color);">Prix d'Achat (DH):</label>
+                    <input type="number" name="prix_achat" id="id_prix_achat" value="{% if form_data.prix_achat %}{{ form_data.prix_achat }}{% else %}{{ article.prix_achat|stringformat:".2f"|default:0 }}{% endif %}" step="0.01" min="0.01" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#034a4a] focus:border-transparent transition duration-200" placeholder="Ex: 150.00, 200.00, 75.00..." required>
                     <small class="text-gray-600">Le prix d'achat doit être supérieur à 0 DH</small>
                 </div>
                 <div>
-                    <label for="id_categorie" class="block text-sm font-semibold mb-2" style="color: #023535;">Catégorie:</label>
-                    <select name="categorie" id="id_categorie" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200">
+                    <label for="id_categorie" class="block text-sm font-semibold mb-2" style="color: var(--admin-color);">Catégorie:</label>
+                    <select name="categorie" id="id_categorie" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#034a4a] focus:border-transparent transition duration-200">
                         {% for categorie in categories %}
                             <option value="{{ categorie.id }}" {% if article.categorie_id == categorie.id %}selected{% endif %}>{{ categorie.nom }}</option>
                         {% endfor %}
@@ -242,9 +248,9 @@
                     <small class="text-gray-600">Catégorie de l'article</small>
                 </div>
                 <div>
-                    <label for="id_genre" class="block text-sm font-semibold mb-2" style="color: #023535;">Genre:</label>
+                    <label for="id_genre" class="block text-sm font-semibold mb-2" style="color: var(--admin-color);">Genre:</label>
                     
-                    <select name="genre" id="id_genre" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200">
+                    <select name="genre" id="id_genre" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#034a4a] focus:border-transparent transition duration-200">
                        {% for genre in genres %}
                             <option value="{{ genre.id }}" {% if article.genre_id == genre.id %}selected{% endif %}>{{ genre.nom }}</option>
                         {% endfor %}
@@ -252,13 +258,13 @@
                     <small class="text-gray-600">Genre de l'article</small>
                 </div>
                 <div>
-                    <label for="id_qte_disponible" class="block text-sm font-semibold mb-2" style="color: #023535;">Quantité Disponible:</label>
+                    <label for="id_qte_disponible" class="block text-sm font-semibold mb-2" style="color: var(--admin-color);">Quantité Disponible:</label>
                     
                     <span class="inline-block px-3 py-1 bg-green-100 text-green-800 rounded-full font-medium">{{ article.qte_disponible }} paires en stock</span>
                     <small class="text-gray-600">Nombre de paires en stock (minimum 0)</small>
                 </div>
                 <div>
-                    <label class="block text-sm font-semibold mb-2" style="color: #023535;">Image actuelle:</label>
+                    <label class="block text-sm font-semibold mb-2" style="color: var(--admin-color);">Image actuelle:</label>
                     {% if article.image %}
                         <img src="{{ article.image.url }}" alt="{{ article.nom }}" class="w-32 h-32 object-cover rounded-lg shadow-sm mb-2" onerror="this.onerror=null;this.src='/static/img/default.png';"/>
                     {% elif article.image_url %}
@@ -268,8 +274,8 @@
                             <i class="fas fa-image"></i>
                         </div>
                     {% endif %}
-                    <label for="id_image" class="block text-sm font-semibold mb-2" style="color: #023535;">Changer l'image:</label>
-                    <input type="file" name="image" id="id_image" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200">
+                    <label for="id_image" class="block text-sm font-semibold mb-2" style="color: var(--admin-color);">Changer l'image:</label>
+                    <input type="file" name="image" id="id_image" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#034a4a] focus:border-transparent transition duration-200">
                 </div>
                 <div>
                     <div class="flex items-center mb-4">
@@ -277,13 +283,13 @@
                         <input type="checkbox" name="isUpsell" id="id_isUpsell" class="w-5 h-5 mr-2 text-gray-400 border-gray-300 rounded opacity-50 cursor-not-allowed" disabled>
                         <label for="id_isUpsell" class="font-medium text-sm text-gray-500">Est un produit Upsell (désactivé pour les articles en {{ article.get_phase_display|lower }})</label>
                         {% else %}
-                        <input type="checkbox" name="isUpsell" id="id_isUpsell" class="w-5 h-5 mr-2 text-[#023535] border-gray-300 rounded focus:ring-[#66cccc]" {% if article.isUpsell %}checked{% endif %}>
-                        <label for="id_isUpsell" class="font-medium text-sm" style="color: #023535;">Est un produit Upsell</label>
+                        <input type="checkbox" name="isUpsell" id="id_isUpsell" class="w-5 h-5 mr-2 text-[var(--admin-color)] border-gray-300 rounded focus:ring-[#034a4a]" {% if article.isUpsell %}checked{% endif %}>
+                        <label for="id_isUpsell" class="font-medium text-sm" style="color: var(--admin-color);">Est un produit Upsell</label>
                         {% endif %}
                     </div>
                 </div>
                 <div>
-                    <label class="block text-sm font-semibold mb-2" style="color: #023535;">Phase de l'article:</label>
+                    <label class="block text-sm font-semibold mb-2" style="color: var(--admin-color);">Phase de l'article:</label>
                     <div class="p-3 border border-gray-300 rounded-lg bg-gray-50">
                         {% if article.phase == 'EN_COURS' %}
                             <span class="inline-block px-3 py-1 bg-green-100 text-green-800 rounded-full font-medium">En Cours</span>
@@ -299,8 +305,8 @@
                 </div>
             </div>
             <div class="mb-6">
-                <label for="id_description" class="block text-sm font-semibold mb-2" style="color: #023535;">Description:</label>
-                <textarea name="description" id="id_description" rows="4" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200" placeholder="Ex: Chaussure de sport confortable avec semelle en caoutchouc, idéale pour la course à pied et les activités quotidiennes...">{% if form_data.description %}{{ form_data.description }}{% else %}{{ article.description|default_if_none:'' }}{% endif %}</textarea>
+                <label for="id_description" class="block text-sm font-semibold mb-2" style="color: var(--admin-color);">Description:</label>
+                <textarea name="description" id="id_description" rows="4" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#034a4a] focus:border-transparent transition duration-200" placeholder="Ex: Chaussure de sport confortable avec semelle en caoutchouc, idéale pour la course à pied et les activités quotidiennes...">{% if form_data.description %}{{ form_data.description }}{% else %}{{ article.description|default_if_none:'' }}{% endif %}</textarea>
             </div>
 
             <!-- Section des variantes -->
@@ -308,14 +314,14 @@
                 <!-- En-tête de la section -->
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
                     <div class="mb-4 md:mb-0">
-                        <h3 class="text-xl font-bold mb-2" style="color: #023535;">
-                            <i class="fas fa-tags mr-3 text-[#66cccc]"></i>
+                        <h3 class="text-xl font-bold mb-2" style="color: var(--admin-color);">
+                            <i class="fas fa-tags mr-3" style="color: #034a4a;"></i>
                             Gestion des Variantes
                         </h3>
                         <p class="text-sm text-gray-600">Gérez les variantes de couleur et pointure de cet article</p>
                     </div>
                     <button type="button" onclick="openVarianteModal()" 
-                            class="btn-ajouter-variante text-white px-6 py-3 rounded-lg font-medium transition-all shadow-md hover:shadow-lg transform hover:scale-105">
+                            class="text-white px-6 py-3 rounded-lg font-medium transition-all shadow-md hover:shadow-lg transform hover:scale-105" style="background: linear-gradient(to right, var(--admin-gradient-start), var(--admin-gradient-end));">
                         <i class="fas fa-plus mr-2"></i>Ajouter une variante
                     </button>
                 </div>
@@ -345,13 +351,13 @@
                 <!-- Variantes existantes -->
                 <div id="variantesExistantes" class="mb-6">
                     {% if article.variantes.all %}
-                        <div class="bg-white rounded-lg border shadow-sm overflow-hidden" style="border-color: #e6fffe;">
+                        <div class="bg-white rounded-lg border shadow-sm overflow-hidden" style="border-color: #034a4a;">
                             <!-- En-tête du tableau -->
-                            <div class="bg-gray-50 px-6 py-4 border-b" style="border-color: #e6fffe;">
-                                <h4 class="text-lg font-semibold flex items-center" style="color: #023535;">
-                                    <i class="fas fa-layer-group mr-2 text-[#66cccc]"></i>
+                            <div class="px-6 py-4 border-b" style="background: linear-gradient(to right, var(--admin-gradient-start), var(--admin-gradient-end)); border-color: #034a4a;">
+                                <h4 class="text-lg font-semibold flex items-center text-white">
+                                    <i class="fas fa-layer-group mr-2" style="color: #034a4a;"></i>
                                     Variantes existantes
-                                    <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-medium text-sm ml-3">
+                                    <span class="px-3 py-1 rounded-full font-medium text-sm ml-3" style="background-color:rgb(255, 255, 255); color: var(--admin-color);">
                                         {{ article.variantes.count }} variante(s)
                                     </span>
                                 </h4>
@@ -362,16 +368,16 @@
                                 {% if tableau_matrice %}
                                     <table class="variantes-table w-full border-collapse">
                                         <thead>
-                                            <tr class="bg-gray-50">
+                                            <tr style="background: linear-gradient(to right, var(--admin-light-accent), #f8f9fa);">
                                                 <!-- En-tête pour la colonne des pointures -->
-                                                <th class="p-3 text-center font-semibold border" style="color: #023535; border-color: #d1d5db; background: #66cccc; color: white;">
+                                                <th class="p-1 text-center font-semibold border" style="border-color: #e5e7eb; background: #f8f9fa; color: #374151;">
                                                     <i class="fas fa-shoe-prints mr-2"></i>
                                                     Pointure
                                                 </th>
                                                 <!-- En-têtes des couleurs -->
                                                 {% for couleur in couleurs_uniques %}
-                                                <th class="p-3 text-center font-semibold border min-w-24" style="border-color: #d1d5db; background: #66cccc; color: white;">
-                                                    <div class="flex flex-col items-center space-y-1">
+                                                <th class="p-1 text-center font-semibold border min-w-16" style="border-color: #e5e7eb; background: #f8f9fa; color: #374151;">
+                                                    <div class="flex flex-col items-center space-y-0.5">
                                                         <i class="fas fa-palette text-sm"></i>
                                                         <span class="text-sm font-medium">{{ couleur }}</span>
                                                     </div>
@@ -383,15 +389,15 @@
                                             {% for ligne in tableau_matrice %}
                                             <tr class="hover:bg-gray-50 transition-all duration-200">
                                                 <!-- Colonne Pointure -->
-                                                <td class="p-3 text-center font-semibold border" style="border-color: #d1d5db; background: #66cccc; color: white;">
+                                                <td class="p-1 text-center font-semibold border" style="border-color: #e5e7eb; background: #f8f9fa; color: #374151;">
                                                     {{ ligne.pointure }}
                                                 </td>
                                                 
                                                 <!-- Colonnes pour chaque couleur -->
                                                 {% for cellule in ligne.cellules %}
                                                     {% if cellule.existe %}
-                                                        <td class="p-2 text-center border" style="border-color: #d1d5db;" data-variante-id="{{ cellule.id }}">
-                                                            <div class="flex flex-col items-center space-y-1">
+                                                        <td class="p-1 text-center border" style="border-color: #e5e7eb;" data-variante-id="{{ cellule.id }}">
+                                                            <div class="flex flex-col items-center space-y-0.5">
                                                                 <!-- Indicateur de statut -->
                                                                 {% if cellule.status == 'normal' %}
                                                                     <span class="inline-block w-3 h-3 rounded-full bg-green-500" title="En stock"></span>
@@ -407,7 +413,7 @@
                                                                        name="variante_existante_{{ cellule.id }}_quantite" 
                                                                        value="{{ cellule.stock }}" 
                                                                        min="0" 
-                                                                       class="quantite-input w-16 px-2 py-1 border border-gray-300 rounded text-xs text-center focus:ring-1 focus:ring-[#66cccc] focus:border-transparent"
+                                                                        class="quantite-input w-12 px-1 py-0.5 border border-gray-300 rounded text-xs text-center focus:ring-1 focus:ring-[#034a4a] focus:border-transparent"
                                                                        onchange="marquerVarianteModifiee({{ cellule.id }})"
                                                                        title="Modifier la quantité">
                                                                 <span class="text-xs text-gray-500">pcs</span>
@@ -427,8 +433,8 @@
                                                         </td>
                                                     {% else %}
                                                         <!-- Cellule vide -->
-                                                        <td class="p-2 text-center border bg-gray-50" style="border-color: #d1d5db;">
-                                                            <div class="flex flex-col items-center space-y-1">
+                                                        <td class="p-1 text-center border" style="border-color: #e5e7eb; background: #f8f9fa;">
+                                                            <div class="flex flex-col items-center space-y-0.5">
                                                                 <span class="text-gray-400 text-xs">-</span>
                                                             </div>
                                                         </td>
@@ -447,8 +453,8 @@
                         </div>
 
                         <!-- Légende des indicateurs -->
-                        <div class="mt-6 p-4 bg-white rounded-lg border shadow-sm" style="border-color: #e6fffe;">
-                            <h5 class="text-sm font-semibold mb-3" style="color: #023535;">Légende des Indicateurs</h5>
+                        <div class="mt-6 p-4 bg-white rounded-lg border shadow-sm" style="border-color: #034a4a;">
+                            <h5 class="text-sm font-semibold mb-3" style="color: var(--admin-color);">Légende des Indicateurs</h5>
                             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                                 <div class="flex items-center">
                                     <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium mr-3">En stock</span>
@@ -471,14 +477,14 @@
                             </div>
                         </div>
                     {% else %}
-                        <div class="text-center py-12 bg-white rounded-lg border shadow-sm" style="border-color: #e6fffe;">
+                        <div class="text-center py-12 bg-white rounded-lg border shadow-sm" style="border-color: #034a4a;">
                             <div class="text-gray-400 text-6xl mb-4">
                                 <i class="fas fa-box-open"></i>
                             </div>
                             <h5 class="text-lg font-medium text-gray-600 mb-3">Aucune variante définie</h5>
                             <p class="text-gray-500 mb-6">Cet article n'a pas encore de variantes (couleur/pointure) configurées.</p>
                             <button type="button" onclick="openVarianteModal()" 
-                                    class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-medium transition-all shadow-md hover:shadow-lg">
+                                    class="text-white px-6 py-3 rounded-lg font-medium transition-all shadow-md hover:shadow-lg" style="background: linear-gradient(to right, var(--admin-gradient-start), var(--admin-gradient-end));">
                                 <i class="fas fa-plus mr-2"></i>Créer la première variante
                             </button>
                         </div>
@@ -495,80 +501,80 @@
             </div>
             
             <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
-                <h3 class="text-lg font-semibold mb-3" style="color: #023535;">Prix de substitution (Upsell)</h3>
+                <h3 class="text-lg font-semibold mb-3" style="color: var(--admin-color);">Prix de substitution (Upsell)</h3>
                 <p class="text-sm text-gray-600 mb-4">Vous pouvez définir jusqu'à 4 prix alternatifs pour cet article</p>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label for="id_prix_upsell_1" class="block text-sm font-semibold mb-2" style="color: #023535;">Prix upsell 1 (DH):</label>
+                        <label for="id_prix_upsell_1" class="block text-sm font-semibold mb-2" style="color: var(--admin-color);">Prix upsell 1 (DH):</label>
                         <input type="number" name="prix_upsell_1" id="id_prix_upsell_1" 
                                value="{{ article.prix_upsell_1|floatformat:"-2"|default:0 }}" 
                                step="0.01" min="0" 
-                               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200" 
+                               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#034a4a] focus:border-transparent transition duration-200" 
                                placeholder="Ex: 349.99">
                     </div>
                     <div>
-                        <label for="id_prix_upsell_2" class="block text-sm font-semibold mb-2" style="color: #023535;">Prix upsell 2 (DH):</label>
+                        <label for="id_prix_upsell_2" class="block text-sm font-semibold mb-2" style="color: var(--admin-color);">Prix upsell 2 (DH):</label>
                         <input type="number" name="prix_upsell_2" id="id_prix_upsell_2" 
                                value="{{ article.prix_upsell_2|floatformat:"-2"|default:0 }}" 
                                step="0.01" min="0" 
-                               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200" 
+                               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#034a4a] focus:border-transparent transition duration-200" 
                                placeholder="Ex: 399.99">
                     </div>
                     <div>
-                        <label for="id_prix_upsell_3" class="block text-sm font-semibold mb-2" style="color: #023535;">Prix upsell 3 (DH):</label>
+                        <label for="id_prix_upsell_3" class="block text-sm font-semibold mb-2" style="color: var(--admin-color);">Prix upsell 3 (DH):</label>
                         <input type="number" name="prix_upsell_3" id="id_prix_upsell_3" 
                                value="{{ article.prix_upsell_3|floatformat:"-2"|default:0 }}" 
                                step="0.01" min="0" 
-                               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200" 
+                               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#034a4a] focus:border-transparent transition duration-200" 
                                placeholder="Ex: 449.99">
                     </div>
                     <div>
-                        <label for="id_prix_upsell_4" class="block text-sm font-semibold mb-2" style="color: #023535;">Prix upsell 4 (DH):</label>
+                        <label for="id_prix_upsell_4" class="block text-sm font-semibold mb-2" style="color: var(--admin-color);">Prix upsell 4 (DH):</label>
                         <input type="number" name="prix_upsell_4" id="id_prix_upsell_4" 
                                value="{{ article.prix_upsell_4|floatformat:"-2"|default:0 }}" 
                                step="0.01" min="0" 
-                               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200" 
+                               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#034a4a] focus:border-transparent transition duration-200" 
                                placeholder="Ex: 499.99">
                     </div>
                 </div>
                 
                 <!-- Section des prix de remise -->
                 <div class="mt-6 pt-4 border-t border-gray-300">
-                    <h4 class="text-lg font-semibold mb-4" style="color: #023535;">Prix de Remise</h4>
+                    <h4 class="text-lg font-semibold mb-4" style="color: var(--admin-color);">Prix de Remise</h4>
                     <p class="text-sm text-gray-600 mb-4">Définissez jusqu'à 4 prix de remise pour cet article</p>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label for="id_prix_remise_1" class="block text-sm font-semibold mb-2" style="color: #023535;">Prix remise 1 (DH):</label>
+                            <label for="id_prix_remise_1" class="block text-sm font-semibold mb-2" style="color: var(--admin-color);">Prix remise 1 (DH):</label>
                             <input type="number" name="prix_remise_1" id="id_prix_remise_1" 
                                    value="{{ article.prix_remise_1|floatformat:"-2"|default:'' }}" 
                                    step="0.01" min="0" 
-                                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200" 
+                                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#034a4a] focus:border-transparent transition duration-200" 
                                    placeholder="Ex: 249.99">
                         </div>
                         <div>
-                            <label for="id_prix_remise_2" class="block text-sm font-semibold mb-2" style="color: #023535;">Prix remise 2 (DH):</label>
+                            <label for="id_prix_remise_2" class="block text-sm font-semibold mb-2" style="color: var(--admin-color);">Prix remise 2 (DH):</label>
                             <input type="number" name="prix_remise_2" id="id_prix_remise_2" 
                                    value="{{ article.prix_remise_2|floatformat:"-2"|default:'' }}" 
                                    step="0.01" min="0" 
-                                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200" 
+                                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#034a4a] focus:border-transparent transition duration-200" 
                                    placeholder="Ex: 229.99">
                         </div>
                         <div>
-                            <label for="id_prix_remise_3" class="block text-sm font-semibold mb-2" style="color: #023535;">Prix remise 3 (DH):</label>
+                            <label for="id_prix_remise_3" class="block text-sm font-semibold mb-2" style="color: var(--admin-color);">Prix remise 3 (DH):</label>
                             <input type="number" name="prix_remise_3" id="id_prix_remise_3" 
                                    value="{{ article.prix_remise_3|floatformat:"-2"|default:'' }}" 
                                    step="0.01" min="0" 
-                                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200" 
+                                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#034a4a] focus:border-transparent transition duration-200" 
                                    placeholder="Ex: 199.99">
                         </div>
                         <div>
-                            <label for="id_prix_remise_4" class="block text-sm font-semibold mb-2" style="color: #023535;">Prix remise 4 (DH):</label>
+                            <label for="id_prix_remise_4" class="block text-sm font-semibold mb-2" style="color: var(--admin-color);">Prix remise 4 (DH):</label>
                             <input type="number" name="prix_remise_4" id="id_prix_remise_4" 
                                    value="{{ article.prix_remise_4|floatformat:"-2"|default:'' }}" 
                                    step="0.01" min="0" 
-                                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200" 
+                                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#034a4a] focus:border-transparent transition duration-200" 
                                    placeholder="Ex: 179.99">
                         </div>
                     </div>
@@ -579,11 +585,11 @@
                  
                     <div class="grid grid-cols-1 md:grid-cols-1 gap-4">
                         <div>
-                            <label for="id_Prix_liquidation" class="block text-sm font-semibold mb-2" style="color: #023535;">Prix de liquidation (DH):</label>
+                            <label for="id_Prix_liquidation" class="block text-sm font-semibold mb-2" style="color: var(--admin-color);">Prix de liquidation (DH):</label>
                             <input type="number" name="Prix_liquidation" id="id_Prix_liquidation" 
                                    value="{{ article.Prix_liquidation|floatformat:"-2"|default:'' }}" 
                                    step="0.01" min="0" 
-                                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200" 
+                                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#034a4a] focus:border-transparent transition duration-200" 
                                    placeholder="Ex: 149.99">
                             <small class="text-gray-600">Prix spécial pour la liquidation</small>
                         </div>
@@ -595,7 +601,7 @@
             <input type="hidden" name="phase" id="id_phase" value="{% if form_data.phase %}{{ form_data.phase }}{% else %}{{ article.phase|default:'EN_COURS' }}{% endif %}">
 
             <div class="flex flex-wrap justify-end gap-3 mt-8">
-                <button type="submit" class="inline-flex items-center text-white px-5 py-3 rounded-lg text-lg font-medium transition-all shadow-md hover:shadow-lg transform hover:scale-105" style="background-color: #023535; hover:background-color: #034a4a;">
+                <button type="submit" class="inline-flex items-center text-white px-5 py-3 rounded-lg text-lg font-medium transition-all shadow-md hover:shadow-lg transform hover:scale-105" style="background-color: var(--admin-color);">
                     <i class="fas fa-save mr-2"></i>Sauvegarder
                 </button>
                 <div class="flex flex-wrap gap-2">
@@ -642,8 +648,8 @@
         <div class="mt-3">
             <div class="modal-header">
                 <div class="flex justify-between items-center">
-                    <h3 class="text-lg font-semibold" style="color: #023535;">
-                        <i class="fas fa-plus-circle mr-2 text-[#66cccc]"></i>
+                    <h3 class="text-lg font-semibold" style="color: var(--admin-color);">
+                        <i class="fas fa-plus-circle mr-2" style="color: #034a4a;"></i>
                         Ajouter une variante
                     </h3>
                     <button onclick="closeVarianteModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
@@ -655,7 +661,7 @@
             <form id="varianteForm" class="space-y-4">
                 <div>
                     <label for="modal_couleur" class="modal-label">Couleur (optionnel):</label>
-                    <select name="couleur" id="modal_couleur" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200">
+                    <select name="couleur" id="modal_couleur" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#034a4a] focus:border-transparent transition duration-200">
                         <option value="">-- Sélectionner une couleur --</option>
                         {% for couleur in couleurs %}
                             <option value="{{ couleur.id }}">{{ couleur.nom }}</option>
@@ -666,7 +672,7 @@
                 
                 <div>
                     <label for="modal_pointure" class="modal-label">Pointure (optionnel):</label>
-                    <select name="pointure" id="modal_pointure" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200">
+                    <select name="pointure" id="modal_pointure" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#034a4a] focus:border-transparent transition duration-200">
                         <option value="">-- Sélectionner une pointure --</option>
                         {% for pointure in pointures %}
                             <option value="{{ pointure.id }}">{{ pointure.pointure }}</option>
@@ -677,7 +683,7 @@
                 
                 <div>
                     <label for="modal_quantite" class="modal-label">Quantité disponible:</label>
-                    <input type="number" name="quantite" id="modal_quantite" min="0" value="0" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200" placeholder="Ex: 10, 25, 50...">
+                    <input type="number" name="quantite" id="modal_quantite" min="0" value="0" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#034a4a] focus:border-transparent transition duration-200" placeholder="Ex: 10, 25, 50...">
                     <small class="help-text">La quantité par défaut est 0</small>
                 </div>
                 
@@ -699,7 +705,7 @@
                     <button type="button" onclick="closeVarianteModal()" class="bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded-lg font-medium transition-colors">
                         Annuler
                     </button>
-                    <button type="button" onclick="addVariante()" class="bg-[#66cccc] hover:bg-[#5bb8b8] text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                    <button type="button" onclick="addVariante()" class="text-white px-4 py-2 rounded-lg font-medium transition-colors" style="background-color: #034a4a;">
                         <i class="fas fa-plus mr-2"></i>Ajouter
                     </button>
                 </div>
@@ -1195,10 +1201,10 @@ document.addEventListener('DOMContentLoaded', function() {
             // 2. Si la couleur n'existe pas, ajouter une nouvelle colonne dans l'en-tête
             if (!couleurHeaderExists && thead) {
                 const newHeader = document.createElement('th');
-                newHeader.className = 'p-3 text-center font-semibold border min-w-24';
-                newHeader.style.borderColor = '#d1d5db';
-                newHeader.style.background = '#66cccc';
-                newHeader.style.color = 'white';
+                newHeader.className = 'p-1 text-center font-semibold border min-w-16';
+                newHeader.style.borderColor = '#e5e7eb';
+                newHeader.style.background = '#f8f9fa';
+                newHeader.style.color = '#374151';
                 newHeader.innerHTML = `
                     <div class="flex flex-col items-center space-y-1">
                         <i class="fas fa-palette text-sm"></i>
@@ -1222,8 +1228,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         
                         // Ajouter une nouvelle cellule pour cette couleur
                         const newCell = document.createElement('td');
-                        newCell.className = 'p-2 text-center border';
-                        newCell.style.borderColor = '#d1d5db';
+                        newCell.className = 'p-1 text-center border';
+                        newCell.style.borderColor = '#e5e7eb';
                         newCell.setAttribute('data-variante-id', variante.id);
                         
                         newCell.innerHTML = `
@@ -1237,7 +1243,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                        name="variante_existante_${variante.id}_quantite" 
                                        value="${quantite}" 
                                        min="0" 
-                                       class="quantite-input w-16 px-2 py-1 border border-gray-300 rounded text-xs text-center focus:ring-1 focus:ring-[#66cccc] focus:border-transparent"
+                                                                        class="quantite-input w-12 px-1 py-0.5 border border-gray-300 rounded text-xs text-center focus:ring-1 focus:ring-[#034a4a] focus:border-transparent"
                                        onchange="marquerVarianteModifiee(${variante.id})"
                                        title="Modifier la quantité">
                                 <span class="text-xs text-gray-500">pcs</span>
@@ -1267,10 +1273,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     // Cellule de la pointure
                     const pointureCell = document.createElement('td');
-                    pointureCell.className = 'p-3 text-center font-semibold border';
-                    pointureCell.style.borderColor = '#d1d5db';
-                    pointureCell.style.background = '#66cccc';
-                    pointureCell.style.color = 'white';
+                    pointureCell.className = 'p-1 text-center font-semibold border';
+                    pointureCell.style.borderColor = '#e5e7eb';
+                    pointureCell.style.background = '#f8f9fa';
+                    pointureCell.style.color = '#374151';
                     pointureCell.textContent = pointureNom;
                     newRow.appendChild(pointureCell);
                     
@@ -1280,17 +1286,17 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (index === 0) return; // Skip la première colonne (pointure)
                         
                         const cell = document.createElement('td');
-                        cell.className = 'p-2 text-center border bg-gray-50';
-                        cell.style.borderColor = '#d1d5db';
+                        cell.className = 'p-1 text-center border bg-gray-50';
+                        cell.style.borderColor = '#e5e7eb';
                         
                         if (header.textContent.trim() === couleurNom) {
                             // Cellule pour la nouvelle variante
-                            cell.className = 'p-2 text-center border';
-                            cell.style.borderColor = '#d1d5db';
+                            cell.className = 'p-1 text-center border';
+                            cell.style.borderColor = '#e5e7eb';
                             cell.setAttribute('data-variante-id', variante.id);
                             
                             cell.innerHTML = `
-                                <div class="flex flex-col items-center space-y-1">
+                                <div class="flex flex-col items-center space-y-0.5">
                                     <!-- Indicateur de statut -->
                                     <span class="inline-block w-3 h-3 rounded-full ${statusClass}" title="${statusText}"></span>
                                     
@@ -1300,7 +1306,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                            name="variante_existante_${variante.id}_quantite" 
                                            value="${quantite}" 
                                            min="0" 
-                                           class="quantite-input w-16 px-2 py-1 border border-gray-300 rounded text-xs text-center focus:ring-1 focus:ring-[#66cccc] focus:border-transparent"
+                                                                        class="quantite-input w-12 px-1 py-0.5 border border-gray-300 rounded text-xs text-center focus:ring-1 focus:ring-[#034a4a] focus:border-transparent"
                                            onchange="marquerVarianteModifiee(${variante.id})"
                                            title="Modifier la quantité">
                                     <span class="text-xs text-gray-500">pcs</span>
@@ -1321,7 +1327,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         } else {
                             // Cellule vide
                             cell.innerHTML = `
-                                <div class="flex flex-col items-center space-y-1">
+                                <div class="flex flex-col items-center space-y-0.5">
                                     <span class="text-gray-400 text-xs">-</span>
                                 </div>
                             `;
