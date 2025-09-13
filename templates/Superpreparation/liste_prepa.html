@@ -1038,7 +1038,7 @@ function finaliserCommande(commandeId) {
             });
             
             // Envoyer la requête AJAX
-            fetch(`/Superpreparation/api/commande/${commandeId}/finaliser/`, {
+            fetch(`/Superpreparation/api/finaliser-preparation/${commandeId}/`, {
                 method: 'POST',
                 headers: {
                     'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
@@ -1486,7 +1486,7 @@ function finaliserCommande(commandeId) {
     // Récupérer le token CSRF
     const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
     
-    fetch(`/operateur-supervision/api/finaliser-preparation/${commandeId}/`, {
+    fetch(`/Superpreparation/api/finaliser-preparation/${commandeId}/`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
