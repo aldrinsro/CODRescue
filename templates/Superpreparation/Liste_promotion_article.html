@@ -4,6 +4,7 @@
 {% block title %}Gestion des Promotions - YZ-CMD{% endblock %}
 
 {% block extra_css %}
+{{ block.super }}
 <style>
     :root {
         --admin-color: #0e1d3d;
@@ -1079,6 +1080,7 @@
 {% endblock %}
 
 {% block extra_js %}
+{{ block.super }}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Animation d'entrée pour les cartes de statistiques

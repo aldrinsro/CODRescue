@@ -85,15 +85,8 @@ def changer_etat_livraison(request, commande_id):
                 details_supplementaires = f"\nLivraison effectuée le : {timezone.now().strftime('%d/%m/%Y à %H:%M')}"
 
             elif nouvel_etat == 'Annulée (SAV)':
-                type_annulation = request.POST.get('type_annulation')
-                if not type_annulation:
-                    messages.error(request, "Le type d'annulation est obligatoire.")
-                    return redirect('operatLogistic:detail_commande', commande_id=commande_id)
-                
                 # Annuler l'envoi
                 envoi.annuler(operateur, commentaire)
-                
-                details_supplementaires = f"\nType d'annulation : {type_annulation}"
                 
 
 
@@ -125,8 +118,34 @@ def _render_sav_list(request, commandes, page_title, page_subtitle):
 
 def _render_sav_list_custom(request, commandes, template_name):
     """Fonction utilitaire pour rendre la liste SAV avec un template personnalisé."""
+    from django.core.paginator import Paginator
+    
+    # Gestion de la pagination avec sélecteur
+    per_page = request.GET.get('per_page', '20')
+    try:
+        per_page = int(per_page)
+        if per_page not in [5, 10, 15, 20, 25, 30, 40, 50]:
+            per_page = 20
+    except (ValueError, TypeError):
+        per_page = 20
+    
+    # Calculer le total avant pagination
+    total_commandes = commandes.count()
+    
+    # Créer le paginateur
+    paginator = Paginator(commandes, per_page)
+    page_number = request.GET.get('page', 1)
+    
+    try:
+        commandes_page = paginator.get_page(page_number)
+    except:
+        commandes_page = paginator.get_page(1)
+    
     context = {
-        'commandes': commandes,
+        'commandes': commandes_page,
+        'paginator': paginator,
+        'per_page': per_page,
+        'total_commandes': total_commandes,
     }
     return render(request, f'operatLogistic/sav/{template_name}', context)
 
@@ -404,44 +423,6 @@ def commandes_livrees_partiellement(request):
 
     return _render_sav_list_custom(request, commandes, 'commandes_livrees_partiellement.html')
 
-@login_required
-def commandes_livrees_avec_changement(request):
-    """Affiche les commandes livrées avec des changements."""
-    commandes = Commande.objects.filter(
-        etats__enum_etat__libelle='Livrée avec changement',
-        etats__date_fin__isnull=True
-    ).select_related('client', 'ville', 'ville__region').prefetch_related(
-        'etats__enum_etat', 'etats__operateur',
-        'envois', 'paniers__article'
-    ).order_by('-etats__date_debut').distinct()
-    
-    # Enrichir les données pour chaque commande
-    for commande in commandes:
-        # Trouver l'état actuel
-        commande.etat_actuel_sav = commande.etats.filter(
-            enum_etat__libelle='Livrée avec changement',
-            date_fin__isnull=True
-        ).first()
-        
-        # Calculer le nombre d'articles dans la commande
-        commande.nombre_articles = commande.paniers.count()
-        
-        # Préparer les articles pour la modale (même logique que pour les livraisons partielles)
-        commande.articles_livres_partiellement = [
-            {
-                'article_id': panier.article.id,
-                'nom': panier.article.nom,
-                'reference': panier.article.reference,
-                'pointure': getattr(panier.article, 'pointure', ''),
-                'couleur': getattr(panier.article, 'couleur', ''),
-                'quantite_livree': panier.quantite,
-                'prix_unitaire': float(getattr(panier.article, 'prix_unitaire', 0.0) or 0.0)
-            }
-            for panier in commande.paniers.all()
-        ]
-        commande.articles_renvoyes = []
-    
-    return _render_sav_list_custom(request, commandes, 'commandes_livrees_avec_changement.html')
 
 
 @login_required
@@ -519,4 +500,55 @@ def commandes_livrees(request):
         ]
         commande.articles_renvoyes = []
     
-    return _render_sav_list_custom(request, commandes, 'commandes_livrees.html') 
+    # Créer le contexte avec les variables supplémentaires
+    context = {
+        'commandes': commandes_list,
+        'current_tab': current_tab,
+        'total_commandes': total_commandes,
+        'commandes_payees': commandes_payees,
+        'commandes_non_payees': commandes_non_payees,
+        # Paramètres de filtre pour le template
+        'filter_start_date': start_date,
+        'filter_end_date': end_date,
+        'filter_preset': preset,
+    }
+    return render(request, 'operatLogistic/sav/commandes_livrees.html', context)
+
+
+@login_required
+@require_POST
+def marquer_commande_payee(request, commande_id):
+    """Marquer une commande comme payée."""
+    try:
+        operateur = Operateur.objects.get(user=request.user, type_operateur='LOGISTIQUE')
+    except Operateur.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Profil d\'opérateur logistique non trouvé.'})
+    
+    try:
+        commande = get_object_or_404(Commande, id=commande_id)
+        
+        # Vérifier que la commande est dans un état qui permet le paiement
+        etats_paiement_autorises = ['Livrée', 'Livrée Partiellement', 'Livrée avec changement']
+        if not commande.etat_actuel or commande.etat_actuel.enum_etat.libelle not in etats_paiement_autorises:
+            return JsonResponse({
+                'success': False, 
+                'error': f'Cette commande ne peut pas être marquée comme payée. État actuel: {commande.etat_actuel.enum_etat.libelle if commande.etat_actuel else "Aucun"}'
+            })
+        
+        # Statut fixe : toujours "Payé"
+        nouveau_statut = 'Payé'
+        
+        with transaction.atomic():
+            # Mettre à jour le statut de paiement
+            ancien_statut = commande.payement
+            commande.payement = nouveau_statut
+            commande.save()
+            return JsonResponse({
+                'success': True,
+                'message': f'Statut de paiement mis à jour vers {nouveau_statut} avec succès',
+                'nouveau_statut': nouveau_statut,
+                'ancien_statut': ancien_statut
+            })
+            
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})

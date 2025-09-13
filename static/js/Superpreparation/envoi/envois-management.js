@@ -570,10 +570,7 @@ function initEnvoisManagement() {
     // Start auto-refresh
     startAutoRefresh();
     
-    // Show welcome message
-    setTimeout(() => {
-        showToast('Bienvenue dans la gestion des envois !', 'info', 3000);
-    }, 1000);
+    // Welcome toast supprimé
     
     // Setup event listeners
     setupEventListeners();

@@ -271,7 +271,7 @@ class Article(models.Model):
     prix_upsell_2 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Prix upsell 2")
     prix_upsell_3 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Prix upsell 3")
     prix_upsell_4 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Prix upsell 4")
-    
+    Prix_liquidation = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Prix liquidation")
     class Meta:
         verbose_name = "Article"
         verbose_name_plural = "Articles"
@@ -320,7 +320,7 @@ class Article(models.Model):
                 })
         
         # Désactiver automatiquement l'upsell pour les articles en liquidation ou en test
-        if self.isUpsell and self.phase in ['LIQUIDATION', 'EN_TEST']:
+        if self.isUpsell and self.phase in ['LIQUIDATION', ]:
             self.isUpsell = False
             
         # Vérifier qu'un article en promotion n'est pas marqué comme upsell

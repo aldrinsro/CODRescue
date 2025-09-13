@@ -6,1201 +6,122 @@
 
 {% block extra_css %}
 {{ block.super }}
+<!-- CSS externe pour les styles Superpreparation -->
+<link rel="stylesheet" href="{% static 'css/Superpreparation/page_cmd_confim.css' %}">
 <style>
-    /* Variables CSS harmonisées avec le thème de supervision */
-    :root {
-        /* Utilisation des couleurs du thème de base Superpreparation */
-        --preparation-primary: #070F2B; /* Couleur principale navy */
-        --preparation-dark: #050A1F;   /* Plus sombre */
-        --preparation-light: #0E1D3D;  /* Plus clair */
-        --preparation-text-light: #E6F0FF; /* Texte très clair */
-        --preparation-border-accent: #1E3A8A; /* Accent (indigo) */
-        --preparation-hover-bg: #0B1733; /* Arrière-plan au survol */
-        --preparation-success: #10b981;
-        --preparation-warning: #f59e0b;
-        --preparation-error: #ef4444;
-        --preparation-info: #3b82f6;
-    }
-
-    @keyframes slideInUp {
-        from {
-            opacity: 0;
-            transform: translateY(30px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-    
-    @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-    }
-    
-    @keyframes pulse {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.05); }
-    }
-    
-    @keyframes bounce {
-        0%, 20%, 53%, 80%, 100% { transform: translate3d(0,0,0); }
-        40%, 43% { transform: translate3d(0, -30px, 0); }
-        70% { transform: translate3d(0, -15px, 0); }
-        90% { transform: translate3d(0, -4px, 0); }
-    }
-    
-    .animate-slideInUp {
-        animation: slideInUp 0.6s ease-out forwards;
-        opacity: 0;
-    }
-    
-    .animate-fadeIn {
-        animation: fadeIn 0.5s ease-out forwards;
-    }
-    
-    .animate-pulse {
-        animation: pulse 2s infinite;
-    }
-    
-    .animate-bounce {
-        animation: bounce 1s;
-    }
-
-    /* Styles harmonisés avec le thème de supervision */
-    .theme-header {
-        background: linear-gradient(135deg, var(--preparation-primary) 0%, var(--preparation-light) 100%);
-        border: 2px solid var(--preparation-border-accent);
-        box-shadow: 0 4px 15px rgba(7, 15, 43, 0.3);
-        border-radius: 16px;
-        padding: 24px;
-    }
-
-    .theme-card {
-        background: white;
-        border: 2px solid var(--preparation-text-light);
-        border-radius: 16px;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-        padding: 24px;
-    }
-
-    .theme-card:hover {
-        border-color: var(--preparation-border-accent);
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-        transform: translateY(-3px);
-    }
-
-    .theme-button-primary {
-        background: linear-gradient(135deg, var(--preparation-primary) 0%, var(--preparation-light) 100%);
-        border: 2px solid var(--preparation-border-accent);
-        color: white;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 15px rgba(7, 15, 43, 0.2);
-        position: relative;
-        overflow: hidden;
-        font-weight: 600;
-        padding: 12px 24px;
-        border-radius: 12px;
-    }
-
-    .theme-button-primary:hover {
-        background: linear-gradient(135deg, var(--preparation-light) 0%, var(--preparation-primary) 100%);
-        border-color: var(--preparation-border-accent);
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(7, 15, 43, 0.3);
-        color: white;
-    }
-
-    .theme-button-primary:active {
-        transform: translateY(0);
-    }
-
-    .theme-button-primary::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-        transition: left 0.5s;
-    }
-
-    .theme-button-primary:hover::before {
-        left: 100%;
-    }
-
-    .theme-button-secondary {
-        background: white;
-        border: 2px solid var(--preparation-text-light);
-        color: var(--preparation-primary);
-        transition: all 0.3s ease;
-        font-weight: 600;
-        padding: 12px 24px;
-        border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    }
-
-    .theme-button-secondary:hover {
-        background: var(--preparation-hover-bg);
-        border-color: var(--preparation-border-accent);
-        transform: translateY(-2px);
-        color: var(--preparation-primary);
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
-    }
-
-    .theme-input {
-        border: 2px solid var(--preparation-text-light);
-        transition: all 0.3s ease;
-        border-radius: 8px;
-        padding: 8px 12px;
-    }
-
-    .theme-input:focus {
-        border-color: var(--preparation-border-accent);
-        box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
-        outline: none;
-    }
-
-    /* Styles spécifiques pour les cartes de statistiques */
-    .stats-card {
-        background: white;
-        border: 2px solid var(--preparation-text-light);
-        border-radius: 16px;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-        position: relative;
-        overflow: hidden;
-        padding: 24px;
-    }
-
-    .stats-card:hover {
-        border-color: var(--preparation-border-accent);
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-        transform: translateY(-5px);
-    }
-
-    .stats-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 3px;
-        background: linear-gradient(90deg, var(--preparation-primary), var(--preparation-light));
-        transform: scaleX(0);
-        transition: transform 0.3s ease;
-    }
-
-    .stats-card:hover::before {
-        transform: scaleX(1);
-    }
-
-    /* Styles pour les icônes des statistiques */
-    .stats-icon {
-        background: linear-gradient(135deg, var(--preparation-primary) 0%, var(--preparation-light) 100%);
-        color: white;
-        border-radius: 50%;
-        padding: 16px;
-        transition: all 0.3s ease;
-        position: relative;
-        width: 60px;
-        height: 60px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .stats-card:hover .stats-icon {
-        background: linear-gradient(135deg, var(--preparation-light) 0%, var(--preparation-primary) 100%);
-        transform: scale(1.1) rotate(5deg);
-    }
-
-    /* Styles pour les sections d'information */
-    .info-section {
-        background: white;
-        border: 2px solid var(--preparation-text-light);
-        border-radius: 16px;
-        padding: 24px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-        transition: all 0.3s ease;
-    }
-
-    .info-section:hover {
-        border-color: var(--preparation-border-accent);
-        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-    }
-
-    /* Toast notifications */
-    .toast-container {
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        z-index: 9999;
-        pointer-events: none;
-    }
-
-    .toast {
-        background: white;
-        border: 2px solid var(--preparation-border-accent);
-        border-radius: 12px;
-        padding: 16px 20px;
-        margin-bottom: 10px;
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
-        transform: translateX(100%);
-        transition: all 0.3s ease;
-        pointer-events: auto;
-        max-width: 400px;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .toast.show {
-        transform: translateX(0);
-    }
-
-    .toast.success {
-        border-left: 4px solid var(--preparation-success);
-    }
-
-    .toast.error {
-        border-left: 4px solid var(--preparation-error);
-    }
-
-    .toast.info {
-        border-left: 4px solid var(--preparation-info);
-    }
-
-    .toast.warning {
-        border-left: 4px solid var(--preparation-warning);
-    }
-
-    .toast::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 2px;
-        background: linear-gradient(90deg, var(--preparation-primary), var(--preparation-light));
-        transform: scaleX(0);
-        transition: transform 3s linear;
-    }
-
-    .toast.show::before {
-        transform: scaleX(1);
-    }
-
-    /* Loading spinner */
-    .loading-spinner {
-        display: inline-block;
-        width: 20px;
-        height: 20px;
-        border: 3px solid rgba(255,255,255,.3);
-        border-radius: 50%;
-        border-top-color: #fff;
-        animation: spin 1s ease-in-out infinite;
-    }
-
-    @keyframes spin {
-        to { transform: rotate(360deg); }
-    }
-
-    /* Tooltip styles */
-    .tooltip {
-        position: relative;
-        cursor: help;
-    }
-
-    .tooltip::after {
-        content: attr(data-tooltip);
-        position: absolute;
-        bottom: 125%;
-        left: 50%;
-        transform: translateX(-50%);
-        background: rgba(0,0,0,0.8);
-        color: white;
-        padding: 8px 12px;
-        border-radius: 6px;
-        font-size: 12px;
-        white-space: nowrap;
-        opacity: 0;
-        visibility: hidden;
-        transition: all 0.3s ease;
-        z-index: 1000;
-    }
-
-    .tooltip::before {
-        content: '';
-        position: absolute;
-        bottom: 125%;
-        left: 50%;
-        transform: translateX(-50%);
-        border: 5px solid transparent;
-        border-top-color: rgba(0,0,0,0.8);
-        opacity: 0;
-        visibility: hidden;
-        transition: all 0.3s ease;
-        z-index: 1000;
-    }
-
-    .tooltip:hover::after,
-    .tooltip:hover::before {
-        opacity: 1;
-        visibility: visible;
-        bottom: 135%;
-    }
-
-    /* Progress bar for operations */
-    .progress-bar {
-        width: 100%;
-        height: 4px;
-        background: #e5e7eb;
-        border-radius: 2px;
-        overflow: hidden;
-        margin-top: 8px;
-    }
-
-    .progress-fill {
-        height: 100%;
-        background: linear-gradient(90deg, var(--preparation-primary), var(--preparation-light));
-        width: 0%;
-        transition: width 0.3s ease;
-    }
-
-    /* Empty state improvements */
-    .empty-state {
-        text-align: center;
-        padding: 60px 20px;
-        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-        border-radius: 16px;
-        border: 2px dashed var(--preparation-text-light);
-    }
-
-    .empty-state-icon {
-        font-size: 4rem;
-        color: var(--preparation-text-light);
-        margin-bottom: 20px;
-        animation: pulse 2s infinite;
-    }
-
-    /* Responsive improvements */
-    @media (max-width: 768px) {
-        .stats-card {
-            margin-bottom: 16px;
-        }
-        
-        .toast {
-            max-width: calc(100vw - 40px);
-            right: 0;
-        }
-    }
-
-    /* Optimisations d'espacement pour éviter la compression */
-    .main-content {
-        padding: 1rem;
-        min-height: 100vh;
-    }
-
-    .page-header {
-        margin-bottom: 1.5rem;
-        padding: 1.5rem;
-    }
-
-    .stats-card {
-        padding: 1.5rem;
-        margin-bottom: 1rem;
-    }
-
-    .info-section {
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
-    }
-
-    .search-section {
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
-    }
-
-    .table-container {
-        margin-bottom: 1.5rem;
-    }
-
-    .table-cell {
-        padding: 12px 16px;
-        font-size: 0.875rem;
-    }
-
-    /* Réduction de la taille des icônes pour économiser l'espace */
-    .stats-icon {
-        width: 50px;
-        height: 50px;
-        padding: 12px;
-    }
-
-    .info-icon {
-        width: 40px;
-        height: 40px;
-        font-size: 1rem;
-    }
-
-    /* Optimisation des marges et paddings */
-    .section-title {
-        font-size: 1.25rem;
-        margin-bottom: 1rem;
-    }
-
-    .info-item {
-        padding: 12px;
-        gap: 10px;
-    }
-
-    /* Réduction de la taille des badges */
-    .status-badge {
-        padding: 3px 8px;
-        font-size: 0.75rem;
-    }
-
-    .etat-badge {
-        padding: 4px 8px;
-        font-size: 0.7rem;
-    }
-
-    /* Optimisation des boutons d'action */
-    .action-button {
-        padding: 6px 12px;
-        font-size: 0.8rem;
-    }
-
-    /* Réduction de l'espacement des grilles */
-    .grid {
-        gap: 1rem;
-    }
-
-    /* Optimisation pour les écrans moyens */
-    @media (min-width: 769px) and (max-width: 1200px) {
-        .main-content {
-            padding: 1.5rem;
-        }
-        
-        .page-header {
-            padding: 1.5rem;
-        }
-        
-        .stats-card {
-            padding: 1.25rem;
-        }
-        
-        .info-section {
-            padding: 1.25rem;
-        }
-    }
-
-    /* Optimisation pour les grands écrans */
-    @media (min-width: 1201px) {
-        .main-content {
-            padding: 1.5rem;
-        }
-    }
-
-    /* Optimisations supplémentaires pour l'espace */
-    .table-container {
-        max-height: calc(100vh - 400px);
-        overflow-y: auto;
-    }
-
-    .table-container table {
-        min-width: 100%;
-    }
-
-    /* Réduction des marges pour les éléments de pagination */
-    .pagination {
-        margin-top: 1rem;
-        margin-bottom: 1rem;
-    }
-
-    /* Optimisation des modales pour qu'elles prennent moins d'espace */
-    .modal-content {
-        max-height: 90vh;
-        overflow-y: auto;
-    }
-
-    /* Réduction de l'espacement des éléments de formulaire */
-    .form-group {
-        margin-bottom: 0.75rem;
-    }
-
-    /* Optimisation des tooltips pour qu'ils ne prennent pas trop d'espace */
-    .tooltip::after {
-        max-width: 200px;
-        white-space: normal;
-        word-wrap: break-word;
-    }
-
-    /* Améliorations spécifiques pour la visibilité */
-    .page-header {
-        background: linear-gradient(135deg, var(--preparation-primary) 0%, var(--preparation-light) 100%);
-        color: white;
-        border: 2px solid var(--preparation-border-accent);
-        border-radius: 16px;
-        padding: 24px;
-        box-shadow: 0 4px 15px rgba(7, 15, 43, 0.3);
-        margin-bottom: 32px;
-    }
-
-    .section-title {
-        color: var(--preparation-primary);
-        font-size: 1.5rem;
-        font-weight: bold;
-        margin-bottom: 16px;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-    }
-
-    .status-badge {
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-size: 0.875rem;
-        font-weight: 600;
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-    }
-
-    .status-badge.confirmee {
-        background: #dcfce7;
-        color: #166534;
-        border: 1px solid #bbf7d0;
-    }
-
-    .status-badge.en-preparation {
-        background: #dbeafe;
-        color: #1e40af;
-        border: 1px solid #bfdbfe;
-    }
-
-    .status-badge.terminee {
-        background: #f0f9ff;
-        color: #0369a1;
-        border: 1px solid #bae6fd;
-    }
-
-    .info-item {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 16px;
-        background: #f8fafc;
-        border-radius: 12px;
-        border: 1px solid #e2e8f0;
-        transition: all 0.3s ease;
-    }
-
-    .info-item:hover {
-        background: #f1f5f9;
-        border-color: var(--preparation-border-accent);
-        transform: translateY(-2px);
-    }
-
-    .info-icon {
-        width: 48px;
-        height: 48px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.25rem;
-        color: white;
-    }
-
-    .info-icon.blue {
-        background: linear-gradient(135deg, var(--preparation-primary) 0%, var(--preparation-light) 100%);
-    }
-
-    .info-icon.green {
-        background: linear-gradient(135deg, #059669 0%, var(--preparation-success) 100%);
-    }
-
-    .info-icon.purple {
-        background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%);
-    }
-
-    .info-icon.orange {
-        background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
-    }
-
-    /* Styles pour le tableau */
-    .table-container {
-        background: white;
-        border: 2px solid var(--preparation-text-light);
-        border-radius: 16px;
-        overflow: hidden;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-        transition: all 0.3s ease;
-    }
-
-    .table-container:hover {
-        border-color: var(--preparation-border-accent);
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-    }
-
-    .table-header {
-        background: linear-gradient(135deg, var(--preparation-primary) 0%, var(--preparation-light) 100%);
-        color: white;
-    }
-
-    .table-row {
-        transition: all 0.3s ease;
-        border-bottom: 1px solid #e5e7eb;
-    }
-
-    .table-row:hover {
-        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-        transform: translateX(4px);
-    }
-
-    .table-cell {
-        padding: 16px;
-        vertical-align: middle;
-    }
-
-    /* Styles pour les boutons d'action */
-    .action-button {
-        background: linear-gradient(135deg, var(--preparation-primary) 0%, var(--preparation-light) 100%);
-        border: 2px solid var(--preparation-border-accent);
-        color: white;
-        transition: all 0.3s ease;
-        font-weight: 600;
-        padding: 8px 16px;
-        border-radius: 8px;
-        font-size: 0.875rem;
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-    }
-
-    .action-button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(7, 15, 43, 0.3);
-        color: white;
-    }
-
-    /* Styles pour les badges d'état */
-    .etat-badge {
-        padding: 6px 12px;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
-    .etat-badge.confirmee {
-        background: #dcfce7;
-        color: #166534;
-        border: 1px solid #bbf7d0;
-    }
-
-    .etat-badge.en-preparation {
-        background: #dbeafe;
-        color: #1e40af;
-        border: 1px solid #bfdbfe;
-    }
-
-    .etat-badge.terminee {
-        background: #f0f9ff;
-        color: #0369a1;
-        border: 1px solid #bae6fd;
-    }
-
-    /* Styles pour la barre de progression d'impression multiple */
-    #printProgressContainer {
-        background: rgba(255, 255, 255, 0.9);
-        border: 1px solid #e5e7eb;
-        border-radius: 8px;
-        padding: 12px;
-        backdrop-filter: blur(10px);
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    }
-
-    #printProgressBar {
-        transition: width 0.5s ease-in-out;
-        background: linear-gradient(90deg, var(--preparation-primary), var(--preparation-light));
-        box-shadow: 0 2px 4px rgba(7, 15, 43, 0.3);
-    }
-
-    #printProgressText {
-        font-weight: 500;
-        color: #374151;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-    }
-
-    /* Animation pour le bouton d'impression multiple */
-    #bulkPrintBtn {
-        position: relative;
-        overflow: hidden;
-    }
-
-    #bulkPrintBtn::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-        transition: left 0.5s;
-    }
-
-    #bulkPrintBtn:hover::before {
-        left: 100%;
-    }
-
-    #bulkPrintBtn:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-        transform: none;
-    }
-
-    /* Style pour la modale de succès */
-    .success-modal {
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: white;
-        padding: 2rem;
-        border-radius: 1rem;
-        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-        z-index: 50;
-        max-width: 32rem;
-        width: 90%;
-        border: 3px solid var(--preparation-border-accent);
-    }
-
-    .success-modal-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background-color: rgba(0, 0, 0, 0.6);
-        backdrop-filter: blur(8px);
-        z-index: 40;
-    }
-
-    .success-icon {
-        width: 3rem;
-        height: 3rem;
-        margin: 0 auto 1rem;
-        background: linear-gradient(135deg, var(--preparation-primary) 0%, var(--preparation-light) 100%);
-        border-radius: 9999px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-    }
-
-    /* Styles pour les champs de recherche */
-    .search-section {
-        background: white;
-        border: 2px solid var(--preparation-text-light);
-        border-radius: 16px;
-        padding: 24px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-        transition: all 0.3s ease;
-    }
-
-    .search-section:hover {
-        border-color: var(--preparation-border-accent);
-        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-    }
-
-    /* Styles pour la pagination */
-    .theme-pagination-controls {
-        background: white;
-        border: 2px solid var(--preparation-text-light);
-        border-radius: 12px;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        transition: all 0.3s ease;
-    }
-
-    .theme-pagination-controls:hover {
-        border-color: var(--preparation-border-accent);
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
-    }
-
-    /* Styles pour les modales */
-    .theme-modal {
-        border: 3px solid var(--preparation-primary);
-        box-shadow: 0 25px 50px rgba(7, 15, 43, 0.3);
-        border-radius: 16px;
-    }
-
-    .theme-modal-header {
-        border-bottom: 2px solid var(--preparation-border-accent);
-        background: linear-gradient(135deg, var(--preparation-text-light), var(--preparation-hover-bg));
-        border-radius: 12px 12px 0 0;
-        padding: 20px;
-    }
-
-    .theme-modal-footer {
-        border-top: 2px solid var(--preparation-border-accent);
-        background: linear-gradient(135deg, var(--preparation-text-light), var(--preparation-hover-bg));
-        border-radius: 0 0 12px 12px;
-        padding: 20px;
-    }
-
-    /* CORRECTIONS SPÉCIFIQUES POUR LE DÉBORDEMENT DU TABLEAU */
-    .main-content {
-        width: 100%;
-        max-width: 100%;
-        overflow-x: hidden;
-    }
-
-    /* Optimisation du tableau pour éviter le débordement */
-    .table-responsive {
-        width: 100%;
-            overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-    }
-
-    .table-responsive table {
-        width: 100%;
-        min-width: 1200px; /* Largeur minimale pour éviter la compression */
-        table-layout: fixed;
-    }
-
-    /* Optimisation des colonnes du tableau */
-    .table-responsive th,
-    .table-responsive td {
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 150px; /* Largeur maximale par colonne */
-    }
-
-    /* Colonnes spécifiques avec largeurs optimisées */
-    .col-checkbox { width: 50px; }
-    .col-id { width: 80px; }
-    .col-externe { width: 100px; }
-    .col-client { width: 180px; }
-    .col-phone { width: 120px; }
-    .col-ville { width: 150px; }
-    .col-total { width: 100px; }
-    .col-date { width: 120px; }
-    .col-operateur { width: 140px; }
-    .col-etat { width: 120px; }
-    .col-actions { width: 100px; }
-
-    /* Optimisation pour les écrans moyens */
-    @media (max-width: 1400px) {
-        .table-responsive table {
-            min-width: 1000px;
-        }
-        
-        .col-client { width: 150px; }
-        .col-ville { width: 120px; }
-        .col-operateur { width: 120px; }
-    }
-
-    /* Optimisation pour les petits écrans */
-    @media (max-width: 1200px) {
-        .table-responsive table {
-            min-width: 900px;
-        }
-        
-        .col-client { width: 120px; }
-        .col-ville { width: 100px; }
-        .col-operateur { width: 100px; }
-        .col-etat { width: 100px; }
-    }
-
-    /* Optimisation pour les très petits écrans */
-    @media (max-width: 768px) {
-        .table-responsive table {
-            min-width: 800px;
-        }
-        
-        .col-client { width: 100px; }
-        .col-ville { width: 80px; }
-        .col-operateur { width: 80px; }
-        .col-etat { width: 80px; }
-    }
-
-    /* Amélioration du scroll horizontal */
-    .table-responsive::-webkit-scrollbar {
-        height: 8px;
-    }
-
-    .table-responsive::-webkit-scrollbar-track {
-        background: #f1f1f1;
-        border-radius: 4px;
-    }
-
-    .table-responsive::-webkit-scrollbar-thumb {
-        background: var(--preparation-primary);
-        border-radius: 4px;
-    }
-
-    .table-responsive::-webkit-scrollbar-thumb:hover {
-        background: var(--preparation-light);
-    }
-
-    /* Optimisation de l'espacement général */
-    .page-header {
-        padding: 1rem;
-        margin-bottom: 1rem;
-    }
-
-    .stats-card {
-        padding: 1rem;
-        margin-bottom: 0.75rem;
-    }
-
-    .info-section {
-        padding: 1rem;
-        margin-bottom: 1rem;
-    }
-
-    /* Réduction des marges pour les boutons d'action */
-    .action-buttons {
-        margin-bottom: 1rem;
-    }
-
-    /* Optimisation des contrôles de pagination */
-    .pagination-controls {
-        padding: 0.75rem;
-        margin-bottom: 1rem;
-    }
-
-    /* SOLUTION PROFESSIONNELLE POUR DASHBOARD RESPONSIVE */
-    
-    /* Conteneur principal avec calcul automatique de l'espace */
-    .main-content {
-        width: 100%;
-        max-width: 100%;
-        padding: 0.75rem;
-        overflow-x: hidden;
-        box-sizing: border-box;
-    }
-
-    /* Optimisation générale de l'espacement */
-    .page-header {
-        padding: 1rem;
-        margin-bottom: 1rem;
-    }
-
-    .stats-card {
-        padding: 0.75rem;
-        margin-bottom: 0.5rem;
-    }
-
-    .info-section {
-        padding: 1rem;
-        margin-bottom: 1rem;
-    }
-
-    .action-buttons {
-        margin-bottom: 1rem;
-    }
-
-    .pagination-controls {
-        padding: 0.75rem;
-        margin-bottom: 1rem;
-    }
-
-    /* Tableau responsive professionnel */
-    .table-responsive {
-        width: 100%;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        border-radius: 0.75rem;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    }
-
-    .table-responsive table {
-        width: 100%;
-        min-width: 100%;
-        border-collapse: collapse;
-        font-size: 0.875rem;
-    }
-
-    .table-responsive th,
-    .table-responsive td {
-        padding: 0.5rem 0.75rem;
-        text-align: left;
-        border-bottom: 1px solid #e5e7eb;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 200px;
-    }
-
-    /* Largeurs de colonnes adaptatives */
-    .table-responsive th:nth-child(1), .table-responsive td:nth-child(1) { width: 40px; }  /* Checkbox */
-    .table-responsive th:nth-child(2), .table-responsive td:nth-child(2) { width: 70px; }  /* ID YZ */
-    .table-responsive th:nth-child(3), .table-responsive td:nth-child(3) { width: 90px; }  /* N° Externe */
-    .table-responsive th:nth-child(4), .table-responsive td:nth-child(4) { width: 140px; } /* Client */
-    .table-responsive th:nth-child(5), .table-responsive td:nth-child(5) { width: 100px; } /* Téléphone */
-    .table-responsive th:nth-child(6), .table-responsive td:nth-child(6) { width: 120px; } /* Ville & Région */
-    .table-responsive th:nth-child(7), .table-responsive td:nth-child(7) { width: 80px; }  /* Total */
-    .table-responsive th:nth-child(8), .table-responsive td:nth-child(8) { width: 100px; } /* Date Confirmation */
-    .table-responsive th:nth-child(9), .table-responsive td:nth-child(9) { width: 120px; } /* Opérateur Conf. */
-    .table-responsive th:nth-child(10), .table-responsive td:nth-child(10) { width: 100px; } /* État Préparation */
-    .table-responsive th:nth-child(11), .table-responsive td:nth-child(11) { width: 120px; }  /* Actions */
-
-    /* Scrollbar personnalisée */
-    .table-responsive::-webkit-scrollbar {
-        height: 6px;
-    }
-
-    .table-responsive::-webkit-scrollbar-track {
-        background: #f1f1f1;
-        border-radius: 3px;
-    }
-
-    .table-responsive::-webkit-scrollbar-thumb {
-        background: var(--preparation-primary);
-        border-radius: 3px;
-    }
-
-    .table-responsive::-webkit-scrollbar-thumb:hover {
-        background: var(--preparation-light);
-    }
-
-    /* Responsive adaptatif professionnel */
-    @media (max-width: 1400px) {
-        .table-responsive th,
-        .table-responsive td {
-            padding: 0.4rem 0.6rem;
-            font-size: 0.8rem;
-        }
-        
-        .table-responsive th:nth-child(4), .table-responsive td:nth-child(4) { width: 120px; }
-        .table-responsive th:nth-child(6), .table-responsive td:nth-child(6) { width: 100px; }
-        .table-responsive th:nth-child(9), .table-responsive td:nth-child(9) { width: 100px; }
-        .table-responsive th:nth-child(11), .table-responsive td:nth-child(11) { width: 110px; }  /* Actions */
-    }
-
-    @media (max-width: 1200px) {
-        .table-responsive th,
-        .table-responsive td {
-            padding: 0.35rem 0.5rem;
-            font-size: 0.75rem;
-        }
-        
-        .table-responsive th:nth-child(4), .table-responsive td:nth-child(4) { width: 100px; }
-        .table-responsive th:nth-child(5), .table-responsive td:nth-child(5) { width: 80px; }
-        .table-responsive th:nth-child(6), .table-responsive td:nth-child(6) { width: 80px; }
-        .table-responsive th:nth-child(8), .table-responsive td:nth-child(8) { width: 80px; }
-        .table-responsive th:nth-child(9), .table-responsive td:nth-child(9) { width: 80px; }
-        .table-responsive th:nth-child(10), .table-responsive td:nth-child(10) { width: 80px; }
-        .table-responsive th:nth-child(11), .table-responsive td:nth-child(11) { width: 100px; }  /* Actions */
-    }
-
-    @media (max-width: 768px) {
-        .main-content {
-            padding: 0.5rem;
-        }
-        
-        .page-header {
-            padding: 0.75rem;
-            margin-bottom: 0.75rem;
-        }
-        
-        .stats-card {
-            padding: 0.5rem;
-            margin-bottom: 0.5rem;
-        }
-        
-        .info-section {
-            padding: 0.75rem;
-            margin-bottom: 0.75rem;
-        }
-        
-        .table-responsive th,
-        .table-responsive td {
-            padding: 0.3rem 0.4rem;
-            font-size: 0.7rem;
-        }
-    }
-
-    /* Optimisation des éléments compacts */
-    .stats-icon {
-        width: 40px;
-        height: 40px;
-        padding: 0.5rem;
-        font-size: 1rem;
-    }
-
-    .info-icon {
-        width: 35px;
-        height: 35px;
-            font-size: 0.875rem;
-        }
-
-    .section-title {
-        font-size: 1.25rem;
-        margin-bottom: 0.75rem;
-    }
-
-    .info-item {
-        padding: 0.75rem;
-        gap: 0.5rem;
-    }
-
-    .status-badge {
-        padding: 0.25rem 0.5rem;
-        font-size: 0.7rem;
-    }
-
-    .etat-badge {
-        padding: 0.25rem 0.5rem;
-        font-size: 0.65rem;
-    }
-
-    .action-button {
-        padding: 0.4rem 0.8rem;
-        font-size: 0.75rem;
-    }
-
-    /* Optimisation spécifique pour la colonne Actions */
-    .table-responsive th:nth-child(11),
-    .table-responsive td:nth-child(11) {
-        padding: 0.5rem 1rem;
-        text-align: center;
-    }
-
-    .table-responsive td:nth-child(11) .action-button {
-        margin: 0 0.25rem;
-        min-width: 80px;
-    }
-
-    /* Espacement des boutons d'action */
-    .action-buttons-container {
-        display: flex;
-        gap: 0.5rem;
-        justify-content: center;
-        align-items: center;
-        flex-wrap: wrap;
-    }
+/* Responsive admin-like: masquer/afficher des colonnes par breakpoint */
+#cmdTable.compact-initialized th, #cmdTable.compact-initialized td { padding: 6px 8px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
+.compact-page #cmdTable { font-size: 12px; }
+.compact-page #cmdTable th:nth-child(1), .compact-page #cmdTable td:nth-child(1) { width: 36px; min-width: 36px; }  /* Select */
+.compact-page #cmdTable th:nth-child(2), .compact-page #cmdTable td:nth-child(2) { width: 90px; min-width: 90px; }   /* Numéro */
+.compact-page #cmdTable th:nth-child(3), .compact-page #cmdTable td:nth-child(3) { width: 100px; min-width: 100px; } /* N° Ext. */
+.compact-page #cmdTable th:nth-child(4), .compact-page #cmdTable td:nth-child(4) { width: 160px; min-width: 160px; } /* Client */
+.compact-page #cmdTable th:nth-child(5), .compact-page #cmdTable td:nth-child(5) { width: 110px; min-width: 110px; } /* Téléphone */
+.compact-page #cmdTable th:nth-child(6), .compact-page #cmdTable td:nth-child(6) { width: 140px; min-width: 140px; } /* Ville & Région */
+.compact-page #cmdTable th:nth-child(7), .compact-page #cmdTable td:nth-child(7) { width: 90px; min-width: 90px; }  /* Total */
+.compact-page #cmdTable th:nth-child(8), .compact-page #cmdTable td:nth-child(8) { width: 110px; min-width: 110px; } /* Date conf. */
+.compact-page #cmdTable th:nth-child(9), .compact-page #cmdTable td:nth-child(9) { width: 120px; min-width: 120px; } /* Op. Conf. */
+.compact-page #cmdTable th:nth-child(10), .compact-page #cmdTable td:nth-child(10) { width: 100px; min-width: 100px; } /* Prépa */
+.compact-page #cmdTable th:nth-child(11), .compact-page #cmdTable td:nth-child(11) { width: 110px; min-width: 110px; } /* Actions */
+#cmdTable thead tr > th:nth-child(3),
+#cmdTable thead tr > th:nth-child(5),
+#cmdTable thead tr > th:nth-child(6),
+#cmdTable thead tr > th:nth-child(8),
+#cmdTable thead tr > th:nth-child(9),
+#cmdTable thead tr > th:nth-child(10),
+#cmdTable tbody tr > td:nth-child(3),
+#cmdTable tbody tr > td:nth-child(5),
+#cmdTable tbody tr > td:nth-child(6),
+#cmdTable tbody tr > td:nth-child(8),
+#cmdTable tbody tr > td:nth-child(9),
+#cmdTable tbody tr > td:nth-child(10) {
+    display: none;
+}
+@media (min-width: 768px) { /* md */
+    #cmdTable thead tr > th:nth-child(3),
+    #cmdTable thead tr > th:nth-child(5),
+    #cmdTable tbody tr > td:nth-child(3),
+    #cmdTable tbody tr > td:nth-child(5) {
+        display: table-cell;
+    }
+}
+@media (min-width: 1024px) { /* lg */
+    #cmdTable thead tr > th:nth-child(6),
+    #cmdTable tbody tr > td:nth-child(6) {
+        display: table-cell;
+    }
+}
+@media (min-width: 1280px) { /* xl */
+    #cmdTable thead tr > th:nth-child(8),
+    #cmdTable thead tr > th:nth-child(9),
+    #cmdTable thead tr > th:nth-child(10),
+    #cmdTable tbody tr > td:nth-child(8),
+    #cmdTable tbody tr > td:nth-child(9),
+    #cmdTable tbody tr > td:nth-child(10) {
+        display: table-cell;
+    }
+}
+
+/* Affinage compact du tableau (espaces lignes/colonnes réduits) */
+#cmdTable th, #cmdTable td { padding: 6px 8px !important; line-height: 1.2; }
+#cmdTable th { font-size: 0.75rem; }
+#cmdTable td { font-size: 0.75rem; }
+#cmdTable .action-button { padding: 4px 8px; font-size: 0.75rem; }
+#cmdTable .status-badge, #cmdTable .etat-badge { padding: 2px 6px; font-size: 0.65rem; }
+@media (max-width: 1024px){
+    #cmdTable th, #cmdTable td { padding: 4px 6px !important; font-size: 0.7rem; }
+}
+
+/* Cartes statistiques (design unifié envois) */
+.stats-card {
+    background: white;
+    border: 2px solid var(--preparation-text-light);
+    border-radius: 16px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    position: relative;
+    overflow: hidden;
+    padding: 24px;
+}
+.stats-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--preparation-primary), var(--preparation-light));
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+.stats-card:hover {
+    border-color: var(--preparation-border-accent);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    transform: translateY(-5px);
+}
+.stats-card:hover::before { transform: scaleX(1); }
+
+.stats-icon {
+    background: linear-gradient(135deg, var(--preparation-primary) 0%, var(--preparation-light) 100%);
+    color: white;
+    border-radius: 50%;
+    width: 60px; height: 60px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.3s ease;
+}
+.stats-card:hover .stats-icon {
+    background: linear-gradient(135deg, var(--preparation-light) 0%, var(--preparation-primary) 100%);
+    transform: scale(1.1);
+}
 </style>
 {% endblock %}
 
 {% block content %}
 {% csrf_token %}
-<div class="main-content transition-all duration-300" id="mainContent">
+<div class="main-content transition-all duration-300 max-w-full 2xl:max-w-[1600px] mx-auto px-3 sm:px-4 lg:px-6 compact-page" id="mainContent">
     <!-- Toast notifications container -->
     <div class="toast-container" id="toastContainer"></div>
 
     <!-- En-tête de la page -->
-    <div class="page-header">
+    <div class="page-header py-4 transition-all duration-300" id="pageHeader">
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center">
             <div>
                 <h1 class="text-3xl font-bold flex items-center mb-2">
@@ -1222,65 +143,24 @@
         </div>
     </div>
 
-    <!-- Statistiques -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-        <!-- Aujourd'hui -->
-        <div class="stats-card group rounded-xl shadow-lg p-4 transition-all duration-300 hover:shadow-2xl border animate-slideInUp" style="animation-delay: 0.1s;">
-                <div class="flex items-center">
-                <div class="stats-icon group-hover:scale-110 transition-all duration-300">
-                        <i class="fas fa-calendar-day text-xl"></i>
-            </div>
-                    <div class="ml-3">
-                    <p class="text-xs font-medium text-gray-600">Aujourd'hui</p>
-                    <p class="text-2xl font-bold text-gray-900 group-hover:text-green-600 transition-colors">{{ confirmees_aujourd_hui|default:0 }}</p>
-            </div>
-        </div>
-            </div>
-        <!-- Cette semaine -->
-        <div class="stats-card group rounded-xl shadow-lg p-4 transition-all duration-300 hover:shadow-2xl border animate-slideInUp" style="animation-delay: 0.2s;">
-                <div class="flex items-center">
-                <div class="stats-icon group-hover:scale-110 transition-all duration-300">
-                        <i class="fas fa-calendar-week text-xl"></i>
-            </div>
-                    <div class="ml-3">
-                    <p class="text-xs font-medium text-gray-600">Cette semaine</p>
-                    <p class="text-2xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">{{ confirmees_semaine|default:0 }}</p>
-        </div>
-            </div>
-        </div>
-        <!-- Ce mois -->
-        <div class="stats-card group rounded-xl shadow-lg p-4 transition-all duration-300 hover:shadow-2xl border animate-slideInUp" style="animation-delay: 0.3s;">
-                <div class="flex items-center">
-                <div class="stats-icon group-hover:scale-110 transition-all duration-300">
-                        <i class="fas fa-calendar-alt text-xl"></i>
-                    </div>
-                    <div class="ml-3">
-                    <p class="text-xs font-medium text-gray-600">Ce mois</p>
-                    <p class="text-2xl font-bold text-gray-900 group-hover:text-purple-600 transition-colors">{{ confirmees_mois|default:0 }}</p>
-                </div>
-            </div>
-        </div>
-        <!-- Total -->
-        <div class="stats-card group rounded-xl shadow-lg p-4 transition-all duration-300 hover:shadow-2xl border animate-slideInUp" style="animation-delay: 0.4s;">
-                <div class="flex items-center">
-                <div class="stats-icon group-hover:scale-110 transition-all duration-300">
-                    <i class="fas fa-check-double text-xl"></i>
-                    </div>
-                    <div class="ml-3">
-                    <p class="text-xs font-medium text-gray-600">Total Confirmées</p>
-                    <p class="text-2xl font-bold text-gray-900 group-hover:text-yellow-600 transition-colors">{{ total_confirmees|default:0 }}</p>
-                </div>
-            </div>
-            </div>
-        </div>
+    <!-- Statistiques (composant unifié) -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        {% include 'Superpreparation/includes/stats-card.html' with icon='fa-calendar-day' label="Aujourd'hui" value=confirmees_aujourd_hui|default:0 delay=0.1 %}
+        {% include 'Superpreparation/includes/stats-card.html' with icon='fa-calendar-week' label='Cette semaine' value=confirmees_semaine|default:0 delay=0.2 %}
+        {% include 'Superpreparation/includes/stats-card.html' with icon='fa-calendar-alt' label='Ce mois' value=confirmees_mois|default:0 delay=0.3 %}
+        {% include 'Superpreparation/includes/stats-card.html' with icon='fa-check-double' label='Total Confirmées' value=total_confirmees|default:0 delay=0.4 %}
+    </div>
 
         <!-- Section d'informations -->
     <div class="info-section mb-4">
-        <h2 class="section-title">
+        <h2 class="section-title flex items-center justify-between cursor-pointer select-none" id="infoSectionToggle" aria-expanded="true">
+            <span class="flex items-center">
             <i class="fas fa-info-circle text-blue-600"></i>
-            Informations générales
+                <span class="ml-2">Informations générales</span>
+            </span>
+            <i class="fas fa-chevron-up text-gray-500 transition-transform duration-200" id="infoSectionChevron"></i>
         </h2>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="infoSectionBody">
             <div class="info-item">
                 <div class="info-icon green">
                     <i class="fas fa-check-circle"></i>
@@ -1311,50 +191,41 @@
         </div>
     </div>
 
+    <div class="overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
     {% include 'Superpreparation/includes/smart-search-toolbar.html' %}
+        <!-- Emplacement standard du bouton colonnes (aligné à droite, comme avant) -->
+        <div id="columnsButtonContainer" class="flex justify-end mt-2"></div>
+    </div>
+
+    
+
+    <!-- Include JS: gestion des colonnes -->
+    <script src="{% static 'js/Superpreparation/responsive-pages/page_cmd_confim.js' %}"></script>
 
     <!-- Actions en masse -->
     <div class="flex flex-col gap-3 action-buttons">
         <!-- Ligne des boutons -->
-        <div class="flex gap-2">
+        <div class="flex gap-2 items-center flex-wrap">
             <button id="bulkAffectBtn" class="px-3 py-1.5 rounded-lg font-medium transition-all shadow-sm opacity-50 cursor-not-allowed bg-[var(--preparation-primary)] text-white flex items-center gap-2 text-sm" disabled>
                 <i class="fas fa-users-cog"></i> Affecter sélection
             </button>
             
-            <!-- Bouton Impression Multiple Fusionné -->
-            <button id="bulkPrintBtn" class="px-3 py-1.5 rounded-lg font-medium transition-all shadow-sm bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white flex items-center gap-2 text-sm">
-                <i class="fas fa-print"></i> Impression multiple
-                <span id="selectionCount" class="ml-1 px-2 py-0.5 text-xs bg-white bg-opacity-20 rounded-full hidden">0</span>
+            <button id="bulkPrintBtn" class="px-3 py-1.5 rounded-lg font-medium transition-all shadow-sm opacity-50 cursor-not-allowed bg-[var(--preparation-primary)] text-white flex items-center gap-2 text-sm" disabled>
+                <i class="fas fa-print"></i> Imprimer tickets
+            </button>
+            
+            <button id="bulkPrintQrBtn" class="px-3 py-1.5 rounded-lg font-medium transition-all shadow-sm opacity-50 cursor-not-allowed bg-[var(--preparation-primary)] text-white flex items-center gap-2 text-sm" disabled>
+                <i class="fas fa-qrcode"></i> Imprimer QR articles
             </button>
             
 
+            <span id="selectionCountBadge" class="hidden ml-2 text-xs font-semibold px-2 py-1 rounded-full bg-blue-100 text-blue-700">
+                0 sélectionnée(s)
+            </span>
+
         </div>
         
-        <!-- Barre de progression pour l'impression multiple -->
-        <div id="printProgressContainer" class="hidden w-full bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
-            <div class="flex items-center justify-between mb-1">
-                <span class="text-xs font-medium text-gray-700">Progression impression</span>
-                <span id="printProgressPercent" class="text-xs font-bold text-purple-600">0%</span>
-            </div>
-            <div class="bg-gray-200 rounded-full h-2 mb-1">
-                <div id="printProgressBar" class="bg-gradient-to-r from-purple-600 to-blue-600 h-2 rounded-full transition-all duration-500 ease-in-out" style="width: 0%"></div>
-            </div>
-            <div id="printProgressText" class="text-xs text-gray-600 text-center font-medium">En attente...</div>
-            <div id="printProgressSteps" class="flex justify-between mt-2 text-xs text-gray-500">
-                <div class="flex items-center">
-                    <div id="step1Icon" class="w-3 h-3 rounded-full bg-gray-300 mr-1 flex items-center justify-center">
-                        <i class="fas fa-clock text-gray-500 text-xs"></i>
-                    </div>
-                    <span>Tickets</span>
-                </div>
-                <div class="flex items-center">
-                    <div id="step2Icon" class="w-3 h-3 rounded-full bg-gray-300 mr-1 flex items-center justify-center">
-                        <i class="fas fa-clock text-gray-500 text-xs"></i>
-                    </div>
-                    <span>Codes QR</span>
-                </div>
-            </div>
-        </div>
+        <!-- Barre de progression d'impression supprimée - en attente de nouvelles instructions -->
     </div>
 
     <!-- Message si aucun résultat -->
@@ -1379,121 +250,35 @@
 
     <!-- Tableau des commandes confirmées -->
     {% if page_obj.object_list %}
-    <div class="table-responsive mb-6 theme-card rounded-xl shadow-lg">
-        <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-[var(--preparation-primary)] border-b-[3px] border-[var(--preparation-primary)] text-white">
+    <div class="table-responsive mb-6 theme-card rounded-xl shadow-lg overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0" id="tableScrollContainer">
+        <table id="cmdTable" class="min-w-full divide-y divide-gray-200 text-xs sm:text-sm">
+            <thead class="bg-[var(--preparation-primary)] border-b-[3px] border-[var(--preparation-primary)] text-white sticky top-0 z-10">
                 <tr>
-                    <th class="px-3 py-2 text-left">
+                    <th class="px-3 py-2 text-left column-select">
                         <input type="checkbox" id="selectAll" class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500">
-                </th>
-                    <th class="px-3 py-2 text-left text-xs font-medium text-white uppercase tracking-wider">ID YZ</th>
-                    <th class="px-3 py-2 text-left text-xs font-medium text-white uppercase tracking-wider">N° Externe</th>
-                    <th class="px-3 py-2 text-left text-xs font-medium text-white uppercase tracking-wider">Client</th>
-                    <th class="px-3 py-2 text-left text-xs font-medium text-white uppercase tracking-wider">Téléphone</th>
-                    <th class="px-3 py-2 text-left text-xs font-medium text-white uppercase tracking-wider">Ville & Région</th>
-                    <th class="px-3 py-2 text-left text-xs font-medium text-white uppercase tracking-wider">Total</th>
-                    <th class="px-3 py-2 text-left text-xs font-medium text-white uppercase tracking-wider">Date Confirmation</th>
-                    <th class="px-3 py-2 text-left text-xs font-medium text-white uppercase tracking-wider">Opérateur Conf.</th>
-                    <th class="px-3 py-2 text-left text-xs font-medium text-white uppercase tracking-wider">État Préparation</th>
-                    <th class="px-3 py-2 text-center text-xs font-medium text-white uppercase tracking-wider">Actions</th>
-                    </tr>
-                </thead>
+                    </th>
+                    <th class="px-3 py-2 text-left text-sm font-medium text-white uppercase tracking-wider column-idyz">Numéro</th>
+                    <th class="px-3 py-2 text-left text-sm font-medium text-white uppercase tracking-wider column-numext">N° Ext.</th>
+                    <th class="px-3 py-2 text-left text-sm font-medium text-white uppercase tracking-wider column-client">Client</th>
+                    <th class="px-3 py-2 text-left text-sm font-medium text-white uppercase tracking-wider column-phone">Téléphone</th>
+                    <th class="px-3 py-2 text-left text-sm font-medium text-white uppercase tracking-wider column-ville">Ville & Région</th>
+                    <th class="px-3 py-2 text-left text-sm font-medium text-white uppercase tracking-wider column-total">Total</th>
+                    <th class="px-3 py-2 text-left text-sm font-medium text-white uppercase tracking-wider column-dateconf">Date conf.</th>
+                    <th class="px-3 py-2 text-left text-sm font-medium text-white uppercase tracking-wider column-operateur">Op. Conf.</th>
+                    <th class="px-3 py-2 text-left text-sm font-medium text-white uppercase tracking-wider column-etat">Prépa</th>
+                    <th class="px-3 py-2 text-center text-sm font-medium text-white uppercase tracking-wider column-actions">Actions</th>
+                </tr>
+            </thead>
             <tbody id="commandTableBody" class="bg-white divide-y divide-gray-200">
                 {% include 'Superpreparation/partials/_confirmees_table_body.html' with page_obj=page_obj %}
             </tbody>
         </table>
     </div>
 
-    <!-- Contrôles de pagination flexible (style Excel) -->
-    <div class="theme-pagination-controls pagination-controls transition-all duration-300">
-        <div class="flex flex-col lg:flex-row items-center justify-between space-y-4 lg:space-y-0">
-            <!-- Section Éléments par page -->
-            <div class="flex items-center space-x-3">
-                <div class="flex items-center space-x-2">
-                    <i class="fas fa-list-ol text-sm" style="color: var(--preparation-primary);"></i>
-                    <label class="text-xs font-semibold text-gray-700">Éléments par page:</label>
-                </div>
-                <select id="itemsPerPageSelect" class="theme-input px-3 py-1.5 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm transition-all duration-200 hover:border-gray-300 focus:shadow-md text-sm">
-                    <option value="25" {% if items_per_page == 25 %}selected{% endif %}>25</option>
-                    <option value="50" {% if items_per_page == 50 %}selected{% endif %}>50</option>
-                    <option value="100" {% if items_per_page == 100 %}selected{% endif %}>100</option>
-                    <option value="250" {% if items_per_page == 250 %}selected{% endif %}>250</option>
-                    <option value="500" {% if items_per_page == 500 %}selected{% endif %}>500</option>
-                    <option value="1000" {% if items_per_page == 1000 %}selected{% endif %}>1000</option>
-                    <option value="2500" {% if items_per_page == 2500 %}selected{% endif %}>2500</option>
-                    <option value="5000" {% if items_per_page == 5000 %}selected{% endif %}>5000</option>
-                    <option value="10000" {% if items_per_page == 10000 %}selected{% endif %}>10000</option>
-                    <option value="all" {% if items_per_page == 'all' %}selected{% endif %}>Tous</option>
-                </select>
-            </div>
-            
-            <!-- Section Plage personnalisée -->
-            <div class="flex items-center space-x-3">
-                <div class="flex items-center space-x-2">
-                    <i class="fas fa-arrows-alt-h text-sm" style="color: var(--preparation-primary);"></i>
-                    <label class="text-xs font-semibold text-gray-700">Plage personnalisée:</label>
-                </div>
-                <div class="flex items-center space-x-2 bg-gray-50 rounded-lg p-2 border border-gray-200">
-                    <div class="flex items-center space-x-2">
-                        <input type="number" id="startRangeInput" placeholder="Début" min="1" value="{{ start_range|default:'' }}" 
-                               class="theme-input px-2 py-1 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-16 text-center bg-white shadow-sm transition-all duration-200 hover:border-gray-300 focus:shadow-md text-sm">
-                        <span class="text-gray-500 text-xs font-medium">à</span>
-                        <input type="number" id="endRangeInput" placeholder="Fin" min="1" value="{{ end_range|default:'' }}" 
-                               class="theme-input px-2 py-1 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-16 text-center bg-white shadow-sm transition-all duration-200 hover:border-gray-300 focus:shadow-md text-sm">
-                    </div>
-                    <div class="flex items-center space-x-1">
-                        <button id="applyRangeBtn" class="px-3 py-1 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-md hover:from-green-600 hover:to-green-700 transition-all duration-200 transform hover:scale-105 shadow-sm hover:shadow-md text-xs font-medium">
-                            <i class="fas fa-check mr-1"></i>Appliquer
-                        </button>
-                        <button id="clearRangeBtn" class="px-3 py-1 bg-gradient-to-r from-red-400 to-red-500 text-white rounded-md hover:from-red-500 hover:to-red-600 transition-all duration-200 transform hover:scale-105 shadow-sm hover:shadow-md text-xs font-medium">
-                            <i class="fas fa-times mr-1"></i>Effacer
-                        </button>
-                    </div>
-        </div>
-            </div>
-            
-            <!-- Section Statistiques -->
-            <div class="flex items-center space-x-2">
-                <div class="flex items-center space-x-2 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg px-3 py-1.5 border border-blue-200">
-                    <i class="fas fa-chart-bar text-sm" style="color: var(--preparation-primary);"></i>
-                    <span class="text-xs font-semibold text-gray-700">Total: <span class="text-blue-600 font-bold">{{ page_obj.paginator.count }}</span> commandes confirmées</span>
-                                </div>
-            </div>
-        </div>
-        
-        <!-- Indicateur de statut -->
-        <div class="mt-3 pt-3 border-t border-gray-200">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-4">
-                    <div class="flex items-center space-x-2">
-                        <div class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
-                        <span class="text-xs text-gray-600">Pagination active</span>
-                    </div>
-                    {% if start_range and end_range %}
-                    <div class="flex items-center space-x-2">
-                        <i class="fas fa-filter text-xs text-blue-500"></i>
-                        <span class="text-xs text-blue-600 font-medium">Plage personnalisée: {{ start_range }} - {{ end_range }}</span>
-                    </div>
-                                {% endif %}
-                </div>
-                <div class="flex items-center space-x-2">
-                    <i class="fas fa-info-circle text-xs text-gray-400"></i>
-                    <span class="text-xs text-gray-500">Utilisez les contrôles ci-dessus pour personnaliser l'affichage</span>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- Pagination (client) -->
+    <div data-superprep-pagination data-items-selector="tbody tr" data-container-selector="table" data-per-page="25"></div>
 
-    <!-- Pagination -->
-    <div id="paginationControls" class="flex justify-center mt-8">
-        {% include 'Superpreparation/partials/_confirmees_pagination.html' %}
-    </div>
-
-    <!-- Informations de pagination -->
-    <div id="paginationInfoContainer">
-        {% include 'Superpreparation/partials/_confirmees_pagination_info.html' %}
-    </div>
-                                {% endif %}
+{% endif %}
 </div>
 
 <!-- Modal d'affectation aux opérateurs de préparation -->
@@ -1816,6 +601,20 @@
             showAffectationModal(null, null, true);
         });
 
+        // Ajouter l'événement click pour le bouton d'impression multiple
+        const bulkPrintBtn = document.getElementById('bulkPrintBtn');
+        const bulkPrintQrBtn = document.getElementById('bulkPrintQrBtn');
+        if (bulkPrintBtn) {
+            bulkPrintBtn.addEventListener('click', () => {
+                imprimerTicketsMultiples();
+            });
+        }
+        if (bulkPrintQrBtn) {
+            bulkPrintQrBtn.addEventListener('click', () => {
+                imprimerQRCodesArticlesMultiples();
+            });
+        }
+
         toggleBulkButton();
     });
 
@@ -1993,318 +792,167 @@
 </script>
 
 <!-- Script de recherche intelligente -->
-<script src="{% static 'js/Suivi_des_Commandes/suivi-commandes-smart-search.js' %}"></script>
-<!-- Script des modales d'impression -->
-<script src="{% static 'js/etiquettage/impression-modals.js' %}"></script>
+<script src="{% static 'js/Superpreparation/Suivi_des_Commandes/suivi-commandes-smart-search.js' %}"></script>
+<!-- Script des modales d'impression - SUPPRIMÉ -->
 <script>
     // Initialiser la recherche intelligente pour cette page
     document.addEventListener('DOMContentLoaded', function() {
         initSuiviCommandesSearch('confirmées');
     });
 
-// Script de gestion de la sidebar
+// Suppression de l'adaptation JS forcée aux largeurs de sidebar: la table est fluide et gérée par CSS
+
+// Ombres directionnelles lors du scroll horizontal (UX dashboard)
 document.addEventListener('DOMContentLoaded', function() {
-    const menuToggle = document.getElementById('menu-toggle');
-    const body = document.body;
-    
-    if (menuToggle) {
-        menuToggle.addEventListener('click', function() {
-            console.log('🔄 Menu toggle clicked');
-            body.classList.toggle('sidebar-open');
-            body.classList.toggle('sidebar-collapsed');
-            
-            // Animation du hamburger
-            menuToggle.classList.toggle('hamburger-active');
-        });
+    const container = document.getElementById('tableScrollContainer');
+    if (!container) return;
+
+    function updateScrollShadows() {
+        const atStart = container.scrollLeft <= 0;
+        const atEnd = Math.ceil(container.scrollLeft + container.clientWidth) >= container.scrollWidth;
+        // Utiliser box-shadow internes pour indiquer le scroll
+        let shadows = [];
+        if (!atStart) shadows.push('inset 12px 0 10px -10px rgba(0,0,0,0.2)');
+        if (!atEnd) shadows.push('inset -12px 0 10px -10px rgba(0,0,0,0.2)');
+        container.style.boxShadow = shadows.join(', ');
     }
-    
-    // Gestion du redimensionnement
-    window.addEventListener('resize', () => {
-        console.log('📐 Redimensionnement détecté:', window.innerWidth);
-        if (window.innerWidth > 1023) {
-            body.classList.add('sidebar-open');
-            body.classList.remove('sidebar-collapsed');
-            console.log('🖥️ Redimensionnement: mode desktop');
-        } else {
-            body.classList.add('sidebar-collapsed');
-            body.classList.remove('sidebar-open');
-            console.log('📱 Redimensionnement: mode mobile');
-        }
-    });
-    
-    console.log('✅ Script de sidebar initialisé pour commandes-confirmees');
-    
-    // Vérifier que la fonction d'impression multiple est disponible
-    if (typeof window.impressionMultipleFusionnee === 'function') {
-        console.log('✅ Fonction impressionMultipleFusionnee disponible');
-    } else {
-        console.warn('⚠️ Fonction impressionMultipleFusionnee non disponible');
-        // Attendre un peu plus pour que le script soit chargé
-        setTimeout(() => {
-            if (typeof window.impressionMultipleFusionnee === 'function') {
-                console.log('✅ Fonction impressionMultipleFusionnee disponible après délai');
-            } else {
-                console.error('❌ Fonction impressionMultipleFusionnee toujours non disponible');
-            }
-        }, 1000);
-    }
-    
-    // Event listener pour le bouton d'impression multiple
-    const bulkPrintBtn = document.getElementById('bulkPrintBtn');
-    if (bulkPrintBtn) {
-        bulkPrintBtn.addEventListener('click', function() {
-            console.log('🖱️ Clic sur bouton impression multiple détecté');
-            
-            // Récupérer les IDs des commandes sélectionnées
-            const selectedIds = window.getSelectedCommandeIds();
-            console.log('📋 IDs sélectionnés pour impression:', selectedIds);
-            
-            // Construire l'URL avec les paramètres
-            let url = '/Superpreparation/api/ticket-commande-multiple/?direct_print=true';
-            if (selectedIds && selectedIds.length > 0) {
-                url += `&selected_ids=${selectedIds.join(',')}`;
-                console.log(`🖨️ Impression pour ${selectedIds.length} commandes sélectionnées`);
-            } else {
-                console.log('🖨️ Impression pour toutes les commandes confirmées');
-            }
-            console.log('🌐 URL finale:', url);
-            
-            // Désactiver le bouton
-            bulkPrintBtn.disabled = true;
-            bulkPrintBtn.classList.add('opacity-50', 'cursor-not-allowed');
-            
-            // Afficher la barre de progression
-            const progressContainer = document.getElementById('printProgressContainer');
-            const progressBar = document.getElementById('printProgressBar');
-            const progressText = document.getElementById('printProgressText');
-            const progressPercent = document.getElementById('printProgressPercent');
-            const step1Icon = document.getElementById('step1Icon');
-            const step2Icon = document.getElementById('step2Icon');
-            
-            if (progressContainer && progressBar && progressText && progressPercent) {
-                progressContainer.classList.remove('hidden');
-                
-                // Initialiser la progression
-                progressBar.style.width = '0%';
-                progressPercent.textContent = '0%';
-                progressText.textContent = 'Démarrage de l\'impression multiple...';
-                
-                // Initialiser les étapes
-                if (step1Icon) {
-                    step1Icon.className = 'w-4 h-4 rounded-full bg-gray-300 mr-2 flex items-center justify-center';
-                    step1Icon.innerHTML = '<i class="fas fa-clock text-gray-500"></i>';
-                }
-                if (step2Icon) {
-                    step2Icon.className = 'w-4 h-4 rounded-full bg-gray-300 mr-2 flex items-center justify-center';
-                    step2Icon.innerHTML = '<i class="fas fa-clock text-gray-500"></i>';
-                }
-            }
-            
-            // Étape 1 : Impression des tickets (0% à 50%)
-            setTimeout(() => {
-                if (progressBar && progressText && progressPercent && step1Icon) {
-                    progressBar.style.width = '50%';
-                    progressPercent.textContent = '50%';
-                    progressText.textContent = 'Impression des tickets de commande en cours...';
-                    
-                    // Marquer l'étape 1 comme active
-                    step1Icon.className = 'w-4 h-4 rounded-full bg-blue-500 mr-2 flex items-center justify-center';
-                    step1Icon.innerHTML = '<i class="fas fa-spinner fa-spin text-white text-xs"></i>';
-                }
-                
-                // Lancer l'impression des tickets avec notre URL personnalisée
-                console.log('🚀 Lancement impression tickets avec URL:', url);
-                
-                // Récupérer le contenu HTML via fetch et l'injecter dans l'iframe
-                fetch(url)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success && data.html) {
-                            console.log('✅ Données tickets récupérées, création iframe...');
-                            
-                            // Créer une iframe cachée
-                            const ticketIframe = document.createElement('iframe');
-                            ticketIframe.style.display = 'none';
-                            ticketIframe.style.width = '800px';
-                            ticketIframe.style.height = '600px';
-                            document.body.appendChild(ticketIframe);
-                            
-                            // Écrire le HTML dans l'iframe
-                            const iframeDoc = ticketIframe.contentDocument || ticketIframe.contentWindow.document;
-                            iframeDoc.open();
-                            iframeDoc.write(data.html);
-                            iframeDoc.close();
-                            
-                            // Lancer l'impression après un court délai
-                            setTimeout(() => {
-                                try {
-                                    ticketIframe.contentWindow.print();
-                                    console.log('✅ Impression tickets lancée');
-                                } catch (error) {
-                                    console.error('❌ Erreur impression tickets:', error);
-                                    // Fallback : ouvrir dans une nouvelle fenêtre
-                                    const fallbackWindow = window.open('data:text/html;charset=utf-8,' + encodeURIComponent(data.html), '_blank', 'width=800,height=600');
-                                    if (fallbackWindow) {
-                                        fallbackWindow.onload = function() {
-                                            fallbackWindow.print();
-                                        };
-                                    }
-                                }
-                            }, 500);
-                        } else {
-                            console.error('❌ Données invalides reçues:', data);
-                        }
-                    })
-                    .catch(error => {
-                        console.error('❌ Erreur lors de la récupération des tickets:', error);
-                        // Fallback : ouvrir directement l'URL
-                        const fallbackWindow = window.open(url, '_blank', 'width=800,height=600');
-                        if (fallbackWindow) {
-                            fallbackWindow.onload = function() {
-                                fallbackWindow.print();
-                            };
-                        }
-                    });
-                
-                // Étape 2 : Impression des codes QR (50% à 100%)
-                setTimeout(() => {
-                    if (progressBar && progressText && progressPercent && step1Icon && step2Icon) {
-                        progressBar.style.width = '100%';
-                        progressPercent.textContent = '100%';
-                        progressText.textContent = 'Impression des codes QR des articles en cours...';
-                        
-                        // Marquer l'étape 1 comme terminée
-                        step1Icon.className = 'w-4 h-4 rounded-full bg-green-500 mr-2 flex items-center justify-center';
-                        step1Icon.innerHTML = '<i class="fas fa-check text-white text-xs"></i>';
-                        
-                        // Marquer l'étape 2 comme active
-                        step2Icon.className = 'w-4 h-4 rounded-full bg-blue-500 mr-2 flex items-center justify-center';
-                        step2Icon.innerHTML = '<i class="fas fa-spinner fa-spin text-white text-xs"></i>';
-                    }
-                    
-                    // Lancer l'impression des codes QR avec notre URL personnalisée
-                    let qrUrl = '/Superpreparation/api/etiquettes-articles-multiple/';
-                    if (selectedIds && selectedIds.length > 0) {
-                        qrUrl += `?selected_ids=${selectedIds.join(',')}`;
-                    }
-                    console.log('🚀 Lancement impression codes QR avec URL:', qrUrl);
-                    
-                    // Récupérer le contenu HTML via fetch et l'injecter dans l'iframe
-                    fetch(qrUrl)
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success && data.html) {
-                                console.log('✅ Données codes QR récupérées, création iframe...');
-                                
-                                // Créer une iframe cachée
-                                const qrIframe = document.createElement('iframe');
-                                qrIframe.style.display = 'none';
-                                qrIframe.style.width = '800px';
-                                qrIframe.style.height = '600px';
-                                document.body.appendChild(qrIframe);
-                                
-                                // Écrire le HTML dans l'iframe
-                                const iframeDoc = qrIframe.contentDocument || qrIframe.contentWindow.document;
-                                iframeDoc.open();
-                                iframeDoc.write(data.html);
-                                iframeDoc.close();
-                                
-                                // Lancer l'impression après un court délai
-                                setTimeout(() => {
-                                    try {
-                                        qrIframe.contentWindow.print();
-                                        console.log('✅ Impression codes QR lancée');
-                                    } catch (error) {
-                                        console.error('❌ Erreur impression codes QR:', error);
-                                        // Fallback : ouvrir dans une nouvelle fenêtre
-                                        const fallbackWindow = window.open('data:text/html;charset=utf-8,' + encodeURIComponent(data.html), '_blank', 'width=800,height=600');
-                                        if (fallbackWindow) {
-                                            fallbackWindow.onload = function() {
-                                                fallbackWindow.print();
-                                            };
-                                        }
-                                    }
-                                }, 500);
-                            } else {
-                                console.error('❌ Données invalides reçues:', data);
-                            }
-                        })
-                        .catch(error => {
-                            console.error('❌ Erreur lors de la récupération des codes QR:', error);
-                            // Fallback : ouvrir directement l'URL
-                            const fallbackWindow = window.open(qrUrl, '_blank', 'width=800,height=600');
-                            if (fallbackWindow) {
-                                fallbackWindow.onload = function() {
-                                    fallbackWindow.print();
-                                };
-                            }
-                        });
-                    
-                    // Finalisation
-                    setTimeout(() => {
-                        if (step2Icon) {
-                            step2Icon.className = 'w-4 h-4 rounded-full bg-green-500 mr-2 flex items-center justify-center';
-                            step2Icon.innerHTML = '<i class="fas fa-check text-white text-xs"></i>';
-                        }
-                        
-                        progressText.textContent = 'Impression multiple terminée avec succès !';
-                        
-                        // Masquer la progression après un délai
-                        setTimeout(() => {
-                            resetPrintProgress();
-                        }, 2000);
-                        
-                        console.log('✅ Impression multiple terminée');
-                    }, 3000);
-                }, 2000);
-            }, 500);
-        });
-    }
-    
-    // Fonction pour réinitialiser la progression
-    function resetPrintProgress() {
-        const bulkPrintBtn = document.getElementById('bulkPrintBtn');
-        const progressContainer = document.getElementById('printProgressContainer');
-        const progressBar = document.getElementById('printProgressBar');
-        const progressText = document.getElementById('printProgressText');
-        const progressPercent = document.getElementById('printProgressPercent');
-        const step1Icon = document.getElementById('step1Icon');
-        const step2Icon = document.getElementById('step2Icon');
-        
-        if (bulkPrintBtn) {
-            bulkPrintBtn.disabled = false;
-            bulkPrintBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-        }
-        
-        if (progressContainer) {
-            progressContainer.classList.add('hidden');
-        }
-        
-        if (progressBar) {
-            progressBar.style.width = '0%';
-        }
-        
-        if (progressText) {
-            progressText.textContent = 'En attente...';
-        }
-        
-        if (progressPercent) {
-            progressPercent.textContent = '0%';
-        }
-        
-        if (step1Icon) {
-            step1Icon.className = 'w-4 h-4 rounded-full bg-gray-300 mr-2 flex items-center justify-center';
-            step1Icon.innerHTML = '<i class="fas fa-clock text-gray-500"></i>';
-        }
-        
-        if (step2Icon) {
-            step2Icon.className = 'w-4 h-4 rounded-full bg-gray-300 mr-2 flex items-center justify-center';
-            step2Icon.innerHTML = '<i class="fas fa-clock text-gray-500"></i>';
-        }
-    }
+
+    container.addEventListener('scroll', updateScrollShadows, { passive: true });
+    window.addEventListener('resize', debounce(updateScrollShadows, 100));
+    setTimeout(updateScrollShadows, 50);
 });
 
-// Les fonctions d'impression sont maintenant gérées par impression-modals.js
+// Persistance de l'état de la sidebar (open/collapsed) dans localStorage
+document.addEventListener('DOMContentLoaded', function() {
+    const body = document.body;
+    const toggle = document.getElementById('menu-toggle');
+    const STORAGE_KEY = 'yz.sidebar.state';
+
+    // Restaurer l'état
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved === 'open') {
+        body.classList.add('sidebar-open');
+        body.classList.remove('sidebar-collapsed');
+    } else if (saved === 'collapsed') {
+        body.classList.add('sidebar-collapsed');
+        body.classList.remove('sidebar-open');
+    }
+
+    function persist() {
+        const state = body.classList.contains('sidebar-collapsed') ? 'collapsed' : 'open';
+        localStorage.setItem(STORAGE_KEY, state);
+    }
+
+    if (toggle) {
+        toggle.addEventListener('click', () => {
+            setTimeout(persist, 10);
+        });
+    }
+
+    // Observer changements de classes
+    const observer = new MutationObserver((mutations) => {
+        for (const m of mutations) {
+            if (m.type === 'attributes' && m.attributeName === 'class') {
+                persist();
+            }
+        }
+    });
+    observer.observe(body, { attributes: true });
+});
+
+// Utilitaire debounce
+function debounce(fn, delay = 150) {
+    let t;
+    return function(...args) {
+        clearTimeout(t);
+        t = setTimeout(() => fn.apply(this, args), delay);
+    };
+}
+
+// Persistance du select "Éléments par page"
+document.addEventListener('DOMContentLoaded', function() {
+    const select = document.getElementById('itemsPerPageSelect');
+    const STORAGE_KEY = 'yz.itemsPerPage';
+    if (!select) return;
+
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved && select.querySelector(`option[value="${saved}"]`)) {
+        select.value = saved;
+    }
+
+    select.addEventListener('change', () => {
+        localStorage.setItem(STORAGE_KEY, select.value);
+    });
+});
+
+// Compactage de l'en-tête au scroll
+document.addEventListener('DOMContentLoaded', function() {
+    const header = document.getElementById('pageHeader');
+    if (!header) return;
+    let last = 0;
+    window.addEventListener('scroll', () => {
+        const y = window.scrollY || document.documentElement.scrollTop;
+        if (y > 24 && last <= 24) {
+            header.classList.add('py-2');
+            header.classList.remove('py-4');
+        } else if (y <= 24 && last > 24) {
+            header.classList.add('py-4');
+            header.classList.remove('py-2');
+        }
+        last = y;
+    }, { passive: true });
+});
+
+// Info section repliable avec persistance
+document.addEventListener('DOMContentLoaded', function() {
+    const toggle = document.getElementById('infoSectionToggle');
+    const body = document.getElementById('infoSectionBody');
+    const chevron = document.getElementById('infoSectionChevron');
+    const STORAGE_KEY = 'yz.infoSection.open';
+    if (!toggle || !body || !chevron) return;
+
+    function setOpen(open) {
+        if (open) {
+            body.classList.remove('hidden');
+            toggle.setAttribute('aria-expanded', 'true');
+            chevron.style.transform = 'rotate(0deg)';
+            localStorage.setItem(STORAGE_KEY, '1');
+        } else {
+            body.classList.add('hidden');
+            toggle.setAttribute('aria-expanded', 'false');
+            chevron.style.transform = 'rotate(180deg)';
+            localStorage.setItem(STORAGE_KEY, '0');
+        }
+    }
+
+    const saved = localStorage.getItem(STORAGE_KEY);
+    setOpen(saved !== '0');
+
+    toggle.addEventListener('click', () => {
+        const isOpen = toggle.getAttribute('aria-expanded') === 'true';
+        setOpen(!isOpen);
+    });
+});
+
+// Compteur de sélection visible et réactif
+document.addEventListener('DOMContentLoaded', function() {
+    const badge = document.getElementById('selectionCountBadge');
+    if (!badge) return;
+    function updateBadge() {
+        const count = document.querySelectorAll('.commande-checkbox:checked').length;
+        badge.textContent = `${count} sélectionnée(s)`;
+        badge.classList.toggle('hidden', count === 0);
+    }
+    document.addEventListener('change', (e) => {
+        if (e.target && e.target.classList && e.target.classList.contains('commande-checkbox')) {
+            updateBadge();
+        }
+    });
+    // init
+    updateBadge();
+});
+
+// Fonctions d'impression supprimées - en attente de nouvelles instructions
 
 // Fonction pour afficher la modale d'informations
 function showInfoModal(commandeId, commandeIdYz, clientName) {
@@ -2323,6 +971,400 @@ function showInfoModal(commandeId, commandeIdYz, clientName) {
 function hideInfoModal() {
     document.getElementById('infoModal').classList.add('hidden');
 }
+
+// Fonction pour imprimer le ticket de commande
+window.imprimerTicketCommande = function(commandeId, commandeIdYz, clientName) {
+    console.log(`🖨️ Impression du ticket pour la commande: ${commandeIdYz}`);
+    
+    // Afficher un indicateur de chargement
+    const printBtn = event.target;
+    const originalText = printBtn.innerHTML;
+    printBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Génération...';
+    printBtn.disabled = true;
+    
+    // Récupérer le contenu du ticket via AJAX
+    fetch(`/Superpreparation/api/ticket-commande-new/?id=${commandeIdYz}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Créer une nouvelle fenêtre pour l'impression
+                const printWindow = window.open('', '_blank', 'width=800,height=600');
+                
+                // Écrire le contenu HTML dans la fenêtre
+                printWindow.document.write(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <title>Ticket Commande ${commandeIdYz}</title>
+                        <style>
+                            @page { 
+                                size: 100mm 100mm; 
+                                margin: 0; 
+                            }
+                            body, html {
+                                margin: 0; 
+                                padding: 0; 
+                                background: white !important;
+                                width: 100mm; 
+                                height: 100mm; 
+                                overflow: hidden;
+                            }
+                            .ticket-container {
+                                width: 100mm !important; 
+                                height: 100mm !important;
+                                margin: 0 !important; 
+                                padding: 2mm !important;
+                                page-break-after: always !important;
+                            }
+                            .ticket-container:last-child { 
+                                page-break-after: auto !important; 
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        ${data.html}
+                    </body>
+                    </html>
+                `);
+                
+                printWindow.document.close();
+                
+                // Attendre que le contenu soit chargé puis imprimer
+                printWindow.onload = function() {
+            setTimeout(() => {
+                        printWindow.print();
+                        printWindow.close();
+                            }, 500);
+                };
+                
+                console.log('✅ Ticket généré et envoyé à l\'impression');
+                        } else {
+                console.error('❌ Erreur lors de la génération du ticket:', data.error);
+                alert('Erreur lors de la génération du ticket: ' + data.error);
+                        }
+                    })
+                    .catch(error => {
+            console.error('❌ Erreur lors de la récupération du ticket:', error);
+            alert('Erreur lors de la récupération du ticket: ' + error.message);
+        })
+        .finally(() => {
+            // Restaurer le bouton
+            printBtn.innerHTML = originalText;
+            printBtn.disabled = false;
+        });
+};
+
+// Fonction pour imprimer plusieurs tickets sélectionnés
+window.imprimerTicketsMultiples = function() {
+    const checkedCheckboxes = document.querySelectorAll('.commande-checkbox:checked');
+    
+    if (checkedCheckboxes.length === 0) {
+        alert('Veuillez sélectionner au moins une commande à imprimer.');
+        return;
+    }
+    
+    // Récupérer les IDs YZ des commandes sélectionnées
+    const commandeIds = Array.from(checkedCheckboxes).map(checkbox => {
+        const row = checkbox.closest('tr');
+        const commandeIdYz = row.getAttribute('data-id-yz');
+        console.log('🔍 Checkbox:', checkbox, 'data-id-yz:', commandeIdYz);
+        return commandeIdYz;
+    }).filter(id => id !== null);
+    
+    if (commandeIds.length === 0) {
+        alert('Aucune commande valide sélectionnée.');
+        return;
+    }
+    
+    console.log(`🖨️ Impression de ${commandeIds.length} ticket(s):`, commandeIds);
+    
+    // Afficher un indicateur de chargement
+    const printBtn = document.getElementById('bulkPrintBtn');
+    const originalText = printBtn.innerHTML;
+    printBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Génération...';
+    printBtn.disabled = true;
+    
+    // Récupérer tous les tickets en parallèle
+    const ticketPromises = commandeIds.map(commandeIdYz => {
+        console.log(`🖨️ Récupération du ticket: ${commandeIdYz}`);
+        return fetch(`/Superpreparation/api/ticket-commande-new/?id=${commandeIdYz}`)
+                    .then(response => response.json())
+                    .then(data => {
+                if (data.success) {
+                    return { success: true, html: data.html, commandeId: commandeIdYz };
+                        } else {
+                    console.error(`❌ Erreur lors de la génération du ticket ${commandeIdYz}:`, data.error);
+                    return { success: false, error: data.error, commandeId: commandeIdYz };
+                        }
+                    })
+                    .catch(error => {
+                console.error(`❌ Erreur lors de la récupération du ticket ${commandeIdYz}:`, error);
+                return { success: false, error: error.message, commandeId: commandeIdYz };
+            });
+    });
+    
+    // Attendre que tous les tickets soient récupérés
+    Promise.all(ticketPromises)
+        .then(ticketResults => {
+            // Filtrer les tickets réussis
+            const successfulTickets = ticketResults.filter(result => result.success);
+            const failedTickets = ticketResults.filter(result => !result.success);
+            
+            if (successfulTickets.length === 0) {
+                alert('Aucun ticket n\'a pu être généré.');
+                printBtn.innerHTML = originalText;
+                printBtn.disabled = false;
+                return;
+            }
+            
+            // Afficher les erreurs s'il y en a
+            if (failedTickets.length > 0) {
+                const errorMessages = failedTickets.map(ticket => `Commande ${ticket.commandeId}: ${ticket.error}`).join('\n');
+                console.warn('⚠️ Certains tickets ont échoué:', errorMessages);
+            }
+            
+            console.log(`✅ ${successfulTickets.length} ticket(s) généré(s) avec succès`);
+            
+            // Créer une seule fenêtre d'impression avec tous les tickets
+            const printWindow = window.open('', '_blank', 'width=800,height=600');
+            
+            // Construire le HTML avec tous les tickets
+            const allTicketsHTML = successfulTickets.map(ticket => ticket.html).join('');
+            
+            // Écrire le contenu HTML dans la fenêtre
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Tickets Commandes - ${successfulTickets.length} ticket(s)</title>
+                    <style>
+                        @page { 
+                            size: 100mm 100mm; 
+                            margin: 0; 
+                        }
+                        body, html {
+                            margin: 0; 
+                            padding: 0; 
+                            background: white !important;
+                        }
+                        .ticket-container {
+                            width: 100mm !important; 
+                            height: 100mm !important;
+                            margin: 0 !important; 
+                            padding: 2mm !important;
+                            page-break-after: always !important;
+                            display: block !important;
+                        }
+                        .ticket-container:last-child { 
+                            page-break-after: auto !important; 
+                        }
+                    </style>
+                </head>
+                <body>
+                    ${allTicketsHTML}
+                </body>
+                </html>
+            `);
+            
+            printWindow.document.close();
+            
+            // Attendre que le contenu soit chargé puis imprimer
+            printWindow.onload = function() {
+                setTimeout(() => {
+                    printWindow.print();
+                    printWindow.close();
+                    
+                    // Restaurer le bouton
+                    printBtn.innerHTML = originalText;
+                    printBtn.disabled = false;
+                    console.log('✅ Impression terminée');
+                }, 1000);
+            };
+        })
+        .catch(error => {
+            console.error('❌ Erreur lors de la génération des tickets:', error);
+            alert('Erreur lors de la génération des tickets: ' + error.message);
+            printBtn.innerHTML = originalText;
+            printBtn.disabled = false;
+        });
+};
+
+// Fonction pour imprimer les QR codes des articles
+window.imprimerQRCodesArticles = function(commandeId, commandeIdYz, clientName) {
+    console.log(`🖨️ Impression des QR codes pour la commande: ${commandeIdYz}`);
+    
+    // Afficher un indicateur de chargement
+    const printBtn = event.target;
+    const originalText = printBtn.innerHTML;
+    printBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Génération...';
+    printBtn.disabled = true;
+    
+    // Récupérer les QR codes des articles via AJAX
+    fetch(`/Superpreparation/api/qr-codes-articles/?id=${commandeIdYz}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Créer une nouvelle fenêtre pour l'impression
+                const printWindow = window.open('', '_blank', 'width=800,height=600');
+                
+                // Écrire le contenu HTML dans la fenêtre
+                printWindow.document.write(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <title>QR Codes Articles - Commande ${commandeIdYz}</title>
+                        <style>
+                            @page { 
+                                size: 100mm 100mm; 
+                                margin: 0; 
+                            }
+                            body, html {
+                                margin: 0; 
+                                padding: 0; 
+                                background: white !important;
+                            }
+                            .qr-code-container {
+                                width: 100mm !important; 
+                                height: 100mm !important;
+                                margin: 0 !important; 
+                                padding: 2mm !important;
+                                page-break-after: always !important;
+                                display: flex !important;
+                                flex-direction: column !important;
+                                align-items: center !important;
+                                justify-content: center !important;
+                                border: 2px solid #000 !important;
+                                box-sizing: border-box !important;
+                            }
+                            .qr-code-container:last-child { 
+                                page-break-after: auto !important; 
+                            }
+                            .qr-code {
+                                width: 60mm !important;
+                                height: 60mm !important;
+                                object-fit: contain !important;
+                                margin-bottom: 5mm !important;
+                            }
+                            .article-info {
+                                text-align: center !important;
+                                font-family: Arial, sans-serif !important;
+                                font-size: 12pt !important;
+                                font-weight: bold !important;
+                                color: #000 !important;
+                                line-height: 1.2 !important;
+                            }
+                            .article-ref {
+                                font-size: 14pt !important;
+                                margin-bottom: 2mm !important;
+                            }
+                            .commande-ref {
+                                font-size: 10pt !important;
+                                color: #666 !important;
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        ${data.html}
+                    </body>
+                    </html>
+                `);
+                
+                printWindow.document.close();
+                
+                // Attendre que le contenu soit chargé puis imprimer
+                printWindow.onload = function() {
+                    setTimeout(() => {
+                        printWindow.print();
+                        printWindow.close();
+                    }, 500);
+                };
+                
+                console.log('✅ QR codes générés et envoyés à l\'impression');
+            } else {
+                console.error('❌ Erreur lors de la génération des QR codes:', data.error);
+                alert('Erreur lors de la génération des QR codes: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('❌ Erreur lors de la récupération des QR codes:', error);
+            alert('Erreur lors de la récupération des QR codes: ' + error.message);
+        })
+        .finally(() => {
+            // Restaurer le bouton
+            printBtn.innerHTML = originalText;
+            printBtn.disabled = false;
+        });
+};
+
+// Impression multiple des QR codes des articles (un seul PDF, pages 10x10)
+window.imprimerQRCodesArticlesMultiples = function() {
+    const checkedCheckboxes = document.querySelectorAll('.commande-checkbox:checked');
+    if (checkedCheckboxes.length === 0) {
+        alert('Veuillez sélectionner au moins une commande.');
+        return;
+    }
+
+    // Récupérer les IDs YZ
+    const commandeIdsYz = Array.from(checkedCheckboxes).map(cb => cb.closest('tr').getAttribute('data-id-yz')).filter(Boolean);
+
+    const btn = document.getElementById('bulkPrintQrBtn');
+    const original = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Génération...';
+    btn.disabled = true;
+
+    // Récupérer en parallèle les pages HTML de QR (chaque article = 1 page 10x10)
+    const promises = commandeIdsYz.map(idYz => fetch(`/Superpreparation/api/qr-codes-articles/?id=${idYz}`).then(r=>r.json()).then(d=>({idYz, d})).catch(e=>({idYz, error: e.message})));
+
+    Promise.all(promises).then(results => {
+        const pages = [];
+        const errors = [];
+        results.forEach(({idYz, d, error}) => {
+            if (error || !d || !d.success) {
+                errors.push(`CMD-${idYz}: ${error || (d && d.error) || 'erreur inconnue'}`);
+            } else {
+                pages.push(d.html);
+            }
+        });
+
+        if (pages.length === 0) {
+            alert('Aucune page QR générée.\n' + (errors.join('\n') || ''));
+            return;
+        }
+
+        const printWindow = window.open('', '_blank', 'width=800,height=600');
+        const allHTML = pages.join('');
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>QR Articles (${pages.length} pages)</title>
+                <style>
+                    @page { size: 100mm 100mm; margin: 0; }
+                    body, html { margin:0; padding:0; background:#fff; }
+                    .qr-code-container { width:100mm!important; height:100mm!important; page-break-after:always!important; display:flex!important; align-items:center!important; justify-content:center!important; flex-direction:column!important; padding:2mm!important; box-sizing:border-box!important; border: 2px solid #000 !important; }
+                    .qr-code-container:last-child { page-break-after:auto!important; }
+                    .qr-code { width:60mm!important; height:60mm!important; object-fit:contain!important; margin-bottom:5mm!important; }
+                    .article-info { text-align:center!important; font-family: Arial, sans-serif!important; font-size:12pt!important; font-weight:bold!important; color:#000!important; line-height:1.2!important; }
+                    .article-ref { font-size:14pt!important; margin-bottom:2mm!important; }
+                    .commande-ref { font-size:10pt!important; color:#666!important; }
+                </style>
+            </head>
+            <body>${allHTML}</body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.onload = function() {
+            setTimeout(()=>{ printWindow.print(); printWindow.close(); }, 800);
+        };
+
+        if (errors.length) console.warn('Certaines commandes ont échoué:', errors);
+    }).catch(err => {
+        alert('Erreur lors de la génération: ' + err.message);
+    }).finally(()=>{
+        btn.innerHTML = original;
+        btn.disabled = false;
+    });
+};
 
 // Fonction pour charger les informations de la commande
 function loadCommandeInfo(commandeId) {
@@ -2494,12 +1536,9 @@ function startAutoRefresh() {
     }, 30000);
     }
 
-    // Start auto-refresh when page loads
+    // Start auto-refresh when page loads (welcome toast removed)
     document.addEventListener('DOMContentLoaded', function() {
-        // Show welcome message
-        setTimeout(() => {
-        showToast('Bienvenue dans la gestion des commandes confirmées !', 'info', 3000);
-    }, 1000);
+        // Intentionally left blank: no automatic welcome notifications
     });
 
     // Keyboard shortcuts
@@ -2522,33 +1561,61 @@ function startAutoRefresh() {
 document.addEventListener('DOMContentLoaded', function() {
     const selectAllCheckbox = document.getElementById('selectAll');
     const commandeCheckboxes = document.querySelectorAll('.commande-checkbox');
-    const selectionCount = document.getElementById('selectionCount');
-    const bulkPrintBtn = document.getElementById('bulkPrintBtn');
     
     // Fonction pour mettre à jour le compteur de sélection
     function updateSelectionCount() {
         const checkedCount = document.querySelectorAll('.commande-checkbox:checked').length;
+        console.log(`📊 ${checkedCount} commande(s) sélectionnée(s)`);
+        
+        // Mettre à jour le checkbox "Tout sélectionner"
+        if (selectAllCheckbox) {
+            if (checkedCount === 0) {
+                selectAllCheckbox.indeterminate = false;
+                selectAllCheckbox.checked = false;
+            } else if (checkedCount === commandeCheckboxes.length) {
+                selectAllCheckbox.indeterminate = false;
+                selectAllCheckbox.checked = true;
+            } else {
+                selectAllCheckbox.indeterminate = true;
+            }
+        }
+        
+        // Mettre à jour les boutons d'action
+        const bulkAffectBtn = document.getElementById('bulkAffectBtn');
+        const bulkPrintBtn = document.getElementById('bulkPrintBtn');
+        const bulkPrintQrBtn = document.getElementById('bulkPrintQrBtn');
         
         if (checkedCount > 0) {
-            selectionCount.textContent = checkedCount;
-            selectionCount.classList.remove('hidden');
-            
-            // Mettre à jour le texte du bouton pour indiquer la sélection
-            const printIcon = bulkPrintBtn.querySelector('i');
-            const printText = bulkPrintBtn.childNodes[2]; // Le texte après l'icône
-            
-            if (printText.nodeType === Node.TEXT_NODE) {
-                printText.textContent = ` Impression multiple (${checkedCount} sélectionnée${checkedCount > 1 ? 's' : ''})`;
+            if (bulkAffectBtn) {
+                bulkAffectBtn.disabled = false;
+                bulkAffectBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                bulkAffectBtn.classList.add('opacity-100', 'cursor-pointer');
+            }
+            if (bulkPrintBtn) {
+                bulkPrintBtn.disabled = false;
+                bulkPrintBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                bulkPrintBtn.classList.add('opacity-100', 'cursor-pointer');
+            }
+            if (bulkPrintQrBtn) {
+                bulkPrintQrBtn.disabled = false;
+                bulkPrintQrBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                bulkPrintQrBtn.classList.add('opacity-100', 'cursor-pointer');
             }
         } else {
-            selectionCount.classList.add('hidden');
-            
-            // Remettre le texte original
-            const printIcon = bulkPrintBtn.querySelector('i');
-            const printText = bulkPrintBtn.childNodes[2];
-            
-            if (printText.nodeType === Node.TEXT_NODE) {
-                printText.textContent = ' Impression multiple';
+            if (bulkAffectBtn) {
+                bulkAffectBtn.disabled = true;
+                bulkAffectBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                bulkAffectBtn.classList.remove('opacity-100', 'cursor-pointer');
+            }
+            if (bulkPrintBtn) {
+                bulkPrintBtn.disabled = true;
+                bulkPrintBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                bulkPrintBtn.classList.remove('opacity-100', 'cursor-pointer');
+            }
+            if (bulkPrintQrBtn) {
+                bulkPrintQrBtn.disabled = true;
+                bulkPrintQrBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                bulkPrintQrBtn.classList.remove('opacity-100', 'cursor-pointer');
             }
         }
     }
@@ -2640,14 +1707,51 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-<!-- Script de recherche intelligente -->
-<script src="{% static 'js/Suivi_des_Commandes/suivi-commandes-smart-search.js' %}"></script>
+<!-- Fallback: charger le contrôleur global des colonnes si absent -->
 <script>
-// Initialiser la recherche intelligente pour cette page
 document.addEventListener('DOMContentLoaded', function() {
-    initSuiviCommandesSearch('confirmees');
+    try {
+        if (typeof toggleColumnVisibility !== 'function') {
+            var s = document.createElement('script');
+            s.src = "{% static 'js/Superpreparation/global-columns-toggle.js' %}";
+            document.body.appendChild(s);
+        }
+    } catch (e) {}
 });
 </script>
+
+<!-- Injection du bouton "Sélectionner les colonnes" après "Imprimer QR articles" (fallbacks: conteneur aligné à droite, puis à côté de Filtres) -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    try {
+        if (document.getElementById('columnToggleInline')) return;
+        var container = document.getElementById('columnsButtonContainer');
+        var filtersBtn = document.querySelector('button[onclick="toggleAdvancedSearch()"]');
+        var qrBtn = document.getElementById('bulkPrintQrBtn');
+        if (!container && !filtersBtn && !qrBtn) return;
+        var btn = document.createElement('button');
+        btn.id = 'columnToggleInline';
+        btn.type = 'button';
+        btn.className = 'inline-flex items-center px-3 py-2 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium rounded transition-colors h-10 ml-2';
+        btn.title = 'Sélectionner les colonnes';
+        btn.innerHTML = '<i class="fas fa-columns mr-2 text-gray-500"></i>Sélectionner les colonnes';
+        btn.addEventListener('click', function() {
+            if (typeof toggleColumnVisibility === 'function') {
+                toggleColumnVisibility();
+            }
+        });
+        if (qrBtn && qrBtn.parentNode) {
+            qrBtn.parentNode.insertBefore(btn, qrBtn.nextSibling);
+        } else if (container) {
+            container.appendChild(btn);
+        } else if (filtersBtn) {
+            filtersBtn.parentNode.insertBefore(btn, filtersBtn.nextSibling);
+        }
+    } catch (e) {}
+});
+</script>
+
+<!-- (Nettoyé) Pas de doublon: la recherche intelligente est déjà incluse plus haut et initialisée avec 'confirmées' -->
 
 <!-- Modale d'informations détaillées -->
 <div id="infoModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50 flex items-center justify-center">
@@ -2693,7 +1797,11 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
 </div>
 
-<!-- Inclure la modale de choix d'impression -->
-{% include 'Superpreparation/partials/_modal_impression_choice.html' %}
+<!-- Modale d'impression supprimée - en attente de nouvelles instructions -->
 
 {% endblock %} 
+
+{% block extra_js %}
+{{ block.super }}
+<script src="{% static 'js/Superpreparation/responsive-pages/page_cmd_confim.js' %}"></script>
+{% endblock %}

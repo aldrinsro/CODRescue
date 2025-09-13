@@ -435,12 +435,14 @@ class VariantesManager {
 
     // Méthode pour valider le formulaire avant soumission
     validateForm() {
+        // Les variantes sont maintenant optionnelles
+        // Si aucune variante n'est ajoutée, c'est OK
         if (this.variantes.length === 0) {
-            this.showAlert('Veuillez ajouter au moins une variante pour cet article.', 'warning');
-            return false;
+            console.log('Aucune variante ajoutée - c\'est autorisé');
+            return true;
         }
         
-        // Vérifier que chaque variante a au moins une couleur ou une pointure
+        // Si des variantes sont ajoutées, vérifier qu'elles sont valides
         for (let variante of this.variantes) {
             if (!variante.couleur && !variante.pointure) {
                 this.showAlert('Chaque variante doit avoir au moins une couleur ou une pointure.', 'error');
@@ -448,9 +450,11 @@ class VariantesManager {
             }
         }
         
-        // Afficher un résumé des variantes
-        const summary = this.showVariantesSummary();
-        console.log('Résumé des variantes:', summary);
+        // Afficher un résumé des variantes si elles existent
+        if (this.variantes.length > 0) {
+            const summary = this.showVariantesSummary();
+            console.log('Résumé des variantes:', summary);
+        }
         
         return true;
     }

@@ -1,0 +1,223 @@
+/**
+ * Styles CSS pour la sidebar de l'interface operatConfirme
+ * Fichier CSS séparé pour éviter les conflits
+ * Version: 1.0.0
+ */
+
+/* ===== VARIABLES CSS ===== */
+:root {
+    --sidebar-width: 256px;
+    --sidebar-transition: all 0.3s ease-in-out;
+    --sidebar-z-index: 1000;
+    --overlay-z-index: 999;
+    --desktop-breakpoint: 1024px;
+    --mobile-breakpoint: 1023.98px;
+}
+
+/* ===== SIDEBAR BASE ===== */
+#sidebar {
+    width: var(--sidebar-width);
+    transition: var(--sidebar-transition);
+    overflow: hidden;
+    flex-shrink: 0;
+    position: relative;
+    height: 100vh;
+}
+
+/* ===== COMPORTEMENT DESKTOP (≥1024px) ===== */
+@media (min-width: 1024px) {
+    /* Sidebar ouverte sur desktop */
+    body.sidebar-open #sidebar {
+        width: var(--sidebar-width) !important;
+        min-width: var(--sidebar-width) !important;
+        transform: translateX(0) !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+    
+    /* Sidebar fermée sur desktop */
+    body.sidebar-collapsed #sidebar {
+        width: 0 !important;
+        min-width: 0 !important;
+        margin-left: 0 !important;
+        transform: translateX(0) !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+    
+    /* Overlay caché sur desktop */
+    #content-overlay {
+        display: none !important;
+    }
+}
+
+/* ===== COMPORTEMENT MOBILE (≤1023px) ===== */
+@media (max-width: 1023.98px) {
+    /* Sidebar en position fixe sur mobile */
+    #sidebar {
+        position: fixed !important;
+        height: 100vh !important;
+        z-index: var(--sidebar-z-index) !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: var(--sidebar-width) !important;
+        min-width: var(--sidebar-width) !important;
+        box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+        /* État fermé par défaut sur mobile */
+        transform: translateX(-100%) !important;
+    }
+    
+    /* Sidebar fermée sur mobile */
+    body.sidebar-collapsed #sidebar {
+        transform: translateX(-100%) !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+    
+    /* Sidebar ouverte sur mobile */
+    body.sidebar-open #sidebar {
+        transform: translateX(0) !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+    
+    /* Overlay pour mobile */
+    #content-overlay {
+        display: none;
+        position: fixed !important;
+        inset: 0 !important;
+        background-color: rgba(0, 0, 0, 0.5) !important;
+        z-index: var(--overlay-z-index) !important;
+        transition: opacity 0.3s ease-in-out !important;
+        opacity: 0;
+    }
+    
+    /* Overlay visible quand sidebar ouverte */
+    body.sidebar-open #content-overlay {
+        display: block !important;
+        opacity: 1 !important;
+    }
+}
+
+/* ===== AMÉLIORATION DU CONTENU PRINCIPAL ===== */
+.main-content {
+    transition: var(--sidebar-transition);
+    flex: 1;
+    overflow-x: hidden;
+}
+
+/* ===== BOUTON HAMBURGER ===== */
+#menu-toggle {
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    transition: var(--sidebar-transition);
+}
+
+#menu-toggle:hover {
+    transform: scale(1.1);
+}
+
+#menu-toggle:active {
+    transform: scale(0.95);
+}
+
+/* Lignes du hamburger */
+#menu-toggle .hamburger-line {
+    display: block;
+    width: 24px;
+    height: 2px;
+    margin: 5px 0;
+    transition: var(--sidebar-transition);
+    transform-origin: center;
+}
+
+/* Animation optionnelle du hamburger (désactivée par défaut) */
+.hamburger-animated #menu-toggle.active .hamburger-line:nth-child(1) {
+    transform: rotate(45deg) translate(6px, 6px);
+}
+
+.hamburger-animated #menu-toggle.active .hamburger-line:nth-child(2) {
+    opacity: 0;
+    transform: scale(0);
+}
+
+.hamburger-animated #menu-toggle.active .hamburger-line:nth-child(3) {
+    transform: rotate(-45deg) translate(6px, -6px);
+}
+
+/* ===== RESPONSIVENESS SUPPLÉMENTAIRE ===== */
+
+/* Très petits écrans */
+@media (max-width: 480px) {
+    :root {
+        --sidebar-width: 100vw;
+    }
+    
+    #sidebar {
+        width: 100vw !important;
+        min-width: 100vw !important;
+    }
+}
+
+/* Tablettes */
+@media (min-width: 768px) and (max-width: 1023px) {
+    :root {
+        --sidebar-width: 280px;
+    }
+}
+
+/* ===== UTILITAIRES ===== */
+
+/* Force l'affichage de la sidebar (classe utilitaire) */
+.sidebar-force-show #sidebar {
+    transform: translateX(0) !important;
+    width: var(--sidebar-width) !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+/* Force le masquage de la sidebar (classe utilitaire) */
+.sidebar-force-hide #sidebar {
+    transform: translateX(-100%) !important;
+    width: 0 !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+}
+
+/* Désactive les transitions (pour debug) */
+.sidebar-no-transition #sidebar,
+.sidebar-no-transition #content-overlay {
+    transition: none !important;
+}
+
+/* ===== DEBUG ===== */
+
+/* Styles de debug (à activer avec .sidebar-debug sur body) */
+.sidebar-debug #sidebar {
+    border: 2px solid red !important;
+}
+
+.sidebar-debug #content-overlay {
+    border: 2px solid blue !important;
+}
+
+.sidebar-debug #menu-toggle {
+    border: 2px solid green !important;
+}
+
+/* ===== COMPATIBILITÉ AVEC LES MODALS ===== */
+
+/* S'assurer que les modals passent au-dessus */
+.modal,
+.modal-backdrop {
+    z-index: 1050 !important;
+}
+
+/* Modals avec force-top */
+.modal-force-top {
+    z-index: 2147483647 !important;
+    position: fixed !important;
+}

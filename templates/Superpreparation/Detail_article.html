@@ -7,7 +7,7 @@
 {% block content %}
 <div class="main-content transition-all duration-300">
     <!-- En-tête de la page -->
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 text-white p-6 rounded-xl shadow-lg" style="background: linear-gradient(to right, #0e1d3d, #1a2b5a);">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 text-white p-6 rounded-xl shadow-lg" style="background: linear-gradient(to right, #070F2B, #070F2B);">
         <div>
             <h1 class="text-3xl font-bold flex items-center mb-2">
                 <i class="fas fa-box-open mr-3" style="color: #4a90e2;"></i>
@@ -119,11 +119,13 @@
                             {% if article.has_promo_active %}
                                 <div class="w-full bg-yellow-100 text-yellow-700 p-2 rounded-lg mb-2 text-sm">
                                     <i class="fas fa-exclamation-triangle mr-1"></i>
-                                    Les changements de phase sont désactivés car cet article est actuellement en promotion.
+                                    Cet article est actuellement en promotion. Cliquer sur "Par défaut" annulera la promotion.
                                 </div>
-                                <button type="button" disabled class="inline-flex items-center bg-gray-300 text-gray-500 px-3 py-1.5 rounded-lg text-sm font-medium cursor-not-allowed opacity-60">
-                                    <i class="fas fa-check-circle mr-1"></i>Par défaut
-                                </button>
+                            {% endif %}
+                            <button type="submit" name="phase" value="EN_COURS" class="inline-flex items-center bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-all">
+                                <i class="fas fa-check-circle mr-1"></i>Par défaut
+                            </button>
+                            {% if article.has_promo_active %}
                                 <button type="button" disabled class="inline-flex items-center bg-gray-300 text-gray-500 px-3 py-1.5 rounded-lg text-sm font-medium cursor-not-allowed opacity-60">
                                     <i class="fas fa-tag mr-1"></i>Liquidation
                                 </button>
@@ -131,10 +133,7 @@
                                     <i class="fas fa-flask mr-1"></i>Test
                                 </button>
                             {% else %}
-                                <button type="submit" name="phase" value="EN_COURS" class="inline-flex items-center bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-all">
-                                    <i class="fas fa-check-circle mr-1"></i>Par défaut
-                                </button>
-                                <button type="button" onclick="openLiquidationModal()" class="inline-flex items-center bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-all">
+                                <button type="submit" name="phase" value="LIQUIDATION_DB" class="inline-flex items-center bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-all">
                                     <i class="fas fa-tag mr-1"></i>Liquidation
                                 </button>
                                 <button type="submit" name="phase" value="EN_TEST" class="inline-flex items-center bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-all">
@@ -171,106 +170,151 @@
     </div>
 
     {% if article.variantes.all %}
-        <!-- Tableau croisé dynamique - Version simplifiée et claire -->
-        <div class="overflow-x-auto">
-<table class="w-full border-collapse border" style="border-color: var(--preparation-border-accent);">
-    <thead>
-        <tr class="bg-gray-50" style="border-color: var(--preparation-border-accent);">
-            <th class="p-3 text-left font-semibold border" style="color: var(--preparation-primary); border-color: var(--preparation-border-accent);">
-                Couleur / Pointure
-            </th>
-            <!-- Colonnes = Pointures -->
-            {% for pointure in pointures_uniques %}
-                <th class="p-3 text-center font-semibold border" style="color: var(--preparation-primary); border-color: var(--preparation-border-accent);">
-                    {{ pointure }}
-                </th>
-            {% endfor %}
-        </tr>
-    </thead>
-    <tbody>
-        <!-- Lignes = Couleurs -->
-        {% for couleur in couleurs_uniques %}
-            <tr class="border-b hover:bg-gray-50 transition-colors" style="border-color: var(--preparation-border-accent);">
-                <td class="p-3 font-semibold border flex items-center" style="border-color: var(--preparation-border-accent); color: var(--preparation-primary);">
-                    <div class="w-4 h-4 rounded-full mr-2 border border-gray-300" style="background-color: #ccc;"></div>
-                    <span>{{ couleur }}</span>
-                </td>
-                {% for pointure in pointures_uniques %}
-                    <td class="p-3 text-center border" style="border-color: var(--preparation-border-accent);">
-                        {% for variante in article.variantes.all %}
-                            {% if variante.couleur.nom == couleur and variante.pointure.pointure == pointure %}
-                                {% if variante.qte_disponible > 0 %}
-                                    {% if variante.qte_disponible < 5 %}
-                                        <span class="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm font-medium">
-                                            {{ variante.qte_disponible }}
-                                        </span>
-                                    {% else %}
-                                        <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                                            {{ variante.qte_disponible }}
-                                        </span>
-                                    {% endif %}
-                                {% else %}
-                                    <span class="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-medium">
-                                        Rupture
-                                    </span>
-                                {% endif %}
-                            {% endif %}
-                        {% empty %}
-                            <span class="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm font-medium">
-                                -
-                            </span>
+        <!-- Tableau croisé dynamique - Design aligné supervision -->
+        <div class="overflow-x-auto rounded-lg shadow-sm border border-gray-200" id="tableVariantesContainer">
+            <table class="min-w-full divide-y divide-gray-200 text-xs sm:text-sm" style="table-layout:auto; min-width: 720px;">
+                <thead class="sticky top-0 z-10" style="background-color: var(--preparation-primary);">
+                    <tr>
+                        <th class="px-3 py-2 text-left text-xs font-medium text-white uppercase tracking-wider">
+                            Couleur / Pointure
+                        </th>
+                        {% for pointure in pointures_uniques %}
+                            <th class="px-3 py-2 text-center text-xs font-medium text-white uppercase tracking-wider">
+                                {{ pointure }}
+                            </th>
                         {% endfor %}
-                    </td>
-                {% endfor %}
-            </tr>
-        {% endfor %}
-    </tbody>
-</table>
-
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for couleur in couleurs_uniques %}
+                        <tr class="hover:bg-gray-50 transition-colors">
+                            <td class="px-3 py-2 font-semibold flex items-center text-[var(--preparation-primary)]">
+                                <div class="w-4 h-4 rounded-full mr-2 border border-gray-300" style="background-color: #ccc;"></div>
+                                <span>{{ couleur }}</span>
+                            </td>
+                            {% for pointure in pointures_uniques %}
+                                <td class="px-3 py-2 text-center">
+                                    {% for variante in article.variantes.all %}
+                                        {% if variante.couleur.nom == couleur and variante.pointure.pointure == pointure %}
+                                            {% if variante.qte_disponible > 0 %}
+                                                {% if variante.qte_disponible < 5 %}
+                                                    <span class="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-xs sm:text-sm font-medium">
+                                                        {{ variante.qte_disponible }}
+                                                    </span>
+                                                {% else %}
+                                                    <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs sm:text-sm font-medium">
+                                                        {{ variante.qte_disponible }}
+                                                    </span>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs sm:text-sm font-medium">
+                                                    Rupture
+                                                </span>
+                                            {% endif %}
+                                        {% endif %}
+                                    {% empty %}
+                                        <span class="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs sm:text-sm font-medium">-</span>
+                                    {% endfor %}
+                                </td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
 
-        <!-- Légende des indicateurs -->
-        <div class="mt-6 p-4 bg-gray-50 rounded-lg border" style="border-color: var(--preparation-border-accent);">
-            <h3 class="text-lg font-semibold mb-3" style="color: var(--preparation-primary);">Légende des Indicateurs</h3>
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div class="flex items-center">
-                    <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium mr-2">5+</span>
-                    <span class="text-sm text-gray-600">Stock normal</span>
+        <!-- Légende des indicateurs (améliorée) -->
+        <div class="mt-6 rounded-xl shadow-sm border border-gray-200 bg-white">
+            <div class="flex items-center justify-between px-4 py-3 border-b" style="border-color: var(--preparation-border-accent);">
+                <h3 class="text-lg font-semibold flex items-center" style="color: var(--preparation-primary);">
+                    <i class="fas fa-info-circle mr-2" style="color: var(--preparation-border-accent);"></i>
+                    Légende des Indicateurs
+                </h3>
+            </div>
+            <div class="p-4 grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="flex items-center p-3 rounded-lg border bg-green-50" style="border-color: #bbf7d0;">
+                    <i class="fas fa-check-circle text-green-600 mr-3"></i>
+                    <div class="flex items-center">
+                        <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium mr-2">5+</span>
+                        <span class="text-sm text-gray-700">Stock normal</span>
+                    </div>
                 </div>
-                <div class="flex items-center">
-                    <span class="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm font-medium mr-2">1-4</span>
-                    <span class="text-sm text-gray-600">Stock faible</span>
+                <div class="flex items-center p-3 rounded-lg border bg-orange-50" style="border-color: #fed7aa;">
+                    <i class="fas fa-exclamation-triangle text-orange-600 mr-3"></i>
+                    <div class="flex items-center">
+                        <span class="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm font-medium mr-2">1-4</span>
+                        <span class="text-sm text-gray-700">Stock faible</span>
+                    </div>
                 </div>
-                <div class="flex items-center">
-                    <span class="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-medium mr-2">0</span>
-                    <span class="text-sm text-gray-600">Rupture</span>
+                <div class="flex items-center p-3 rounded-lg border bg-red-50" style="border-color: #fecaca;">
+                    <i class="fas fa-times-circle text-red-600 mr-3"></i>
+                    <div class="flex items-center">
+                        <span class="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-medium mr-2">0</span>
+                        <span class="text-sm text-gray-700">Rupture</span>
+                    </div>
                 </div>
-                <div class="flex items-center">
-                    <span class="bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-sm font-medium mr-2">-</span>
-                    <span class="text-sm text-gray-600">Variante inexistante</span>
+                <div class="flex items-center p-3 rounded-lg border bg-gray-50" style="border-color: #e5e7eb;">
+                    <i class="fas fa-minus-circle text-gray-500 mr-3"></i>
+                    <div class="flex items-center">
+                        <span class="bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-sm font-medium mr-2">-</span>
+                        <span class="text-sm text-gray-700">Variante inexistante</span>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Résumé des variantes -->
-        <div class="mt-6 p-4 bg-gray-50 rounded-lg border" style="border-color: var(--preparation-border-accent);">
-            <h3 class="text-lg font-semibold mb-3" style="color: var(--preparation-primary);">Résumé des Variantes</h3>
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div class="text-center">
-                    <div class="text-2xl font-bold text-blue-600">{{ stats_variantes.total }}</div>
-                    <div class="text-sm text-gray-600">Total Variantes</div>
+        <!-- Résumé des variantes (amélioré) -->
+        <div class="mt-6 rounded-xl shadow-sm border border-gray-200 bg-white">
+            <div class="flex items-center justify-between px-4 py-3 border-b" style="border-color: var(--preparation-border-accent);">
+                <h3 class="text-lg font-semibold flex items-center" style="color: var(--preparation-primary);">
+                    <i class="fas fa-chart-bar mr-2" style="color: var(--preparation-border-accent);"></i>
+                    Résumé des Variantes
+                </h3>
+            </div>
+            <div class="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="stats-card group rounded-xl p-4 transition-all duration-300 hover:shadow-2xl border">
+                    <div class="flex items-center">
+                        <div class="stats-icon">
+                            <i class="fas fa-layer-group text-xl"></i>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-xs font-medium text-gray-600">Total Variantes</p>
+                            <p class="text-2xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">{{ stats_variantes.total }}</p>
+                        </div>
+                    </div>
                 </div>
-                <div class="text-center">
-                    <div class="text-2xl font-bold text-green-600">{{ stats_variantes.en_stock }}</div>
-                    <div class="text-sm text-gray-600">En Stock</div>
+                <div class="stats-card group rounded-xl p-4 transition-all duration-300 hover:shadow-2xl border">
+                    <div class="flex items-center">
+                        <div class="stats-icon">
+                            <i class="fas fa-check-circle text-xl"></i>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-xs font-medium text-gray-600">En Stock</p>
+                            <p class="text-2xl font-bold text-gray-900 group-hover:text-green-600 transition-colors">{{ stats_variantes.en_stock }}</p>
+                        </div>
+                    </div>
                 </div>
-                <div class="text-center">
-                    <div class="text-2xl font-bold text-orange-600">{{ stats_variantes.stock_faible }}</div>
-                    <div class="text-sm text-gray-600">Stock Faible</div>
+                <div class="stats-card group rounded-xl p-4 transition-all duration-300 hover:shadow-2xl border">
+                    <div class="flex items-center">
+                        <div class="stats-icon">
+                            <i class="fas fa-exclamation-triangle text-xl"></i>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-xs font-medium text-gray-600">Stock Faible</p>
+                            <p class="text-2xl font-bold text-gray-900 group-hover:text-orange-600 transition-colors">{{ stats_variantes.stock_faible }}</p>
+                        </div>
+                    </div>
                 </div>
-                <div class="text-center">
-                    <div class="text-2xl font-bold text-red-600">{{ stats_variantes.rupture }}</div>
-                    <div class="text-sm text-gray-600">Rupture</div>
+                <div class="stats-card group rounded-xl p-4 transition-all duration-300 hover:shadow-2xl border">
+                    <div class="flex items-center">
+                        <div class="stats-icon">
+                            <i class="fas fa-times-circle text-xl"></i>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-xs font-medium text-gray-600">Rupture</p>
+                            <p class="text-2xl font-bold text-gray-900 group-hover:text-red-600 transition-colors">{{ stats_variantes.rupture }}</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -290,37 +334,6 @@
     {% endif %}
 </div>
 
-<!-- Modale de liquidation -->
-<div id="liquidationModal" class="fixed inset-0 z-50 items-center justify-center bg-black bg-opacity-60 hidden">
-    <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full transform transition-all duration-300 scale-95 opacity-0" id="liquidationModalContent">
-        <div class="text-center">
-            <div class="mb-4">
-                <i class="fas fa-tag text-6xl text-orange-400"></i>
-            </div>
-            <h2 class="text-2xl font-bold text-gray-800 mb-2">Appliquer une liquidation</h2>
-            <p class="text-gray-600 mb-6">
-                Veuillez saisir le pourcentage de réduction pour la liquidation.
-            </p>
-            <form method="POST" action="{% url 'Superpreparation:appliquer_liquidation' article.id %}" class="space-y-4">
-                {% csrf_token %}
-                <div>
-                    <label for="pourcentage" class="block text-sm font-medium text-gray-700 mb-2">Pourcentage de réduction</label>
-                    <input type="number" name="pourcentage" id="pourcentage" min="1" max="90" step="0.1" required
-                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
-                    <p class="text-sm text-gray-500 mt-1">Entre 1% et 90%</p>
-                </div>
-                <div class="flex justify-center gap-4 mt-6">
-                    <button type="submit" class="px-6 py-2 bg-orange-500 text-white rounded-lg font-semibold hover:bg-orange-600 transition-colors shadow-lg">
-                        Appliquer
-                    </button>
-                    <button type="button" onclick="closeLiquidationModal()" class="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg font-semibold hover:bg-gray-300 transition-colors shadow-lg">
-                        Annuler
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 
 {% endblock %}
 
@@ -371,38 +384,5 @@
         }
     }
 
-    function openLiquidationModal() {
-        const modal = document.getElementById('liquidationModal');
-        const modalContent = document.getElementById('liquidationModalContent');
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
-        setTimeout(() => {
-            modalContent.classList.remove('scale-95', 'opacity-0');
-        }, 10);
-    }
-
-    function closeLiquidationModal() {
-        const modal = document.getElementById('liquidationModal');
-        const modalContent = document.getElementById('liquidationModalContent');
-        modalContent.classList.add('scale-95', 'opacity-0');
-        setTimeout(() => {
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-        }, 300);
-    }
-
-    // Fermer la modale si on clique en dehors
-    document.getElementById('liquidationModal').addEventListener('click', function(event) {
-        if (event.target === this) {
-            closeLiquidationModal();
-        }
-    });
-
-    // Fermer la modale avec la touche Echap
-    document.addEventListener('keydown', function(event) {
-        if (event.key === 'Escape') {
-            closeLiquidationModal();
-        }
-    });
 </script>
 {% endblock %}

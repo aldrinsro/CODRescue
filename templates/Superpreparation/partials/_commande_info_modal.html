@@ -8,7 +8,7 @@
         </h4>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-                <p class="text-sm text-gray-600">ID YZ: <span class="font-semibold text-gray-900">{{ commande.id_yz }}</span></p>
+                <p class="text-sm text-gray-600">Numéro Commande: <span class="font-semibold text-gray-900">{{ commande.id_yz }}</span></p>
                 <p class="text-sm text-gray-600">N° Externe: <span class="font-semibold text-gray-900">{{ commande.num_cmd|default:"-" }}</span></p>
                 <p class="text-sm text-gray-600">Total: <span class="font-semibold text-green-600">{{ commande.total_cmd|floatformat:2 }} DH</span></p>
             </div>

@@ -1,11 +1,11 @@
 <header class="bg-white shadow-md px-6 py-4 border-b" style="border-color: var(--preparation-border-accent);">
     <div class="flex items-center justify-between">
         <!-- Menu hamburger pour mobile -->
-        <button id="menu-toggle" class="p-2 rounded-lg transition-all duration-300 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-opacity-50" style="hover:background-color: var(--preparation-hover-bg); focus:ring-color: var(--preparation-primary); background-color: var(--preparation-light);">
+        <button id="menu-toggle" class="p-2 rounded-lg transition-all duration-300 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-opacity-50" style="hover:background-color: var(--preparation-hover-bg); focus:ring-color: var(--preparation-primary); background-color: var(--preparation-primary);">
             <div class="space-y-1.5">
-                <span id="hamburger-line-1" class="block w-6 h-0.5 transition-all duration-300 transform origin-center" style="background-color: var(--preparation-primary);"></span>
-                <span id="hamburger-line-2" class="block w-6 h-0.5 mt-1.5 transition-all duration-300 transform origin-center" style="background-color: var(--preparation-primary);"></span>
-                <span id="hamburger-line-3" class="block w-6 h-0.5 mt-1.5 transition-all duration-300 transform origin-center" style="background-color: var(--preparation-primary);"></span>
+                <span id="hamburger-line-1" class="block w-6 h-0.5 transition-all duration-300 transform origin-center" style="background-color: var(--preparation-text-light);"></span>
+                <span id="hamburger-line-2" class="block w-6 h-0.5 mt-1.5 transition-all duration-300 transform origin-center" style="background-color: var(--preparation-text-light);"></span>
+                <span id="hamburger-line-3" class="block w-6 h-0.5 mt-1.5 transition-all duration-300 transform origin-center" style="background-color: var(--preparation-text-light);"></span>
             </div>
         </button>
         <div>
@@ -104,6 +104,30 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🔧 Initialisation du modal de profil - Préparation');
+    // Logs de diagnostic couleur hamburger
+    try {
+        const rootStyles = getComputedStyle(document.documentElement);
+        const varPrimary = rootStyles.getPropertyValue('--preparation-primary').trim();
+        const varLight = rootStyles.getPropertyValue('--preparation-light').trim();
+        const varTextLight = rootStyles.getPropertyValue('--preparation-text-light').trim();
+        const btn = document.getElementById('menu-toggle');
+        const line1 = document.getElementById('hamburger-line-1');
+        const line2 = document.getElementById('hamburger-line-2');
+        const line3 = document.getElementById('hamburger-line-3');
+        const btnBg = btn ? getComputedStyle(btn).backgroundColor : null;
+        const l1Bg = line1 ? getComputedStyle(line1).backgroundColor : null;
+        const l2Bg = line2 ? getComputedStyle(line2).backgroundColor : null;
+        const l3Bg = line3 ? getComputedStyle(line3).backgroundColor : null;
+        console.log('🎨 Variables CSS', { varPrimary, varLight, varTextLight });
+        console.log('🎨 Styles hamburger (computed)', { btnBg, l1Bg, l2Bg, l3Bg });
+        // Détecter des doublons éventuels de menu-toggle
+        const toggles = document.querySelectorAll('#menu-toggle');
+        if (toggles.length > 1) {
+            console.warn('⚠️ Plusieurs boutons #menu-toggle détectés:', toggles.length);
+        }
+    } catch (e) {
+        console.warn('Log couleurs hamburger impossible:', e);
+    }
     
     const profileDropdownButton = document.getElementById('header-profile-dropdown');
     const profileMenu = document.getElementById('header-profile-menu-root');
@@ -179,30 +203,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     console.log('✅ Initialisation terminée');
     
-    // Gestion de la sidebar
-    const menuToggle = document.getElementById('menu-toggle');
-    const body = document.body;
-    
-    if (menuToggle) {
-        console.log('🔧 Bouton menu-toggle trouvé, ajout de la logique de sidebar');
-        
-        menuToggle.addEventListener('click', function() {
-            console.log('🖱️ Clic sur menu-toggle détecté');
-            
-            // Toggle des classes pour la sidebar
-            body.classList.toggle('sidebar-open');
-            body.classList.toggle('sidebar-collapsed');
-            
-            // Toggle de l'animation du hamburger
-            this.classList.toggle('hamburger-active');
-            
-            console.log('📊 État sidebar après toggle:', {
-                sidebarOpen: body.classList.contains('sidebar-open'),
-                sidebarCollapsed: body.classList.contains('sidebar-collapsed')
-            });
-        });
-    } else {
-        console.error('❌ Bouton menu-toggle non trouvé');
-    }
+    // Gestion de la sidebar - DÉLÉGUÉE À base.html
+    console.log('🔧 Sidebar gérée par base.html');
 });
 </script> 

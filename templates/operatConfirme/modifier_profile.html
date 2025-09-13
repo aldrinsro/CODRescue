@@ -70,6 +70,10 @@
     </div>
 </div>
 
+{% endblock content %}
+
+{% block extra_js %}
+{{ block.super }}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const photoInput = document.getElementById('id_photo');
@@ -96,4 +100,4 @@
         }
     });
 </script>
-{% endblock content %} 
+{% endblock %} 

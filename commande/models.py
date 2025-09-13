@@ -54,7 +54,22 @@ class Commande(models.Model):
         ('ADMIN', 'Administrateur'),
         ('SYNC', 'Synchronisation')
     ]
-    
+    SOURCE_CHOICES = [
+        ('Appel', 'Appel'),
+        ('Whatsapp ', 'Whatsapp '),
+        ('SMS', 'SMS'),
+        ('Email', 'Email'),
+        ('Facebook', 'Facebook'),
+        ("Youcan", "Youcan"),
+        ("Shopify", "Shopify"), 
+              ]
+    PAYER_CHOICES = [
+        ('Non payé', 'Non payé'),
+        ('Payé', 'Payé'),
+        ('Remboursée', 'Remboursée'),
+    ]
+
+
     num_cmd = models.CharField(max_length=50, unique=True)
     id_yz = models.PositiveIntegerField(unique=True, null=True, blank=True)
     origine = models.CharField(max_length=10, choices=ORIGINE_CHOICES, default='SYNC')
@@ -62,7 +77,6 @@ class Commande(models.Model):
     total_cmd = models.FloatField()
     adresse = models.TextField()
     motif_annulation = models.TextField(blank=True, null=True)
-    is_upsell = models.BooleanField(default=False)
     date_creation = models.DateTimeField(default=timezone.now)
     date_modification = models.DateTimeField(auto_now=True)
     last_sync_date = models.DateTimeField(null=True, blank=True, verbose_name="Date de dernière synchronisation")
@@ -70,12 +84,16 @@ class Commande(models.Model):
     ville_init = models.CharField(max_length=100, blank=True, null=True)
     ville = models.ForeignKey(Ville, on_delete=models.CASCADE, null=True, blank=True, related_name='commandes')
     produit_init = models.TextField(blank=True, null=True)
-    compteur = models.IntegerField(default=0, verbose_name="Compteur d'utilisation")
-  
-    # Relation avec Envoi pour les exports journaliers
+    source = models.CharField(max_length=100, blank=True, null=True, choices=SOURCE_CHOICES)
+    compteur = models.IntegerField(default=0, verbose_name="Compteur d'utilisation")  
+    payement  = models.CharField(default='Non payé', verbose_name="Payement", choices=PAYER_CHOICES)
+    frais_livraison = models.BooleanField(default=True, verbose_name="Frais de livraison")
+    Date_livraison = models.DateTimeField(null=True, blank=True, verbose_name="Date de livraison")
+
+
+    # Relation avec Envoi pour les exports journaliers  
     envoi = models.ForeignKey('Envoi', on_delete=models.SET_NULL, null=True, blank=True, related_name='commandes_associees')
-  
-    
+
     class Meta:
         verbose_name = "Commande"
         verbose_name_plural = "Commandes"
@@ -93,7 +111,14 @@ class Commande(models.Model):
             last_id_yz = Commande.objects.aggregate(max_id=models.Max('id_yz'))['max_id']
             base = self.START_ID_YZ - 1
             # Si aucune commande, commencer à 211971; sinon continuer après le max existant
-            self.id_yz = max(last_id_yz or base, base) + 1
+            self.id_yz = max(last_id_yz or base, base) + 1 
+        
+        # Détecter automatiquement la source basée sur le numéro de commande
+        if self.num_cmd and not self.source:
+            if self.num_cmd.startswith('YCN'):
+                self.source = 'Youcan'
+            elif self.num_cmd.startswith('SHP'):
+                self.source = 'Shopify'
         
         # Générer le numéro de commande selon l'origine si ce n'est pas déjà fait
         if not self.num_cmd:
@@ -132,6 +157,29 @@ class Commande(models.Model):
         
         super().save(*args, **kwargs)
     
+    @classmethod
+    def update_sources_from_num_cmd(cls):
+        """
+        Met à jour la source des commandes existantes basée sur leur num_cmd
+        """
+        # Mettre à jour les commandes YCN vers Youcan
+        updated_youcan = cls.objects.filter(
+            num_cmd__startswith='YCN',
+            source__isnull=True
+        ).update(source='Youcan')
+        
+        # Mettre à jour les commandes SHP vers Shopify
+        updated_shopify = cls.objects.filter(
+            num_cmd__startswith='SHP',
+            source__isnull=True
+        ).update(source='Shopify')
+        
+        return {
+            'youcan_updated': updated_youcan,
+            'shopify_updated': updated_shopify,
+            'total_updated': updated_youcan + updated_shopify
+        }
+    
     def __str__(self):
         return f"Commande {self.id_yz or self.num_cmd} - {self.client}"
     
@@ -139,7 +187,6 @@ class Commande(models.Model):
     def etat_actuel(self):
         """Retourne l'état actuel de la commande"""
         return self.etats.filter(date_fin__isnull=True).first()
-    
     @property
     def historique_etats(self):
         """Retourne l'historique complet des états"""
@@ -158,18 +205,24 @@ class Commande(models.Model):
         
         # Recalculer chaque panier selon le compteur upsell
         for panier in self.paniers.all():
-            # Calculer le prix selon le compteur de la commande
-            prix_unitaire = get_prix_upsell_avec_compteur(panier.article, self.compteur)
-            nouveau_sous_total = prix_unitaire * panier.quantite
-            
-            print(f"   📦 {panier.article.nom} (upsell: {panier.article.isUpsell}): qté={panier.quantite}, prix={prix_unitaire}, sous_total={nouveau_sous_total}")
-            
-            # Mettre à jour le sous-total du panier si nécessaire
-            if panier.sous_total != nouveau_sous_total:
-                panier.sous_total = float(nouveau_sous_total)
-                panier.save()
-            
-            nouveau_total += nouveau_sous_total
+            # Vérifier si une remise a été appliquée sur ce panier
+            if hasattr(panier, 'remise_appliquer') and panier.remise_appliquer:
+                # Une remise a été appliquée - NE PAS recalculer, conserver le prix remisé
+                print(f"   📦 {panier.article.nom} (REMISE APPLIQUÉE): qté={panier.quantite}, sous_total préservé={panier.sous_total}")
+                nouveau_total += float(panier.sous_total)
+            else:
+                # Aucune remise - calculer selon le compteur de la commande
+                prix_unitaire = get_prix_upsell_avec_compteur(panier.article, self.compteur)
+                nouveau_sous_total = prix_unitaire * panier.quantite
+                
+                print(f"   📦 {panier.article.nom} (upsell: {panier.article.isUpsell}): qté={panier.quantite}, prix={prix_unitaire}, sous_total={nouveau_sous_total}")
+                
+                # Mettre à jour le sous-total du panier si nécessaire
+                if panier.sous_total != nouveau_sous_total:
+                    panier.sous_total = float(nouveau_sous_total)
+                    panier.save()
+                
+                nouveau_total += nouveau_sous_total
         
         # Ajouter les frais de livraison au total
         frais_livraison = self.ville.frais_livraison if self.ville else 0
@@ -194,15 +247,158 @@ class Commande(models.Model):
     @property
     def total_avec_frais(self):
         """Retourne le total articles + frais de livraison"""
-        return float(self.sous_total_articles) + float(self.frais_livraison)
+        return float(self.sous_total_articles) + float(self.montant_frais_livraison)
+    
+    def corriger_paniers_liquidation_et_promotion(self):
+        """
+        Corrige automatiquement tous les paniers d'articles en liquidation et en promotion
+        pour s'assurer qu'ils n'ont pas remise_appliquer = True
+        """
+        from django.db.models import Q
+        
+        # Corriger les paniers d'articles en liquidation
+        paniers_liquidation = self.paniers.filter(
+            article__phase='LIQUIDATION',
+            remise_appliquer=True
+        )
+        
+        for panier in paniers_liquidation:
+            print(f"🔧 Correction panier liquidation: {panier.article.nom}")
+            # Recalculer le sous-total avec le prix de liquidation
+            prix_liquidation = panier.article.Prix_liquidation or panier.article.prix_actuel or panier.article.prix_unitaire
+            panier.sous_total = float(prix_liquidation) * panier.quantite
+            panier.remise_appliquer = False
+            panier.type_remise_appliquee = ''
+            panier.save()
+        
+        # Corriger les paniers d'articles en promotion
+        # Utiliser une requête Django pour identifier les articles avec promotions actives
+        from django.utils import timezone
+        now = timezone.now()
+        
+        paniers_promotion = self.paniers.filter(
+            article__promotions__active=True,
+            article__promotions__date_debut__lte=now,
+            article__promotions__date_fin__gte=now,
+            remise_appliquer=True
+        ).distinct()
+        
+        for panier in paniers_promotion:
+            print(f"🔧 Correction panier promotion: {panier.article.nom}")
+            # Recalculer le sous-total avec le prix promotionnel
+            prix_promotion = panier.article.prix_actuel or panier.article.prix_unitaire
+            panier.sous_total = float(prix_promotion) * panier.quantite
+            panier.remise_appliquer = False
+            panier.type_remise_appliquee = ''
+            panier.save()
+
+    def recalculer_total_avec_frais(self):
+        """
+        Recalcule le total de la commande en incluant les frais de livraison
+        SEULEMENT si frais_livraison = True
+        """
+        # Corriger d'abord les paniers en liquidation et en promotion
+        self.corriger_paniers_liquidation_et_promotion()
+        
+        # Calculer le sous-total des articles
+        sous_total_articles = sum(panier.sous_total for panier in self.paniers.all())
+        
+        if self.frais_livraison:
+            # Récupérer les frais de livraison de la ville
+            frais_ville = self.ville.frais_livraison if self.ville else 0
+            
+            # Calculer le nouveau total avec frais
+            nouveau_total = float(sous_total_articles) + float(frais_ville)
+            
+            # Mettre à jour le total si nécessaire
+            if self.total_cmd != nouveau_total:
+                self.total_cmd = nouveau_total
+                # Éviter la récursion en utilisant update_fields
+                Commande.objects.filter(id=self.id).update(total_cmd=nouveau_total)
+                print(f"✅ Frais de livraison ajoutés: {sous_total_articles} + {frais_ville} = {nouveau_total}")
+        else:
+            # Si frais_livraison = False, calculer le total sans frais
+            nouveau_total = float(sous_total_articles)
+            if self.total_cmd != nouveau_total:
+                self.total_cmd = nouveau_total
+                Commande.objects.filter(id=self.id).update(total_cmd=nouveau_total)
+                print(f"ℹ️  Frais de livraison désactivés - Total recalculé: {nouveau_total}")
+
+    # === Méthodes pour la gestion des articles retournés ===
+    
+    def get_articles_retournes(self):
+        """Retourne tous les articles retournés pour cette commande"""
+        return self.articles_retournes.all()
+    
+    def articles_retournes_en_attente(self):
+        """Retourne les articles retournés en attente de traitement"""
+        return self.articles_retournes.filter(statut_retour='en_attente')
+    
+    def articles_retournes_count(self):
+        """Nombre total d'articles retournés pour cette commande"""
+        return self.articles_retournes.count()
+    
+    def valeur_articles_retournes(self):
+        """Valeur totale des articles retournés"""
+        total = 0
+        for article_retourne in self.articles_retournes.all():
+            total += float(article_retourne.valeur_retour())
+        return total
+    
+    def a_des_articles_retournes(self):
+        """Vérifie si la commande a des articles retournés"""
+        return self.articles_retournes.exists()
+    
+    def peut_reintegrer_articles_retournes(self):
+        """Vérifie si des articles retournés peuvent être réintégrés en stock"""
+        return self.articles_retournes.filter(
+            statut_retour='en_attente',
+            variante__isnull=False,
+            variante__actif=True
+        ).exists()
+    
+    def reintegrer_tous_articles_retournes(self, operateur=None, commentaire="Réintégration automatique"):
+        """Réintègre automatiquement tous les articles retournés éligibles"""
+        articles_reintegres = 0
+        for article_retourne in self.articles_retournes_en_attente():
+            if article_retourne.peut_etre_reintegre():
+                if article_retourne.reintegrer_stock(operateur, commentaire):
+                    articles_reintegres += 1
+        return articles_reintegres
+    
+    def resume_retours(self):
+        """Résumé des retours pour cette commande"""
+        retours = self.articles_retournes.all()
+        if not retours:
+            return None
+        
+        return {
+            'total_articles': retours.count(),
+            'total_quantite': sum(r.quantite_retournee for r in retours),
+            'total_valeur': sum(r.valeur_retour() for r in retours),
+            'en_attente': retours.filter(statut_retour='en_attente').count(),
+            'reintegres': retours.filter(statut_retour='reintegre_stock').count(),
+            'traites': retours.exclude(statut_retour='en_attente').count()
+        }
 
 
 class Panier(models.Model):
+    CHOIX_TYPE_REMISE = [
+        ('', 'Aucune remise'),
+        ('remise_1', 'Prix remise 1'),
+        ('remise_2', 'Prix remise 2'),
+        ('remise_3', 'Prix remise 3'),
+        ('remise_4', 'Prix remise 4'),
+      
+    ]
+    
     commande = models.ForeignKey(Commande, on_delete=models.CASCADE, related_name='paniers')
     article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name='paniers')
     variante = models.ForeignKey(VarianteArticle, on_delete=models.SET_NULL, null=True, blank=True, related_name='paniers')
     quantite = models.IntegerField()
     sous_total = models.FloatField()
+    remise_appliquer = models.BooleanField(default=False)
+    type_remise_appliquee = models.CharField(max_length=20, choices=CHOIX_TYPE_REMISE, blank=True, default='')
     
     class Meta:
         verbose_name = "Panier"
@@ -212,6 +408,20 @@ class Panier(models.Model):
             models.CheckConstraint(check=models.Q(quantite__gt=0), name='quantite_positive'),
             models.CheckConstraint(check=models.Q(sous_total__gte=0), name='sous_total_positif'),
         ]
+    
+    def save(self, *args, **kwargs):
+        # Protection : les articles en liquidation et en promotion ne peuvent pas avoir remise_appliquer = True
+        if self.article:
+            article_en_liquidation = self.article.phase == 'LIQUIDATION'
+            article_en_promotion = hasattr(self.article, 'has_promo_active') and self.article.has_promo_active
+            
+            if (article_en_liquidation or article_en_promotion) and self.remise_appliquer:
+                motif = "liquidation" if article_en_liquidation else "promotion"
+                print(f"⚠️ PROTECTION: Article {self.article.nom} en {motif} - remise_appliquer forcé à False")
+                self.remise_appliquer = False
+                self.type_remise_appliquee = ''
+        
+        super().save(*args, **kwargs)
     
     def __str__(self):
         return f"{self.commande.num_cmd} - {self.article.nom} (x{self.quantite})"
@@ -224,6 +434,7 @@ class EtatCommande(models.Model):
     date_fin = models.DateTimeField(blank=True, null=True)
     commentaire = models.TextField(blank=True, null=True)
     operateur = models.ForeignKey(Operateur, on_delete=models.CASCADE, related_name='etats_modifies', blank=True, null=True)
+    date_fin_delayed = models.DateTimeField(blank=True, null=True, verbose_name="Date reporte de confirmation décalée")
     
     class Meta:
         verbose_name = "État de commande(Suivi de commande)"
@@ -262,25 +473,24 @@ class Operation(models.Model):
         ("Message Whatsapp", "Appel Whatsapp "),
         ("Vocal Whatsapp", "Vocal Whatsapp "),
         ('ENVOI_SMS', 'Envoi de SMS'),
-        ('MODIFICATION', 'Modification'),
-        ('PROBLEME_SIGNALÉ', 'Problème signalé'),
-        ('RENVOI_PREPARATION', 'Renvoi en préparation'),
-        # Opérations d'affectation par supervision
-        ('AFFECTATION_SUPERVISION', 'Affectation par supervision'),
-        ('REAFFECTATION_SUPERVISION', 'Réaffectation par supervision'),
-        # Opérations d'affectation par admin
-        ('AFFECTATION_ADMIN', 'Affectation par admin'),
-        ('REAFFECTATION_ADMIN', 'Réaffectation par admin'),
     ]
     Type_Commentaire_CHOICES=[
-        ("Commande Annulée", "Commande Annulée"),
-        ("Client hésitant", "Client hésitant"),
-        ("Client intéressé", "Client intéressé"),
-        ("Client non intéressé", "Client non intéressé"),
-        ("Client non joignable", "Client non joignable"),
-        ("commande reportée", "commande reportée"),
-        ("Article non disponible", "Article non disponible"),
+        ("Appel 1", "Appel 1"),
+        ("Appel 2", "Appel 2"),
+        ("Appel 3", "Appel 3"),
+        ("Appel 4", "Appel 4"),
+        ("Appel 5", "Appel 5"),
+        ("Appel 6", "Appel 6"),
+        ("Confirmée", "Confirmée"),
+        ("Confirmée & Echangée", "Confirmée & Echangée"),
+        ("Echangée", "Echangée"),
+        ("Abonnement","Abonnement"),
+        ("Offre","Offre"),
+        ('numero errone',"numéro erroné"),
+        ('boite vocalee',"boite vocalee"),
+        ("indisponible","indisponible"),
         
+
     ]
     
     type_operation = models.CharField(max_length=30, choices=TYPE_OPERATION_CHOICES)
@@ -300,8 +510,6 @@ class Operation(models.Model):
 
 
 class Envoi(models.Model):
-
-
     # Relations
     commande = models.ForeignKey(Commande, on_delete=models.CASCADE, related_name='envois', null=True, blank=True)   
     region = models.ForeignKey(
@@ -311,16 +519,13 @@ class Envoi(models.Model):
         blank=True, 
         related_name='envois'
     )
-    
     # Informations principales
     date_envoi = models.DateField(default=timezone.now, verbose_name="Date d'envoi")
     date_livraison_prevue = models.DateField(verbose_name="Date de livraison prévue")
     date_livraison_effective = models.DateField(null=True, blank=True, verbose_name="Date de clôture")
-    
     # Statut et suivi
     status = models.BooleanField(default=True, verbose_name="En cours")
     numero_envoi = models.CharField(max_length=50, blank=True, verbose_name="Numéro d'envoi")
-    
     # Opérateurs et traçabilité
     operateur_creation = models.ForeignKey(
         Operateur, 
@@ -393,3 +598,191 @@ class EtatArticleRenvoye(models.Model):
     def __str__(self):
         return f"{self.article} ({self.etat}) dans {self.commande}"
 
+
+class EtiquetteTemplate(models.Model):
+    """Template pour les étiquettes d'articles professionnelles"""
+    name = models.CharField(max_length=100, verbose_name="Nom du template")
+    width = models.FloatField(default=180, verbose_name="Largeur (mm)")
+    height = models.FloatField(default=260, verbose_name="Hauteur (mm)")
+    margin_top = models.FloatField(default=10, verbose_name="Marge haute (mm)")
+    margin_bottom = models.FloatField(default=10, verbose_name="Marge basse (mm)")
+    margin_left = models.FloatField(default=10, verbose_name="Marge gauche (mm)")
+    margin_right = models.FloatField(default=10, verbose_name="Marge droite (mm)")
+    
+    # Styles
+    font_family = models.CharField(max_length=50, default="Helvetica", verbose_name="Police")
+    font_size_title = models.IntegerField(default=16, verbose_name="Taille police titre")
+    font_size_text = models.IntegerField(default=12, verbose_name="Taille police texte")
+    font_size_barcode = models.IntegerField(default=14, verbose_name="Taille police code-barres")
+    
+    # Couleurs
+    color_header = models.CharField(max_length=7, default="#2c3e50", verbose_name="Couleur en-tête")
+    color_footer = models.CharField(max_length=7, default="#2c3e50", verbose_name="Couleur pied")
+    color_text = models.CharField(max_length=7, default="#333333", verbose_name="Couleur texte")
+    
+    # Code-barres
+    barcode_width = models.FloatField(default=4, verbose_name="Largeur barres (mm)")
+    barcode_height = models.FloatField(default=80, verbose_name="Hauteur barres (mm)")
+    barcode_format = models.CharField(max_length=20, default="CODE128B", verbose_name="Format code-barres")
+    
+    # QR Code
+    qr_size = models.IntegerField(default=300, verbose_name="Taille QR code (px)")
+    
+    # Options
+    show_header = models.BooleanField(default=True, verbose_name="Afficher en-tête")
+    show_footer = models.BooleanField(default=True, verbose_name="Afficher pied")
+    show_barcode = models.BooleanField(default=True, verbose_name="Afficher code-barres")
+    show_qr = models.BooleanField(default=False, verbose_name="Afficher QR code")
+    
+    # Métadonnées
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True, verbose_name="Actif")
+    
+    class Meta:
+        verbose_name = "Template d'étiquette"
+        verbose_name_plural = "Templates d'étiquettes"
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.name} ({self.width}x{self.height}mm)"
+    
+    def get_dimensions(self):
+        """Retourne les dimensions en points (pour ReportLab)"""
+        from reportlab.lib.units import mm
+        return (self.width * mm, self.height * mm)
+    
+    def get_margins(self):
+        """Retourne les marges en points"""
+        from reportlab.lib.units import mm
+        return {
+            'top': self.margin_top * mm,
+            'bottom': self.margin_bottom * mm,
+            'left': self.margin_left * mm,
+            'right': self.margin_right * mm
+        }
+
+
+class ArticleRetourne(models.Model):
+    """
+    Modèle pour stocker les articles/variantes retournés lors d'une livraison partielle.
+    Ces articles seront réintégrés en stock ou renvoyés en préparation.
+    """
+    commande = models.ForeignKey(
+        'Commande', 
+        on_delete=models.CASCADE, 
+        related_name='articles_retournes',
+        help_text="Commande d'origine de l'article retourné"
+    )
+    article = models.ForeignKey(
+        Article, 
+        on_delete=models.CASCADE,
+        help_text="Article retourné"
+    )
+    variante = models.ForeignKey(
+        VarianteArticle,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        help_text="Variante spécifique de l'article retourné"
+    )
+    quantite_retournee = models.PositiveIntegerField(
+        help_text="Quantité retournée de cet article/variante"
+    )
+    prix_unitaire_origine = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2,
+        help_text="Prix unitaire de l'article au moment de la livraison partielle"
+    )
+    raison_retour = models.TextField(
+        max_length=500,
+        blank=True,
+        help_text="Raison du retour (optionnel)"
+    )
+    date_retour = models.DateTimeField(
+        auto_now_add=True,
+        help_text="Date et heure du retour"
+    )
+    operateur_retour = models.ForeignKey(
+        Operateur,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="Opérateur qui a effectué le retour"
+    )
+    
+    # Statut du traitement du retour
+    STATUT_RETOUR_CHOICES = [
+        ('en_attente', 'En attente de traitement'),
+        ('reintegre_stock', 'Réintégré en stock'),
+        ('renvoye_preparation', 'Renvoyé en préparation'),
+        ('defectueux', 'Défectueux - à écarter'),
+        ('traite', 'Traité'),
+    ]
+    
+    statut_retour = models.CharField(
+        max_length=50,
+        choices=STATUT_RETOUR_CHOICES,
+        default='en_attente',
+        help_text="Statut du traitement du retour"
+    )
+    
+    date_traitement = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Date de traitement du retour"
+    )
+    
+    operateur_traitement = models.ForeignKey(
+        Operateur,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='retours_traites',
+        help_text="Opérateur qui a traité le retour"
+    )
+    
+    commentaire_traitement = models.TextField(
+        max_length=500,
+        blank=True,
+        help_text="Commentaire sur le traitement du retour"
+    )
+
+    class Meta:
+        verbose_name = "Article Retourné"
+        verbose_name_plural = "Articles Retournés"
+        ordering = ['-date_retour']
+        indexes = [
+            models.Index(fields=['commande', 'statut_retour']),
+            models.Index(fields=['article', 'statut_retour']),
+            models.Index(fields=['date_retour']),
+        ]
+
+    def __str__(self):
+        variante_str = f" ({self.variante})" if self.variante else ""
+        return f"Retour: {self.article.nom}{variante_str} x{self.quantite_retournee} - Commande {self.commande.id_yz}"
+
+    def valeur_retour(self):
+        """Calcule la valeur totale du retour"""
+        return self.quantite_retournee * self.prix_unitaire_origine
+
+    def peut_etre_reintegre(self):
+        """Vérifie si l'article peut être réintégré en stock"""
+        return self.statut_retour == 'en_attente' and self.variante and self.variante.actif
+
+    def reintegrer_stock(self, operateur=None, commentaire=""):
+        """Réintègre l'article en stock"""
+        if self.peut_etre_reintegre():
+            # Augmenter la quantité disponible de la variante
+            self.variante.qte_disponible += self.quantite_retournee
+            self.variante.save(update_fields=['qte_disponible'])
+            
+            # Mettre à jour le statut
+            self.statut_retour = 'reintegre_stock'
+            self.date_traitement = timezone.now()
+            self.operateur_traitement = operateur
+            self.commentaire_traitement = commentaire or f"Réintégré automatiquement en stock: +{self.quantite_retournee}"
+            self.save()
+            
+            return True
+        return False

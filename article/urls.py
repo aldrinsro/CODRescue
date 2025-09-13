@@ -39,6 +39,7 @@ urlpatterns = [
     # Gestion des phases
     path('changer-phase/<int:id>/', views.changer_phase, name='changer_phase'),
     path('appliquer-liquidation/<int:id>/', views.appliquer_liquidation, name='appliquer_liquidation'),
+    path('appliquer-liquidation-prix-db/<int:id>/', views.appliquer_liquidation_prix_db, name='appliquer_liquidation_prix_db'),
     path('reinitialiser-prix/<int:id>/', views.reinitialiser_prix, name='reinitialiser_prix'),
     
     # URLs pour la gestion des couleurs et pointures

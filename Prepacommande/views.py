@@ -208,6 +208,7 @@ def home_view(request):
 def liste_prepa(request):
     """Liste des commandes à préparer pour les opérateurs de préparation"""
     from commande.models import Operation
+    from django.core.paginator import Paginator
     
     try:
         operateur_profile = request.user.profil_operateur
@@ -944,10 +945,24 @@ def liste_prepa(request):
             }
         )
 
+    # Pagination côté serveur
+    items_per_page = int(request.GET.get('per_page', 10))  # Par défaut 10 éléments par page
+    page_number = request.GET.get('page', 1)
+    
+    # Créer le paginator avec la liste des commandes
+    paginator = Paginator(commandes_affectees, items_per_page)
+    
+    try:
+        commandes_paginated = paginator.page(page_number)
+    except (Paginator.EmptyPage, ValueError):
+        # Si la page demandée n'existe pas ou n'est pas un nombre valide, afficher la première page
+        commandes_paginated = paginator.page(1)
+        page_number = 1
+
     context = {
         "page_title": "Mes Commandes à Préparer",
         "page_subtitle": f"Vous avez {total_affectees} commande(s) affectée(s)",
-        "commandes_affectees": commandes_affectees,
+        "commandes_affectees": commandes_paginated,  # Utiliser les commandes paginées
         "search_query": search_query,
         "filter_type": filter_type,
         "stats": {
@@ -960,6 +975,16 @@ def liste_prepa(request):
         "api_produits_url_base": reverse(
             "Prepacommande:api_commande_produits", args=[99999999]
         ),
+        # Informations de pagination
+        "paginator": paginator,
+        "page_obj": commandes_paginated,
+        "items_per_page": items_per_page,
+        "current_page": page_number,
+        "total_pages": paginator.num_pages,
+        "has_previous": commandes_paginated.has_previous(),
+        "has_next": commandes_paginated.has_next(),
+        "previous_page_number": commandes_paginated.previous_page_number() if commandes_paginated.has_previous() else None,
+        "next_page_number": commandes_paginated.next_page_number() if commandes_paginated.has_next() else None,
     }
     return render(request, "Prepacommande/liste_prepa.html", context)
 
@@ -967,6 +992,8 @@ def liste_prepa(request):
 @login_required
 def commandes_en_preparation(request):
     """Liste des commandes en cours de préparation pour les opérateurs de préparation"""
+    from django.core.paginator import Paginator
+    
     try:
         operateur_profile = request.user.profil_operateur
         
@@ -994,12 +1021,36 @@ def commandes_en_preparation(request):
         .distinct()
     )
 
+    # Pagination côté serveur
+    items_per_page = int(request.GET.get('per_page', 10))  # Par défaut 10 éléments par page
+    page_number = request.GET.get('page', 1)
+    
+    # Créer le paginator avec la liste des commandes
+    paginator = Paginator(commandes_en_preparation, items_per_page)
+    
+    try:
+        commandes_paginated = paginator.page(page_number)
+    except (Paginator.EmptyPage, ValueError):
+        # Si la page demandée n'existe pas ou n'est pas un nombre valide, afficher la première page
+        commandes_paginated = paginator.page(1)
+        page_number = 1
+
     context = {
         "page_title": "Commandes en Préparation",
         "page_subtitle": "Interface Opérateur de Préparation",
         "profile": operateur_profile,
-        "commandes": commandes_en_preparation,
+        "commandes": commandes_paginated,  # Utiliser les commandes paginées
         "active_tab": "en_preparation",
+        # Informations de pagination
+        "paginator": paginator,
+        "page_obj": commandes_paginated,
+        "items_per_page": items_per_page,
+        "current_page": page_number,
+        "total_pages": paginator.num_pages,
+        "has_previous": commandes_paginated.has_previous(),
+        "has_next": commandes_paginated.has_next(),
+        "previous_page_number": commandes_paginated.previous_page_number() if commandes_paginated.has_previous() else None,
+        "next_page_number": commandes_paginated.next_page_number() if commandes_paginated.has_next() else None,
     }
     return render(request, "Prepacommande/commandes_en_preparation.html", context)
 
@@ -1007,6 +1058,8 @@ def commandes_en_preparation(request):
 @login_required
 def commandes_livrees_partiellement(request):
     """Liste des commandes livrées partiellement renvoyées en préparation"""
+    from django.core.paginator import Paginator
+    
     try:
         operateur_profile = request.user.profil_operateur
         
@@ -1075,13 +1128,37 @@ def commandes_livrees_partiellement(request):
                 commande.commande_renvoi_num = commande.commande_renvoi.num_cmd
                 commande.commande_renvoi_id_yz = commande.commande_renvoi.id_yz
 
+    # Pagination côté serveur
+    items_per_page = int(request.GET.get('per_page', 10))  # Par défaut 10 éléments par page
+    page_number = request.GET.get('page', 1)
+    
+    # Créer le paginator avec la liste des commandes
+    paginator = Paginator(commandes_livrees_partiellement, items_per_page)
+    
+    try:
+        commandes_paginated = paginator.page(page_number)
+    except (Paginator.EmptyPage, ValueError):
+        # Si la page demandée n'existe pas ou n'est pas un nombre valide, afficher la première page
+        commandes_paginated = paginator.page(1)
+        page_number = 1
+
     context = {
         "page_title": "Commandes Livrées Partiellement",
         "page_subtitle": "Interface Opérateur de Préparation",
         "profile": operateur_profile,
-        "commandes_livrees_partiellement": commandes_livrees_partiellement,
+        "commandes_livrees_partiellement": commandes_paginated,  # Utiliser les commandes paginées
         "commandes_count": len(commandes_livrees_partiellement),
         "active_tab": "livrees_partiellement",
+        # Informations de pagination
+        "paginator": paginator,
+        "page_obj": commandes_paginated,
+        "items_per_page": items_per_page,
+        "current_page": page_number,
+        "total_pages": paginator.num_pages,
+        "has_previous": commandes_paginated.has_previous(),
+        "has_next": commandes_paginated.has_next(),
+        "previous_page_number": commandes_paginated.previous_page_number() if commandes_paginated.has_previous() else None,
+        "next_page_number": commandes_paginated.next_page_number() if commandes_paginated.has_next() else None,
     }
     return render(
         request, "Prepacommande/commandes_livrees_partiellement.html", context
@@ -1091,6 +1168,8 @@ def commandes_livrees_partiellement(request):
 @login_required
 def commandes_retournees(request):
     """Liste des commandes retournées (état actuel 'Retournée') préparées initialement par l'opérateur courant"""
+    from django.core.paginator import Paginator
+    
     try:
         operateur_profile = request.user.profil_operateur
         if not operateur_profile.is_preparation:
@@ -1133,13 +1212,37 @@ def commandes_retournees(request):
             commande.commentaire_retournee = etat_retour.commentaire
             commande.operateur_retour = etat_retour.operateur
 
+    # Pagination côté serveur
+    items_per_page = int(request.GET.get('per_page', 10))  # Par défaut 10 éléments par page
+    page_number = request.GET.get('page', 1)
+    
+    # Créer le paginator avec la liste des commandes
+    paginator = Paginator(commandes, items_per_page)
+    
+    try:
+        commandes_paginated = paginator.page(page_number)
+    except (Paginator.EmptyPage, ValueError):
+        # Si la page demandée n'existe pas ou n'est pas un nombre valide, afficher la première page
+        commandes_paginated = paginator.page(1)
+        page_number = 1
+
     context = {
         "page_title": "Commandes Retournées",
         "page_subtitle": "Commandes renvoyées à la préparation (état 'Retournée')",
         "profile": operateur_profile,
-        "commandes_retournees": commandes,
+        "commandes_retournees": commandes_paginated,  # Utiliser les commandes paginées
         "commandes_count": len(commandes),
         "active_tab": "retournees",
+        # Informations de pagination
+        "paginator": paginator,
+        "page_obj": commandes_paginated,
+        "items_per_page": items_per_page,
+        "current_page": page_number,
+        "total_pages": paginator.num_pages,
+        "has_previous": commandes_paginated.has_previous(),
+        "has_next": commandes_paginated.has_next(),
+        "previous_page_number": commandes_paginated.previous_page_number() if commandes_paginated.has_previous() else None,
+        "next_page_number": commandes_paginated.next_page_number() if commandes_paginated.has_next() else None,
     }
     return render(request, "Prepacommande/commandes_retournees.html", context)
 
@@ -1582,12 +1685,7 @@ def detail_prepa(request, pk):
                 )
                 
                 # Log de l'opération
-                Operation.objects.create(
-                    commande=commande,
-                    type_operation="ARTICLES_COLLECTES",
-                    operateur=operateur_profile,
-                    conclusion=f"Articles collectés par {operateur_profile.nom_complet}.",
-                )
+           
 
             messages.success(
                 request,
@@ -1621,13 +1719,7 @@ def detail_prepa(request, pk):
                     operateur=operateur_profile,
                 )
 
-                # Log de l'opération
-                Operation.objects.create(
-                    commande=commande,
-                    type_operation="COMMANDE_EMBALLEE",
-                    operateur=operateur_profile,
-                    conclusion=f"Commande emballée par {operateur_profile.nom_complet}. Notification envoyée au superviseur.",
-                )
+             
 
                 # TODO: Ajouter ici la notification au superviseur
                 # Pour l'instant, on peut utiliser les messages Django ou créer un système de notification
@@ -1694,12 +1786,7 @@ def detail_prepa(request, pk):
                         f"La commande {commande.id_yz} a été renvoyée au pool de confirmation (opérateur d'origine non trouvé).",
                     )
 
-                Operation.objects.create(
-                    commande=commande,
-                    type_operation="PROBLEME_SIGNALÉ",
-                    operateur=operateur_profile,
-                    conclusion=log_conclusion,
-                )
+              
 
             return redirect("Prepacommande:liste_prepa")
     
@@ -1779,8 +1866,6 @@ def api_commande_produits(request, commande_id):
         return JsonResponse({"success": False, "message": f"Erreur: {str(e)}"})
 
 
-# API api_changer_etat_preparation supprimée car les commandes passent maintenant 
-# directement de "Confirmée" à "En préparation" lors de l'affectation
 
 
 @login_required
@@ -2320,13 +2405,7 @@ def modifier_commande_prepa(request, commande_id):
                             }
                         )
                     
-                    # Créer la nouvelle opération
-                    operation = Operation.objects.create(
-                        commande=commande,
-                        type_operation=type_operation,
-                        conclusion=commentaire,
-                        operateur=operateur,
-                    )
+                 
 
                     return JsonResponse(
                         {
@@ -2385,13 +2464,7 @@ def modifier_commande_prepa(request, commande_id):
                     commande.total_cmd = float(total_commande)
                     commande.save()
                     
-                    # Créer une opération pour consigner la modification
-                    Operation.objects.create(
-                        commande=commande,
-                        type_operation="MODIFICATION_QUANTITES",
-                        conclusion=f"Modification en masse des quantités d'articles par l'opérateur de préparation.",
-                        operateur=operateur,
-                    )
+                
 
                     return JsonResponse(
                         {
@@ -2545,13 +2618,7 @@ def modifier_commande_prepa(request, commande_id):
                         articles_upsell.aggregate(total=Sum("quantite"))["total"] or 0
                     )
                     
-                    # Créer une opération pour consigner la modification
-                    Operation.objects.create(
-                        commande=commande,
-                        type_operation="MODIFICATION_QUANTITE",
-                        conclusion=f"Quantité d'article modifiée de {ancienne_quantite} à {nouvelle_quantite}.",
-                        operateur=operateur,
-                    )
+                   
 
                     return JsonResponse(
                         {
@@ -2598,13 +2665,7 @@ def modifier_commande_prepa(request, commande_id):
                     
                     commande.save()
                     
-                    # Créer une opération pour consigner la modification
-                    Operation.objects.create(
-                        commande=commande,
-                        type_operation="MODIFICATION_PREPA",
-                        conclusion=f"La commande a été modifiée par l'opérateur.",
-                        operateur=operateur,
-                    )
+                   
 
                     messages.success(
                         request, f"Commande {commande.id_yz} mise à jour avec succès."
@@ -2641,20 +2702,12 @@ def modifier_commande_prepa(request, commande_id):
                             commande.ville = nouvelle_ville
                         except Ville.DoesNotExist:
                             messages.error(request, "Ville sélectionnée non trouvée.")
-                            return redirect(
-                                "Prepacommande:modifier_commande",
-                                commande_id=commande.id,
-                            )
+                            return redirect("Prepacommande:liste_prepa")
                     
                     commande.save()
 
                     # Créer une opération pour consigner la modification
-                    Operation.objects.create(
-                        commande=commande,
-                        type_operation="MODIFICATION_PREPA",
-                        conclusion=f"La commande a été modifiée par l'opérateur.",
-                        operateur=operateur,
-                    )
+              
 
                     messages.success(
                         request,
@@ -2664,7 +2717,7 @@ def modifier_commande_prepa(request, commande_id):
                 
         except Exception as e:
             messages.error(request, f"Erreur lors de la modification: {str(e)}")
-            return redirect("Prepacommande:modifier_commande", commande_id=commande.id)
+            return redirect("Prepacommande:liste_prepa")
     
     # Récupérer les données pour l'affichage
     paniers = commande.paniers.all().select_related("article")
@@ -3309,71 +3362,6 @@ def api_panier_commande_prepa(request, commande_id):
         }
     )
 
-
-@login_required
-def imprimer_tickets_preparation(request):
-    """
-    Vue pour imprimer les tickets de préparation SANS changer l'état des commandes.
-    Permet d'imprimer ou de réimprimer des tickets pour les commandes en préparation.
-    """
-    try:
-        operateur_profile = request.user.profil_operateur
-        if not operateur_profile.is_preparation:
-            return HttpResponse("Accès non autorisé.", status=403)
-    except Operateur.DoesNotExist:
-        return HttpResponse("Profil opérateur non trouvé.", status=403)
-
-    commande_ids_str = request.GET.get("ids")
-    if not commande_ids_str:
-        return HttpResponse("Aucun ID de commande fourni.", status=400)
-
-    try:
-        commande_ids = [int(id) for id in commande_ids_str.split(",") if id.isdigit()]
-    except ValueError:
-        return HttpResponse("IDs de commande invalides.", status=400)
-    
-    # Récupérer les commandes en préparation affectées à cet opérateur
-    commandes = Commande.objects.filter(
-        id__in=commande_ids,
-        etats__operateur=operateur_profile,
-        etats__enum_etat__libelle="En préparation",
-        etats__date_fin__isnull=True,
-    ).distinct()
-
-    if not commandes.exists():
-        return HttpResponse(
-            "Aucune commande en préparation trouvée pour cet opérateur.", status=404
-        )
-
-    # Génération du code-barres pour chaque commande (sans transition d'état)
-    code128 = barcode.get_barcode_class("code128")
-    
-    for commande in commandes:
-        # Générer le code-barres uniquement si pas déjà présent
-        if not hasattr(commande, "barcode_base64") or not commande.barcode_base64:
-            barcode_instance = code128(str(commande.id_yz), writer=ImageWriter())
-            buffer = BytesIO()
-            barcode_instance.write(
-                buffer,
-                options={
-                    "write_text": False,
-                    "module_height": 15.0,
-                    "module_width": 0.3,
-                },
-            )
-            barcode_base64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
-            commande.barcode_base64 = barcode_base64
-        
-        # Définir la date de préparation pour l'affichage (sans sauvegarder en DB)
-        if not hasattr(commande, "date_preparation") or not commande.date_preparation:
-            commande.date_preparation = timezone.now()
-
-    context = {
-        "commandes": commandes,
-        "is_reprint": True,  # Indicateur pour différencier des impressions initiales
-    }
-    
-    return render(request, "Prepacommande/tickets_preparation.html", context)
 
 # === NOUVELLES FONCTIONNALITÉS : GESTION DE STOCK ===
 
@@ -4588,16 +4576,6 @@ def details_region_view(request):
     return render(request, "Prepacommande/details_region.html", context)
 
 
-@login_required
-def imprimer_commande(request, commande_id):
-    """
-    Imprime une commande spécifique.
-    """
-    commande = get_object_or_404(Commande, id=commande_id)
-    # Assurez-vous que l'opérateur a le droit de voir cette commande si nécessaire
-    return render(
-        request, "Prepacommande/impression_commande.html", {"commande": commande}
-    )
 
 
 @login_required 
@@ -4611,13 +4589,6 @@ def exporter_etats_pdf(request):
     )
 
 
-@login_required
-def imprimer_envoi(request, envoi_id):
-    """
-    Imprime les détails d'un envoi.
-    """
-    envoi = get_object_or_404(Envoi, id=envoi_id)
-    return render(request, "Prepacommande/impression_envoi.html", {"envoi": envoi})
 
 
 @login_required
@@ -4989,210 +4960,10 @@ def ajouter_article_commande_prepa(request, commande_id):
         return JsonResponse({"error": f"Erreur interne: {str(e)}"}, status=500)
 
 
-@login_required
-def modifier_quantite_article_prepa(request, commande_id):
-    """Modifier la quantité d'un article dans la commande en préparation"""
-    if request.method != "POST":
-        return JsonResponse({"error": "Méthode non autorisée"}, status=405)
-
-    try:
-        operateur = Operateur.objects.get(
-            user=request.user, type_operateur="PREPARATION"
-        )
-    except Operateur.DoesNotExist:
-        return JsonResponse({"error": "Profil d'opérateur non trouvé."}, status=403)
-
-    try:
-        with transaction.atomic():
-            commande = Commande.objects.select_for_update().get(id=commande_id)
-            
-            # Vérifier l'affectation
-            if not commande.etats.filter(
-                operateur=operateur,
-                enum_etat__libelle__in=["En préparation", "À imprimer"],
-                date_fin__isnull=True,
-            ).exists():
-                return JsonResponse({"error": "Commande non affectée."}, status=403)
-
-            panier_id = request.POST.get("panier_id")
-            nouvelle_quantite = int(request.POST.get("quantite", 1))
-
-            panier = Panier.objects.get(id=panier_id, commande=commande)
-            ancienne_quantite = panier.quantite
-            article = panier.article
-            difference = nouvelle_quantite - ancienne_quantite
-
-            if difference > 0:
-                creer_mouvement_stock(
-                    article,
-                    difference,
-                    "sortie",
-                    commande,
-                    operateur,
-                    f"Ajustement qté cmd {commande.id_yz}",
-                )
-            elif difference < 0:
-                creer_mouvement_stock(
-                    article,
-                    abs(difference),
-                    "entree",
-                    commande,
-                    operateur,
-                    f"Ajustement qté cmd {commande.id_yz}",
-                )
-
-            panier.quantite = nouvelle_quantite
-            
-            # Recalculer le compteur si c'est un article upsell
-            if article.isUpsell:
-                # Compter la quantité totale d'articles upsell après modification
-                total_quantite_upsell = (
-                    commande.paniers.filter(article__isUpsell=True).aggregate(
-                        total=Sum("quantite")
-                    )["total"]
-                    or 0
-                )
-                
-                # Appliquer la logique : compteur = max(0, total_quantite_upsell - 1)
-                if total_quantite_upsell >= 2:
-                    commande.compteur = total_quantite_upsell - 1
-                else:
-                    commande.compteur = 0
-                
-                commande.save()
-                
-                # Recalculer TOUS les articles de la commande avec le nouveau compteur
-                commande.recalculer_totaux_upsell()
-            else:
-                # Pour les articles normaux, juste calculer le sous-total
-                from commande.templatetags.commande_filters import (
-                    get_prix_upsell_avec_compteur,
-                )
-
-                prix_unitaire = get_prix_upsell_avec_compteur(
-                    article, commande.compteur
-                )
-                panier.sous_total = prix_unitaire * nouvelle_quantite
-            panier.save()
-
-            commande.total_cmd = sum(p.sous_total for p in commande.paniers.all())
-            commande.save()
-
-            # Calculer les statistiques upsell
-            articles_upsell = commande.paniers.filter(article__isUpsell=True)
-            total_quantite_upsell = (
-                articles_upsell.aggregate(total=Sum("quantite"))["total"] or 0
-            )
-
-            return JsonResponse(
-                {
-                    "success": True,
-                    "message": "Quantité modifiée",
-                    "compteur": commande.compteur,
-                    "articles_upsell": articles_upsell.count(),
-                    "quantite_totale_upsell": total_quantite_upsell,
-                    "total_commande": float(commande.total_cmd),
-                    "sous_total_articles": float(commande.sous_total_articles),
-                }
-            )
-
-    except Panier.DoesNotExist:
-        return JsonResponse({"error": "Panier non trouvé"}, status=404)
-    except Exception as e:
-        return JsonResponse({"error": f"Erreur interne: {str(e)}"}, status=500)
+# Fonction de modification des quantités supprimée - Les opérateurs de préparation ne peuvent plus modifier les commandes
 
 
-@login_required
-def supprimer_article_commande_prepa(request, commande_id):
-    """Supprimer un article de la commande en préparation"""
-    if request.method != "POST":
-        return JsonResponse({"error": "Méthode non autorisée"}, status=405)
-
-    try:
-        operateur = Operateur.objects.get(
-            user=request.user, type_operateur="PREPARATION"
-        )
-    except Operateur.DoesNotExist:
-        return JsonResponse({"error": "Profil d'opérateur non trouvé."}, status=403)
-
-    try:
-        with transaction.atomic():
-            commande = Commande.objects.select_for_update().get(id=commande_id)
-            
-            # Vérifier l'affectation
-            if not commande.etats.filter(
-                operateur=operateur,
-                enum_etat__libelle__in=["En préparation", "À imprimer"],
-                date_fin__isnull=True,
-            ).exists():
-                return JsonResponse({"error": "Commande non affectée."}, status=403)
-
-            panier_id = request.POST.get("panier_id")
-            panier = Panier.objects.get(id=panier_id, commande=commande)
-            quantite_supprimee = panier.quantite
-            article = panier.article
-            
-            creer_mouvement_stock(
-                article,
-                quantite_supprimee,
-                "entree",
-                commande,
-                operateur,
-                f"Suppression article cmd {commande.id_yz}",
-            )
-            
-            # Sauvegarder l'info avant suppression
-            etait_upsell = panier.article.isUpsell
-            
-            # Supprimer l'article
-            panier.delete()
-
-            # Recalculer le compteur après suppression (logique de confirmation)
-            if etait_upsell:
-                # Compter la quantité totale d'articles upsell restants (après suppression)
-                total_quantite_upsell = (
-                    commande.paniers.filter(article__isUpsell=True).aggregate(
-                        total=Sum("quantite")
-                    )["total"]
-                    or 0
-                )
-                
-                # Appliquer la logique : compteur = max(0, total_quantite_upsell - 1)
-                if total_quantite_upsell >= 2:
-                    commande.compteur = total_quantite_upsell - 1
-                else:
-                    commande.compteur = 0
-                
-                commande.save()
-                
-                # Recalculer TOUS les articles de la commande avec le nouveau compteur
-                commande.recalculer_totaux_upsell()
-
-            commande.total_cmd = sum(p.sous_total for p in commande.paniers.all())
-            commande.save()
-
-            # Calculer les statistiques upsell
-            articles_upsell = commande.paniers.filter(article__isUpsell=True)
-            total_quantite_upsell = (
-                articles_upsell.aggregate(total=Sum("quantite"))["total"] or 0
-            )
-
-            return JsonResponse(
-                {
-                    "success": True,
-                    "message": "Article supprimé",
-                    "compteur": commande.compteur,
-                    "articles_upsell": articles_upsell.count(),
-                    "quantite_totale_upsell": total_quantite_upsell,
-                    "total_commande": float(commande.total_cmd),
-                    "sous_total_articles": float(commande.sous_total_articles),
-                }
-            )
-
-    except Panier.DoesNotExist:
-        return JsonResponse({"error": "Panier non trouvé"}, status=404)
-    except Exception as e:
-        return JsonResponse({"error": f"Erreur interne: {str(e)}"}, status=500)
+# Fonction de suppression d'articles supprimée - Les opérateurs de préparation ne peuvent plus modifier les commandes
 
 
 # === VUES DE RÉPARTITION SUPPRIMÉES (DÉPLACÉES VERS ADMIN) ===
@@ -5379,7 +5150,7 @@ def api_articles_commande_livree_partiellement(request, commande_id):
                     pass
         if commande_originale:
             # Les articles dans cette commande de renvoi sont ceux qui ont été renvoyés
-            for panier in paniers:
+            for panier in commande_originale.panier_set.all():
                 etat = etat_articles_renvoyes.get(panier.article.id, "bon")
                 articles_renvoyes.append(
                     {
@@ -5445,759 +5216,6 @@ def api_articles_commande_livree_partiellement(request, commande_id):
         )
 
 
-@login_required
-def export_commandes_consolidees_csv(request):
-    """
-    Export CSV consolidé : chaque commande sur une seule ligne avec articles regroupés
-    """
-    try:
-        operateur = Operateur.objects.get(
-            user=request.user, type_operateur="PREPARATION"
-        )
-    except Operateur.DoesNotExist:
-        return JsonResponse({"error": "Accès non autorisé"}, status=403)
-    
-    # Récupérer les filtres
-    region_name = request.GET.get("region")
-    ville_name = request.GET.get("ville")
-    
-    # Construire la requête de base - UNIQUEMENT les commandes PRÉPARÉES
-    commandes_query = (
-        Commande.objects.filter(
-            etats__enum_etat__libelle="Préparée", etats__date_fin__isnull=True
-        )
-        .select_related("client", "ville", "ville__region")
-        .prefetch_related("paniers__article")
-        .distinct()
-    )
-
-    commandes = commandes_query.order_by("-date_cmd")
-    
-    # Créer la réponse CSV
-    response = HttpResponse(content_type="text/csv; charset=utf-8")
-    filename = f"commandes_consolidees_{timezone.now().strftime('%Y%m%d_%H%M%S')}.csv"
-    response["Content-Disposition"] = f'attachment; filename="{filename}"'
-    
-    # Écrire l'en-tête BOM pour Excel
-    response.write("\ufeff")
-    
-    writer = csv.writer(response, delimiter=";")
-    
-    # En-têtes
-    headers = [
-        "N° Commande",
-        "Client",
-        "Téléphone",
-        "Ville",
-        "Région",
-        "Articles et Quantités",
-        "Prix Total (DH)",
-        "Adresse",
-        "État",
-    ]
-    writer.writerow(headers)
-    
-    # Traiter chaque commande
-    for commande in commandes:
-        # Construire la liste des articles avec quantités
-        articles_list = []
-        for panier in commande.paniers.all():
-            article_info = f"{panier.article.nom}"
-            if panier.article.couleur:
-                article_info += f" {panier.article.couleur}"
-            if panier.article.pointure:
-                article_info += f" {panier.article.pointure}"
-            if panier.quantite > 1:
-                article_info += f" x{panier.quantite}"
-            articles_list.append(article_info)
-        
-        # Joindre tous les articles avec des virgules
-        articles_consolides = (
-            ", ".join(articles_list) if articles_list else "Aucun article"
-        )
-        
-        # État actuel de la commande
-        etat_actuel = (
-            commande.etat_actuel.enum_etat.libelle
-            if commande.etat_actuel
-            else "Non défini"
-        )
-        
-        # Écrire la ligne
-        row = [
-            commande.id_yz or commande.num_cmd,
-            f"{commande.client.prenom} {commande.client.nom}"
-            if commande.client
-            else "N/A",
-            commande.client.numero_tel if commande.client else "N/A",
-            commande.ville.nom if commande.ville else "N/A",
-            commande.ville.region.nom_region
-            if commande.ville and commande.ville.region
-            else "N/A",
-            articles_consolides,
-            f"{commande.total_cmd:.2f}" if commande.total_cmd else "0.00",
-            commande.adresse or "N/A",
-            etat_actuel,
-        ]
-        writer.writerow(row)
-    
-    return response
-
-
-@login_required
-def export_commandes_consolidees_excel(request):
-    """
-    Export Excel consolidé : chaque commande sur une seule ligne avec articles regroupés
-    """
-    try:
-        operateur = Operateur.objects.get(
-            user=request.user, type_operateur="PREPARATION"
-        )
-    except Operateur.DoesNotExist:
-        return JsonResponse({"error": "Accès non autorisé"}, status=403)
-    
-    # Récupérer les filtres
-    region_name = request.GET.get("region")
-    ville_name = request.GET.get("ville")
-    
-    # Construire la requête de base - UNIQUEMENT les commandes PRÉPARÉES
-    commandes_query = (
-        Commande.objects.filter(
-            etats__enum_etat__libelle="Préparée", etats__date_fin__isnull=True
-        )
-        .select_related("client", "ville", "ville__region")
-        .prefetch_related("paniers__article")
-        .distinct()
-    )
-    
-    # Appliquer les filtres
-    if region_name:
-        commandes_query = commandes_query.filter(ville__region__nom_region=region_name)
-    if ville_name:
-        commandes_query = commandes_query.filter(ville__nom=ville_name)
-    
-    commandes = commandes_query.order_by("-date_cmd")
-    
-    # Créer le fichier Excel
-    from openpyxl import Workbook
-    from openpyxl.styles import Font, PatternFill, Alignment
-    from openpyxl.utils import get_column_letter
-    
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Commandes Consolidées"
-    
-    # En-têtes
-    headers = [
-        "N° Commande",
-        "Client",
-        "Téléphone",
-        "Ville",
-        "Région",
-        "Articles et Quantités",
-        "Prix Total (DH)",
-        "Adresse",
-        "État",
-    ]
-    
-    # Ajouter les en-têtes
-    for col, header in enumerate(headers, 1):
-        cell = ws.cell(row=1, column=col, value=header)
-        cell.font = Font(bold=True, color="FFFFFF")
-        cell.fill = PatternFill(
-            start_color="366092", end_color="366092", fill_type="solid"
-        )
-        cell.alignment = Alignment(horizontal="center", vertical="center")
-    
-    # Traiter chaque commande
-    for row, commande in enumerate(commandes, 2):
-        # Construire la liste des articles avec quantités
-        articles_list = []
-        for panier in commande.paniers.all():
-            article_info = f"{panier.article.nom}"
-            if panier.article.couleur:
-                article_info += f" {panier.article.couleur}"
-            if panier.article.pointure:
-                article_info += f" {panier.article.pointure}"
-            if panier.quantite > 1:
-                article_info += f" x{panier.quantite}"
-            articles_list.append(article_info)
-        
-        # Joindre tous les articles avec des virgules
-        articles_consolides = (
-            ", ".join(articles_list) if articles_list else "Aucun article"
-        )
-        
-        # État actuel de la commande
-        etat_actuel = (
-            commande.etat_actuel.enum_etat.libelle
-            if commande.etat_actuel
-            else "Non défini"
-        )
-        
-        # Ajouter les données
-        ws.cell(row=row, column=1, value=commande.id_yz or commande.num_cmd)
-        ws.cell(
-            row=row,
-            column=2,
-            value=f"{commande.client.prenom} {commande.client.nom}"
-            if commande.client
-            else "N/A",
-        )
-        ws.cell(
-            row=row,
-            column=3,
-            value=commande.client.numero_tel if commande.client else "N/A",
-        )
-        ws.cell(
-            row=row, column=4, value=commande.ville.nom if commande.ville else "N/A"
-        )
-        ws.cell(
-            row=row,
-            column=5,
-            value=commande.ville.region.nom_region
-            if commande.ville and commande.ville.region
-            else "N/A",
-        )
-        ws.cell(row=row, column=6, value=articles_consolides)
-        ws.cell(
-            row=row,
-            column=7,
-            value=float(commande.total_cmd) if commande.total_cmd else 0.00,
-        )
-        ws.cell(row=row, column=8, value=commande.adresse or "N/A")
-        ws.cell(row=row, column=9, value=etat_actuel)
-        
-        # Ajuster la hauteur de la ligne pour les articles
-        if len(articles_consolides) > 100:
-            ws.row_dimensions[row].height = 30
-    
-    # Ajuster la largeur des colonnes
-    column_widths = [15, 25, 15, 15, 15, 50, 15, 40, 15]
-    for col, width in enumerate(column_widths, 1):
-        ws.column_dimensions[get_column_letter(col)].width = width
-    
-    # Créer la réponse
-    response = HttpResponse(
-        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
-    filename = f"commandes_consolidees_{timezone.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-    response["Content-Disposition"] = f'attachment; filename="{filename}"'
-    
-    wb.save(response)
-    return response
-
-
-@login_required
-def export_region_consolidee_csv(request, region_name):
-    """
-    Export CSV consolidé pour une région spécifique
-    """
-    try:
-        operateur = Operateur.objects.get(
-            user=request.user, type_operateur="PREPARATION"
-        )
-    except Operateur.DoesNotExist:
-        return JsonResponse({"error": "Accès non autorisé"}, status=403)
-    
-    # Récupérer les commandes PRÉPARÉES de la région
-    commandes = (
-        Commande.objects.filter(
-            etats__enum_etat__libelle="Préparée",
-        etats__date_fin__isnull=True,
-            ville__region__nom_region=region_name,
-        )
-        .select_related("client", "ville", "ville__region")
-        .prefetch_related("paniers__article")
-        .distinct()
-        .order_by("-date_cmd")
-    )
-    
-    # Créer la réponse CSV
-    response = HttpResponse(content_type="text/csv; charset=utf-8")
-    filename = f"region_{region_name.lower().replace(' ', '_')}_consolidee_{timezone.now().strftime('%Y%m%d_%H%M%S')}.csv"
-    response["Content-Disposition"] = f'attachment; filename="{filename}"'
-    
-    # Écrire l'en-tête BOM pour Excel
-    response.write("\ufeff")
-    
-    writer = csv.writer(response, delimiter=";")
-    
-    # En-têtes
-    headers = [
-        "N° Commande",
-        "Client",
-        "Téléphone",
-        "Ville",
-        "Région",
-        "Articles et Quantités",
-        "Prix Total (DH)",
-        "Adresse",
-        "État",
-    ]
-    writer.writerow(headers)
-    
-    # Traiter chaque commande
-    for commande in commandes:
-        # Construire la liste des articles avec quantités
-        articles_list = []
-        for panier in commande.paniers.all():
-            article_info = f"{panier.article.nom}"
-            if panier.article.couleur:
-                article_info += f" {panier.article.couleur}"
-            if panier.article.pointure:
-                article_info += f" {panier.article.pointure}"
-            if panier.quantite > 1:
-                article_info += f" x{panier.quantite}"
-            articles_list.append(article_info)
-        
-        # Joindre tous les articles avec des virgules
-        articles_consolides = (
-            ", ".join(articles_list) if articles_list else "Aucun article"
-        )
-        
-        # État actuel de la commande
-        etat_actuel = (
-            commande.etat_actuel.enum_etat.libelle
-            if commande.etat_actuel
-            else "Non défini"
-        )
-        
-        # Écrire la ligne
-        row = [
-            commande.id_yz or commande.num_cmd,
-            f"{commande.client.prenom} {commande.client.nom}"
-            if commande.client
-            else "N/A",
-            commande.client.numero_tel if commande.client else "N/A",
-            commande.ville.nom if commande.ville else "N/A",
-            commande.ville.region.nom_region
-            if commande.ville and commande.ville.region
-            else "N/A",
-            articles_consolides,
-            f"{commande.total_cmd:.2f}" if commande.total_cmd else "0.00",
-            commande.adresse or "N/A",
-            etat_actuel,
-        ]
-        writer.writerow(row)
-    
-    return response
-
-
-@login_required
-def export_region_consolidee_excel(request, region_name):
-    """
-    Export Excel consolidé pour une région spécifique
-    """
-    try:
-        operateur = Operateur.objects.get(
-            user=request.user, type_operateur="PREPARATION"
-        )
-    except Operateur.DoesNotExist:
-        return JsonResponse({"error": "Accès non autorisé"}, status=403)
-    
-    # Récupérer les commandes PRÉPARÉES de la région
-    commandes = (
-        Commande.objects.filter(
-            etats__enum_etat__libelle="Préparée",
-        etats__date_fin__isnull=True,
-            ville__region__nom_region=region_name,
-        )
-        .select_related("client", "ville", "ville__region")
-        .prefetch_related("paniers__article")
-        .distinct()
-        .order_by("-date_cmd")
-    )
-    
-    # Créer le fichier Excel
-    from openpyxl import Workbook
-    from openpyxl.styles import Font, PatternFill, Alignment
-    from openpyxl.utils import get_column_letter
-    
-    wb = Workbook()
-    ws = wb.active
-    ws.title = f"Région {region_name}"
-    
-    # En-têtes
-    headers = [
-        "N° Commande",
-        "Client",
-        "Téléphone",
-        "Ville",
-        "Région",
-        "Articles et Quantités",
-        "Prix Total (DH)",
-        "Adresse",
-        "État",
-    ]
-    
-    # Ajouter les en-têtes
-    for col, header in enumerate(headers, 1):
-        cell = ws.cell(row=1, column=col, value=header)
-        cell.font = Font(bold=True, color="FFFFFF")
-        cell.fill = PatternFill(
-            start_color="366092", end_color="366092", fill_type="solid"
-        )
-        cell.alignment = Alignment(horizontal="center", vertical="center")
-    
-    # Traiter chaque commande
-    for row, commande in enumerate(commandes, 2):
-        # Construire la liste des articles avec quantités
-        articles_list = []
-        for panier in commande.paniers.all():
-            article_info = f"{panier.article.nom}"
-            if panier.article.couleur:
-                article_info += f" {panier.article.couleur}"
-            if panier.article.pointure:
-                article_info += f" {panier.article.pointure}"
-            if panier.quantite > 1:
-                article_info += f" x{panier.quantite}"
-            articles_list.append(article_info)
-        
-        # Joindre tous les articles avec des virgules
-        articles_consolides = (
-            ", ".join(articles_list) if articles_list else "Aucun article"
-        )
-        
-        # État actuel de la commande
-        etat_actuel = (
-            commande.etat_actuel.enum_etat.libelle
-            if commande.etat_actuel
-            else "Non défini"
-        )
-        
-        # Ajouter les données
-        ws.cell(row=row, column=1, value=commande.id_yz or commande.num_cmd)
-        ws.cell(
-            row=row,
-            column=2,
-            value=f"{commande.client.prenom} {commande.client.nom}"
-            if commande.client
-            else "N/A",
-        )
-        ws.cell(
-            row=row,
-            column=3,
-            value=commande.client.numero_tel if commande.client else "N/A",
-        )
-        ws.cell(
-            row=row, column=4, value=commande.ville.nom if commande.ville else "N/A"
-        )
-        ws.cell(
-            row=row,
-            column=5,
-            value=commande.ville.region.nom_region
-            if commande.ville and commande.ville.region
-            else "N/A",
-        )
-        ws.cell(row=row, column=6, value=articles_consolides)
-        ws.cell(
-            row=row,
-            column=7,
-            value=float(commande.total_cmd) if commande.total_cmd else 0.00,
-        )
-        ws.cell(row=row, column=8, value=commande.adresse or "N/A")
-        ws.cell(row=row, column=9, value=etat_actuel)
-        
-        # Ajuster la hauteur de la ligne pour les articles
-        if len(articles_consolides) > 100:
-            ws.row_dimensions[row].height = 30
-    
-    # Ajuster la largeur des colonnes
-    column_widths = [15, 25, 15, 15, 15, 50, 15, 40, 15]
-    for col, width in enumerate(column_widths, 1):
-        ws.column_dimensions[get_column_letter(col)].width = width
-    
-    # Ajouter une feuille de résumé
-    ws_resume = wb.create_sheet("Résumé")
-    
-    # Statistiques de la région
-    total_commandes = commandes.count()
-    total_montant = sum(float(cmd.total_cmd) for cmd in commandes if cmd.total_cmd)
-    
-    resume_data = [
-        ["Région", region_name],
-        ["Nombre de commandes", total_commandes],
-        ["Montant total", f"{total_montant:.2f} DH"],
-        ["Date d'export", timezone.now().strftime("%d/%m/%Y %H:%M")],
-    ]
-    
-    for row, (label, value) in enumerate(resume_data, 1):
-        ws_resume.cell(row=row, column=1, value=label).font = Font(bold=True)
-        ws_resume.cell(row=row, column=2, value=value)
-    
-    # Ajuster la largeur des colonnes du résumé
-    ws_resume.column_dimensions["A"].width = 25
-    ws_resume.column_dimensions["B"].width = 20
-    
-    # Créer la réponse
-    response = HttpResponse(
-        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
-    filename = f"region_{region_name.lower().replace(' ', '_')}_consolidee_{timezone.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-    response["Content-Disposition"] = f'attachment; filename="{filename}"'
-    
-    wb.save(response)
-    return response
-
-
-@login_required
-def export_ville_consolidee_csv(request, ville_id):
-    """
-    Export CSV consolidé pour une ville spécifique
-    """
-    try:
-        operateur = Operateur.objects.get(
-            user=request.user, type_operateur="PREPARATION"
-        )
-    except Operateur.DoesNotExist:
-        return JsonResponse({"error": "Accès non autorisé"}, status=403)
-    
-    # Récupérer la ville
-    try:
-        ville = Ville.objects.get(id=ville_id)
-    except Ville.DoesNotExist:
-        return JsonResponse({"error": "Ville non trouvée"}, status=404)
-    
-    # Récupérer les commandes PRÉPARÉES de la ville
-    commandes = (
-        Commande.objects.filter(
-            etats__enum_etat__libelle="Préparée",
-        etats__date_fin__isnull=True,
-            ville=ville,
-        )
-        .select_related("client", "ville", "ville__region")
-        .prefetch_related("paniers__article")
-        .distinct()
-        .order_by("-date_cmd")
-    )
-    
-    # Créer la réponse CSV
-    response = HttpResponse(content_type="text/csv; charset=utf-8")
-    response[
-        "Content-Disposition"
-    ] = f'attachment; filename="ville_{ville.nom}_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv"'
-    
-    # Écrire l'en-tête BOM pour Excel
-    response.write("\ufeff")
-    
-    writer = csv.writer(response, delimiter=";")
-    
-    # En-têtes
-    writer.writerow(
-        [
-            "N° Commande",
-            "Client",
-            "Téléphone",
-            "Ville",
-            "Région",
-            "Articles et Quantités",
-            "Prix Total (DH)",
-            "Adresse",
-            "État",
-        ]
-    )
-    
-    # Traiter chaque commande
-    for commande in commandes:
-        # Construire la liste des articles avec quantités
-        articles_list = []
-        for panier in commande.paniers.all():
-            article_info = f"{panier.article.nom}"
-            if panier.article.couleur:
-                article_info += f" {panier.article.couleur}"
-            if panier.article.pointure:
-                article_info += f" {panier.article.pointure}"
-            if panier.quantite > 1:
-                article_info += f" x{panier.quantite}"
-            articles_list.append(article_info)
-        
-        # Joindre tous les articles avec des virgules
-        articles_consolides = (
-            ", ".join(articles_list) if articles_list else "Aucun article"
-        )
-        
-        # État actuel de la commande
-        etat_actuel = (
-            commande.etat_actuel.enum_etat.libelle
-            if commande.etat_actuel
-            else "Non défini"
-        )
-        
-        # Écrire la ligne
-        row = [
-            commande.id_yz or commande.num_cmd,
-            f"{commande.client.prenom} {commande.client.nom}"
-            if commande.client
-            else "N/A",
-            commande.client.numero_tel if commande.client else "N/A",
-            commande.ville.nom if commande.ville else "N/A",
-            commande.ville.region.nom_region
-            if commande.ville and commande.ville.region
-            else "N/A",
-            articles_consolides,
-            float(commande.total_cmd) if commande.total_cmd else 0.00,
-            commande.adresse or "N/A",
-            etat_actuel,
-        ]
-        writer.writerow(row)
-    
-    return response
-
-
-@login_required
-def export_ville_consolidee_excel(request, ville_id):
-    """
-    Export Excel consolidé pour une ville spécifique
-    """
-    try:
-        ville = get_object_or_404(Ville, id=ville_id)
-        
-        # Récupérer toutes les commandes de cette ville
-        commandes = (
-            Commande.objects.filter(
-            ville=ville,
-                etat_actuel__enum_etat__libelle__in=[
-                    "Confirmée",
-                    "En préparation",
-                    "Prête",
-                    "Livrée",
-                ],
-            )
-            .select_related(
-                "client",
-                "ville",
-                "ville__region",
-                "etat_actuel",
-                "etat_actuel__enum_etat",
-            )
-            .prefetch_related("paniers__article")
-            .order_by("date_cmd")
-        )
-        
-        if not commandes.exists():
-            messages.warning(
-                request, f"Aucune commande trouvée pour la ville {ville.nom}"
-            )
-            return redirect("Prepacommande:liste_prepa")
-    
-        # Créer le fichier Excel
-        from openpyxl import Workbook
-        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-        from openpyxl.utils import get_column_letter
-        from datetime import datetime
-    
-        wb = Workbook()
-        ws = wb.active
-        ws.title = f"Commandes {ville.nom}"
-        
-        # Styles
-        header_font = Font(bold=True, color="FFFFFF")
-        header_fill = PatternFill(
-            start_color="366092", end_color="366092", fill_type="solid"
-        )
-        border = Border(
-            left=Side(style="thin"),
-            right=Side(style="thin"),
-            top=Side(style="thin"),
-            bottom=Side(style="thin"),
-        )
-    
-        # En-têtes
-        headers = [
-            "ID YZ",
-            "Numéro",
-            "Date",
-            "Client",
-            "Téléphone",
-            "Adresse",
-            "Ville",
-            "Région",
-            "État",
-            "Total Articles",
-            "Frais Livraison",
-            "Total Commande",
-            "Compteur Upsell",
-            "Articles",
-        ]
-        
-        for col, header in enumerate(headers, 1):
-            cell = ws.cell(row=1, column=col, value=header)
-            cell.font = header_font
-            cell.fill = header_fill
-            cell.border = border
-            cell.alignment = Alignment(horizontal="center", vertical="center")
-        
-        # Données
-        row = 2
-        for commande in commandes:
-            # Articles détaillés
-            articles_detail = []
-            for panier in commande.paniers.all():
-                article_info = f"{panier.article.nom} (Qté: {panier.quantite}, Prix: {panier.sous_total:.2f} DH)"
-                if panier.article.isUpsell:
-                    article_info += " [UPSELL]"
-                articles_detail.append(article_info)
-            
-            articles_text = "\n".join(articles_detail)
-            
-            ws.cell(row=row, column=1, value=commande.id_yz).border = border
-            ws.cell(row=row, column=2, value=commande.num_cmd).border = border
-            ws.cell(
-                row=row, column=3, value=commande.date_cmd.strftime("%d/%m/%Y")
-            ).border = border
-            ws.cell(
-                row=row,
-                column=4,
-                value=f"{commande.client.nom} {commande.client.prenom}",
-            ).border = border
-            ws.cell(row=row, column=5, value=commande.client.numero_tel).border = border
-            ws.cell(row=row, column=6, value=commande.adresse).border = border
-            ws.cell(row=row, column=7, value=commande.ville.nom).border = border
-            ws.cell(
-                row=row, column=8, value=commande.ville.region.nom_region
-            ).border = border
-            ws.cell(
-                row=row, column=9, value=commande.etat_actuel.enum_etat.libelle
-            ).border = border
-            ws.cell(
-                row=row, column=10, value=float(commande.sous_total_articles)
-            ).border = border
-            ws.cell(
-                row=row, column=11, value=float(commande.ville.frais_livraison or 0)
-            ).border = border
-            ws.cell(row=row, column=12, value=float(commande.total_cmd)).border = border
-            ws.cell(row=row, column=13, value=commande.compteur).border = border
-            ws.cell(row=row, column=14, value=articles_text).border = border
-            
-            # Ajuster la hauteur de ligne pour les articles
-            ws.row_dimensions[row].height = max(20, len(articles_detail) * 15)
-            
-            row += 1
-        
-        # Ajuster la largeur des colonnes
-        for col in range(1, len(headers) + 1):
-            ws.column_dimensions[get_column_letter(col)].width = 15
-        
-        # Largeur spéciale pour la colonne articles
-        ws.column_dimensions["N"].width = 40
-        
-        # Nom du fichier
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"commandes_consolidees_{ville.nom}_{timestamp}.xlsx"
-        
-        # Réponse
-        response = HttpResponse(
-            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
-        response["Content-Disposition"] = f'attachment; filename="{filename}"'
-        
-        wb.save(response)
-        return response
-        
-    except Exception as e:
-        messages.error(request, f"Erreur lors de l'export: {str(e)}")
-        return redirect("Prepacommande:liste_prepa")
 
 
 @login_required
@@ -6319,89 +5337,6 @@ def api_prix_upsell_articles(request, commande_id):
 
 
 @login_required
-def diagnostiquer_compteur(request, commande_id):
-    """
-    Fonction pour diagnostiquer et corriger le compteur d'une commande
-    """
-    try:
-        commande = get_object_or_404(Commande, id=commande_id)
-        
-        # Diagnostiquer la situation actuelle
-        articles_upsell = commande.paniers.filter(article__isUpsell=True)
-        compteur_actuel = commande.compteur
-        
-        # Calculer la quantité totale d'articles upsell
-        total_quantite_upsell = (
-            articles_upsell.aggregate(total=Sum("quantite"))["total"] or 0
-        )
-        
-        print(f"🔍 DIAGNOSTIC Commande {commande.id_yz}:")
-        print(f"📊 Compteur actuel: {compteur_actuel}")
-        print(f"📦 Articles upsell trouvés: {articles_upsell.count()}")
-        print(f"🔢 Quantité totale d'articles upsell: {total_quantite_upsell}")
-        
-        if articles_upsell.exists():
-            print("📋 Articles upsell dans la commande:")
-            for panier in articles_upsell:
-                print(
-                    f"  - {panier.article.nom} (Qté: {panier.quantite}, ID: {panier.article.id}, isUpsell: {panier.article.isUpsell})"
-                )
-        
-        # Déterminer le compteur correct selon la nouvelle logique :
-        # 0-1 unités upsell → compteur = 0
-        # 2+ unités upsell → compteur = total_quantite_upsell - 1
-        if total_quantite_upsell >= 2:
-            compteur_correct = total_quantite_upsell - 1
-        else:
-            compteur_correct = 0
-        
-        print(f"✅ Compteur correct: {compteur_correct}")
-        print(
-            "📖 Logique: 0-1 unités upsell → compteur=0 | 2+ unités upsell → compteur=total_quantité-1"
-        )
-        
-        # Corriger si nécessaire
-        if compteur_actuel != compteur_correct:
-            print(f"🔧 CORRECTION: {compteur_actuel} -> {compteur_correct}")
-            commande.compteur = compteur_correct
-            commande.save()
-            
-            # Recalculer tous les totaux
-            commande.recalculer_totaux_upsell()
-            
-            # Retourner les nouvelles données
-            return JsonResponse(
-                {
-                    "success": True,
-                    "message": f"Compteur corrigé de {compteur_actuel} vers {compteur_correct}",
-                    "ancien_compteur": compteur_actuel,
-                    "nouveau_compteur": compteur_correct,
-                    "total_commande": float(commande.total_cmd),
-                    "articles_upsell": articles_upsell.count(),
-                    "quantite_totale_upsell": total_quantite_upsell,
-                    "articles_count": commande.paniers.count(),
-                    "sous_total_articles": float(commande.sous_total_articles),
-                }
-            )
-        else:
-            return JsonResponse(
-                {
-                    "success": True,
-                    "message": "Compteur déjà correct",
-                    "compteur": compteur_actuel,
-                    "articles_upsell": articles_upsell.count(),
-                    "quantite_totale_upsell": total_quantite_upsell,
-                    "total_commande": float(commande.total_cmd),
-                    "articles_count": commande.paniers.count(),
-                    "sous_total_articles": float(commande.sous_total_articles),
-                }
-            )
-            
-    except Exception as e:
-        return JsonResponse({"success": False, "error": str(e)})
-
-
-@login_required
 def api_changer_etat_commande(request, commande_id):
     """API pour changer l'état d'une commande (Collectée, Emballée)"""
     if request.method != "POST":
@@ -6481,7 +5416,7 @@ def api_changer_etat_commande(request, commande_id):
                     "ancien_etat": etat_actuel_libelle,
                     "nouvel_etat": nouvel_etat,
                     "commentaire": f"Changement d'état de {etat_actuel_libelle} vers {nouvel_etat}"
-                })
+                }, ensure_ascii=False)
             )
         
         return JsonResponse({

@@ -9,8 +9,8 @@ class RegionAdmin(admin.ModelAdmin):
 
 @admin.register(Ville)
 class VilleAdmin(admin.ModelAdmin):
-    list_display = ('id', 'nom', 'region', 'frais_livraison', 'frequence_livraison')
-    list_filter = ('region', 'frequence_livraison')
+    list_display = ('id', 'nom', 'region', 'frais_livraison', 'Delai_livraison_min', 'Delai_livraison_max')
+    list_filter = ('region', 'Delai_livraison_min', 'Delai_livraison_max')
     search_fields = ('nom', 'region__nom_region')
     ordering = ('nom',)
 

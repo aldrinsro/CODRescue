@@ -1,13 +1,15 @@
 <header class="bg-white shadow-md px-6 py-4 border-b" style="border-color: var(--confirmation-border-accent);">
     <div class="flex items-center justify-between">
+
         <!-- Menu hamburger pour mobile -->
-        <button id="menu-toggle" class="p-2 rounded-lg transition-all duration-300 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-opacity-50" style="hover:background-color: #8B5A2B; focus:ring-color: #4B352A; background-color: #f7d9c4;">
+        <button id="menu-toggle" class="p-2 rounded-lg transition-all duration-300 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-opacity-50" style="hover:background-color: #f7d9c4; focus:ring-color: #8B5A2B;">
             <div class="space-y-1.5">
-                <span id="hamburger-line-1" class="block w-6 h-0.5 transition-all duration-300 transform origin-center" style="background-color: #4B352A;"></span>
-                <span id="hamburger-line-2" class="block w-6 h-0.5 mt-1.5 transition-all duration-300 transform origin-center" style="background-color: #4B352A;"></span>
-                <span id="hamburger-line-3" class="block w-6 h-0.5 mt-1.5 transition-all duration-300 transform origin-center" style="background-color: #4B352A;"></span>
+                <span id="hamburger-line-1" class="block w-6 h-0.5 transition-all duration-300 transform origin-center" style="background-color: #8B5A2B;"></span>
+                <span id="hamburger-line-2" class="block w-6 h-0.5 mt-1.5 transition-all duration-300 transform origin-center" style="background-color: #8B5A2B;"></span>
+                <span id="hamburger-line-3" class="block w-6 h-0.5 mt-1.5 transition-all duration-300 transform origin-center" style="background-color: #8B5A2B;"></span>
             </div>
         </button>
+
         <div>
             <h1 class="text-2xl font-bold text-gray-800">{% block page_title %}Mes Commandes{% endblock %}</h1>
             <p class="text-gray-600 text-sm">{% block page_subtitle %}Interface Opérateur de Confirmation{% endblock %}</p>
@@ -82,19 +84,7 @@
     transform: scale(0.95);
 }
 
-/* Animation pour le menu hamburger */
-.hamburger-active #hamburger-line-1 {
-    transform: rotate(45deg) translate(6px, 6px);
-}
-
-.hamburger-active #hamburger-line-2 {
-    opacity: 0;
-    transform: scale(0);
-}
-
-.hamburger-active #hamburger-line-3 {
-    transform: rotate(-45deg) translate(6px, -6px);
-}
+/* Animation du menu hamburger gérée dans base.html */
 
 /* Force les modals au premier plan absolu */
 .modal-force-top {
@@ -242,14 +232,16 @@
 </style>
 
 <script>
-// Variables globales pour la recherche
-let headerSearchTimeout = null;
-let headerCurrentQuery = '';
-let headerSelectedIndex = -1;
-let headerSearchResults = [];
+// Variables de recherche déplacées dans global_search_component.html
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🔧 Initialisation du modal de profil - Confirmation');
+    console.log('🔧 [Header] Initialisation du modal de profil - Confirmation');
+    console.log('🔧 [Header] URL actuelle:', window.location.pathname);
+
+    console.log('🔧 [Header] État du DOM:', document.readyState);
+    console.log('🔧 [Header] Menu-toggle présent:', !!document.getElementById('menu-toggle'));
+    
+
     
     const profileDropdownButton = document.getElementById('header-profile-dropdown');
     const profileMenu = document.getElementById('header-profile-menu-root');
@@ -326,284 +318,5 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('✅ Initialisation terminée');
 });
 
-// Fonctions pour la recherche globale
-function initializeHeaderSearch() {
-    const searchInput = document.getElementById('headerGlobalSearch');
-    const searchResults = document.getElementById('headerSearchResults');
-    const searchOverlay = document.getElementById('searchOverlay');
-    
-    // Focus sur la barre de recherche
-    searchInput.addEventListener('focus', function() {
-        if (headerCurrentQuery.length >= 2) {
-            showHeaderResults();
-        }
-    });
-    
-    // Saisie dans la barre de recherche
-    searchInput.addEventListener('input', function() {
-        const query = this.value.trim();
-        headerCurrentQuery = query;
-        
-        clearTimeout(headerSearchTimeout);
-        
-        if (query.length >= 2) {
-            showHeaderLoading();
-            headerSearchTimeout = setTimeout(() => {
-                performHeaderSearch(query);
-            }, 300);
-        } else {
-            hideHeaderResults();
-        }
-    });
-    
-    // Navigation au clavier
-    searchInput.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            hideHeaderResults();
-            this.blur();
-        } else if (e.key === 'ArrowDown') {
-            e.preventDefault();
-            navigateHeaderResults(1);
-        } else if (e.key === 'ArrowUp') {
-            e.preventDefault();
-            navigateHeaderResults(-1);
-        } else if (e.key === 'Enter') {
-            e.preventDefault();
-            selectHeaderResult();
-        }
-    });
-    
-    // Raccourci clavier global
-    document.addEventListener('keydown', function(e) {
-        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-            e.preventDefault();
-            searchInput.focus();
-        }
-    });
-    
-    // Clic sur l'overlay pour fermer
-    searchOverlay.addEventListener('click', hideHeaderResults);
-    
-    // Clic en dehors pour fermer
-    document.addEventListener('click', function(e) {
-        if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
-            hideHeaderResults();
-        }
-    });
-}
-
-function performHeaderSearch(query) {
-    fetch(`{% url 'operatConfirme:global_search_api' %}?q=${encodeURIComponent(query)}&category=all`)
-        .then(response => response.json())
-        .then(data => {
-            hideHeaderLoading();
-            if (data.success) {
-                displayHeaderResults(data.results, query);
-            } else {
-                showHeaderError(data.message || 'Erreur lors de la recherche');
-            }
-        })
-        .catch(error => {
-            hideHeaderLoading();
-            showHeaderError('Erreur de connexion');
-        });
-}
-
-function displayHeaderResults(results, query) {
-    const content = document.getElementById('headerSearchContent');
-    const countElement = document.getElementById('headerSearchCount');
-    
-    headerSearchResults = [];
-    let totalResults = 0;
-    let html = '';
-    
-    // Parcourir toutes les catégories
-    const categories = ['commandes', 'clients', 'regions', 'villes', 'articles', 'statistiques'];
-    const categoryNames = {
-        'commandes': 'Commandes',
-        'clients': 'Clients', 
-        'regions': 'Régions',
-        'villes': 'Villes',
-        'articles': 'Articles',
-        'statistiques': 'Fonctionnalités'
-    };
-    
-    categories.forEach(category => {
-        const items = results[category] || [];
-        if (items.length > 0) {
-            totalResults += items.length;
-            headerSearchResults.push(...items);
-            
-            html += `<div class="search-category">${categoryNames[category]}</div>`;
-            
-            // Limiter à 3 éléments par catégorie pour le header
-            items.slice(0, 3).forEach((item, index) => {
-                html += createHeaderResultItem(item, query);
-            });
-            
-            // Si plus de 3 éléments, ajouter un lien "voir plus"
-            if (items.length > 3) {
-                html += `
-                    <div class="search-result-item p-2 text-center text-blue-600 hover:text-blue-800 cursor-pointer" 
-                         onclick="navigateToHeader('{% url 'operatConfirme:global_search' %}?q=${encodeURIComponent(query)}&category=${category}')">
-                        <span class="text-xs">Voir ${items.length - 3} résultats supplémentaires...</span>
-                    </div>
-                `;
-            }
-        }
-    });
-
-    if (totalResults === 0) {
-        html = `
-            <div class="p-4 text-center text-gray-500">
-                <i class="fas fa-search text-2xl mb-2"></i>
-                <p>Aucun résultat trouvé pour "${query}"</p>
-                <p class="text-xs mt-1">Essayez d'autres mots-clés</p>
-            </div>
-        `;
-    }
-    
-    content.innerHTML = html;
-    countElement.textContent = `${totalResults} résultat${totalResults > 1 ? 's' : ''}`;
-    
-    headerSelectedIndex = -1;
-    showHeaderResults();
-}
-
-function createHeaderResultItem(item, query) {
-    const statusClass = getHeaderStatusClass(item.status);
-    const iconColor = getHeaderIconColor(item.type);
-    
-    return `
-        <div class="search-result-item p-3 cursor-pointer border-b border-gray-100 last:border-b-0" 
-             onclick="navigateToHeader('${item.url}')"
-             data-index="${headerSearchResults.length - 1}">
-            <div class="flex items-start space-x-3">
-                <div class="flex-shrink-0">
-                    <div class="w-8 h-8 rounded-lg flex items-center justify-center ${iconColor.bg}">
-                        <i class="${item.icon} ${iconColor.text} text-sm"></i>
-                    </div>
-                </div>
-                <div class="flex-1 min-w-0">
-                    <div class="flex items-center justify-between">
-                        <h4 class="text-sm font-medium text-gray-900 truncate">
-                            ${highlightQuery(item.title, query)}
-                        </h4>
-                        <span class="search-status ${statusClass}">${item.status}</span>
-                    </div>
-                    <p class="text-xs text-gray-600 mt-1 line-clamp-2">
-                        ${highlightQuery(item.subtitle, query)}
-                    </p>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-function highlightQuery(text, query) {
-    if (!query) return text;
-    const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-    return text.replace(regex, '<mark class="bg-yellow-200 px-1 rounded">$1</mark>');
-}
-
-function getHeaderStatusClass(status) {
-    const statusMap = {
-        'Actif': 'active',
-        'Inactif': 'inactive',
-        'En cours': 'pending',
-        'Terminé': 'completed',
-        'Erreur': 'error',
-        'Avertissement': 'warning',
-        'Info': 'info',
-        'Succès': 'success',
-        'Nouvelle': 'default',
-        'Confirmée': 'active',
-        'Préparée': 'completed',
-        'Livrée': 'success',
-        'Annulée': 'error',
-        'En préparation': 'pending',
-        'En stock': 'success',
-        'Rupture': 'error',
-        'Stock faible': 'warning',
-        'Disponible': 'active'
-    };
-    return statusMap[status] || 'default';
-}
-
-function getHeaderIconColor(type) {
-    const colorMap = {
-        'commande': { bg: 'bg-blue-100', text: 'text-blue-600' },
-        'client': { bg: 'bg-green-100', text: 'text-green-600' },
-        'operateur': { bg: 'bg-green-100', text: 'text-green-600' },
-        'region': { bg: 'bg-purple-100', text: 'text-purple-600' },
-        'ville': { bg: 'bg-orange-100', text: 'text-orange-600' },
-        'article': { bg: 'bg-red-100', text: 'text-red-600' },
-        'statistique': { bg: 'bg-indigo-100', text: 'text-indigo-600' }
-    };
-    return colorMap[type] || { bg: 'bg-gray-100', text: 'text-gray-600' };
-}
-
-function navigateHeaderResults(direction) {
-    const items = document.querySelectorAll('.search-result-item');
-    if (items.length === 0) return;
-    
-    // Retirer la sélection précédente
-    if (headerSelectedIndex >= 0 && headerSelectedIndex < items.length) {
-        items[headerSelectedIndex].classList.remove('selected');
-    }
-    
-    // Calculer le nouvel index
-    headerSelectedIndex += direction;
-    if (headerSelectedIndex >= items.length) headerSelectedIndex = 0;
-    if (headerSelectedIndex < 0) headerSelectedIndex = items.length - 1;
-    
-    // Appliquer la sélection
-    if (headerSelectedIndex >= 0 && headerSelectedIndex < items.length) {
-        items[headerSelectedIndex].classList.add('selected');
-        items[headerSelectedIndex].scrollIntoView({ block: 'nearest' });
-    }
-}
-
-function selectHeaderResult() {
-    if (headerSelectedIndex >= 0 && headerSelectedIndex < headerSearchResults.length) {
-        const item = headerSearchResults[headerSelectedIndex];
-        navigateToHeader(item.url);
-    }
-}
-
-function navigateToHeader(url) {
-    console.log('Navigating to URL:', url);
-    window.location.href = url;
-    hideHeaderResults();
-}
-
-function showHeaderLoading() {
-    document.getElementById('headerSearchLoading').classList.remove('hidden');
-}
-
-function hideHeaderLoading() {
-    document.getElementById('headerSearchLoading').classList.add('hidden');
-}
-
-function showHeaderResults() {
-    document.getElementById('headerSearchResults').classList.remove('hidden');
-    document.getElementById('searchOverlay').classList.remove('hidden');
-}
-
-function hideHeaderResults() {
-    document.getElementById('headerSearchResults').classList.add('hidden');
-    document.getElementById('searchOverlay').classList.add('hidden');
-    headerSelectedIndex = -1;
-}
-
-function showHeaderError(message) {
-    const content = document.getElementById('headerSearchContent');
-    content.innerHTML = `
-        <div class="p-4 text-center text-red-500">
-            <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
-            <p>${message}</p>
-        </div>
-    `;
-    showHeaderResults();
-}
+// Note: Les fonctions de recherche sont maintenant définies dans global_search_component.html
 </script> 

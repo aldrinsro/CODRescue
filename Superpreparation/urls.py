@@ -18,9 +18,10 @@ urlpatterns = [
     path('commandes-en-preparation/', views.commandes_en_preparation, name='commandes_en_preparation'),
     path('commandes-emballees/', views.commandes_emballees, name='commandes_emballees'),
     path('commandes-preparees/', views.commandes_preparees, name='commandes_preparees'),
+    
 
 
-   
+    #Gestion des commandes confirmees
     path('commandes-confirmees/', views.commandes_confirmees, name='commandes_confirmees'),
     path('livrees-partiellement/', views.commandes_livrees_partiellement, name='commandes_livrees_partiellement'),
     path('retournees/', views.commandes_retournees, name='commandes_retournees'),
@@ -30,15 +31,18 @@ urlpatterns = [
     path('detail-prepa/<int:pk>/', views.detail_prepa, name='detail_prepa'),
 
 
-
+    #gestion des API
     path('api/commande/<int:commande_id>/articles/', views.api_articles_commande, name='api_articles_commande'),
     path('api/commandes-confirmees/', views.api_commandes_confirmees, name='api_commandes_confirmees'),
     path('api/commande-info/<int:commande_id>/', views.api_commande_info, name='api_commande_info'),
-    # Impression supprimée (gérée par Gestion des étiquettes)
+
+
     path('modifier-commande/<int:commande_id>/', views.modifier_commande_prepa, name='modifier_commande'),
     path('modifier-commande-superviseur/<int:commande_id>/', views.modifier_commande_superviseur, name='modifier_commande_superviseur'),
-   
     path('api/commande/<int:commande_id>/produits/', views.api_commande_produits, name='api_commande_produits'),
+    
+
+
     # path('api/commande/<int:commande_id>/changer-etat/', views.api_changer_etat_preparation, name='api_changer_etat_preparation') # Supprimée - plus nécessaire
     path('api/articles-disponibles-prepa/', views.api_articles_disponibles_prepa, name='api_articles_disponibles_prepa'),
     path('api/commande/<int:commande_id>/panier/', views.api_panier_commande_prepa, name='api_panier_commande'),
@@ -55,15 +59,21 @@ urlpatterns = [
     path('commande/<int:commande_id>/modifier-quantite/', views.modifier_quantite_article_prepa, name='modifier_quantite_article_prepa'),
     path('commande/<int:commande_id>/supprimer-article/', views.supprimer_article_commande_prepa, name='supprimer_article_commande_prepa'),
     path('commande/<int:commande_id>/prix-upsell/', views.api_prix_upsell_articles, name='api_prix_upsell_articles'),
+    path('commande/<int:commande_id>/diagnostiquer-compteur/', views.diagnostiquer_compteur, name='diagnostiquer_compteur'),
     path('api/article/<int:article_id>/variantes/', views.get_article_variants, name='get_article_variants'),
     
+
+
+
     # URLs pour les modales d'impression
-    path('api/codes-barres-commandes/', views.api_codes_barres_commandes, name='api_codes_barres_commandes'),
-    path('api/ticket-commande/', views.api_ticket_commande, name='api_ticket_commande'),
-    path('api/ticket-commande-multiple/', views.api_ticket_commande_multiple, name='api_ticket_commande_multiple'),
-    path('api/etiquettes-articles/', views.api_etiquettes_articles, name='api_etiquettes_articles'),
-    path('api/etiquettes-articles-multiple/', views.api_etiquettes_articles_multiple, name='api_etiquettes_articles_multiple'),
+    path('api/ticket-commande-new/', views.api_ticket_commande_new, name='api_ticket_commande_new'),
+    path('api/qr-codes-articles/', views.api_qr_codes_articles, name='api_qr_codes_articles'),
     path('api/finaliser-preparation/<int:commande_id>/', views.api_finaliser_preparation, name='api_finaliser_preparation'),
+
+
+
+
+
 
     # Gestion des envois
     path('envois/', views.envois_view, name='envois'),
@@ -105,6 +115,8 @@ urlpatterns = [
     # === NOUVELLES URLs : GESTION DES ARTICLES STOCK (SUPERPREPARATION) === 
     # Pages principales
     path('gestion-articles/', views.liste_articles, name='liste_articles'),
+    # Redirection pour compatibilité avec l'ancienne URL
+    path('articles/', views.liste_articles, name='liste_articles_redirect'),
     path('gestion-articles/detail/<int:id>/', views.detail_article, name='detail_article'),
     path('gestion-articles/modifier/<int:id>/', views.modifier_article, name='modifier_article'),
     path('gestion-articles/creer/', views.creer_article, name='creer_article'),
@@ -125,10 +137,13 @@ urlpatterns = [
     # Gestion du stock
     path('gestion-articles/stock-faible/', views.stock_faible, name='stock_faible'),
     path('gestion-articles/rupture-stock/', views.rupture_stock, name='rupture_stock'),
+    # Alias pour compatibilité avec anciens liens
+    path('gestion-articles/alertes-stock/', views.stock_faible, name='alertes_stock'),
     
     # Gestion des phases
     path('gestion-articles/changer-phase/<int:id>/', views.changer_phase, name='changer_phase'),
     path('gestion-articles/appliquer-liquidation/<int:id>/', views.appliquer_liquidation, name='appliquer_liquidation'),
+    path('gestion-articles/appliquer-liquidation-prix-db/<int:id>/', views.appliquer_liquidation_prix_db, name='appliquer_liquidation_prix_db'),
     path('gestion-articles/reinitialiser-prix/<int:id>/', views.reinitialiser_prix, name='reinitialiser_prix'),
     
     # URLs pour la gestion des couleurs et pointures

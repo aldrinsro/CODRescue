@@ -269,7 +269,12 @@ function initializeHeaderSearch() {
 
 function performHeaderSearch(query) {
     fetch(`{% url 'Prepacommande:global_search_api' %}?q=${encodeURIComponent(query)}&category=all`)
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
         .then(data => {
             hideHeaderLoading();
             if (data.success) {
@@ -280,7 +285,8 @@ function performHeaderSearch(query) {
         })
         .catch(error => {
             hideHeaderLoading();
-            showHeaderError('Erreur de connexion');
+            console.error('Erreur de recherche:', error);
+            showHeaderError(`Erreur de connexion: ${error.message}`);
         });
 }
 
@@ -293,12 +299,13 @@ function displayHeaderResults(results, query) {
     let html = '';
     
     // Parcourir toutes les catégories
-    const categories = ['commandes', 'articles', 'stock', 'statistiques'];
+    const categories = ['commandes', 'articles_panier', 'exports', 'fonctionnalites', 'profile'];
     const categoryNames = {
         'commandes': 'Commandes',
-        'articles': 'Articles',
-        'stock': 'Stock',
-        'statistiques': 'Fonctionnalités'
+        'articles_panier': 'Articles Panier',
+        'exports': 'Exports',
+        'fonctionnalites': 'Fonctionnalités',
+        'profile': 'Profil'
     };
     
     categories.forEach(category => {

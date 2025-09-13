@@ -1,0 +1,577 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Générateur d'Étiquettes Professionnelles{% endblock %}
+
+{% block extra_css %}
+<style>
+    .etiquette-generator {
+        background: #f8f9fa;
+        min-height: 100vh;
+        padding: 20px;
+    }
+    
+    .generator-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+        margin-bottom: 20px;
+    }
+    
+    .template-selector {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .template-card {
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        padding: 20px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: white;
+    }
+    
+    .template-card:hover {
+        border-color: #007bff;
+        box-shadow: 0 4px 12px rgba(0, 123, 255, 0.15);
+    }
+    
+    .template-card.selected {
+        border-color: #007bff;
+        background: #f8f9ff;
+    }
+    
+    .template-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    
+    .template-name {
+        font-weight: 600;
+        color: #2c3e50;
+        font-size: 16px;
+    }
+    
+    .template-dimensions {
+        color: #6c757d;
+        font-size: 14px;
+    }
+    
+    .template-options {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 10px;
+    }
+    
+    .option-badge {
+        background: #e9ecef;
+        color: #495057;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+    }
+    
+    .commande-list {
+        max-height: 400px;
+        overflow-y: auto;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 15px;
+    }
+    
+    .commande-item {
+        display: flex;
+        align-items: center;
+        padding: 12px;
+        border: 1px solid #e9ecef;
+        border-radius: 6px;
+        margin-bottom: 8px;
+        background: white;
+        transition: all 0.2s ease;
+    }
+    
+    .commande-item:hover {
+        border-color: #007bff;
+        box-shadow: 0 2px 4px rgba(0, 123, 255, 0.1);
+    }
+    
+    .commande-item.selected {
+        border-color: #007bff;
+        background: #f8f9ff;
+    }
+    
+    .commande-checkbox {
+        margin-right: 12px;
+    }
+    
+    .commande-info {
+        flex-grow: 1;
+    }
+    
+    .commande-number {
+        font-weight: 600;
+        color: #2c3e50;
+    }
+    
+    .commande-client {
+        color: #6c757d;
+        font-size: 14px;
+    }
+    
+    .commande-date {
+        color: #6c757d;
+        font-size: 12px;
+    }
+    
+    .format-selector {
+        display: flex;
+        gap: 15px;
+        margin: 20px 0;
+    }
+    
+    .format-option {
+        display: flex;
+        align-items: center;
+        padding: 12px 20px;
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: white;
+    }
+    
+    .format-option:hover {
+        border-color: #007bff;
+    }
+    
+    .format-option.selected {
+        border-color: #007bff;
+        background: #f8f9ff;
+    }
+    
+    .format-icon {
+        font-size: 24px;
+        margin-right: 10px;
+    }
+    
+    .format-text {
+        font-weight: 500;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 15px;
+        justify-content: center;
+        margin-top: 30px;
+    }
+    
+    .btn-generate {
+        background: linear-gradient(135deg, #007bff, #0056b3);
+        color: white;
+        border: none;
+        padding: 15px 30px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 16px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .btn-generate:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 123, 255, 0.3);
+    }
+    
+    .btn-generate:disabled {
+        background: #6c757d;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
+    
+    .btn-preview {
+        background: #28a745;
+        color: white;
+        border: none;
+        padding: 12px 25px;
+        border-radius: 8px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-preview:hover {
+        background: #218838;
+        transform: translateY(-1px);
+    }
+    
+    .stats-panel {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 20px;
+    }
+    
+    .stat-item {
+        text-align: center;
+    }
+    
+    .stat-number {
+        font-size: 24px;
+        font-weight: 700;
+        color: #007bff;
+    }
+    
+    .stat-label {
+        color: #6c757d;
+        font-size: 14px;
+        margin-top: 4px;
+    }
+    
+    .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+    }
+    
+    .loading-content {
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        text-align: center;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+    
+    .spinner {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #007bff;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 20px;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="etiquette-generator">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12">
+                <div class="generator-card">
+                    <h1 class="mb-4">
+                        <i class="fas fa-tags"></i>
+                        Générateur d'Étiquettes Professionnelles
+                    </h1>
+                    
+                    <!-- Statistiques -->
+                    <div class="stats-panel">
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <div class="stat-number" id="selected-commandes">0</div>
+                                <div class="stat-label">Commandes sélectionnées</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-number" id="total-articles">0</div>
+                                <div class="stat-label">Articles à étiqueter</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-number" id="estimated-pages">0</div>
+                                <div class="stat-label">Pages estimées</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Sélection du template -->
+                    <h3 class="mb-3">
+                        <i class="fas fa-palette"></i>
+                        Choisir un Template
+                    </h3>
+                    <div class="template-selector">
+                        {% for template in templates %}
+                        <div class="template-card" data-template-id="{{ template.id }}">
+                            <div class="template-info">
+                                <div class="template-name">{{ template.name }}</div>
+                                <div class="template-dimensions">{{ template.width }}×{{ template.height }}mm</div>
+                            </div>
+                            <div class="template-options">
+                                {% if template.show_header %}
+                                <span class="option-badge">En-tête</span>
+                                {% endif %}
+                                {% if template.show_footer %}
+                                <span class="option-badge">Pied</span>
+                                {% endif %}
+                                {% if template.show_barcode %}
+                                <span class="option-badge">Code-barres</span>
+                                {% endif %}
+                                {% if template.show_qr %}
+                                <span class="option-badge">QR Code</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <!-- Sélection du format -->
+                    <h3 class="mb-3">
+                        <i class="fas fa-barcode"></i>
+                        Format du Code
+                    </h3>
+                    <div class="format-selector">
+                        <div class="format-option selected" data-format="barcode">
+                            <div class="format-icon">📊</div>
+                            <div class="format-text">Code-barres</div>
+                        </div>
+                        <div class="format-option" data-format="qr">
+                            <div class="format-icon">🔲</div>
+                            <div class="format-text">QR Code</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Liste des commandes -->
+                    <h3 class="mb-3">
+                        <i class="fas fa-list"></i>
+                        Sélectionner les Commandes
+                    </h3>
+                    <div class="commande-list">
+                        {% for commande in commandes %}
+                        <div class="commande-item" data-commande-id="{{ commande.id }}">
+                            <input type="checkbox" class="commande-checkbox" data-commande-id="{{ commande.id }}">
+                            <div class="commande-info">
+                                <div class="commande-number">
+                                    Commande {{ commande.id_yz|default:commande.num_cmd }}
+                                </div>
+                                <div class="commande-client">{{ commande.client.nom }}</div>
+                                <div class="commande-date">{{ commande.date_cmd|date:"d/m/Y" }}</div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <!-- Boutons d'action -->
+                    <div class="action-buttons">
+                        <button class="btn-preview" id="btn-preview" disabled>
+                            <i class="fas fa-eye"></i>
+                            Aperçu
+                        </button>
+                        <button class="btn-generate" id="btn-generate" disabled>
+                            <i class="fas fa-download"></i>
+                            Générer les Étiquettes
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Overlay de chargement -->
+<div class="loading-overlay" id="loading-overlay">
+    <div class="loading-content">
+        <div class="spinner"></div>
+        <h4>Génération en cours...</h4>
+        <p>Veuillez patienter pendant la création des étiquettes.</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let selectedTemplate = null;
+    let selectedFormat = 'barcode';
+    let selectedCommandes = new Set();
+    
+    // Gestion de la sélection des templates
+    document.querySelectorAll('.template-card').forEach(card => {
+        card.addEventListener('click', function() {
+            // Désélectionner tous les autres
+            document.querySelectorAll('.template-card').forEach(c => c.classList.remove('selected'));
+            
+            // Sélectionner celui-ci
+            this.classList.add('selected');
+            selectedTemplate = this.dataset.templateId;
+            
+            updateButtons();
+        });
+    });
+    
+    // Gestion de la sélection du format
+    document.querySelectorAll('.format-option').forEach(option => {
+        option.addEventListener('click', function() {
+            document.querySelectorAll('.format-option').forEach(o => o.classList.remove('selected'));
+            this.classList.add('selected');
+            selectedFormat = this.dataset.format;
+        });
+    });
+    
+    // Gestion de la sélection des commandes
+    document.querySelectorAll('.commande-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const commandeId = this.dataset.commandeId;
+            const commandeItem = this.closest('.commande-item');
+            
+            if (this.checked) {
+                selectedCommandes.add(commandeId);
+                commandeItem.classList.add('selected');
+            } else {
+                selectedCommandes.delete(commandeId);
+                commandeItem.classList.remove('selected');
+            }
+            
+            updateStats();
+            updateButtons();
+        });
+    });
+    
+    // Gestion des clics sur les items de commande
+    document.querySelectorAll('.commande-item').forEach(item => {
+        item.addEventListener('click', function(e) {
+            if (e.target.type !== 'checkbox') {
+                const checkbox = this.querySelector('.commande-checkbox');
+                checkbox.checked = !checkbox.checked;
+                checkbox.dispatchEvent(new Event('change'));
+            }
+        });
+    });
+    
+    // Sélection automatique d'une commande spécifique depuis l'URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const commandeId = urlParams.get('commande_id');
+    if (commandeId) {
+        const commandeItem = document.querySelector(`[data-commande-id="${commandeId}"]`);
+        if (commandeItem) {
+            const checkbox = commandeItem.querySelector('.commande-checkbox');
+            if (checkbox && !checkbox.checked) {
+                checkbox.checked = true;
+                checkbox.dispatchEvent(new Event('change'));
+                commandeItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                // Mettre en surbrillance la commande sélectionnée
+                commandeItem.style.animation = 'pulse 2s ease-in-out';
+                setTimeout(() => {
+                    commandeItem.style.animation = '';
+                }, 2000);
+            }
+        }
+    }
+    
+    // Mise à jour des statistiques
+    function updateStats() {
+        document.getElementById('selected-commandes').textContent = selectedCommandes.size;
+        
+        // Calculer le nombre total d'articles
+        let totalArticles = 0;
+        selectedCommandes.forEach(commandeId => {
+            const commandeItem = document.querySelector(`[data-commande-id="${commandeId}"]`);
+            // Ici, vous pourriez récupérer le nombre d'articles via AJAX
+            // Pour l'instant, on estime à 2 articles par commande
+            totalArticles += 2;
+        });
+        
+        document.getElementById('total-articles').textContent = totalArticles;
+        document.getElementById('estimated-pages').textContent = totalArticles; // 1 page par article
+    }
+    
+    // Mise à jour des boutons
+    function updateButtons() {
+        const canGenerate = selectedTemplate && selectedCommandes.size > 0;
+        document.getElementById('btn-generate').disabled = !canGenerate;
+        document.getElementById('btn-preview').disabled = !canGenerate;
+    }
+    
+    // Génération des étiquettes
+    document.getElementById('btn-generate').addEventListener('click', function() {
+        if (!selectedTemplate || selectedCommandes.size === 0) {
+            alert('Veuillez sélectionner un template et au moins une commande.');
+            return;
+        }
+        
+        const loadingOverlay = document.getElementById('loading-overlay');
+        loadingOverlay.style.display = 'flex';
+        
+        const data = {
+            commande_ids: Array.from(selectedCommandes),
+            template_id: selectedTemplate,
+            format: selectedFormat
+        };
+        
+        fetch('{% url "commande:generate_etiquettes" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.blob();
+            } else {
+                throw new Error('Erreur lors de la génération');
+            }
+        })
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `etiquettes_${new Date().toISOString().slice(0,10)}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur lors de la génération des étiquettes: ' + error.message);
+        })
+        .finally(() => {
+            loadingOverlay.style.display = 'none';
+        });
+    });
+    
+    // Aperçu
+    document.getElementById('btn-preview').addEventListener('click', function() {
+        if (!selectedTemplate || selectedCommandes.size === 0) {
+            alert('Veuillez sélectionner un template et au moins une commande.');
+            return;
+        }
+        
+        // Prendre la première commande sélectionnée pour l'aperçu
+        const firstCommandeId = Array.from(selectedCommandes)[0];
+        const previewUrl = `{% url "commande:preview_etiquette" 0 0 %}`.replace('0/0', `${firstCommandeId}/${selectedTemplate}`);
+        
+        window.open(previewUrl, '_blank');
+    });
+});
+</script>
+{% endblock %}

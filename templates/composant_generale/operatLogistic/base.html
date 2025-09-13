@@ -166,8 +166,8 @@
         console.log('🔍 Sidebar element found:', !!sidebar, sidebar);
         let isSidebarOpen = true;
         
-        // Toggle de la sidebar avec animation du hamburger
-        function toggleSidebar() {
+        // Toggle de la sidebar (legacy fallback) avec animation du hamburger
+        function legacyToggleSidebar() {
             console.log('🔄 Toggle sidebar clicked, current state:', isSidebarOpen);
             isSidebarOpen = !isSidebarOpen;
             
@@ -205,7 +205,15 @@
         }
 
           if (menuToggle) {
-              menuToggle.addEventListener('click', toggleSidebar);
+              menuToggle.addEventListener('click', function(){
+                  if (typeof window.toggleSidebar === 'function') {
+                      console.log('[OperatLogistic] Delegating to global toggleSidebar');
+                      window.toggleSidebar();
+                  } else {
+                      console.log('[OperatLogistic] Using legacyToggleSidebar (no global handler)');
+                      legacyToggleSidebar();
+                  }
+              });
         }
         if (sidebarToggle) {
             sidebarToggle.addEventListener('click', closeSidebarMobile);

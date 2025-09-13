@@ -4,97 +4,39 @@
 {% block title %}{{ page_title }} - YZ-CMD{% endblock %}
 
 {% block extra_css %}
+
+{% endblock %}
+
+{% block content %}
 <style>
-    @keyframes slideInUp {
-        from {
-            opacity: 0;
-            transform: translateY(30px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
+    /* Styles pour les onglets de filtrage */
+    .tab-active {
+        color: #4B352A !important;
+        border-bottom-color: #4B352A !important;
+        background-color: #f7d9c4;
     }
     
-    .animate-slideInUp {
-        animation: slideInUp 0.6s ease-out forwards;
-        opacity: 0;
-    }
-
-    .status-badge {
-        display: inline-flex;
-        align-items: center;
-        padding: 0.375rem 0.75rem;
-        border-radius: 9999px;
-        font-size: 0.875rem;
-        font-weight: 500;
-        text-transform: capitalize;
-    }
-
-    /* Toast simple */
-    .toast-notification {
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: #22c55e;
-        color: white;
-        padding: 12px 20px;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        z-index: 1000;
-        animation: slideInRight 0.3s ease-out;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-weight: 500;
-        min-width: 300px;
-    }
-
-    @keyframes slideInRight {
-        from {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-        to {
-            transform: translateX(0);
-            opacity: 1;
-        }
-    }
-
-    @keyframes slideOutRight {
-        from {
-            transform: translateX(0);
-            opacity: 1;
-        }
-        to {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-    }
-    .tab-active {
-        border-color: #6d4b3b;
-        background-color: #ede0d3;
-        color: #4B352A;
-        font-weight: 600;
-    }
     .tab-inactive {
-        border-color: transparent;
         color: #6B7280;
+        border-bottom-color: transparent;
     }
+    
+    .tab-inactive:hover {
+        color: #4B352A;
+        border-bottom-color: #f7d9c4;
+    }
+    
     .tab-badge {
         background-color: #4B352A;
         color: white;
     }
-    .row-retour {
-        background-color: #FFFBEB !important; /* Jaune très clair */
-    }
-    .row-retour:hover {
-        background-color: #FEF3C7 !important; /* Jaune un peu plus foncé au survol */
+    
+    /* Animation pour les onglets */
+    .tab-active, .tab-inactive {
+        transition: all 0.3s ease;
     }
 </style>
-{% endblock %}
 
-{% block content %}
 <div class="main-content transition-all duration-300" id="mainContent">
     <!-- En-tête de la page -->
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 text-white p-6 rounded-xl shadow-lg" style="background: linear-gradient(to right, #4B352A, #6d4b3b);">
@@ -111,15 +53,6 @@
         </div>
     </div>
 
-    <!-- Messages Toast -->
-    {% if messages %}
-        {% for message in messages %}
-        <div class="toast-notification" id="toast-{{ forloop.counter }}">
-            <i class="{% if message.tags == 'success' %}fas fa-check-circle{% elif message.tags == 'error' %}fas fa-exclamation-circle{% elif message.tags == 'warning' %}fas fa-exclamation-triangle{% else %}fas fa-info-circle{% endif %}"></i>
-            {{ message }}
-        </div>
-        {% endfor %}
-    {% endif %}
 
     <!-- Onglets de filtrage -->
     <div class="mb-8 border-b border-gray-200">
@@ -136,46 +69,51 @@
                 En Cours
                 <span class="ml-2 px-2 py-0.5 rounded-full text-xs font-medium tab-badge">{{ stats.en_cours|default:0 }}</span>
             </a>
+<<<<<<< HEAD
             <a href="?tab=retournees" class="px-3 py-4 border-b-2 font-medium text-sm transition-all duration-300 {% if current_tab == 'retournees' %}tab-active{% else %}tab-inactive hover:text-gray-700 hover:border-gray-300{% endif %}">
                 Retournées
-                <span class="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-500 text-white">{{ stats.retournees|default:0 }}</span>
+                <span class="ml-2 px-2 py-0.5 rounded-full text-xs font-medium tab-badge">{{ stats.retournees|default:0 }}</span>
             </a>
+=======
+            <a href="?tab=reportees" class="px-3 py-4 border-b-2 font-medium text-sm transition-all duration-300 {% if current_tab == 'reportees' %}tab-active{% else %}tab-inactive hover:text-gray-700 hover:border-gray-300{% endif %}">
+                Report de la confirmation 
+                <span class="ml-2 px-2 py-0.5 rounded-full text-xs font-medium tab-badge">{{ stats.reportees|default:0 }}</span>
+            </a>
+            
+>>>>>>> dev_jesse
         </nav>
     </div>
 
-    <!-- Barre de recherche et actions -->
+    <!-- Barre de recherche intelligente et actions -->
     <div class="bg-white rounded-xl shadow-md border p-6 mb-8">
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <form method="get" class="flex-grow flex gap-4">
-                <div class="flex-grow">
+            <!-- Barre de recherche intelligente -->
+            <div class="flex-grow max-w-md">
                     <div class="relative">
-                        <input type="text" name="search" value="{{ search_query|default:'' }}" 
+                    <input type="text" 
+                           id="searchInput" 
                                class="w-full pl-10 pr-4 py-2 rounded-lg border focus:ring-2 transition-all" 
                                style="border-color: #f7d9c4; focus:ring-color: #6d4b3b; focus:border-color: #4B352A;"
-                               placeholder="Rechercher par N° commande, client, ville...">
+                           placeholder="Rechercher par ID YZ, N° externe, client, téléphone, ville, date, total, état...">
                         <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2" style="color: #6d4b3b;"></i>
+                    <button onclick="clearSearch()" id="clearSearchBtn" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 hidden">
+                        <i class="fas fa-times"></i>
+                    </button>
                     </div>
                 </div>
-                <button type="submit" class="px-6 py-2 rounded-lg text-white font-medium transition-all shadow-md hover:shadow-lg transform hover:scale-105" 
-                        style="background-color: #4B352A;">
-                    Rechercher
-                </button>
-                {% if search_query %}
-                <a href="{% url 'operatConfirme:liste_commandes' %}" class="px-6 py-2 rounded-lg bg-gray-500 text-white font-medium transition-all shadow-md hover:shadow-lg transform hover:scale-105">
-                    Réinitialiser
-                </a>
-                {% endif %}
-            </form>
 
             <!-- Bouton Nouvelle Commande au centre -->
             <div class="flex justify-center">
-                <a href="{% url 'operatConfirme:creer_commande' %}" class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-medium transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105">
+                <a href="{% url 'operatConfirme:creer_commande' %}" class="text-white px-6 py-2 rounded-lg font-medium transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105" style="background: linear-gradient(to right, #f7d9c4, #ede0d3); color: #4B352A;">
                     <i class="fas fa-plus mr-2"></i>Nouvelle Commande
                 </a>
             </div>
 
-            <!-- Liens vers autres pages -->
-            <div class="flex gap-2">
+            <!-- Liens vers autres pages et compteur -->
+            <div class="flex items-center gap-4">
+                <div class="text-sm text-gray-600">
+                    <strong id="filteredCount">{{ commandes.count }}</strong> commande{{ commandes.count|pluralize }} à traiter
+                </div>
                 <a href="{% url 'operatConfirme:confirmation' %}" class="text-white px-6 py-2 rounded-lg font-medium transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105" style="background: linear-gradient(to right, #4B352A, #6d4b3b);">
                     <i class="fas fa-clipboard-check mr-2"></i> Page Confirmation
                 </a>
@@ -184,7 +122,7 @@
     </div>
 
     <!-- Message si aucun résultat -->
-    {% if not page_obj %}
+    {% if not commandes %}
     <div class="border-l-4 p-4 mb-8 rounded-lg" style="background-color: #f7d9c4; border-color: #6d4b3b;">
         <div class="flex">
             <div class="flex-shrink-0">
@@ -204,7 +142,7 @@
     {% endif %}
 
     <!-- Tableau des commandes -->
-    {% if page_obj %}
+    {% if commandes %}
     <div class="overflow-x-auto mb-8 bg-white rounded-xl shadow-lg">
         <table class="min-w-full divide-y divide-gray-200">
                     <thead style="background-color: #4B352A;">
@@ -218,12 +156,16 @@
                     <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Date</th>
                     <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Total</th>
                     <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">État</th>
+<<<<<<< HEAD
+=======
+                    
+>>>>>>> dev_jesse
                     <th class="px-4 py-3 text-center text-xs font-medium text-white uppercase tracking-wider">Panier</th>
                     <th class="px-4 py-3 text-center text-xs font-medium text-white uppercase tracking-wider">Actions</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
-                {% for commande in page_obj %}
+                {% for commande in commandes %}
                 {% with etat_actuel=commande.etats.all|first %}
                 <tr class="hover:bg-gray-50 transition-colors {% if etat_actuel.enum_etat.libelle == 'Retour Confirmation' %}row-retour{% endif %}">
 
@@ -264,7 +206,12 @@
                                 <div>
                                     <span class="status-badge" style="background-color: {{ etat_actuel.enum_etat.couleur|default:'#6B7280' }}20; color: {{ etat_actuel.enum_etat.couleur|default:'#6B7280' }}; border: 1px solid {{ etat_actuel.enum_etat.couleur|default:'#6B7280' }}80;">
                                         {{ etat_actuel.enum_etat.libelle }}
-                        </span>
+                                    </span>
+                                    {% if etat_actuel.enum_etat.libelle == 'Report de confirmation' and etat_actuel.date_fin_delayed %}
+                                    <div class="text-xs text-gray-600 mt-1">
+                                        Reportée au <strong>{{ etat_actuel.date_fin_delayed|date:"d/m/Y H:i" }}</strong>
+                                    </div>
+                                    {% endif %}
                                 </div>
                                 {% if etat_actuel.enum_etat.libelle == 'Retour Confirmation' and all_etats|length > 1 %}
                                     {% with etat_precedent=all_etats.1 %}
@@ -281,6 +228,10 @@
                         {% endif %}
                         {% endwith %}
                     </td>
+<<<<<<< HEAD
+=======
+                    
+>>>>>>> dev_jesse
                     <td class="px-4 py-4 whitespace-nowrap text-center">
                         <button class="text-blue-600 hover:text-blue-800" onclick="viewCart('{{ commande.id }}')">
                             <i class="fas fa-shopping-basket"></i>
@@ -321,63 +272,9 @@
         </table>
     </div>
 
-    <!-- Pagination -->
-    {% if page_obj.has_other_pages %}
-    <div class="flex justify-center mt-8">
-        <nav aria-label="Navigation des commandes">
-            <ul class="flex items-center -space-x-px">
-            {% if page_obj.has_previous %}
-                <li>
-                    <a href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}" class="px-3 py-2 leading-tight bg-white border rounded-l-lg hover:bg-gray-100 hover:text-gray-700" style="color: #4B352A; border-color: #f7d9c4;">
-                        <i class="fas fa-angle-double-left"></i>
-                    </a>
-                </li>
-                <li>
-                    <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}" class="px-3 py-2 leading-tight bg-white border hover:bg-gray-100 hover:text-gray-700" style="color: #4B352A; border-color: #f7d9c4;">
-                        <i class="fas fa-angle-left"></i>
-                    </a>
-                </li>
-            {% endif %}
-
-            {% for num in page_obj.paginator.page_range %}
-                {% if page_obj.number == num %}
-                    <li>
-                        <span class="px-3 py-2 leading-tight text-white border" style="background-color: #4B352A; border-color: #4B352A;">{{ num }}</span>
-                    </li>
-                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                    <li>
-                        <a href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}" class="px-3 py-2 leading-tight bg-white border hover:bg-gray-100 hover:text-gray-700" style="color: #4B352A; border-color: #f7d9c4;">{{ num }}</a>
-                    </li>
-                {% endif %}
-            {% endfor %}
-
-            {% if page_obj.has_next %}
-                <li>
-                    <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}" class="px-3 py-2 leading-tight bg-white border hover:bg-gray-100 hover:text-gray-700" style="color: #4B352A; border-color: #f7d9c4;">
-                        <i class="fas fa-angle-right"></i>
-                    </a>
-                </li>
-                <li>
-                    <a href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}" class="px-3 py-2 leading-tight bg-white border rounded-r-lg hover:bg-gray-100 hover:text-gray-700" style="color: #4B352A; border-color: #f7d9c4;">
-                        <i class="fas fa-angle-double-right"></i>
-                    </a>
-                </li>
-            {% endif %}
-            </ul>
-        </nav>
-    </div>
-
-    <!-- Informations de pagination -->
-    <div class="flex justify-center mt-4">
-        <div class="text-sm text-gray-600">
-            Affichage de {{ page_obj.start_index }} à {{ page_obj.end_index }} sur {{ page_obj.paginator.count }} commandes.
-        </div>
-    </div>
-    {% endif %}
+    <!-- Pagination intelligente gérée par smart-pagination.js -->
     {% endif %}
 </div>
-
-
 
 <!-- Modal de détail du panier -->
 <div id="cartModal" class="fixed inset-0 flex items-center justify-center z-50 hidden" style="background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(8px);">
@@ -400,6 +297,8 @@
 
 {% block extra_js %}
 {{ block.super }}
+<script src="{% static 'js/operatConfirme/smart-search.js' %}"></script>
+<script src="{% static 'js/operatConfirme/smart-pagination.js' %}"></script>
 <script>
 let currentCommandeId = null;
 
@@ -548,19 +447,5 @@ window.addEventListener('click', function(event) {
     }
 });
 
-// Gestion des toasts
-document.addEventListener('DOMContentLoaded', function() {
-    const toasts = document.querySelectorAll('.toast-notification');
-    
-    toasts.forEach(function(toast, index) {
-        // Auto-masquage après 4 secondes
-        setTimeout(function() {
-            toast.style.animation = 'slideOutRight 0.3s ease-out forwards';
-            setTimeout(function() {
-                toast.remove();
-            }, 300);
-        }, 4000 + (index * 500)); // Décalage si plusieurs toasts
-    });
-});
 </script>
 {% endblock %}
