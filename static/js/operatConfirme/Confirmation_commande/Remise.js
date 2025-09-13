@@ -24,50 +24,58 @@ let currentArticleRemise = null;
  */
 function ouvrirModalRemise(panierId) {
     console.log('🔄 Ouverture de la modale de remise pour panier ID:', panierId);
-    
+
     currentPanierId = panierId;
-    
+
     // Récupérer les données de l'article
     const articleCard = document.querySelector(`[data-article-id="${panierId}"]`);
     if (!articleCard) {
         console.error('❌ Article non trouvé pour l\'ID:', panierId);
         return;
     }
-    
+
+    // PROTECTION PRIORITAIRE: Vérifier si le bouton de remise est activé
+    const btnRemise = document.getElementById(`btn-remise-${panierId}`);
+    if (btnRemise && btnRemise.disabled) {
+        console.warn('⚠️ Tentative d\'ouverture de modale sur un panier avec remise non activée');
+        alert('Vous devez d\'abord activer la remise avec le bouton vert "Activer remise" avant de pouvoir appliquer une remise.');
+        return;
+    }
+
     // Parser les données de l'article avec gestion d'erreur
     let articleData;
     try {
         const articleDataStr = articleCard.getAttribute('data-article');
         console.log('📄 Données brutes de l\'article:', articleDataStr);
-        
+
         // Le JSON semble déjà bien formaté avec des points pour les décimaux
         // Seulement nettoyer les espaces superflus si nécessaire
         const cleanDataStr = articleDataStr.trim();
-            
+
         articleData = JSON.parse(cleanDataStr);
         console.log('✅ Données article parsées:', articleData);
-        
+
         // Vérifier si l'article est en phase LIQUIDATION ou en promotion
         if (articleData.phase === 'LIQUIDATION') {
             console.warn('⚠️ Tentative d\'ouverture de modale remise sur un article en liquidation');
             alert('Les articles en liquidation ne peuvent pas avoir de remise appliquée.');
             return;
         }
-        
+
         if (articleData.has_promo_active) {
             console.warn('⚠️ Tentative d\'ouverture de modale remise sur un article en promotion');
             alert('Les articles en promotion ne peuvent pas avoir de remise appliquée.');
             return;
         }
-        
+
     } catch (error) {
         console.error('❌ Erreur lors du traitement des données article:', error);
         console.error('❌ Données JSON brutes:', articleCard.getAttribute('data-article'));
-        
+
         alert('Erreur lors du traitement des données de l\'article. Veuillez rafraîchir la page et réessayer.');
         return;
     }
-    
+
     currentArticleRemise = articleData;
     afficherModalRemise(articleData);
 }

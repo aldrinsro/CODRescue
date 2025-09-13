@@ -359,3 +359,5 @@ config/settings.py
 # Autres fichiers modifiés localement (ajoutez ici selon vos besoins)
 # local_modifications/
 # personal_config/
+
+upsell.png

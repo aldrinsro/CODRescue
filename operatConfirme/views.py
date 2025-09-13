@@ -2211,10 +2211,15 @@ def modifier_commande(request, commande_id):
                     
                     
                     panier.save()
+
+                    # ⚡ CORRECTION UPSELL: Recalculer le compteur après application de remise
+                    if panier.article.isUpsell:
+                        commande.mettre_a_jour_compteur_si_necessaire()
+
                     print(f"💾 DEBUG: Prix unitaire remisé appliqué - Ancien sous-total: {ancien_sous_total}, Nouveau sous-total: {nouveau_sous_total} (prix unitaire: {nouveau_prix_float})")
-                    
-                   
-                    
+
+
+
                     # Recalculer les totaux de la commande (utilise la méthode qui existe)
                     commande.recalculer_total_avec_frais()
                     commande.save()
@@ -3649,6 +3654,11 @@ def activer_remise_panier(request, panier_id):
             
             panier.remise_appliquer = True
             panier.save(update_fields=['remise_appliquer', 'sous_total', 'type_remise_appliquee'])
+
+            # ⚡ CORRECTION UPSELL: Recalculer le compteur après activation de remise
+            if panier.article.isUpsell:
+                panier.commande.mettre_a_jour_compteur_si_necessaire()
+
             print(f"✅ DEBUG: Remise activée avec succès")
             
             return JsonResponse({
@@ -3719,7 +3729,11 @@ def desactiver_remise_panier(request, panier_id):
             panier.type_remise_appliquee = ''
             panier.sous_total = nouveau_sous_total
             panier.save(update_fields=['remise_appliquer', 'type_remise_appliquee', 'sous_total'])
-            
+
+            # ⚡ CORRECTION UPSELL: Recalculer le compteur après désactivation de remise
+            if panier.article.isUpsell:
+                panier.commande.mettre_a_jour_compteur_si_necessaire()
+
             print(f"✅ DEBUG: Prix normal restauré: {prix_normal} DH, nouveau sous-total: {nouveau_sous_total} DH")
             
             return JsonResponse({

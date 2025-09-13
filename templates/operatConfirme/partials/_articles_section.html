@@ -40,19 +40,19 @@
                         </span>
                         {% endif %}
                         
-                        <!-- Bouton pour activer/désactiver remise -->
+                        <!-- Bouton pour activer/désactiver remise - PROTECTION RENFORCÉE -->
                         {% if panier.article.phase != 'LIQUIDATION' and not panier.article.has_promo_active %}
                             {% if not panier.remise_appliquer %}
-                            <button type="button" onclick="activerRemise({{ panier.id }})" 
-                                    class="inline-flex items-center px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium ml-2 hover:bg-green-200 transition-colors" 
-                                    title="Activer la remise"
+                            <button type="button" onclick="activerRemise({{ panier.id }})"
+                                    class="inline-flex items-center px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium ml-2 hover:bg-green-200 transition-colors"
+                                    title="Activer la remise pour pouvoir appliquer des prix de remise"
                                     id="btn-activer-remise-{{ panier.id }}">
                                 <i class="fas fa-check mr-1"></i>Activer remise
                             </button>
                             {% else %}
-                            <button type="button" onclick="desactiverRemise({{ panier.id }})" 
-                                    class="inline-flex items-center px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-medium ml-2 hover:bg-red-200 transition-colors" 
-                                    title="Désactiver la remise"
+                            <button type="button" onclick="desactiverRemise({{ panier.id }})"
+                                    class="inline-flex items-center px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-medium ml-2 hover:bg-red-200 transition-colors"
+                                    title="Désactiver la remise et revenir au prix normal"
                                     id="btn-desactiver-remise-{{ panier.id }}">
                                 <i class="fas fa-times mr-1"></i>Désactiver remise
                             </button>
@@ -187,25 +187,25 @@
         
          <!-- Boutons d'action -->
    <div class="flex space-x-2 ml-4">
-    <!-- Bouton Remise -->
+    <!-- Bouton Remise - PROTECTION: Ne fonctionne que si remise_appliquer est activé -->
     {% if panier.article.phase != 'LIQUIDATION' and not panier.article.has_promo_active %}
-    <button type="button" onclick="ouvrirModalRemise({{ panier.id }})" 
-            class="px-3 py-2 bg-purple-500 hover:bg-purple-600 text-white text-sm rounded-lg transition-colors flex items-center {% if not panier.remise_appliquer %}opacity-50 cursor-not-allowed{% endif %}" 
-            title="Appliquer une remise"
+    <button type="button" onclick="ouvrirModalRemise({{ panier.id }})"
+            class="px-3 py-2 bg-purple-500 hover:bg-purple-600 text-white text-sm rounded-lg transition-colors flex items-center {% if not panier.remise_appliquer %}opacity-50 cursor-not-allowed{% endif %}"
+            title="{% if panier.remise_appliquer %}Appliquer une remise{% else %}Activez d'abord la remise avec le bouton vert ci-dessus{% endif %}"
             id="btn-remise-{{ panier.id }}"
             {% if not panier.remise_appliquer %}disabled{% endif %}>
         <i class="fas fa-percent mr-1"></i>Remise
     </button>
     {% elif panier.article.phase == 'LIQUIDATION' %}
-    <button type="button" 
-            class="px-3 py-2 bg-gray-400 text-white text-sm rounded-lg flex items-center cursor-not-allowed opacity-50" 
+    <button type="button"
+            class="px-3 py-2 bg-gray-400 text-white text-sm rounded-lg flex items-center cursor-not-allowed opacity-50"
             title="Les articles en liquidation ne peuvent pas avoir de remise"
             disabled>
         <i class="fas fa-ban mr-1"></i>Liquidation
     </button>
     {% elif panier.article.has_promo_active %}
-    <button type="button" 
-            class="px-3 py-2 bg-gray-400 text-white text-sm rounded-lg flex items-center cursor-not-allowed opacity-50" 
+    <button type="button"
+            class="px-3 py-2 bg-gray-400 text-white text-sm rounded-lg flex items-center cursor-not-allowed opacity-50"
             title="Les articles en promotion ne peuvent pas avoir de remise"
             disabled>
         <i class="fas fa-fire mr-1"></i>Promotion

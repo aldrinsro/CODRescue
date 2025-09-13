@@ -1,4 +1,5 @@
 {% load commande_filters %}
+{% load remise_filters %}
 {% load json_tags %}
 
 <!-- Section des articles livrés (sans en-tête sur demande) -->
@@ -35,11 +36,7 @@
                                 <span class="text-xs text-orange-600">
                                     <i class="fas fa-clock mr-1"></i>{{ operation_date|date:"d/m/Y H:i" }}
                                 </span>
-                                <a href="{% url 'operatLogistic:liste_articles_retournes' %}" 
-                                   class="inline-flex items-center px-2 py-1 bg-orange-600 text-white rounded text-xs hover:bg-orange-700 transition-colors"
-                                   title="Gérer tous les articles retournés">
-                                    <i class="fas fa-cog mr-1"></i>Gérer
-                                </a>
+                            
                             </div>
                         </h4>
                         <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
@@ -60,7 +57,7 @@
                                                     Quantité retournée : {{ article_retourne.quantite_retournee }}
                                                 </span>
                                                 <span class="ml-2 text-xs text-green-600 font-semibold">
-                                                    {{ article_retourne.valeur_retour|floatformat:2 }} €
+                                                    {{ article_retourne.valeur_retour|floatformat:2 }} Dhs
                                                 </span>
                                             </div>
                                             {% if article_retourne.raison_retour %}
@@ -130,7 +127,7 @@
                                                     </span>
                                                     
                                                     <span class="inline-flex items-center px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">
-                                                        <i class="fas fa-euro-sign mr-1"></i>{{ article_retourne.prix_unitaire_origine }}€
+                                                        <i class="fas fa-euro-sign mr-1"></i>{{ article_retourne.prix_unitaire_origine }} Dhs
                                                     </span>
                                                 </div>
                                             </div>
@@ -152,7 +149,7 @@
                                             <div class="text-center min-w-0">
                                                 <div class="text-sm text-gray-500">Prix unitaire</div>
                                                 <div class="font-medium text-gray-700">
-                                                    {{ article_retourne.prix_unitaire_origine|floatformat:2 }} €
+                                                    {{ article_retourne.prix_unitaire_origine|floatformat:2 }} Dhs
                                                 </div>
                                                 <div class="text-xs text-gray-600 mt-1">
                                                     Prix d'origine
@@ -163,7 +160,7 @@
                                             <div class="text-center min-w-0">
                                                 <div class="text-sm text-gray-500">Valeur retournée</div>
                                                 <div class="text-lg font-bold text-orange-600">
-                                                    {{ article_retourne.valeur_retour|floatformat:2 }} €
+                                                    {{ article_retourne.valeur_retour|floatformat:2 }} dhs
                                                 </div>
                                             </div>
                                             
@@ -218,7 +215,7 @@
                                             <div class="text-xs text-gray-600">En attente</div>
                                         </div>
                                         <div>
-                                            <div class="text-2xl font-bold text-green-600">{{ commande.valeur_articles_retournes|floatformat:2 }} €</div>
+                                            <div class="text-2xl font-bold text-green-600">{{ commande.valeur_articles_retournes|floatformat:2 }} dhs </div>
                                             <div class="text-xs text-gray-600">Valeur totale</div>
                                         </div>
                                     </div>
@@ -324,10 +321,17 @@
                             <i class="fas fa-fire mr-1"></i>PROMO
                         </span>
                         {% endif %}
-                        
+
                         {% if panier.article.isUpsell %}
                         <span class="inline-flex items-center px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">
                             <i class="fas fa-arrow-up mr-1"></i>UPSELL
+                        </span>
+                        {% endif %}
+
+                        <!-- Badge remise appliquée - Interface Logistique -->
+                        {% if panier.remise_appliquer and panier.article.phase != 'LIQUIDATION' and not panier.article.has_promo_active %}
+                        <span class="inline-flex items-center px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+                            <i class="fas fa-percent mr-1"></i>REMISE APPLIQUÉE
                         </span>
                         {% endif %}
 
@@ -387,22 +391,37 @@
                 <!-- Prix unitaire -->
                 <div class="text-center min-w-0">
                     <div class="text-sm text-gray-500">Prix unitaire</div>
-                    {% with panier.article|get_prix_avec_phase_info:commande.compteur as prix_info %}
-                    <div class="font-medium {{ prix_info.couleur_classe }}">
-                        {{ prix_info.prix|floatformat:2 }} DH
+
+                    <!-- Utiliser le filtre get_prix_effectif_panier pour tenir compte des remises -->
+                    {% with panier|get_prix_effectif_panier as prix_effectif %}
+                    <div class="font-medium {{ prix_effectif.couleur_classe }}">
+                        {{ prix_effectif.prix_unitaire|floatformat:2 }} DH
                     </div>
-                    <div class="text-xs {{ prix_info.couleur_classe }} mt-1">
-                        {{ prix_info.libelle }}
+                    <div class="text-xs {{ prix_effectif.couleur_classe }} mt-1">
+                        <i class="{{ prix_effectif.icone }} mr-1"></i>{{ prix_effectif.libelle }}
                     </div>
+
+                    {% if prix_effectif.est_remise %}
+                        <!-- Afficher le prix original barré si une remise est appliquée -->
+                        {% with panier.article|get_prix_affichage_remise:panier.quantite as prix_normal %}
+                        <div class="text-xs text-gray-400 line-through mt-1">
+                            <i class="fas fa-arrow-down mr-1"></i>{{ prix_normal.prix|floatformat:2 }} DH
+                        </div>
+                        {% endwith %}
+                    {% endif %}
                     {% endwith %}
                 </div>
-                
+
                 <!-- Sous-total -->
                 <div class="text-center min-w-0">
                     <div class="text-sm text-gray-500">Sous-total</div>
+
+                    <!-- Utiliser le prix effectif calculé précédemment -->
+                    {% with panier|get_prix_effectif_panier as prix_effectif %}
                     <div class="text-lg font-bold" style="color: var(--logistic-accent, #66b3b3);">
-                        {{ panier|calculer_sous_total_avec_compteur:commande.compteur|floatformat:2 }} DH
+                        {{ prix_effectif.sous_total|floatformat:2 }} DH
                     </div>
+                    {% endwith %}
                 </div>
                 
                 <!-- État de préparation pour logistique -->
