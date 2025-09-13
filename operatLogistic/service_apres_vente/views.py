@@ -609,17 +609,38 @@ def marquer_commande_payee(request, commande_id):
         
         # Statut fixe : toujours "Payé"
         nouveau_statut = 'Payé'
-        
+
+        # Récupérer la date de paiement depuis la requête
+        date_paiement_str = request.POST.get('date_paiement')
+        if not date_paiement_str:
+            return JsonResponse({
+                'success': False,
+                'error': 'La date de paiement est obligatoire'
+            })
+
+        try:
+            # Convertir la date string en datetime
+            date_paiement = datetime.strptime(date_paiement_str, '%Y-%m-%d')
+            # Convertir en timezone aware datetime
+            date_paiement = timezone.make_aware(date_paiement)
+        except ValueError:
+            return JsonResponse({
+                'success': False,
+                'error': 'Format de date invalide. Utilisez le format YYYY-MM-DD'
+            })
+
         with transaction.atomic():
-            # Mettre à jour le statut de paiement
+            # Mettre à jour le statut de paiement et la date
             ancien_statut = commande.payement
             commande.payement = nouveau_statut
+            commande.Date_paiement = date_paiement
             commande.save()
             return JsonResponse({
                 'success': True,
                 'message': f'Statut de paiement mis à jour vers {nouveau_statut} avec succès',
                 'nouveau_statut': nouveau_statut,
-                'ancien_statut': ancien_statut
+                'ancien_statut': ancien_statut,
+                'date_paiement': date_paiement.strftime('%d/%m/%Y')
             })
             
     except Exception as e:
