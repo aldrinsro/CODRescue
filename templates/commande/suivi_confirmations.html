@@ -254,9 +254,6 @@
                 <tr class="hover:bg-gray-50 transition-colors">
                     <td class="px-4 py-4 whitespace-nowrap">
                         <div class="text-sm font-medium text-gray-900">{{ commande.id_yz }}</div>
-                        {% if commande.num_cmd != commande.id_yz|stringformat:"s" %}
-                        <div class="text-xs text-gray-500">{{ commande.num_cmd }}</div>
-                        {% endif %}
                     </td>
                     <td class="px-4 py-4 whitespace-nowrap">
                         <div class="text-sm font-medium text-gray-900">

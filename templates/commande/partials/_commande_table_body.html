@@ -3,15 +3,8 @@
     <!-- N° Commande -->
     <td class="px-4 py-3 border-r border-gray-200">
         <div class="font-medium text-gray-900">
-            {% if commande.origine == 'OC' %}
-                <span class="text-orange-600">{{ commande.num_cmd }}</span>
-            {% elif commande.origine == 'ADMIN' %}
-                <span class="text-blue-600">{{ commande.num_cmd }}</span>
-            {% else %}
-                <span>{{ commande.num_cmd }}</span>
-            {% endif %}
+            <span class="font-bold" style="color: var(--admin-color);">{{ commande.id_yz }}</span>
         </div>
-        <div class="text-sm text-gray-500">N° Commande: {{ commande.id_yz }}</div>
     </td>
     <!-- N° Externe -->
     <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-600 border-r border-gray-200">
