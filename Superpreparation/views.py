@@ -802,6 +802,17 @@ def commandes_livrees_partiellement(request):
                 commande.commande_renvoi_id = commande.commande_renvoi.id
                 commande.commande_renvoi_num = commande.commande_renvoi.num_cmd
                 commande.commande_renvoi_id_yz = commande.commande_renvoi.id_yz
+
+    # Récupérer les statistiques des articles retournés à traiter
+    from commande.models import ArticleRetourne
+
+    articles_retournes_stats = {
+        'total_en_attente': ArticleRetourne.objects.filter(statut_retour='en_attente').count(),
+        'total_reintegres': ArticleRetourne.objects.filter(statut_retour='reintegre_stock').count(),
+        'total_defectueux': ArticleRetourne.objects.filter(statut_retour='defectueux').count(),
+        'total_traites': ArticleRetourne.objects.exclude(statut_retour='en_attente').count(),
+    }
+
     context = {
         'page_title': 'Suivi - Commandes Livrées Partiellement',
         'page_subtitle': f'Suivi en temps réel de {len(commandes_livrees_partiellement)} commande(s) livrées partiellement',
@@ -810,9 +821,11 @@ def commandes_livrees_partiellement(request):
         'commandes_count': len(commandes_livrees_partiellement),
         'active_tab': 'livrees_partiellement',
         'is_readonly': True,
-        'is_tracking_page': True
+        'is_tracking_page': True,
+        'articles_retournes_stats': articles_retournes_stats,  # Ajout des stats
     }
     return render(request, 'Superpreparation/commandes_livrees_partiellement.html', context)
+
 @superviseur_preparation_required
 def commandes_retournees(request):
     """Page de suivi (lecture seule) des commandes retournées"""

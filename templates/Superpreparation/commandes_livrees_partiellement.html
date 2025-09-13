@@ -596,6 +596,38 @@
     .compact-page #cmdTable th:nth-child(8), .compact-page #cmdTable td:nth-child(8) { width: 100px; min-width: 100px; } /* Total */
     .compact-page #cmdTable th:nth-child(9), .compact-page #cmdTable td:nth-child(9) { width: 100px; min-width: 100px; } /* État */
     .compact-page #cmdTable th:nth-child(10), .compact-page #cmdTable td:nth-child(10) { width: 110px; min-width: 110px; }/* Panier */
+    .compact-page #cmdTable th:nth-child(11), .compact-page #cmdTable td:nth-child(11) { width: 100px; min-width: 100px; }/* Actions */
+
+    /* Styles pour le bouton Articles retournés */
+    .articles-button {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease-in-out;
+    }
+
+    .articles-button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(234, 88, 12, 0.15);
+    }
+
+    .articles-badge {
+        animation: bounce 2s infinite;
+    }
+
+    .articles-badge-pulse {
+        animation: pulse 2s infinite;
+    }
+
+    @media (max-width: 640px) {
+        .articles-button span:not(.articles-badge) {
+            display: none;
+        }
+        .articles-button i {
+            margin-right: 0 !important;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -629,7 +661,7 @@
     </div>
 
     <!-- Statistiques -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <!-- Total des commandes -->
         <div class="stats-card animate-slideInUp" style="animation-delay: 0.1s;">
                 <div class="flex items-center">
@@ -663,8 +695,22 @@
                         <i class="fas fa-exclamation-triangle text-2xl"></i>
                     </div>
                     <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-600">Urgentes</p>
+                    <p class="text-sm font-medium text-gray-600">Nombres d'articles defecteux </p>
                     <p class="text-3xl font-bold text-gray-900">{{ stats.commandes_urgentes|default:0 }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Articles retournés à traiter -->
+        <div class="stats-card animate-slideInUp cursor-pointer hover:shadow-lg transition-all duration-200" style="animation-delay: 0.4s;" onclick="ouvrirModaleArticlesRetournes()">
+                <div class="flex items-center">
+                <div class="stats-icon bg-orange-500">
+                        <i class="fas fa-undo text-2xl"></i>
+                    </div>
+                    <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">Articles à Traiter</p>
+                    <p class="text-3xl font-bold text-orange-600">{{ articles_retournes_stats.total_en_attente|default:0 }}</p>
+                    <p class="text-xs text-gray-500">Cliquer pour voir</p>
                 </div>
             </div>
         </div>
@@ -737,6 +783,7 @@
                         <th class="table-cell text-left text-xs font-medium text-white uppercase tracking-wider">Total</th>
                         <th class="table-cell text-left text-xs font-medium text-white uppercase tracking-wider">État</th>
                         <th class="table-cell text-center text-xs font-medium text-white uppercase tracking-wider">Panier</th>
+                        <th class="table-cell text-center text-xs font-medium text-white uppercase tracking-wider">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
@@ -823,18 +870,35 @@
                             </td>
                             
                             <td class="table-cell whitespace-nowrap text-center">
-                                <a href="{% url 'Superpreparation:detail_prepa' commande.pk %}" 
+                                <a href="{% url 'Superpreparation:detail_prepa' commande.pk %}"
                                    class="action-button"
                                    title="Voir le panier de cette commande">
-                                    <i class="fas fa-shopping-cart"></i> 
+                                    <i class="fas fa-shopping-cart"></i>
                                     {{ commande.paniers.count }} article{{ commande.paniers.count|pluralize }}
                                 </a>
+                            </td>
+
+                            <!-- Nouvelle colonne Actions -->
+                            <td class="table-cell whitespace-nowrap text-center">
+                                <div class="flex justify-center space-x-2">
+                                    <button onclick="ouvrirModaleArticlesRetournes()"
+                                            class="action-button articles-button relative bg-orange-50 text-orange-600 hover:bg-orange-100 border border-orange-200 hover:border-orange-300 transition-all duration-200"
+                                            title="Voir les articles retournés à traiter ({{ articles_retournes_stats.total_en_attente }} en attente)">
+                                        <i class="fas fa-undo mr-1"></i>
+                                        <span class="hidden sm:inline">Articles</span>
+                                        {% if articles_retournes_stats.total_en_attente > 0 %}
+                                        <span class="articles-badge absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-600 rounded-full min-w-[20px] h-5">
+                                            {{ articles_retournes_stats.total_en_attente }}
+                                        </span>
+                                        {% endif %}
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
                     {% else %}
                         <tr>
-                            <td colspan="10" class="table-cell whitespace-nowrap text-center">
+                            <td colspan="11" class="table-cell whitespace-nowrap text-center">
                                 <div class="empty-state">
                                     <div class="empty-state-icon">
                                         <i class="fas fa-truck"></i>
@@ -941,6 +1005,39 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
+<!-- Modale des Articles Retournés à Traiter -->
+<div id="modaleArticlesRetournes" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-10 mx-auto p-6 border w-full max-w-6xl shadow-lg rounded-lg bg-white">
+        <div class="flex justify-between items-start mb-6">
+            <div>
+                <h3 class="text-xl font-bold text-gray-900 flex items-center">
+                    <i class="fas fa-undo mr-2 text-orange-600"></i>
+                    Service - Articles Retournés à Traiter
+                </h3>
+                <p class="text-sm text-gray-600 mt-1">Articles retournés lors de livraisons partielles en attente de traitement</p>
+            </div>
+            <button onclick="fermerModaleArticlesRetournes()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                <i class="fas fa-times text-2xl"></i>
+            </button>
+        </div>
+
+        <!-- Contenu de la modale -->
+        <div id="contenuArticlesRetournes" class="space-y-4">
+            <div class="text-center py-8">
+                <i class="fas fa-spinner fa-spin text-3xl text-blue-600 mb-4"></i>
+                <p class="text-gray-600">Chargement des articles retournés...</p>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex justify-between items-center mt-6 pt-4 border-t border-gray-200">
+            <button onclick="fermerModaleArticlesRetournes()" class="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors">
+                <i class="fas fa-times mr-2"></i>Fermer
+            </button>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -951,6 +1048,300 @@ document.addEventListener('DOMContentLoaded', function() {
 document.addEventListener('DOMContentLoaded', function() {
     if (typeof initSuiviCommandesSearch === 'function') {
         initSuiviCommandesSearch('livrees_partiellement');
+    }
+});
+
+// === GESTION DES ARTICLES RETOURNÉS ===
+
+function ouvrirModaleArticlesRetournes() {
+    console.log('Ouverture de la modale des articles retournés');
+    document.getElementById('modaleArticlesRetournes').classList.remove('hidden');
+    chargerArticlesRetournes();
+}
+
+function fermerModaleArticlesRetournes() {
+    console.log('Fermeture de la modale des articles retournés');
+    document.getElementById('modaleArticlesRetournes').classList.add('hidden');
+}
+
+function chargerArticlesRetournes() {
+    console.log('Chargement des articles retournés...');
+    const contenu = document.getElementById('contenuArticlesRetournes');
+
+    // Afficher le spinner
+    contenu.innerHTML = `
+        <div class="text-center py-8">
+            <i class="fas fa-spinner fa-spin text-3xl text-blue-600 mb-4"></i>
+            <p class="text-gray-600">Chargement des articles retournés...</p>
+        </div>
+    `;
+
+    fetch('{% url "Superpreparation:service_api_articles_retournes_modal" %}', {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                afficherArticlesRetournes(data.articles);
+            } else {
+                contenu.innerHTML = `
+                    <div class="text-center py-8 text-red-600">
+                        <i class="fas fa-exclamation-triangle text-3xl mb-4"></i>
+                        <p>Erreur: ${data.error}</p>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            contenu.innerHTML = `
+                <div class="text-center py-8 text-red-600">
+                    <i class="fas fa-exclamation-triangle text-3xl mb-4"></i>
+                    <p>Erreur de réseau lors du chargement</p>
+                </div>
+            `;
+        });
+}
+
+function afficherArticlesRetournes(articles) {
+    const contenu = document.getElementById('contenuArticlesRetournes');
+
+    if (articles.length === 0) {
+        contenu.innerHTML = `
+            <div class="text-center py-8">
+                <i class="fas fa-check-circle text-3xl text-green-600 mb-4"></i>
+                <p class="text-gray-600">Aucun article retourné en attente de traitement</p>
+            </div>
+        `;
+        return;
+    }
+
+    let html = `
+        <div class="mb-4 p-3 bg-blue-50 rounded-lg">
+            <div class="flex items-center justify-between">
+                <span class="text-sm text-blue-800">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    ${articles.length} article(s) retourné(s) en attente de traitement
+                </span>
+                <div class="text-xs text-blue-600">
+                    Affichage des ${Math.min(articles.length, 50)} premiers résultats
+                </div>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Article & Variante</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Commande</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantité</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Retour</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Raison</th>
+                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+    `;
+
+    articles.forEach(article => {
+        const canReintegrate = article.peut_etre_reintegre;
+
+        html += `
+            <tr class="hover:bg-gray-50">
+                <td class="px-4 py-4 whitespace-nowrap">
+                    <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                        <div class="text-sm font-medium text-gray-900 mb-1">${article.article_nom}</div>
+                        <div class="text-xs text-gray-500 mb-2">Réf: ${article.article_reference}</div>
+                        ${article.variante_info.has_variante ? `
+                            <div class="border-t border-gray-200 pt-2 mt-2">
+                                <div class="text-xs font-medium text-gray-700 mb-1">Variante associée :</div>
+                                <div class="space-y-1">
+                                    ${article.variante_info.reference_variante ? `
+                                        <div class="text-xs text-gray-600">
+                                            <i class="fas fa-barcode mr-1"></i>Réf: ${article.variante_info.reference_variante}
+                                        </div>
+                                    ` : ''}
+                                    <div class="flex flex-wrap gap-1">
+                                        ${article.variante_info.couleur ? `
+                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                <i class="fas fa-palette mr-1"></i>${article.variante_info.couleur}
+                                            </span>
+                                        ` : ''}
+                                        ${article.variante_info.pointure ? `
+                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                <i class="fas fa-ruler mr-1"></i>Taille ${article.variante_info.pointure}
+                                            </span>
+                                        ` : ''}
+                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${article.variante_info.stock_disponible > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                                            <i class="fas fa-boxes mr-1"></i>Stock: ${article.variante_info.stock_disponible}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        ` : `
+                            <div class="border-t border-gray-200 pt-2 mt-2">
+                                <div class="text-xs text-red-400 italic flex items-center">
+                                    <i class="fas fa-exclamation-triangle mr-1"></i>
+                                    Aucune variante associée
+                                </div>
+                            </div>
+                        `}
+                    </div>
+                </td>
+                <td class="px-4 py-4 whitespace-nowrap">
+                    <div class="text-sm font-medium text-gray-900">${article.commande_info.id_yz}</div>
+                    <div class="text-xs text-gray-500">${article.commande_info.num_cmd}</div>
+                </td>
+                <td class="px-4 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">${article.commande_info.client_nom}</div>
+                </td>
+                <td class="px-4 py-4 whitespace-nowrap">
+                    <div class="text-sm font-bold text-orange-600">${article.quantite_retournee}x</div>
+                    <div class="text-xs text-gray-500">${article.prix_unitaire} DH</div>
+                </td>
+                <td class="px-4 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">${article.date_retour}</div>
+                </td>
+                <td class="px-4 py-4">
+                    <div class="text-sm text-gray-900 max-w-xs truncate" title="${article.raison_retour}">
+                        ${article.raison_retour}
+                    </div>
+                </td>
+                <td class="px-4 py-4 whitespace-nowrap text-center">
+                    <div class="flex justify-center space-x-2">
+                        ${canReintegrate ? `
+                            <button onclick="traiterArticle(${article.id}, 'reintegrer_stock')"
+                                    class="text-green-600 hover:text-green-900 transition-colors"
+                                    title="Réintégrer en stock">
+                                <i class="fas fa-check-circle"></i>
+                            </button>
+                        ` : ''}
+                        <button onclick="traiterArticle(${article.id}, 'marquer_defectueux')"
+                                class="text-red-600 hover:text-red-900 transition-colors"
+                                title="Marquer défectueux">
+                            <i class="fas fa-times-circle"></i>
+                        </button>
+                        <button onclick="traiterArticle(${article.id}, 'marquer_traite')"
+                                class="text-blue-600 hover:text-blue-900 transition-colors"
+                                title="Marquer traité">
+                            <i class="fas fa-check"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    });
+
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+
+    contenu.innerHTML = html;
+}
+
+function traiterArticle(articleId, action) {
+    const actions = {
+        'reintegrer_stock': 'réintégrer en stock',
+        'marquer_defectueux': 'marquer comme défectueux',
+        'marquer_traite': 'marquer comme traité'
+    };
+
+    if (!confirm(`Êtes-vous sûr de vouloir ${actions[action]} cet article ?`)) {
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('action', action);
+    formData.append('commentaire', `Traitement via Superpreparation - ${new Date().toLocaleString()}`);
+
+    const url = `{% url "Superpreparation:service_traiter_article_retourne" 0 %}`.replace('0', articleId);
+    console.log('Fetching URL:', url);
+
+    fetch(url, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': '{{ csrf_token }}'
+        }
+    })
+    .then(response => {
+        console.log('Response status:', response.status);
+        console.log('Response headers:', response.headers.get('content-type'));
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            showToast(data.message, 'success');
+            // Recharger les articles
+            chargerArticlesRetournes();
+            // Mettre à jour le compteur dans le card
+            location.reload();
+        } else {
+            showToast(`Erreur: ${data.error}`, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showToast('Erreur de réseau lors du traitement', 'error');
+    });
+}
+
+function reintegrerTousLesArticles() {
+    if (!confirm('Êtes-vous sûr de vouloir réintégrer automatiquement tous les articles éligibles ?')) {
+        return;
+    }
+
+    fetch('{% url "Superpreparation:service_reintegrer_automatique" %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.message, 'success');
+            // Recharger les articles
+            chargerArticlesRetournes();
+            // Recharger la page pour mettre à jour les statistiques
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            showToast(`Erreur: ${data.error}`, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showToast('Erreur de réseau lors de la réintégration automatique', 'error');
+    });
+}
+
+// Fermer la modale en cliquant en dehors
+document.addEventListener('click', function(e) {
+    const modale = document.getElementById('modaleArticlesRetournes');
+    if (e.target === modale) {
+        fermerModaleArticlesRetournes();
+    }
+});
+
+// Fermer avec Échap
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const modale = document.getElementById('modaleArticlesRetournes');
+        if (!modale.classList.contains('hidden')) {
+            fermerModaleArticlesRetournes();
+        }
     }
 });
 </script>
