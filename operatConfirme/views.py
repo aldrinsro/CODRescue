@@ -1410,7 +1410,7 @@ def annuler_commande_confirmation(request, commande_id):
                 })
             
             # Autoriser l'annulation depuis "En cours de confirmation" ou "Affectée"
-            etats_autorises = ['en cours de confirmation', 'affectée']
+            etats_autorises = ['en cours de confirmation', 'affectée','report de confirmation']
             if etat_actuel.enum_etat.libelle.lower() not in etats_autorises:
                 return JsonResponse({
                     'success': False,
