@@ -498,7 +498,7 @@
                     </h3>
                     <p class="text-green-700 mb-3">
                         Cette commande a été livrée partiellement. Certains articles ont été livrés au client, 
-                        tandis que d'autres ont été renvoyés en préparation pour traitement.
+                        tandis que d'autres ont été retournés pour traitement.
                     </p>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="bg-white p-3 rounded border border-green-200">
@@ -513,7 +513,7 @@
                         <div class="bg-white p-3 rounded border border-orange-200">
                             <div class="flex items-center mb-2">
                                 <i class="fas fa-undo text-orange-600 mr-2"></i>
-                                <span class="font-medium text-orange-800">Articles Renvoyés</span>
+                                <span class="font-medium text-orange-800">Articles Retournés</span>
                             </div>
                             <p class="text-sm text-orange-700">
                                 Les articles non livrés ont été transférés vers une commande de renvoi pour traitement.
@@ -652,7 +652,7 @@
                     <div class="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                         <p class="text-sm text-yellow-800">
                             <i class="fas fa-exclamation-triangle mr-2"></i>
-                            <strong>Note :</strong> La commande sera renvoyée aux opérateurs de préparation qui effectueront les modifications demandées par le client.
+                            <strong>Note :</strong> La commande sera retournée aux opérateurs de préparation qui effectueront les modifications demandées par le client.
                         </p>
                     </div>
                 </div>
@@ -667,7 +667,7 @@
     {% endif %}
 
     <!-- Section Actions de Livraison (SAV) -->
-    {% if commande.etat_actuel.enum_etat.libelle != 'Retournée' %}
+    {% if commande.etat_actuel.enum_etat.libelle != 'Retournée' and commande.etat_actuel.enum_etat.libelle != 'Livrée Partiellement'  %}
     <div class="bg-white rounded-xl shadow-lg border p-6 md:p-8 mt-6" style="border-color: var(--logistic-border);">
         <h2 class="text-2xl font-bold flex items-center mb-6" style="color: var(--logistic-primary);">
             <i class="fas fa-shipping-fast mr-2"></i>Actions de Livraison (SAV)
@@ -733,7 +733,26 @@
                                     </div>
                                 </div>
                             </div>
-
+                            
+                            <!-- Champ date de livraison (caché par défaut) -->
+                            <div id="dateLivraisonDiv" class="mb-4 hidden">
+                                <h3 class="text-lg font-medium text-gray-900 mb-4">Date de livraison</h3>
+                                <div class="bg-green-50 p-4 rounded-lg">
+                                    <label for="date_livraison" class="block text-sm font-medium text-gray-700">
+                                        <i class="fas fa-calendar-check mr-1 text-green-600"></i>
+                                        Date de livraison effective
+                                    </label>
+                                    <input type="date" 
+                                           name="date_livraison" 
+                                           id="date_livraison"
+                                           class="w-full mt-2 p-2 border border-green-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                                           required>
+                                    <p class="mt-2 text-sm text-gray-600">
+                                        <i class="fas fa-info-circle mr-1 text-green-600"></i>
+                                        Veuillez indiquer la date à laquelle la commande a été effectivement livrée
+                                    </p>
+                                </div>
+                            </div>
 
                             <label for="commentaire" class="text-sm font-medium text-gray-700">Commentaire (obligatoire)</label>
                             <textarea name="commentaire" id="commentaire" rows="4" class="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" required></textarea>
@@ -774,7 +793,7 @@
                         <div class="ml-3">
                             <p class="text-sm text-blue-700">
                                 <strong>Instructions :</strong> Sélectionnez les articles que vous allez livrer au client. 
-                                Les articles non sélectionnés seront automatiquement renvoyés aux opérateurs de préparation 
+                                Les articles non sélectionnés seront automatiquement retournés aux opérateurs de préparation 
                                 pour traitement (remplacement, correction, etc.).
                             </p>
                         </div>
@@ -785,9 +804,14 @@
                     {% csrf_token %}
                     
                     <!-- Ces champs seront remplis dynamiquement par JavaScript juste avant la soumission -->
+<<<<<<< HEAD
                     <input type="hidden" name="articles_livres_json" id="articlesLivresJsonInput">
                     <input type="hidden" name="articles_renvoyes_json" id="articlesRenvoyesJsonInput">
                     <input type="hidden" name="type_retour" id="typeRetourInput" value="preparation">
+=======
+                    <input type="hidden" name="articles_livres" id="articlesLivresJsonInput">
+                    <input type="hidden" name="articles_renvoyes" id="articlesRetournesJsonInput">
+>>>>>>> dev_jesse
                     
                     <!-- Section Articles à Livrer -->
                     <div class="mb-8">
@@ -798,12 +822,22 @@
                         <div class="bg-green-50 border border-green-200 rounded-lg p-4">
                             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="articlesALivrerContainer">
                                 {% for panier in commande.paniers.all %}
+<!-- Panier {{ panier.id }}: {{ panier.article.nom }} - Prix: {{ panier.prix_actuel_pour_affichage|default:panier.article.prix_unitaire }} DH -->
                                 <div class="article-livraison-card bg-white rounded-lg border border-green-300 p-4 hover:border-green-400 transition-colors"
-                                     data-panier-id="{{ panier.id }}" 
+                                     data-panier-id="{{ panier.id }}"
                                      data-article-id="{{ panier.article.id }}"
                                      data-article-nom="{{ panier.article.nom }}"
+<<<<<<< HEAD
                                      data-article-prix="{{ panier.prix_actuel_pour_affichage|stringformat:"%.2f" }}"
                                      data-quantite-max="{{ panier.quantite }}">
+=======
+                                     data-is-upsell="{{ panier.article.isUpsell|yesno:'true,false' }}"
+                                     data-compteur="{{ commande.compteur }}"
+                                     data-prix-unitaire="{{ panier.article.prix_unitaire }}"
+                                     data-prix-actuel="{{ panier.prix_actuel_pour_affichage|default:panier.article.prix_unitaire }}"
+                                     data-quantite-max="{{ panier.quantite }}"
+                                     data-sous-total="{{ panier.sous_total }}">
+>>>>>>> dev_jesse
                                     <div class="flex items-start space-x-3">
                                         <input type="checkbox" 
                                                id="livrer_{{ panier.id }}" 
@@ -812,7 +846,27 @@
                                                checked>
                                         <div class="flex-1">
                                             <label for="livrer_{{ panier.id }}" class="cursor-pointer">
+<<<<<<< HEAD
                                                 <div class="font-medium text-gray-900">{{ panier.article.nom }}</div>
+=======
+                                                <div class="font-medium text-gray-900">
+                                                    {{ panier.article.nom }}
+                                                    {% if panier.article.isUpsell and commande.compteur > 0 %}
+                                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700 ml-2">
+                                                            <i class="fas fa-arrow-up mr-1"></i>Upsell Niv.{{ commande.compteur }}
+                                                        </span>
+                                                    {% endif %}
+                                                    {% if panier.variante %}
+                                                        <br><small class="text-gray-600">
+                                                        {% if panier.variante.couleur %}{{ panier.variante.couleur.nom }}{% endif %}
+                                                        {% if panier.variante.pointure %}{% if panier.variante.couleur %} / {% endif %}{{ panier.variante.pointure.pointure }}{% endif %}
+                                                        {% if panier.variante.taille %}{% if panier.variante.couleur or panier.variante.pointure %} / {% endif %}{{ panier.variante.taille }}{% endif %}
+                                                        {% if panier.variante.modele %}{% if panier.variante.couleur or panier.variante.pointure or panier.variante.taille %} / {% endif %}{{ panier.variante.modele }}{% endif %}
+                                                        {% if panier.variante.matiere %}{% if panier.variante.couleur or panier.variante.pointure or panier.variante.taille or panier.variante.modele %} / {% endif %}{{ panier.variante.matiere }}{% endif %}
+                                                        </small>
+                                                    {% endif %}
+                                                </div>
+>>>>>>> dev_jesse
                                                 <div class="text-sm text-gray-500">
                                                     {% if panier.article.reference %}
                                                         Réf: {{ panier.article.reference }}<br>
@@ -820,10 +874,17 @@
                                                     {% if panier.article.couleur %}
                                                         Couleur: {{ panier.article.couleur }}<br>
                                                     {% endif %}
+<<<<<<< HEAD
                                                     {% if panier.article.pointure %}
                                                         Pointure: {{ panier.article.pointure }}<br>
                                                     {% endif %}
                                                     Prix: {{ panier.prix_actuel_pour_affichage|stringformat:"%.2f" }} DH
+=======
+                                                     <div class="flex justify-between items-center mt-1">
+                                                         <span>Prix unitaire: {% if commande.compteur > 0 and panier.article.isUpsell %}{% if commande.compteur == 1 and panier.article.prix_upsell_1 %}{{ panier.article.prix_upsell_1|floatformat:2 }}{% elif commande.compteur == 2 and panier.article.prix_upsell_2 %}{{ panier.article.prix_upsell_2|floatformat:2 }}{% elif commande.compteur == 3 and panier.article.prix_upsell_3 %}{{ panier.article.prix_upsell_3|floatformat:2 }}{% elif commande.compteur >= 4 and panier.article.prix_upsell_4 %}{{ panier.article.prix_upsell_4|floatformat:2 }}{% else %}{{ panier.article.prix_unitaire|floatformat:2 }}{% endif %}{% else %}{{ panier.article.prix_unitaire|floatformat:2 }}{% endif %} DH{% if commande.compteur > 0 and panier.article.isUpsell %}<small class="ml-1 text-green-600">(Niveau {{ commande.compteur }})</small>{% endif %}</span>
+                                                         <span class="font-medium text-blue-600">Sous-total: {{ panier.sous_total|floatformat:2 }} DH</span>
+                                                     </div>
+>>>>>>> dev_jesse
                                                 </div>
                                             </label>
                                             <div class="mt-3">
@@ -852,16 +913,16 @@
                     <div class="mb-8">
                         <h4 class="text-lg font-semibold text-orange-700 mb-4 flex items-center">
                             <i class="fas fa-undo mr-2"></i>
-                            Articles à Renvoyer
+                            Articles à Retourner
                         </h4>
                         <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
                             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="articlesARenvoyerContainer">
                                 <!-- Les articles non sélectionnés apparaîtront ici dynamiquement -->
-                                <!-- Pour chaque article à renvoyer, on ajoute un champ select pour l'état -->
+                                <!-- Pour chaque article à retourner, on ajoute un champ select pour l'état -->
                             </div>
                             <div id="aucunArticleRenvoyer" class="text-center py-8 text-gray-500">
                                 <i class="fas fa-info-circle text-2xl mb-2"></i>
-                                <p>Aucun article à renvoyer. Tous les articles seront livrés.</p>
+                                <p>Aucun article à retourner. Tous les articles seront livrés.</p>
                             </div>
                             
                             <!-- Nouvelle section pour le type de retour -->
@@ -904,19 +965,57 @@
                             <i class="fas fa-calculator mr-2"></i>
                             Résumé de la Livraison Partielle
                         </h4>
+<<<<<<< HEAD
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+=======
+                        <div class="grid grid-cols-1 md:grid-cols-6 gap-3">
+>>>>>>> dev_jesse
                             <div class="text-center">
                                 <div class="text-2xl font-bold text-green-600" id="totalArticlesLivres">0</div>
                                 <div class="text-sm text-gray-600">Articles à livrer</div>
                             </div>
                             <div class="text-center">
                                 <div class="text-2xl font-bold text-orange-600" id="totalArticlesRenvoyes">0</div>
-                                <div class="text-sm text-gray-600">Articles à renvoyer</div>
+                                <div class="text-sm text-gray-600">Articles à retourner</div>
                             </div>
                             <div class="text-center">
                                 <div class="text-2xl font-bold text-blue-600" id="totalValeurLivree">0.00 DH</div>
                                 <div class="text-sm text-gray-600">Valeur livrée</div>
                             </div>
+<<<<<<< HEAD
+=======
+                            <div class="text-center">
+                                <div class="text-2xl font-bold text-red-600" id="totalValeurRenvoyee">0.00 DH</div>
+                                <div class="text-sm text-gray-600">Valeur retournée</div>
+                            </div>
+                            {% if commande.frais_livraison and commande.ville.frais_livraison %}
+                            <div class="text-center">
+                                <div class="text-2xl font-bold text-indigo-600" id="totalFraisLivraison">{{ commande.ville.frais_livraison|floatformat:2 }} DH</div>
+                                <div class="text-sm text-gray-600">Frais de livraison</div>
+                            </div>
+                            {% endif %}
+                            <div class="text-center">
+                                <div class="text-2xl font-bold text-purple-600" 
+                                     id="totalCommandeLivraison" 
+                                     data-total-commande="{{ commande.total_cmd|stringformat:"%.2f" }}"
+                                     data-frais-livraison="{{ commande.ville.frais_livraison|default:0|stringformat:"%.2f" }}"
+                                     data-inclure-frais="{{ commande.frais_livraison|yesno:'true,false' }}">{{ commande.total_cmd|floatformat:2 }} DH</div>
+                                <div class="text-sm text-gray-600">Total original</div>
+                                {% if commande.frais_livraison and commande.ville.frais_livraison %}
+                                <div class="text-xs text-gray-500">(incl. frais)</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Pourcentage de livraison -->
+                        <div class="mt-4 text-center">
+                            <div class="text-lg font-medium text-gray-700">
+                                Pourcentage de livraison: <span id="pourcentageLivraison" class="text-blue-600 font-bold">100%</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+                                <div id="barreProgresLivraison" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 100%"></div>
+                            </div>
+>>>>>>> dev_jesse
                         </div>
                     </div>
 
@@ -942,6 +1041,7 @@
                         </button>
                         <button type="submit" 
                                 id="confirmerLivraisonPartielleBtn"
+                                onclick="mettreAJourDonneesAvantSoumission()"
                                 class="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                             <i class="fas fa-check mr-2"></i>
                             Confirmer la Livraison Partielle
@@ -1085,6 +1185,7 @@
         </div>
     </div>
 
+<<<<<<< HEAD
     <!-- Modale de Renvoi en Préparation -->
     <div id="renvoyerModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
         <div class="relative top-20 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white">
@@ -1322,6 +1423,9 @@
         </div>
     </div>
 
+=======
+ 
+>>>>>>> dev_jesse
     <!-- Modale de confirmation livraison partielle -->
     <div id="confirmationLivraisonPartielleModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
         <div class="relative top-32 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
@@ -1379,6 +1483,7 @@ function getPrixUpsell(article, compteur) {
     return prixUnitaire;
 }
 
+<<<<<<< HEAD
 // ================== GESTION DU SAV ==================
 
 function openSavModal(etat) {
@@ -1515,6 +1620,8 @@ function chargerArticles() {
         });
 }
 
+=======
+>>>>>>> dev_jesse
 function remplirSelectArticles() {
     const select = document.getElementById('articleSelect');
     select.innerHTML = '<option value="">-- Sélectionner un article --</option>';
@@ -1790,7 +1897,7 @@ function showStockNotification(action, articleName, quantite, stockChange = null
         case 'suppression':
             message = `🗑️ Article supprimé: ${articleName}`;
             if (stockChange) {
-                message += `\n📦 Article renvoyé en préparation`;
+                message += `\n📦 Article retourné en préparation`;
             }
             type = 'success';
             break;
@@ -1799,7 +1906,7 @@ function showStockNotification(action, articleName, quantite, stockChange = null
             if (stockChange && stockChange > 0) {
                 message += `\n📦 Stock décrémenté: -${stockChange} unités`;
             } else if (stockChange && stockChange < 0) {
-                message += `\n📦 Article renvoyé en préparation`;
+                message += `\n📦 Article retourné en préparation`;
             }
             type = 'success';
             break;
@@ -2371,6 +2478,7 @@ function isCommandeConfirmee() {
     return statutElement && statutElement.dataset.statutCommande === 'confirmée';
 }
 
+<<<<<<< HEAD
 // Fonction pour afficher les notifications de stock
 function showStockNotification(action, articleNom, quantite, isConfirmee = false) {
     let message = '';
@@ -2482,6 +2590,8 @@ function modifierQuantite(panierId, delta, nouvelleQuantite = null) {
 }
 
 
+=======
+>>>>>>> dev_jesse
 
 // Fonction pour basculer l'affichage de la timeline
 function toggleTimeline() {
@@ -2523,6 +2633,7 @@ function toggleTimeline() {
     }
 }
 
+<<<<<<< HEAD
 // Fonction pour afficher la modale des calculs détaillés
 function afficherModalCalculs() {
     const modal = document.createElement('div');
@@ -2943,6 +3054,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+=======
+>>>>>>> dev_jesse
 // Initialiser les calculs avec frais de livraison et la timeline au chargement
 document.addEventListener('DOMContentLoaded', function() {
     calculerTotalAvecLivraison();
@@ -2968,6 +3081,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // ================== GESTION DE LA LIVRAISON PARTIELLE ==================
 
+<<<<<<< HEAD
 function ouvrirModalLivraisonPartielle() {
     console.log('DEBUG: Tentative d\'ouverture du modal de livraison partielle');
     const modal = document.getElementById('livraisonPartielleModal');
@@ -3003,8 +3117,30 @@ function fermerModalLivraisonPartielle() {
     // Mettre à jour le résumé
     mettreAJourResumeLivraisonPartielle();
 }
+=======
+// Initialiser les données des paniers pour le JavaScript
+window.currentPaniersData = [
+    {% for panier in commande.paniers.all %}
+    {
+        id: {{ panier.id }},
+        nom: "{{ panier.article.nom|escapejs }}",
+        article_id: {{ panier.article.id }},
+        quantite: {{ panier.quantite }},
+        prix_unitaire: "{{ panier.article.prix_unitaire|stringformat:"%.2f" }}",
+        prix_actuel: "{{ panier.prix_actuel_pour_affichage|default:panier.article.prix_unitaire|stringformat:"%.2f" }}",
+        sous_total: "{{ panier.sous_total|stringformat:"%.2f" }}",
+        reference: "{{ panier.article.reference|default:''|escapejs }}",
+        compteur: {{ commande.compteur }},
+        is_upsell: {{ panier.article.isUpsell|yesno:"true,false" }}
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+];
+console.log('🔧 DEBUG: Données des paniers initialisées:', window.currentPaniersData);
 
-function initialiserModalLivraisonPartielle() {
+// Fonctions ouvrirModalLivraisonPartielle et fermerModalLivraisonPartielle déplacées vers static/js/OperteurSAV/modals.js
+>>>>>>> dev_jesse
+
+function initialiserModalLivraisonPartielleTemplate() {
     console.log('DEBUG: Initialisation du modal de livraison partielle');
     
     // Initialiser les événements pour les checkboxes
@@ -3076,13 +3212,17 @@ function mettreAJourResumeLivraisonPartielle() {
     let totalArticlesLivres = 0;
     let totalArticlesRenvoyes = 0;
     let totalValeurLivree = 0;
+    let totalValeurRenvoyee = 0;
     
+    // Pas de fallback texte: on s'appuie uniquement sur data-attributes/JSON numériques
+
     // Parcourir tous les articles du panier original
     document.querySelectorAll('.article-livraison-card').forEach(card => {
         const panierId = parseInt(card.dataset.panierId);
         const articleId = parseInt(card.dataset.articleId);
         const articleNom = card.dataset.articleNom;
         
+<<<<<<< HEAD
         // --- DEBUG PRIX START ---
         console.log('DEBUG LP - Raw data-article-prix:', card.dataset.articlePrix); // Log 1: Raw string from DOM
         const articlePrix = parseFloat(card.dataset.articlePrix);
@@ -3090,6 +3230,102 @@ function mettreAJourResumeLivraisonPartielle() {
         // --- DEBUG PRIX END ---
 
         const quantiteMax = parseInt(card.dataset.quantiteMax);
+=======
+        // Récupérer les informations de variante depuis le DOM
+        const nomElement = card.querySelector('.font-medium.text-gray-900');
+        const nomCompletAvecVariante = nomElement ? nomElement.textContent.trim() : articleNom;
+        
+        // --- DEBUG COMPLET START ---
+        console.log('=== DEBUG ARTICLE START ===');
+        console.log('DEBUG LP - Card element:', card);
+        console.log('DEBUG LP - Raw data-article-prix:', card.dataset.articlePrix);
+        console.log('DEBUG LP - Raw data-article-prix TYPE:', typeof card.dataset.articlePrix);
+        console.log('DEBUG LP - Raw data-article-prix LENGTH:', (card.dataset.articlePrix || '').length);
+        console.log('DEBUG LP - Raw data-sous-total:', card.dataset.sousTotal);
+        console.log('DEBUG LP - Raw data-quantite-max:', card.dataset.quantiteMax);
+        console.log('DEBUG LP - Raw data-is-upsell:', card.dataset.isUpsell);
+        console.log('DEBUG LP - Raw data-compteur:', card.dataset.compteur);
+        console.log('DEBUG LP - Raw data-article (brut):', card.dataset.article);
+        console.log('DEBUG LP - Tous les datasets du card:', card.dataset);
+        
+        const articlePrix = parseFloat(card.dataset.articlePrix || '0');
+        const sousTotal = parseFloat(card.dataset.sousTotal || '0');
+        const quantiteMax = parseInt(card.dataset.quantiteMax || '1');
+        const isUpsell = card.dataset.isUpsell === 'true';
+        const compteur = parseInt(card.dataset.compteur || '0');
+        
+        console.log('DEBUG LP - Parsed articlePrix (float):', articlePrix);
+        console.log('DEBUG LP - Parsed sousTotal (float):', sousTotal);
+        console.log('DEBUG LP - Parsed quantiteMax (int):', quantiteMax);
+        console.log('DEBUG LP - Parsed isUpsell (bool):', isUpsell);
+        console.log('DEBUG LP - Parsed compteur (int):', compteur);
+        
+        // Calculer le prix unitaire actuel (pas le prix de base)
+        let prixUnitaire = articlePrix;
+        if (prixUnitaire === 0 && sousTotal > 0 && quantiteMax > 0) {
+            prixUnitaire = sousTotal / quantiteMax;
+            console.log('DEBUG LP - Prix calculé depuis sous-total:', prixUnitaire);
+        }
+        
+        // Si le prix est toujours 0, essayer de récupérer depuis les données de l'article
+        if (prixUnitaire === 0) {
+            console.log('ERREUR LP - Prix unitaire = 0, récupération alternative...');
+            
+            // Essayer de récupérer depuis data-article du card
+            try {
+                const articleData = JSON.parse(card.dataset.article || '{}');
+                console.log('DEBUG LP - articleData récupérée:', articleData);
+                
+                // NOUVEAU: Toujours utiliser prix_actuel car il contient déjà le bon prix selon le contexte
+                prixUnitaire = parseFloat(articleData.prix_actuel || articleData.prix_unitaire || 0);
+                console.log('DEBUG LP - Prix actuel récupéré:', prixUnitaire);
+                console.log('DEBUG LP - Prix unitaire de base:', articleData.prix_unitaire);
+                console.log('DEBUG LP - Données upsell disponibles:', {
+                    prix_upsell_1: articleData.prix_upsell_1,
+                    prix_upsell_2: articleData.prix_upsell_2,
+                    prix_upsell_3: articleData.prix_upsell_3,
+                    prix_upsell_4: articleData.prix_upsell_4
+                });
+            } catch (e) {
+                console.error('ERREUR LP - Impossible de parser data-article:', e);
+            }
+        }
+        
+        // Pour les articles upsell, le prix doit déjà être le prix upsell dans data-article-prix
+        if (isUpsell && compteur > 0) {
+            console.log('DEBUG LP - Article UPSELL détecté - Niveau:', compteur);
+            console.log('DEBUG LP - Prix upsell utilisé:', prixUnitaire);
+        } else {
+            console.log('DEBUG LP - Article NORMAL - Prix unitaire de base:', prixUnitaire);
+        }
+        
+        console.log('DEBUG LP - Prix unitaire final utilisé:', prixUnitaire);
+        
+        if (prixUnitaire === 0) {
+            console.error('ERREUR CRITIQUE LP - Prix unitaire reste à 0 !');
+            console.error('ERREUR CRITIQUE LP - Data attributes:', {
+                articlePrix: card.dataset.articlePrix,
+                sousTotal: card.dataset.sousTotal,
+                quantiteMax: card.dataset.quantiteMax,
+                article: card.dataset.article
+            });
+            
+            // FALLBACK D'URGENCE: Essayer de récupérer depuis l'affichage HTML du prix
+            console.log('FALLBACK - Tentative récupération depuis DOM...');
+            const prixElements = card.querySelectorAll('[class*="prix"], [class*="DH"], span, div');
+            prixElements.forEach((el, idx) => {
+                if (el.textContent && el.textContent.includes('DH')) {
+                    console.log(`FALLBACK - Element ${idx}:`, el.textContent.trim());
+                }
+            });
+            
+            // Essayer de récupérer le prix depuis le text "Prix unitaire: X.XX DH"
+            // AUCUN FALLBACK DOM: si data manquante, on reste à 0 et on loggue
+        }
+        
+        console.log('=== DEBUG ARTICLE END ===');
+        // --- DEBUG COMPLET END ---
+>>>>>>> dev_jesse
         
         const checkbox = card.querySelector('.article-livrer-checkbox');
         const quantiteInput = card.querySelector('.quantite-livrer-input');
@@ -3108,52 +3344,140 @@ function mettreAJourResumeLivraisonPartielle() {
                     panier_id: panierId,
                     article_id: articleId,
                     quantite: quantiteLivree,
+<<<<<<< HEAD
                     nom: articleNom,
                     prix_unitaire: articlePrix // This should be a float
+=======
+                    nom: nomCompletAvecVariante,
+                    prix_unitaire: prixUnitaire, // This should be a float
+                    is_upsell: isUpsell,
+                    compteur: compteur
+>>>>>>> dev_jesse
                 });
                 totalArticlesLivres += quantiteLivree;
                 totalValeurLivree += quantiteLivree * articlePrix;
             }
             
             if (quantiteRenvoyee > 0) {
+<<<<<<< HEAD
                 const selectEtat = document.querySelector(`.etat-article-renvoye[data-article-id="${articleId}"][data-panier-id="${panierId}"]`);
                 etatArticleRenvoye = selectEtat ? selectEtat.value : 'bon';
                 
+=======
+                const isUpsell = card.dataset.isUpsell === 'true';
+                const compteur = parseInt(card.dataset.compteur || '0');
+                
+                console.log('=== DEBUG ARTICLE RENVOYÉ START ===');
+                console.log('DEBUG AR - Article ID:', articleId);
+                console.log('DEBUG AR - Quantité renvoyée:', quantiteRenvoyee);
+                console.log('DEBUG AR - Prix unitaire final:', prixUnitaire);
+                console.log('DEBUG AR - Is upsell:', isUpsell);
+                console.log('DEBUG AR - Compteur:', compteur);
+                console.log('DEBUG AR - Nom complet:', nomCompletAvecVariante);
+                console.log('=== DEBUG ARTICLE RENVOYÉ END ===');
+                
+                const prix = Number(prixUnitaire) || 0;
+>>>>>>> dev_jesse
                 articlesRenvoyes.push({
                     panier_id: panierId,
                     article_id: articleId,
                     quantite: quantiteRenvoyee,
+<<<<<<< HEAD
                     nom: articleNom,
                     prix_unitaire: articlePrix,
                     etat: etatArticleRenvoye
+=======
+                    nom: nomCompletAvecVariante,
+                    prix_unitaire: prix,
+                    prix_actuel: prix,
+                    is_upsell: isUpsell,
+                    compteur: compteur
+>>>>>>> dev_jesse
                 });
                 totalArticlesRenvoyes += quantiteRenvoyee;
+                totalValeurRenvoyee += quantiteRenvoyee * prix;
             }
         } else {
             quantiteRenvoyee = quantiteMax;
+<<<<<<< HEAD
             const selectEtat = document.querySelector(`.etat-article-renvoye[data-article-id="${articleId}"][data-panier-id="${panierId}"]`);
             etatArticleRenvoye = selectEtat ? selectEtat.value : 'bon';
+=======
+            const isUpsell = card.dataset.isUpsell === 'true';
+            const compteur = parseInt(card.dataset.compteur || '0');
+>>>>>>> dev_jesse
             
+            console.log('=== DEBUG ARTICLE RENVOYÉ COMPLET START ===');
+            console.log('DEBUG ARC - Article ID:', articleId);
+            console.log('DEBUG ARC - Quantité renvoyée (complète):', quantiteRenvoyee);
+            console.log('DEBUG ARC - Prix unitaire final:', prixUnitaire);
+            console.log('DEBUG ARC - Is upsell:', isUpsell);
+            console.log('DEBUG ARC - Compteur:', compteur);
+            console.log('DEBUG ARC - Nom complet:', nomCompletAvecVariante);
+            console.log('=== DEBUG ARTICLE RENVOYÉ COMPLET END ===');
+            
+            const prix = Number(prixUnitaire) || 0;
             articlesRenvoyes.push({
                 panier_id: panierId,
                 article_id: articleId,
                 quantite: quantiteRenvoyee,
+<<<<<<< HEAD
                 nom: articleNom,
                 prix_unitaire: articlePrix,
                 etat: etatArticleRenvoye
+=======
+                nom: nomCompletAvecVariante,
+                prix_unitaire: prix,
+                prix_actuel: prix,
+                is_upsell: isUpsell,
+                compteur: compteur
+>>>>>>> dev_jesse
             });
             totalArticlesRenvoyes += quantiteRenvoyee;
+            totalValeurRenvoyee += quantiteRenvoyee * prix;
         }
     });
     
     // --- DEBUG PRIX FINAL ---
     console.log('DEBUG LP - Final articlesLivres before send:', articlesLivres); // Log 3: Final array
     console.log('DEBUG LP - Final articlesRenvoyes before send:', articlesRenvoyes); // Log 4: Final array
+    
+    // --- DEBUG COMPTEUR UPSELL ---
+    console.log('=== DEBUG COMPTEUR UPSELL START ===');
+    
+    // Calculer le total des quantités upsell qui seront livrées
+    let totalQuantiteUpsellLivrees = 0;
+    articlesLivres.forEach(article => {
+        if (article.is_upsell) {
+            totalQuantiteUpsellLivrees += article.quantite;
+            console.log(`DEBUG COMPTEUR - Article livré upsell: ${article.nom}, Quantité: ${article.quantite}`);
+        }
+    });
+    
+    // Calculer le total des quantités upsell qui seront renvoyées
+    let totalQuantiteUpsellRenvoyees = 0;
+    articlesRenvoyes.forEach(article => {
+        if (article.is_upsell) {
+            totalQuantiteUpsellRenvoyees += article.quantite;
+            console.log(`DEBUG COMPTEUR - Article renvoyé upsell: ${article.nom}, Quantité: ${article.quantite}`);
+        }
+    });
+    
+    const compteurActuel = parseInt(document.querySelector('[data-compteur]')?.dataset.compteur || '0');
+    const nouveauCompteur = totalQuantiteUpsellLivrees >= 2 ? totalQuantiteUpsellLivrees - 1 : 0;
+    
+    console.log(`DEBUG COMPTEUR - Compteur actuel: ${compteurActuel}`);
+    console.log(`DEBUG COMPTEUR - Total quantité upsell livrées: ${totalQuantiteUpsellLivrees}`);
+    console.log(`DEBUG COMPTEUR - Total quantité upsell renvoyées: ${totalQuantiteUpsellRenvoyees}`);
+    console.log(`DEBUG COMPTEUR - Nouveau compteur calculé: ${nouveauCompteur}`);
+    console.log(`DEBUG COMPTEUR - Changement: ${compteurActuel} → ${nouveauCompteur}`);
+    
+    console.log('=== DEBUG COMPTEUR UPSELL END ===');
     // --- DEBUG PRIX FINAL ---
 
     // Mettre à jour les champs cachés (qui seront utilisés par le submit handler)
     document.getElementById('articlesLivresJsonInput').value = JSON.stringify(articlesLivres);
-    document.getElementById('articlesRenvoyesJsonInput').value = JSON.stringify(articlesRenvoyes);
+    document.getElementById('articlesRetournesJsonInput').value = JSON.stringify(articlesRenvoyes);
     
     // Gérer l'affichage de la section de type de retour
     const typeRetourSection = document.getElementById('typeRetourSection');
@@ -3171,6 +3495,7 @@ function mettreAJourResumeLivraisonPartielle() {
     document.getElementById('totalArticlesLivres').textContent = totalArticlesLivres;
     document.getElementById('totalArticlesRenvoyes').textContent = totalArticlesRenvoyes;
     document.getElementById('totalValeurLivree').textContent = totalValeurLivree.toFixed(2) + ' DH';
+    document.getElementById('totalValeurRenvoyee').textContent = totalValeurRenvoyee.toFixed(2) + ' DH';
     
     // Mettre à jour la section des articles à renvoyer
     mettreAJourSectionArticlesRenvoyes(articlesRenvoyes);
@@ -3184,6 +3509,7 @@ function mettreAJourResumeLivraisonPartielle() {
     console.log('DEBUG: Fin de miseAJourResumeLivraisonPartielle - Bouton toujours activé');
 }
 
+<<<<<<< HEAD
 // Fonction pour gérer le changement de type de retour
 function gererChangementTypeRetour() {
     const typeRetourInput = document.getElementById('typeRetourInput');
@@ -3418,12 +3744,40 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+=======
+// Fonction appelée juste avant la soumission pour s'assurer que les données sont à jour
+function mettreAJourDonneesAvantSoumission() {
+    console.log('🔧 DEBUG: Mise à jour des données avant soumission');
+    
+    // Forcer la mise à jour des données
+    mettreAJourDonneesLivraison();
+    
+    // Vérifier que les champs sont remplis
+    const articlesLivresInput = document.getElementById('articlesLivresJsonInput');
+    const articlesRetournesInput = document.getElementById('articlesRetournesJsonInput');
+    
+    console.log('🔧 DEBUG: Articles livrés input value:', articlesLivresInput.value);
+    console.log('🔧 DEBUG: Articles retournés input value:', articlesRetournesInput.value);
+    
+    // S'assurer qu'on a au moins des tableaux vides
+    if (!articlesLivresInput.value || articlesLivresInput.value.trim() === '') {
+        articlesLivresInput.value = '[]';
+        console.log('⚠️ WARNING: articles_livres était vide, défini à []');
+    }
+    
+    if (!articlesRetournesInput.value || articlesRetournesInput.value.trim() === '') {
+        articlesRetournesInput.value = '[]';
+        console.log('⚠️ WARNING: articles_retournes était vide, défini à []');
+    }
+}
 
-// ================== FIN GESTION DE LA LIVRAISON PARTIELLE ==================
+// Cette fonction est maintenant gérée par modals.js avec les données du backend
 
-// ================== GESTION DE LA LIVRAISON PARTIELLE (duplication à supprimer) ==================
-// Cette section est une duplication qui doit être supprimée. La logique a été déplacée plus haut.
-// Je vais la supprimer après la confirmation de cette modification.
-// ... existing code ...
+// ================== SUPPRIMÉ - Gestionnaire maintenant dans modals.js ==================
+// Le gestionnaire de soumission du formulaire de livraison partielle a été déplacé
+// vers modals.js pour éviter les doubles exécutions
+>>>>>>> dev_jesse
+
+
 </script>
 {% endblock %} 

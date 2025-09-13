@@ -1,0 +1,173 @@
+{% load static %}
+
+<!-- Composant de pagination global amélioré -->
+{% if commandes.has_other_pages or total_commandes > 0 %}
+<div class="bg-gradient-to-r from-white to-gray-50 px-6 py-4 rounded-xl shadow-lg border border-gray-200 mt-6">
+    <div class="flex flex-col lg:flex-row items-center justify-between space-y-4 lg:space-y-0">
+        <!-- Sélecteur d'éléments par page avec style amélioré -->
+        <div class="flex items-center space-x-3">
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-list text-gray-500"></i>
+                <label for="perPageSelect" class="text-sm font-medium text-gray-700">Éléments par page:</label>
+            </div>
+            <select id="perPageSelect" 
+                    class="px-4 py-2 bg-white border-2 border-gray-300 rounded-lg text-sm font-medium text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm hover:border-gray-400" 
+                    onchange="changePerPage(this.value)">
+                <option value="5" {% if per_page == 5 %}selected{% endif %}>5</option>
+                <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
+                <option value="15" {% if per_page == 15 %}selected{% endif %}>15</option>
+                <option value="20" {% if per_page == 20 %}selected{% endif %}>20</option>
+                <option value="25" {% if per_page == 25 %}selected{% endif %}>25</option>
+                <option value="30" {% if per_page == 30 %}selected{% endif %}>30</option>
+                <option value="40" {% if per_page == 40 %}selected{% endif %}>40</option>
+                <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+            </select>
+        </div>
+        
+        <!-- Informations de pagination avec style amélioré -->
+        <div class="flex items-center space-x-2 bg-blue-50 px-4 py-2 rounded-lg border border-blue-200">
+            <i class="fas fa-info-circle text-blue-500"></i>
+            <div class="text-sm text-blue-700 font-medium">
+                {% if total_commandes > 0 %}
+                Affichage de
+                <span class="font-bold text-blue-800">{{ commandes.start_index|default:1 }}</span>
+                à
+                <span class="font-bold text-blue-800">{{ commandes.end_index|default:total_commandes }}</span>
+                sur
+                <span class="font-bold text-blue-800">{{ total_commandes }}</span>
+                résultat{{ total_commandes|pluralize }}
+                {% else %}
+                <span class="text-orange-600">
+                    <i class="fas fa-exclamation-triangle mr-1"></i>
+                    Aucun résultat trouvé
+                </span>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Contrôles de pagination avec style moderne -->
+        {% if commandes.has_other_pages %}
+        <div class="flex items-center">
+            <!-- Bouton première page -->
+            {% if commandes.number > 2 %}
+                <a href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" 
+                   class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-l-lg hover:bg-gray-100 hover:text-gray-800 transition-all duration-200 shadow-sm"
+                   title="Première page">
+                    <i class="fas fa-angle-double-left"></i>
+                </a>
+            {% endif %}
+            
+            <!-- Bouton précédent -->
+            {% if commandes.has_previous %}
+                <a href="?page={{ commandes.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" 
+                   class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-600 bg-white border-t border-b border-gray-300 {% if commandes.number <= 2 %}border-l rounded-l-lg{% endif %} hover:bg-gray-100 hover:text-gray-800 transition-all duration-200 shadow-sm"
+                   title="Page précédente">
+                    <i class="fas fa-chevron-left mr-1"></i>
+                    <span class="hidden sm:inline">Précédent</span>
+                </a>
+            {% else %}
+                <span class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-400 bg-gray-100 border border-gray-300 {% if commandes.number <= 2 %}rounded-l-lg{% endif %} cursor-not-allowed">
+                    <i class="fas fa-chevron-left mr-1"></i>
+                    <span class="hidden sm:inline">Précédent</span>
+                </span>
+            {% endif %}
+            
+            <!-- Numéros de page avec design moderne -->
+            <div class="flex items-center">
+                {% for i in commandes.paginator.page_range %}
+                    {% if i == commandes.number %}
+                        <span class="inline-flex items-center px-4 py-2 text-sm font-bold text-white border-t border-b shadow-md transform scale-105 transition-all duration-200" 
+                              style="background: linear-gradient(135deg, var(--logistic-color, #3B82F6) 0%, var(--logistic-gradient-end, #1E40AF) 100%); border-color: var(--logistic-color, #3B82F6);">
+                            {{ i }}
+                        </span>
+                    {% elif i > commandes.number|add:'-3' and i < commandes.number|add:'3' %}
+                        <a href="?page={{ i }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" 
+                           class="inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700 bg-white border-t border-b border-gray-300 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300 transition-all duration-200 shadow-sm">
+                            {{ i }}
+                        </a>
+                    {% elif i == 1 and commandes.number > 4 %}
+                        <a href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" 
+                           class="inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700 bg-white border-t border-b border-gray-300 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300 transition-all duration-200 shadow-sm">
+                            1
+                        </a>
+                        {% if commandes.number > 5 %}
+                        <span class="inline-flex items-center px-3 py-2 text-sm font-semibold text-gray-500 bg-gray-50 border-t border-b border-gray-300">
+                            <i class="fas fa-ellipsis-h"></i>
+                        </span>
+                        {% endif %}
+                    {% elif i == commandes.paginator.num_pages and commandes.number < commandes.paginator.num_pages|add:'-3' %}
+                        {% if commandes.number < commandes.paginator.num_pages|add:'-4' %}
+                        <span class="inline-flex items-center px-3 py-2 text-sm font-semibold text-gray-500 bg-gray-50 border-t border-b border-gray-300">
+                            <i class="fas fa-ellipsis-h"></i>
+                        </span>
+                        {% endif %}
+                        <a href="?page={{ commandes.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" 
+                           class="inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700 bg-white border-t border-b border-gray-300 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300 transition-all duration-200 shadow-sm">
+                            {{ commandes.paginator.num_pages }}
+                        </a>
+                    {% endif %}
+                {% endfor %}
+            </div>
+            
+            <!-- Bouton suivant -->
+            {% if commandes.has_next %}
+                <a href="?page={{ commandes.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" 
+                   class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-600 bg-white border-t border-b border-gray-300 {% if commandes.number >= commandes.paginator.num_pages|add:'-1' %}border-r rounded-r-lg{% endif %} hover:bg-gray-100 hover:text-gray-800 transition-all duration-200 shadow-sm"
+                   title="Page suivante">
+                    <span class="hidden sm:inline">Suivant</span>
+                    <i class="fas fa-chevron-right ml-1"></i>
+                </a>
+            {% else %}
+                <span class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-400 bg-gray-100 border border-gray-300 {% if commandes.number >= commandes.paginator.num_pages|add:'-1' %}rounded-r-lg{% endif %} cursor-not-allowed">
+                    <span class="hidden sm:inline">Suivant</span>
+                    <i class="fas fa-chevron-right ml-1"></i>
+                </span>
+            {% endif %}
+            
+            <!-- Bouton dernière page -->
+            {% if commandes.number < commandes.paginator.num_pages|add:'-1' %}
+                <a href="?page={{ commandes.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" 
+                   class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-r-lg hover:bg-gray-100 hover:text-gray-800 transition-all duration-200 shadow-sm"
+                   title="Dernière page">
+                    <i class="fas fa-angle-double-right"></i>
+                </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function changePerPage(newPerPage) {
+    const url = new URL(window.location);
+    url.searchParams.set('per_page', newPerPage);
+    url.searchParams.delete('page'); // Revenir à la première page
+    
+    // Animation de transition douce
+    const paginationContainer = document.querySelector('.bg-gradient-to-r');
+    if (paginationContainer) {
+        paginationContainer.style.opacity = '0.7';
+        paginationContainer.style.transform = 'scale(0.98)';
+    }
+    
+    setTimeout(() => {
+        window.location.href = url.toString();
+    }, 150);
+}
+
+// Animation d'apparition au chargement
+document.addEventListener('DOMContentLoaded', function() {
+    const paginationContainer = document.querySelector('.bg-gradient-to-r');
+    if (paginationContainer) {
+        paginationContainer.style.opacity = '0';
+        paginationContainer.style.transform = 'translateY(10px)';
+        
+        setTimeout(() => {
+            paginationContainer.style.transition = 'all 0.3s ease-out';
+            paginationContainer.style.opacity = '1';
+            paginationContainer.style.transform = 'translateY(0)';
+        }, 100);
+    }
+});
+</script>
+{% endif %}

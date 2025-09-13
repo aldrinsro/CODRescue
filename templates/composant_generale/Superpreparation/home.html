@@ -24,7 +24,7 @@
 {% endif %}
 
 <!-- Métriques principales de supervision -->
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
 
 
     <!-- Commandes en préparation -->
@@ -207,7 +207,7 @@
         </h3>
     </div>
     
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-4">
 
         
         <a href="{% url 'Superpreparation:commandes_en_preparation' %}" class="group p-4 bg-orange-50 hover:bg-orange-100 rounded-lg transition-all duration-300 transform hover:scale-105">
@@ -274,7 +274,8 @@
         {% endfor %}
     </div>
 </div>
-
+{% block extra_js %}
+{{ block.super }}
 <!-- Auto-refresh et animations -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -323,6 +324,41 @@ document.addEventListener('DOMContentLoaded', function() {
     statusDiv.className = 'fixed bottom-4 right-4 bg-green-500 text-white px-3 py-1 rounded-full text-sm font-medium shadow-lg';
     statusDiv.innerHTML = '<i class="fas fa-wifi mr-2"></i>Supervision Active';
     document.body.appendChild(statusDiv);
+});
+</script>
+
+<!-- Activation du bouton hamburger (aligné aux autres pages Superpréparation) -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var menuToggle = document.getElementById('menu-toggle');
+    var body = document.body;
+    if (!menuToggle) return;
+
+    function persistSidebarState() {
+        try {
+            var state = body.classList.contains('sidebar-collapsed') ? 'collapsed' : 'open';
+            localStorage.setItem('yz.sidebar.state', state);
+        } catch (e) {}
+    }
+
+    // Restaurer l'état
+    try {
+        var saved = localStorage.getItem('yz.sidebar.state');
+        if (saved === 'open') {
+            body.classList.add('sidebar-open');
+            body.classList.remove('sidebar-collapsed');
+        } else if (saved === 'collapsed') {
+            body.classList.add('sidebar-collapsed');
+            body.classList.remove('sidebar-open');
+        }
+    } catch (e) {}
+
+    menuToggle.addEventListener('click', function() {
+        if (typeof window.toggleSidebar === 'function') {
+            window.toggleSidebar();
+        }
+        setTimeout(persistSidebarState, 10);
+    });
 });
 </script>
 
@@ -418,4 +454,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 }
 </style>
+{% endblock %}
+
 {% endblock %}

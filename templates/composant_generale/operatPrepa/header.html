@@ -187,22 +187,23 @@ document.addEventListener('DOMContentLoaded', function() {
     const contentOverlay = document.getElementById('content-overlay');
     
     if (menuToggle) {
-        console.log('🔧 Bouton menu-toggle trouvé, ajout de la logique de sidebar');
-        
-        menuToggle.addEventListener('click', function() {
-            console.log('🖱️ Clic sur menu-toggle détecté');
+        console.log('🔧 Sidebar gérée par base.html (delegation)');
+        menuToggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
             
-            // Toggle des classes pour la sidebar
-            body.classList.toggle('sidebar-open');
-            body.classList.toggle('sidebar-collapsed');
+            // Attendre que la fonction soit disponible
+            const tryToggle = () => {
+                if (typeof window.toggleSidebar === 'function') {
+                    console.log('✅ Fonction toggleSidebar trouvée, exécution...');
+                    window.toggleSidebar();
+                } else {
+                    console.warn('⚠️ Fonction toggleSidebar pas encore disponible, nouvelle tentative...');
+                    setTimeout(tryToggle, 50);
+                }
+            };
             
-            // Toggle de l'animation du hamburger
-            this.classList.toggle('hamburger-active');
-            
-            console.log('📊 État sidebar après toggle:', {
-                sidebarOpen: body.classList.contains('sidebar-open'),
-                sidebarCollapsed: body.classList.contains('sidebar-collapsed')
-            });
+            tryToggle();
         });
     } else {
         console.error('❌ Bouton menu-toggle non trouvé');

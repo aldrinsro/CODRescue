@@ -208,6 +208,7 @@ def home_view(request):
 def liste_prepa(request):
     """Liste des commandes à préparer pour les opérateurs de préparation"""
     from commande.models import Operation
+    from django.core.paginator import Paginator
     
     try:
         operateur_profile = request.user.profil_operateur
@@ -944,10 +945,24 @@ def liste_prepa(request):
             }
         )
 
+    # Pagination côté serveur
+    items_per_page = int(request.GET.get('per_page', 10))  # Par défaut 10 éléments par page
+    page_number = request.GET.get('page', 1)
+    
+    # Créer le paginator avec la liste des commandes
+    paginator = Paginator(commandes_affectees, items_per_page)
+    
+    try:
+        commandes_paginated = paginator.page(page_number)
+    except (Paginator.EmptyPage, ValueError):
+        # Si la page demandée n'existe pas ou n'est pas un nombre valide, afficher la première page
+        commandes_paginated = paginator.page(1)
+        page_number = 1
+
     context = {
         "page_title": "Mes Commandes à Préparer",
         "page_subtitle": f"Vous avez {total_affectees} commande(s) affectée(s)",
-        "commandes_affectees": commandes_affectees,
+        "commandes_affectees": commandes_paginated,  # Utiliser les commandes paginées
         "search_query": search_query,
         "filter_type": filter_type,
         "stats": {
@@ -960,6 +975,16 @@ def liste_prepa(request):
         "api_produits_url_base": reverse(
             "Prepacommande:api_commande_produits", args=[99999999]
         ),
+        # Informations de pagination
+        "paginator": paginator,
+        "page_obj": commandes_paginated,
+        "items_per_page": items_per_page,
+        "current_page": page_number,
+        "total_pages": paginator.num_pages,
+        "has_previous": commandes_paginated.has_previous(),
+        "has_next": commandes_paginated.has_next(),
+        "previous_page_number": commandes_paginated.previous_page_number() if commandes_paginated.has_previous() else None,
+        "next_page_number": commandes_paginated.next_page_number() if commandes_paginated.has_next() else None,
     }
     return render(request, "Prepacommande/liste_prepa.html", context)
 
@@ -967,6 +992,8 @@ def liste_prepa(request):
 @login_required
 def commandes_en_preparation(request):
     """Liste des commandes en cours de préparation pour les opérateurs de préparation"""
+    from django.core.paginator import Paginator
+    
     try:
         operateur_profile = request.user.profil_operateur
         
@@ -994,12 +1021,36 @@ def commandes_en_preparation(request):
         .distinct()
     )
 
+    # Pagination côté serveur
+    items_per_page = int(request.GET.get('per_page', 10))  # Par défaut 10 éléments par page
+    page_number = request.GET.get('page', 1)
+    
+    # Créer le paginator avec la liste des commandes
+    paginator = Paginator(commandes_en_preparation, items_per_page)
+    
+    try:
+        commandes_paginated = paginator.page(page_number)
+    except (Paginator.EmptyPage, ValueError):
+        # Si la page demandée n'existe pas ou n'est pas un nombre valide, afficher la première page
+        commandes_paginated = paginator.page(1)
+        page_number = 1
+
     context = {
         "page_title": "Commandes en Préparation",
         "page_subtitle": "Interface Opérateur de Préparation",
         "profile": operateur_profile,
-        "commandes": commandes_en_preparation,
+        "commandes": commandes_paginated,  # Utiliser les commandes paginées
         "active_tab": "en_preparation",
+        # Informations de pagination
+        "paginator": paginator,
+        "page_obj": commandes_paginated,
+        "items_per_page": items_per_page,
+        "current_page": page_number,
+        "total_pages": paginator.num_pages,
+        "has_previous": commandes_paginated.has_previous(),
+        "has_next": commandes_paginated.has_next(),
+        "previous_page_number": commandes_paginated.previous_page_number() if commandes_paginated.has_previous() else None,
+        "next_page_number": commandes_paginated.next_page_number() if commandes_paginated.has_next() else None,
     }
     return render(request, "Prepacommande/commandes_en_preparation.html", context)
 
@@ -1007,6 +1058,8 @@ def commandes_en_preparation(request):
 @login_required
 def commandes_livrees_partiellement(request):
     """Liste des commandes livrées partiellement renvoyées en préparation"""
+    from django.core.paginator import Paginator
+    
     try:
         operateur_profile = request.user.profil_operateur
         
@@ -1075,13 +1128,37 @@ def commandes_livrees_partiellement(request):
                 commande.commande_renvoi_num = commande.commande_renvoi.num_cmd
                 commande.commande_renvoi_id_yz = commande.commande_renvoi.id_yz
 
+    # Pagination côté serveur
+    items_per_page = int(request.GET.get('per_page', 10))  # Par défaut 10 éléments par page
+    page_number = request.GET.get('page', 1)
+    
+    # Créer le paginator avec la liste des commandes
+    paginator = Paginator(commandes_livrees_partiellement, items_per_page)
+    
+    try:
+        commandes_paginated = paginator.page(page_number)
+    except (Paginator.EmptyPage, ValueError):
+        # Si la page demandée n'existe pas ou n'est pas un nombre valide, afficher la première page
+        commandes_paginated = paginator.page(1)
+        page_number = 1
+
     context = {
         "page_title": "Commandes Livrées Partiellement",
         "page_subtitle": "Interface Opérateur de Préparation",
         "profile": operateur_profile,
-        "commandes_livrees_partiellement": commandes_livrees_partiellement,
+        "commandes_livrees_partiellement": commandes_paginated,  # Utiliser les commandes paginées
         "commandes_count": len(commandes_livrees_partiellement),
         "active_tab": "livrees_partiellement",
+        # Informations de pagination
+        "paginator": paginator,
+        "page_obj": commandes_paginated,
+        "items_per_page": items_per_page,
+        "current_page": page_number,
+        "total_pages": paginator.num_pages,
+        "has_previous": commandes_paginated.has_previous(),
+        "has_next": commandes_paginated.has_next(),
+        "previous_page_number": commandes_paginated.previous_page_number() if commandes_paginated.has_previous() else None,
+        "next_page_number": commandes_paginated.next_page_number() if commandes_paginated.has_next() else None,
     }
     return render(
         request, "Prepacommande/commandes_livrees_partiellement.html", context
@@ -1091,6 +1168,8 @@ def commandes_livrees_partiellement(request):
 @login_required
 def commandes_retournees(request):
     """Liste des commandes retournées (état actuel 'Retournée') préparées initialement par l'opérateur courant"""
+    from django.core.paginator import Paginator
+    
     try:
         operateur_profile = request.user.profil_operateur
         if not operateur_profile.is_preparation:
@@ -1133,13 +1212,37 @@ def commandes_retournees(request):
             commande.commentaire_retournee = etat_retour.commentaire
             commande.operateur_retour = etat_retour.operateur
 
+    # Pagination côté serveur
+    items_per_page = int(request.GET.get('per_page', 10))  # Par défaut 10 éléments par page
+    page_number = request.GET.get('page', 1)
+    
+    # Créer le paginator avec la liste des commandes
+    paginator = Paginator(commandes, items_per_page)
+    
+    try:
+        commandes_paginated = paginator.page(page_number)
+    except (Paginator.EmptyPage, ValueError):
+        # Si la page demandée n'existe pas ou n'est pas un nombre valide, afficher la première page
+        commandes_paginated = paginator.page(1)
+        page_number = 1
+
     context = {
         "page_title": "Commandes Retournées",
         "page_subtitle": "Commandes renvoyées à la préparation (état 'Retournée')",
         "profile": operateur_profile,
-        "commandes_retournees": commandes,
+        "commandes_retournees": commandes_paginated,  # Utiliser les commandes paginées
         "commandes_count": len(commandes),
         "active_tab": "retournees",
+        # Informations de pagination
+        "paginator": paginator,
+        "page_obj": commandes_paginated,
+        "items_per_page": items_per_page,
+        "current_page": page_number,
+        "total_pages": paginator.num_pages,
+        "has_previous": commandes_paginated.has_previous(),
+        "has_next": commandes_paginated.has_next(),
+        "previous_page_number": commandes_paginated.previous_page_number() if commandes_paginated.has_previous() else None,
+        "next_page_number": commandes_paginated.next_page_number() if commandes_paginated.has_next() else None,
     }
     return render(request, "Prepacommande/commandes_retournees.html", context)
 
@@ -1582,12 +1685,7 @@ def detail_prepa(request, pk):
                 )
                 
                 # Log de l'opération
-                Operation.objects.create(
-                    commande=commande,
-                    type_operation="ARTICLES_COLLECTES",
-                    operateur=operateur_profile,
-                    conclusion=f"Articles collectés par {operateur_profile.nom_complet}.",
-                )
+           
 
             messages.success(
                 request,
@@ -1621,13 +1719,7 @@ def detail_prepa(request, pk):
                     operateur=operateur_profile,
                 )
 
-                # Log de l'opération
-                Operation.objects.create(
-                    commande=commande,
-                    type_operation="COMMANDE_EMBALLEE",
-                    operateur=operateur_profile,
-                    conclusion=f"Commande emballée par {operateur_profile.nom_complet}. Notification envoyée au superviseur.",
-                )
+             
 
                 # TODO: Ajouter ici la notification au superviseur
                 # Pour l'instant, on peut utiliser les messages Django ou créer un système de notification
@@ -1694,12 +1786,7 @@ def detail_prepa(request, pk):
                         f"La commande {commande.id_yz} a été renvoyée au pool de confirmation (opérateur d'origine non trouvé).",
                     )
 
-                Operation.objects.create(
-                    commande=commande,
-                    type_operation="PROBLEME_SIGNALÉ",
-                    operateur=operateur_profile,
-                    conclusion=log_conclusion,
-                )
+              
 
             return redirect("Prepacommande:liste_prepa")
     
@@ -2318,13 +2405,7 @@ def modifier_commande_prepa(request, commande_id):
                             }
                         )
                     
-                    # Créer la nouvelle opération
-                    operation = Operation.objects.create(
-                        commande=commande,
-                        type_operation=type_operation,
-                        conclusion=commentaire,
-                        operateur=operateur,
-                    )
+                 
 
                     return JsonResponse(
                         {
@@ -2383,13 +2464,7 @@ def modifier_commande_prepa(request, commande_id):
                     commande.total_cmd = float(total_commande)
                     commande.save()
                     
-                    # Créer une opération pour consigner la modification
-                    Operation.objects.create(
-                        commande=commande,
-                        type_operation="MODIFICATION_QUANTITES",
-                        conclusion=f"Modification en masse des quantités d'articles par l'opérateur de préparation.",
-                        operateur=operateur,
-                    )
+                
 
                     return JsonResponse(
                         {
@@ -2543,13 +2618,7 @@ def modifier_commande_prepa(request, commande_id):
                         articles_upsell.aggregate(total=Sum("quantite"))["total"] or 0
                     )
                     
-                    # Créer une opération pour consigner la modification
-                    Operation.objects.create(
-                        commande=commande,
-                        type_operation="MODIFICATION_QUANTITE",
-                        conclusion=f"Quantité d'article modifiée de {ancienne_quantite} à {nouvelle_quantite}.",
-                        operateur=operateur,
-                    )
+                   
 
                     return JsonResponse(
                         {
@@ -2596,13 +2665,7 @@ def modifier_commande_prepa(request, commande_id):
                     
                     commande.save()
                     
-                    # Créer une opération pour consigner la modification
-                    Operation.objects.create(
-                        commande=commande,
-                        type_operation="MODIFICATION_PREPA",
-                        conclusion=f"La commande a été modifiée par l'opérateur.",
-                        operateur=operateur,
-                    )
+                   
 
                     messages.success(
                         request, f"Commande {commande.id_yz} mise à jour avec succès."
@@ -2639,20 +2702,12 @@ def modifier_commande_prepa(request, commande_id):
                             commande.ville = nouvelle_ville
                         except Ville.DoesNotExist:
                             messages.error(request, "Ville sélectionnée non trouvée.")
-                            return redirect(
-                                "Prepacommande:modifier_commande",
-                                commande_id=commande.id,
-                            )
+                            return redirect("Prepacommande:liste_prepa")
                     
                     commande.save()
 
                     # Créer une opération pour consigner la modification
-                    Operation.objects.create(
-                        commande=commande,
-                        type_operation="MODIFICATION_PREPA",
-                        conclusion=f"La commande a été modifiée par l'opérateur.",
-                        operateur=operateur,
-                    )
+              
 
                     messages.success(
                         request,
@@ -2662,7 +2717,7 @@ def modifier_commande_prepa(request, commande_id):
                 
         except Exception as e:
             messages.error(request, f"Erreur lors de la modification: {str(e)}")
-            return redirect("Prepacommande:modifier_commande", commande_id=commande.id)
+            return redirect("Prepacommande:liste_prepa")
     
     # Récupérer les données pour l'affichage
     paniers = commande.paniers.all().select_related("article")
@@ -3307,71 +3362,6 @@ def api_panier_commande_prepa(request, commande_id):
         }
     )
 
-
-@login_required
-def imprimer_tickets_preparation(request):
-    """
-    Vue pour imprimer les tickets de préparation SANS changer l'état des commandes.
-    Permet d'imprimer ou de réimprimer des tickets pour les commandes en préparation.
-    """
-    try:
-        operateur_profile = request.user.profil_operateur
-        if not operateur_profile.is_preparation:
-            return HttpResponse("Accès non autorisé.", status=403)
-    except Operateur.DoesNotExist:
-        return HttpResponse("Profil opérateur non trouvé.", status=403)
-
-    commande_ids_str = request.GET.get("ids")
-    if not commande_ids_str:
-        return HttpResponse("Aucun ID de commande fourni.", status=400)
-
-    try:
-        commande_ids = [int(id) for id in commande_ids_str.split(",") if id.isdigit()]
-    except ValueError:
-        return HttpResponse("IDs de commande invalides.", status=400)
-    
-    # Récupérer les commandes en préparation affectées à cet opérateur
-    commandes = Commande.objects.filter(
-        id__in=commande_ids,
-        etats__operateur=operateur_profile,
-        etats__enum_etat__libelle="En préparation",
-        etats__date_fin__isnull=True,
-    ).distinct()
-
-    if not commandes.exists():
-        return HttpResponse(
-            "Aucune commande en préparation trouvée pour cet opérateur.", status=404
-        )
-
-    # Génération du code-barres pour chaque commande (sans transition d'état)
-    code128 = barcode.get_barcode_class("code128")
-    
-    for commande in commandes:
-        # Générer le code-barres uniquement si pas déjà présent
-        if not hasattr(commande, "barcode_base64") or not commande.barcode_base64:
-            barcode_instance = code128(str(commande.id_yz), writer=ImageWriter())
-            buffer = BytesIO()
-            barcode_instance.write(
-                buffer,
-                options={
-                    "write_text": False,
-                    "module_height": 15.0,
-                    "module_width": 0.3,
-                },
-            )
-            barcode_base64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
-            commande.barcode_base64 = barcode_base64
-        
-        # Définir la date de préparation pour l'affichage (sans sauvegarder en DB)
-        if not hasattr(commande, "date_preparation") or not commande.date_preparation:
-            commande.date_preparation = timezone.now()
-
-    context = {
-        "commandes": commandes,
-        "is_reprint": True,  # Indicateur pour différencier des impressions initiales
-    }
-    
-    return render(request, "Prepacommande/tickets_preparation.html", context)
 
 # === NOUVELLES FONCTIONNALITÉS : GESTION DE STOCK ===
 
@@ -4586,16 +4576,6 @@ def details_region_view(request):
     return render(request, "Prepacommande/details_region.html", context)
 
 
-@login_required
-def imprimer_commande(request, commande_id):
-    """
-    Imprime une commande spécifique.
-    """
-    commande = get_object_or_404(Commande, id=commande_id)
-    # Assurez-vous que l'opérateur a le droit de voir cette commande si nécessaire
-    return render(
-        request, "Prepacommande/impression_commande.html", {"commande": commande}
-    )
 
 
 @login_required 
@@ -4609,13 +4589,6 @@ def exporter_etats_pdf(request):
     )
 
 
-@login_required
-def imprimer_envoi(request, envoi_id):
-    """
-    Imprime les détails d'un envoi.
-    """
-    envoi = get_object_or_404(Envoi, id=envoi_id)
-    return render(request, "Prepacommande/impression_envoi.html", {"envoi": envoi})
 
 
 @login_required
@@ -4987,210 +4960,10 @@ def ajouter_article_commande_prepa(request, commande_id):
         return JsonResponse({"error": f"Erreur interne: {str(e)}"}, status=500)
 
 
-@login_required
-def modifier_quantite_article_prepa(request, commande_id):
-    """Modifier la quantité d'un article dans la commande en préparation"""
-    if request.method != "POST":
-        return JsonResponse({"error": "Méthode non autorisée"}, status=405)
-
-    try:
-        operateur = Operateur.objects.get(
-            user=request.user, type_operateur="PREPARATION"
-        )
-    except Operateur.DoesNotExist:
-        return JsonResponse({"error": "Profil d'opérateur non trouvé."}, status=403)
-
-    try:
-        with transaction.atomic():
-            commande = Commande.objects.select_for_update().get(id=commande_id)
-            
-            # Vérifier l'affectation
-            if not commande.etats.filter(
-                operateur=operateur,
-                enum_etat__libelle__in=["En préparation", "À imprimer"],
-                date_fin__isnull=True,
-            ).exists():
-                return JsonResponse({"error": "Commande non affectée."}, status=403)
-
-            panier_id = request.POST.get("panier_id")
-            nouvelle_quantite = int(request.POST.get("quantite", 1))
-
-            panier = Panier.objects.get(id=panier_id, commande=commande)
-            ancienne_quantite = panier.quantite
-            article = panier.article
-            difference = nouvelle_quantite - ancienne_quantite
-
-            if difference > 0:
-                creer_mouvement_stock(
-                    article,
-                    difference,
-                    "sortie",
-                    commande,
-                    operateur,
-                    f"Ajustement qté cmd {commande.id_yz}",
-                )
-            elif difference < 0:
-                creer_mouvement_stock(
-                    article,
-                    abs(difference),
-                    "entree",
-                    commande,
-                    operateur,
-                    f"Ajustement qté cmd {commande.id_yz}",
-                )
-
-            panier.quantite = nouvelle_quantite
-            
-            # Recalculer le compteur si c'est un article upsell
-            if article.isUpsell:
-                # Compter la quantité totale d'articles upsell après modification
-                total_quantite_upsell = (
-                    commande.paniers.filter(article__isUpsell=True).aggregate(
-                        total=Sum("quantite")
-                    )["total"]
-                    or 0
-                )
-                
-                # Appliquer la logique : compteur = max(0, total_quantite_upsell - 1)
-                if total_quantite_upsell >= 2:
-                    commande.compteur = total_quantite_upsell - 1
-                else:
-                    commande.compteur = 0
-                
-                commande.save()
-                
-                # Recalculer TOUS les articles de la commande avec le nouveau compteur
-                commande.recalculer_totaux_upsell()
-            else:
-                # Pour les articles normaux, juste calculer le sous-total
-                from commande.templatetags.commande_filters import (
-                    get_prix_upsell_avec_compteur,
-                )
-
-                prix_unitaire = get_prix_upsell_avec_compteur(
-                    article, commande.compteur
-                )
-                panier.sous_total = prix_unitaire * nouvelle_quantite
-            panier.save()
-
-            commande.total_cmd = sum(p.sous_total for p in commande.paniers.all())
-            commande.save()
-
-            # Calculer les statistiques upsell
-            articles_upsell = commande.paniers.filter(article__isUpsell=True)
-            total_quantite_upsell = (
-                articles_upsell.aggregate(total=Sum("quantite"))["total"] or 0
-            )
-
-            return JsonResponse(
-                {
-                    "success": True,
-                    "message": "Quantité modifiée",
-                    "compteur": commande.compteur,
-                    "articles_upsell": articles_upsell.count(),
-                    "quantite_totale_upsell": total_quantite_upsell,
-                    "total_commande": float(commande.total_cmd),
-                    "sous_total_articles": float(commande.sous_total_articles),
-                }
-            )
-
-    except Panier.DoesNotExist:
-        return JsonResponse({"error": "Panier non trouvé"}, status=404)
-    except Exception as e:
-        return JsonResponse({"error": f"Erreur interne: {str(e)}"}, status=500)
+# Fonction de modification des quantités supprimée - Les opérateurs de préparation ne peuvent plus modifier les commandes
 
 
-@login_required
-def supprimer_article_commande_prepa(request, commande_id):
-    """Supprimer un article de la commande en préparation"""
-    if request.method != "POST":
-        return JsonResponse({"error": "Méthode non autorisée"}, status=405)
-
-    try:
-        operateur = Operateur.objects.get(
-            user=request.user, type_operateur="PREPARATION"
-        )
-    except Operateur.DoesNotExist:
-        return JsonResponse({"error": "Profil d'opérateur non trouvé."}, status=403)
-
-    try:
-        with transaction.atomic():
-            commande = Commande.objects.select_for_update().get(id=commande_id)
-            
-            # Vérifier l'affectation
-            if not commande.etats.filter(
-                operateur=operateur,
-                enum_etat__libelle__in=["En préparation", "À imprimer"],
-                date_fin__isnull=True,
-            ).exists():
-                return JsonResponse({"error": "Commande non affectée."}, status=403)
-
-            panier_id = request.POST.get("panier_id")
-            panier = Panier.objects.get(id=panier_id, commande=commande)
-            quantite_supprimee = panier.quantite
-            article = panier.article
-            
-            creer_mouvement_stock(
-                article,
-                quantite_supprimee,
-                "entree",
-                commande,
-                operateur,
-                f"Suppression article cmd {commande.id_yz}",
-            )
-            
-            # Sauvegarder l'info avant suppression
-            etait_upsell = panier.article.isUpsell
-            
-            # Supprimer l'article
-            panier.delete()
-
-            # Recalculer le compteur après suppression (logique de confirmation)
-            if etait_upsell:
-                # Compter la quantité totale d'articles upsell restants (après suppression)
-                total_quantite_upsell = (
-                    commande.paniers.filter(article__isUpsell=True).aggregate(
-                        total=Sum("quantite")
-                    )["total"]
-                    or 0
-                )
-                
-                # Appliquer la logique : compteur = max(0, total_quantite_upsell - 1)
-                if total_quantite_upsell >= 2:
-                    commande.compteur = total_quantite_upsell - 1
-                else:
-                    commande.compteur = 0
-                
-                commande.save()
-                
-                # Recalculer TOUS les articles de la commande avec le nouveau compteur
-                commande.recalculer_totaux_upsell()
-
-            commande.total_cmd = sum(p.sous_total for p in commande.paniers.all())
-            commande.save()
-
-            # Calculer les statistiques upsell
-            articles_upsell = commande.paniers.filter(article__isUpsell=True)
-            total_quantite_upsell = (
-                articles_upsell.aggregate(total=Sum("quantite"))["total"] or 0
-            )
-
-            return JsonResponse(
-                {
-                    "success": True,
-                    "message": "Article supprimé",
-                    "compteur": commande.compteur,
-                    "articles_upsell": articles_upsell.count(),
-                    "quantite_totale_upsell": total_quantite_upsell,
-                    "total_commande": float(commande.total_cmd),
-                    "sous_total_articles": float(commande.sous_total_articles),
-                }
-            )
-
-    except Panier.DoesNotExist:
-        return JsonResponse({"error": "Panier non trouvé"}, status=404)
-    except Exception as e:
-        return JsonResponse({"error": f"Erreur interne: {str(e)}"}, status=500)
+# Fonction de suppression d'articles supprimée - Les opérateurs de préparation ne peuvent plus modifier les commandes
 
 
 # === VUES DE RÉPARTITION SUPPRIMÉES (DÉPLACÉES VERS ADMIN) ===
@@ -5377,7 +5150,7 @@ def api_articles_commande_livree_partiellement(request, commande_id):
                     pass
         if commande_originale:
             # Les articles dans cette commande de renvoi sont ceux qui ont été renvoyés
-            for panier in paniers:
+            for panier in commande_originale.panier_set.all():
                 etat = etat_articles_renvoyes.get(panier.article.id, "bon")
                 articles_renvoyes.append(
                     {
@@ -5643,7 +5416,7 @@ def api_changer_etat_commande(request, commande_id):
                     "ancien_etat": etat_actuel_libelle,
                     "nouvel_etat": nouvel_etat,
                     "commentaire": f"Changement d'état de {etat_actuel_libelle} vers {nouvel_etat}"
-                })
+                }, ensure_ascii=False)
             )
         
         return JsonResponse({

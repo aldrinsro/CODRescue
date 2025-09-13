@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Bouton Hamburger - Interface Préparation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-button {
+            background: #361f27;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        .test-button:hover {
+            background: #4b2e3a;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Test du Bouton Hamburger - Interface Préparation</h1>
+        
+        <div id="status" class="status info">
+            Initialisation en cours...
+        </div>
+        
+        <div>
+            <button class="test-button" onclick="testToggleSidebar()">Test Toggle Sidebar</button>
+            <button class="test-button" onclick="testFunctionExists()">Vérifier Fonction</button>
+            <button class="test-button" onclick="clearLog()">Effacer Log</button>
+        </div>
+        
+        <h3>Log de Test :</h3>
+        <div id="log" class="log"></div>
+        
+        <h3>Instructions :</h3>
+        <ol>
+            <li>Cliquez sur "Vérifier Fonction" pour voir si <code>window.toggleSidebar</code> existe</li>
+            <li>Cliquez sur "Test Toggle Sidebar" pour tester la fonction</li>
+            <li>Vérifiez les logs pour voir les détails</li>
+        </ol>
+    </div>
+
+    <script>
+        // Simulation de la fonction toggleSidebar (copie de base.html)
+        window.toggleSidebar = function() {
+            log('🍔 [Test] toggleSidebar appelée');
+            
+            const body = document.body;
+            const sidebar = document.getElementById('sidebar');
+            const menuToggle = document.getElementById('menu-toggle');
+            
+            if (!body) {
+                log('❌ [Test] Body non trouvé');
+                return;
+            }
+            
+            // État avant
+            const before = {
+                hasOpen: body.classList.contains('sidebar-open'),
+                hasCollapsed: body.classList.contains('sidebar-collapsed'),
+                windowWidth: window.innerWidth
+            };
+            
+            log('📊 [Test] État avant toggle: ' + JSON.stringify(before));
+            
+            // Toggle des classes
+            body.classList.toggle('sidebar-open');
+            body.classList.toggle('sidebar-collapsed');
+            
+            // Animation du bouton hamburger
+            if (menuToggle) {
+                menuToggle.classList.toggle('hamburger-active');
+                log('✅ [Test] Animation hamburger appliquée');
+            } else {
+                log('⚠️ [Test] Bouton menu-toggle non trouvé');
+            }
+            
+            // État après
+            const after = {
+                hasOpen: body.classList.contains('sidebar-open'),
+                hasCollapsed: body.classList.contains('sidebar-collapsed')
+            };
+            
+            log('📊 [Test] État après toggle: ' + JSON.stringify(after));
+            log('✅ [Test] Toggle terminé avec succès');
+        };
+
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.textContent += `[${timestamp}] ${message}\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function testFunctionExists() {
+            const status = document.getElementById('status');
+            if (typeof window.toggleSidebar === 'function') {
+                status.className = 'status success';
+                status.textContent = '✅ Fonction window.toggleSidebar trouvée et disponible';
+                log('✅ Fonction toggleSidebar disponible');
+            } else {
+                status.className = 'status error';
+                status.textContent = '❌ Fonction window.toggleSidebar non trouvée';
+                log('❌ Fonction toggleSidebar non trouvée');
+            }
+        }
+
+        function testToggleSidebar() {
+            log('🧪 Début du test toggleSidebar');
+            try {
+                window.toggleSidebar();
+            } catch (error) {
+                log('💥 Erreur lors du test: ' + error.message);
+            }
+        }
+
+        function clearLog() {
+            document.getElementById('log').textContent = '';
+        }
+
+        // Test initial
+        document.addEventListener('DOMContentLoaded', function() {
+            log('🚀 Page de test chargée');
+            testFunctionExists();
+        });
+    </script>
+</body>
+</html>

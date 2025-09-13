@@ -976,7 +976,7 @@
 
     .table-responsive table {
         width: 100%;
-        min-width: 1200px; /* Largeur minimale pour éviter la compression */
+        min-width: 1000px; /* Largeur minimale pour éviter la compression */
         table-layout: fixed;
     }
 
@@ -986,55 +986,55 @@
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        max-width: 150px; /* Largeur maximale par colonne */
+        max-width: 120px; /* Largeur maximale par colonne */
     }
 
     /* Colonnes spécifiques avec largeurs optimisées */
-    .col-checkbox { width: 50px; }
-    .col-id { width: 80px; }
-    .col-externe { width: 100px; }
-    .col-client { width: 180px; }
-    .col-phone { width: 120px; }
-    .col-ville { width: 150px; }
-    .col-total { width: 100px; }
-    .col-date { width: 120px; }
-    .col-operateur { width: 140px; }
-    .col-etat { width: 120px; }
-    .col-actions { width: 100px; }
+    .col-checkbox { width: 40px; }
+    .col-id { width: 70px; }
+    .col-externe { width: 90px; }
+    .col-client { width: 160px; }
+    .col-phone { width: 100px; }
+    .col-ville { width: 130px; }
+    .col-total { width: 90px; }
+    .col-date { width: 110px; }
+    .col-operateur { width: 130px; }
+    .col-etat { width: 110px; }
+    .col-actions { width: 90px; }
 
     /* Optimisation pour les écrans moyens */
     @media (max-width: 1400px) {
         .table-responsive table {
-            min-width: 1000px;
+            min-width: 900px;
         }
         
-        .col-client { width: 150px; }
-        .col-ville { width: 120px; }
-        .col-operateur { width: 120px; }
+        .col-client { width: 130px; }
+        .col-ville { width: 110px; }
+        .col-operateur { width: 110px; }
     }
 
     /* Optimisation pour les petits écrans */
     @media (max-width: 1200px) {
         .table-responsive table {
-            min-width: 900px;
+            min-width: 800px;
         }
         
-        .col-client { width: 120px; }
-        .col-ville { width: 100px; }
-        .col-operateur { width: 100px; }
-        .col-etat { width: 100px; }
+        .col-client { width: 110px; }
+        .col-ville { width: 90px; }
+        .col-operateur { width: 90px; }
+        .col-etat { width: 90px; }
     }
 
     /* Optimisation pour les très petits écrans */
     @media (max-width: 768px) {
         .table-responsive table {
-            min-width: 800px;
+            min-width: 700px;
         }
         
-        .col-client { width: 100px; }
-        .col-ville { width: 80px; }
-        .col-operateur { width: 80px; }
-        .col-etat { width: 80px; }
+        .col-client { width: 90px; }
+        .col-ville { width: 70px; }
+        .col-operateur { width: 70px; }
+        .col-etat { width: 70px; }
     }
 
     /* Amélioration du scroll horizontal */
@@ -1144,24 +1144,24 @@
 
     .table-responsive table {
         width: 100%;
-        min-width: 1300px; /* Largeur minimale optimisée pour un affichage compact */
+        min-width: 1000px; /* Largeur minimale optimisée pour un affichage compact */
         border-collapse: collapse;
-        font-size: 0.8rem; /* Police légèrement plus petite */
+        font-size: 0.75rem; /* Police légèrement plus petite */
         table-layout: auto; /* Permet aux colonnes de s'adapter au contenu */
     }
     
     /* Ajustement de la largeur du tableau selon l'état de la sidebar */
     body.sidebar-open .table-responsive table {
-        min-width: 1300px; /* Sidebar ouverte - largeur optimisée */
+        min-width: 950px; /* Sidebar ouverte - largeur optimisée */
     }
     
     body.sidebar-collapsed .table-responsive table {
-        min-width: 1400px; /* Sidebar fermée - espace optimisé */
+        min-width: 1100px; /* Sidebar fermée - espace optimisé */
     }
 
     .table-responsive th,
     .table-responsive td {
-        padding: 0.5rem 0.75rem; /* Padding réduit pour un affichage plus compact */
+        padding: 0.4rem 0.6rem; /* Padding réduit pour un affichage plus compact */
         text-align: left;
         border-bottom: 1px solid #e5e7eb;
         white-space: normal; /* Permettre le retour à la ligne */
@@ -1173,35 +1173,35 @@
     }
 
     /* Largeurs de colonnes optimisées pour un affichage compact */
-    .table-responsive th:nth-child(1), .table-responsive td:nth-child(1) { width: 45px; }   /* Checkbox */
-    .table-responsive th:nth-child(2), .table-responsive td:nth-child(2) { width: 85px; }   /* ID YZ */
-    .table-responsive th:nth-child(3), .table-responsive td:nth-child(3) { width: 100px; }  /* N° Externe */
-    .table-responsive th:nth-child(4), .table-responsive td:nth-child(4) { width: 140px; }  /* Client */
-    .table-responsive th:nth-child(5), .table-responsive td:nth-child(5) { width: 110px; }  /* Téléphone */
-    .table-responsive th:nth-child(6), .table-responsive td:nth-child(6) { width: 130px; }  /* Ville & Région */
-    .table-responsive th:nth-child(7), .table-responsive td:nth-child(7) { width: 85px; }   /* Total */
-    .table-responsive th:nth-child(8), .table-responsive td:nth-child(8) { width: 130px; }  /* Date Confirmation */
-    .table-responsive th:nth-child(9), .table-responsive td:nth-child(9) { width: 150px; }  /* Opérateur Conf. */
-    .table-responsive th:nth-child(10), .table-responsive td:nth-child(10) { width: 130px; } /* État Préparation */
-    .table-responsive th:nth-child(11), .table-responsive td:nth-child(11) { width: 140px; } /* Actions */
+    .table-responsive th:nth-child(1), .table-responsive td:nth-child(1) { width: 40px; }   /* Checkbox */
+    .table-responsive th:nth-child(2), .table-responsive td:nth-child(2) { width: 70px; }   /* ID YZ */
+    .table-responsive th:nth-child(3), .table-responsive td:nth-child(3) { width: 90px; }  /* N° Externe */
+    .table-responsive th:nth-child(4), .table-responsive td:nth-child(4) { width: 130px; }  /* Client */
+    .table-responsive th:nth-child(5), .table-responsive td:nth-child(5) { width: 100px; }  /* Téléphone */
+    .table-responsive th:nth-child(6), .table-responsive td:nth-child(6) { width: 110px; }  /* Ville & Région */
+    .table-responsive th:nth-child(7), .table-responsive td:nth-child(7) { width: 80px; }   /* Total */
+    .table-responsive th:nth-child(8), .table-responsive td:nth-child(8) { width: 110px; }  /* Date Confirmation */
+    .table-responsive th:nth-child(9), .table-responsive td:nth-child(9) { width: 130px; }  /* Opérateur Conf. */
+    .table-responsive th:nth-child(10), .table-responsive td:nth-child(10) { width: 110px; } /* État Préparation */
+    .table-responsive th:nth-child(11), .table-responsive td:nth-child(11) { width: 120px; } /* Actions */
     
     /* Largeurs optimisées quand la sidebar est fermée (plus d'espace) */
     body.sidebar-collapsed .table-responsive th:nth-child(3), 
-    body.sidebar-collapsed .table-responsive td:nth-child(3) { width: 120px; }  /* N° Externe */
+    body.sidebar-collapsed .table-responsive td:nth-child(3) { width: 110px; }  /* N° Externe */
     body.sidebar-collapsed .table-responsive th:nth-child(4), 
-    body.sidebar-collapsed .table-responsive td:nth-child(4) { width: 160px; }  /* Client */
+    body.sidebar-collapsed .table-responsive td:nth-child(4) { width: 150px; }  /* Client */
     body.sidebar-collapsed .table-responsive th:nth-child(5), 
-    body.sidebar-collapsed .table-responsive td:nth-child(5) { width: 130px; }  /* Téléphone */
+    body.sidebar-collapsed .table-responsive td:nth-child(5) { width: 120px; }  /* Téléphone */
     body.sidebar-collapsed .table-responsive th:nth-child(6), 
-    body.sidebar-collapsed .table-responsive td:nth-child(6) { width: 150px; }  /* Ville & Région */
+    body.sidebar-collapsed .table-responsive td:nth-child(6) { width: 130px; }  /* Ville & Région */
     body.sidebar-collapsed .table-responsive th:nth-child(8), 
-    body.sidebar-collapsed .table-responsive td:nth-child(8) { width: 150px; }  /* Date Confirmation */
+    body.sidebar-collapsed .table-responsive td:nth-child(8) { width: 130px; }  /* Date Confirmation */
     body.sidebar-collapsed .table-responsive th:nth-child(9), 
-    body.sidebar-collapsed .table-responsive td:nth-child(9) { width: 170px; }  /* Opérateur Conf. */
+    body.sidebar-collapsed .table-responsive td:nth-child(9) { width: 150px; }  /* Opérateur Conf. */
     body.sidebar-collapsed .table-responsive th:nth-child(10), 
-    body.sidebar-collapsed .table-responsive td:nth-child(10) { width: 150px; } /* État Préparation */
+    body.sidebar-collapsed .table-responsive td:nth-child(10) { width: 130px; } /* État Préparation */
     body.sidebar-collapsed .table-responsive th:nth-child(11), 
-    body.sidebar-collapsed .table-responsive td:nth-child(11) { width: 160px; } /* Actions */
+    body.sidebar-collapsed .table-responsive td:nth-child(11) { width: 140px; } /* Actions */
 
     /* Scrollbar personnalisée */
     .table-responsive::-webkit-scrollbar {
@@ -1225,7 +1225,7 @@
     /* Responsive adaptatif professionnel avec sidebar */
     @media (max-width: 1400px) {
         .table-responsive table {
-            min-width: 1100px; /* Largeur réduite */
+            min-width: 950px; /* Largeur réduite */
         }
         
         .table-responsive th,
@@ -1234,17 +1234,17 @@
             font-size: 0.75rem; /* Police plus petite */
         }
         
-        .table-responsive th:nth-child(4), .table-responsive td:nth-child(4) { width: 130px; } /* Client */
-        .table-responsive th:nth-child(6), .table-responsive td:nth-child(6) { width: 120px; } /* Ville & Région */
-        .table-responsive th:nth-child(8), .table-responsive td:nth-child(8) { width: 120px; } /* Date Confirmation */
-        .table-responsive th:nth-child(9), .table-responsive td:nth-child(9) { width: 140px; } /* Opérateur Conf. */
-        .table-responsive th:nth-child(10), .table-responsive td:nth-child(10) { width: 120px; } /* État Préparation */
-        .table-responsive th:nth-child(11), .table-responsive td:nth-child(11) { width: 130px; } /* Actions */
+        .table-responsive th:nth-child(4), .table-responsive td:nth-child(4) { width: 120px; } /* Client */
+        .table-responsive th:nth-child(6), .table-responsive td:nth-child(6) { width: 100px; } /* Ville & Région */
+        .table-responsive th:nth-child(8), .table-responsive td:nth-child(8) { width: 100px; } /* Date Confirmation */
+        .table-responsive th:nth-child(9), .table-responsive td:nth-child(9) { width: 120px; } /* Opérateur Conf. */
+        .table-responsive th:nth-child(10), .table-responsive td:nth-child(10) { width: 100px; } /* État Préparation */
+        .table-responsive th:nth-child(11), .table-responsive td:nth-child(11) { width: 110px; } /* Actions */
     }
 
     @media (max-width: 1200px) {
         .table-responsive table {
-            min-width: 900px; /* Largeur réduite */
+            min-width: 850px; /* Largeur réduite */
         }
         
         .table-responsive th,
@@ -1253,13 +1253,13 @@
             font-size: 0.7rem; /* Police plus petite */
         }
         
-        .table-responsive th:nth-child(4), .table-responsive td:nth-child(4) { width: 120px; } /* Client */
-        .table-responsive th:nth-child(5), .table-responsive td:nth-child(5) { width: 100px; } /* Téléphone */
-        .table-responsive th:nth-child(6), .table-responsive td:nth-child(6) { width: 110px; } /* Ville & Région */
-        .table-responsive th:nth-child(8), .table-responsive td:nth-child(8) { width: 110px; } /* Date Confirmation */
-        .table-responsive th:nth-child(9), .table-responsive td:nth-child(9) { width: 120px; } /* Opérateur Conf. */
-        .table-responsive th:nth-child(10), .table-responsive td:nth-child(10) { width: 110px; } /* État Préparation */
-        .table-responsive th:nth-child(11), .table-responsive td:nth-child(11) { width: 120px; } /* Actions */
+        .table-responsive th:nth-child(4), .table-responsive td:nth-child(4) { width: 100px; } /* Client */
+        .table-responsive th:nth-child(5), .table-responsive td:nth-child(5) { width: 80px; } /* Téléphone */
+        .table-responsive th:nth-child(6), .table-responsive td:nth-child(6) { width: 90px; } /* Ville & Région */
+        .table-responsive th:nth-child(8), .table-responsive td:nth-child(8) { width: 90px; } /* Date Confirmation */
+        .table-responsive th:nth-child(9), .table-responsive td:nth-child(9) { width: 100px; } /* Opérateur Conf. */
+        .table-responsive th:nth-child(10), .table-responsive td:nth-child(10) { width: 90px; } /* État Préparation */
+        .table-responsive th:nth-child(11), .table-responsive td:nth-child(11) { width: 100px; } /* Actions */
     }
 
     @media (max-width: 768px) {

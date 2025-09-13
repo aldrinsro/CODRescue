@@ -8,8 +8,9 @@
         <div class="ticket-header">
             <!-- Logo -->
             <div class="logo-left">
-                <img src="{% static 'logo-tiicket/image.svg' %}" alt="Logo" class="header-logo" />
+                <img src="{% static 'logo-tickets/image.svg' %}" alt="Logo" class="header-logo" />
             </div>
+            <div class="header-divider"></div>
             
             <!-- Informations de commande et Code QR -->
             <div class="header-right">
@@ -169,7 +170,7 @@
     display: flex;
     flex-direction: column;
     height: 100%;
-        justify-content: space-between; /* Distribuer l'espace */
+        justify-content: stretch;
 }
 
     /* HEADER (Sans bande noire) */
@@ -183,8 +184,15 @@
         gap: var(--gap-md);
         font-size: 12px;
         font-weight: 800;
-        height: 25mm; /* Hauteur fixe pour le header */
         border-bottom: 1px solid #eee; /* Ligne de séparation légère */
+}
+
+.header-divider {
+        width: 0.6mm;
+        background: #ddd;
+        align-self: stretch;
+        height: 100%;
+        margin: 0 1mm;
 }
 
 .logo-left {
@@ -244,7 +252,7 @@
 }
 
 .ticket-date {
-        font-size: 11px;
+        font-size: 13px;
         font-weight: 600;
         color: #000; /* Noir pour la date */
     display: flex;
@@ -330,7 +338,7 @@
         flex-direction: column;
         gap: var(--gap-md);
         align-items: flex-start;
-        height: 20mm; /* Hauteur fixe pour la section client */
+        height: auto;
         overflow: hidden;
 }
 
@@ -345,14 +353,14 @@
     display: flex;
     align-items: center;
     gap: var(--gap-sm);
-        font-size: 11px;
+        font-size: 13px;
         color: #222;
         font-weight: 600;
     }
     .client-line i {
-        font-size: 10px;
+        font-size: 12px;
     color: #666;
-        width: 10px; /* Aligner les icônes */
+        width: 12px; /* Aligner les icônes */
     text-align: center;
 }
     .client-line strong {
@@ -365,12 +373,12 @@
         background: #fdfdfd; /* Fond très léger */
         padding: var(--section-pad-y) var(--section-pad-x);
         border-top: 1px solid #eee;
-        height: 50mm; /* hauteur ajustée pour le format 100x100mm */
         overflow: hidden; /* pas de scroll à l'impression */
-        flex: 1; /* Prendre l'espace restant */
+        flex: 1 1 auto; /* Prendre l'espace disponible */
+        height: auto;
     }
 .articles-title {
-        font-size: 12px; 
+        font-size: 14px; 
         font-weight: 800; 
         margin-bottom: var(--gap-md);
     display: flex;
@@ -381,11 +389,11 @@
         border-bottom: 1px dashed #ddd; /* Ligne sous le titre */
 }
 .articles-title i {
-        font-size: 10px;
+        font-size: 12px;
         color: #888;
 }
 .articles-list {
-        font-size: 8.5px;
+        font-size: 10px;
         color: #444; 
         line-height: 1.2; 
     word-break: break-word;
@@ -415,31 +423,31 @@
 .article-ref {
         font-weight: 700; 
         color: #111; 
-        font-size: 10px;
+        font-size: 12px;
     }
     .article-color, .article-size { 
         color: #555; 
-        font-size: 9px; 
+        font-size: 11px; 
     }
 .article-qty {
         font-weight: 800; 
     color: #059669;
-        font-size: 9px;
+        font-size: 11px;
 }
 
     /* FOOTER (Sans bande noire, section prix) */
-.ticket-footer {
-        background: #fff; /* Fond blanc */
-        color: #000; /* Texte noir */
-        padding: var(--section-pad-y) var(--section-pad-x);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-        gap: var(--gap-sm);
-        font-size: 11px;
-        font-weight: 600;
-        border-top: 1px solid #eee; /* Ligne de séparation légère */
-    }
+ .ticket-footer {
+         background: #fff; /* Fond blanc */
+         color: #000; /* Texte noir */
+         padding: calc(var(--section-pad-y) + 1mm) var(--section-pad-x) calc(var(--section-pad-y) + 3mm) var(--section-pad-x);
+     display: flex;
+     justify-content: space-between;
+     align-items: center;
+         gap: var(--gap-sm);
+         font-size: 11px;
+         font-weight: 600;
+         border-top: none; /* Pas de bordure */
+     }
 .ticket-price {
     display: flex;
     flex-direction: row; /* prix seulement */
@@ -453,7 +461,7 @@
         flex-direction: column;
         align-items: flex-end;
         gap: var(--gap-sm);
-        font-size: 9px;
+        font-size: 11px;
         line-height: 1.2;
         max-width: 55mm; /* reste dans la bande */
     }
@@ -462,7 +470,7 @@
     align-items: center;
         gap: 1.2mm;
     }
-    .footer-company i { font-size: 8px; color: #9aa0a6; }
+    .footer-company i { font-size: 10px; color: #9aa0a6; }
 
 /* Styles spécifiques pour l'impression */
 @media print {
@@ -477,11 +485,11 @@
             page-break-after: always; /* S'assurer qu'un nouveau ticket commence sur une nouvelle page */
             overflow: hidden !important; /* rester dans le cadre */
         }
-    /* Ajustements pour l'impression */
-    .ticket-header { height: 25mm !important; overflow: hidden !important; }
-    .client-info { height: 20mm !important; overflow: hidden !important; }
-    .articles-section { height: 50mm !important; overflow: hidden !important; }
-    .ticket-footer { height: 15mm !important; }
+         /* Ajustements pour l'impression - laisser le contenu occuper l'espace */
+     .ticket-header { height: auto !important; overflow: hidden !important; }
+     .client-info { height: auto !important; overflow: hidden !important; }
+     .articles-section { height: auto !important; flex: 1 1 auto !important; overflow: hidden !important; }
+     .ticket-footer { height: auto !important; margin-bottom: 2mm !important; }
     .ticket-commande:last-child {
             page-break-after: auto; 
         }

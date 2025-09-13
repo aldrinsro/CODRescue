@@ -248,21 +248,44 @@ def home_view(request):
 
 def _get_commandes_en_preparation():
     """Récupère toutes les commandes en préparation sans doublons"""
-    from django.db.models import Q
+    from django.db.models import Q, Max
+    from django.db.models import Prefetch
     
     # États de préparation valides
     etats_preparation = ['En préparation', 'Collectée', 'Emballée', 'Préparée']
     
-    # Récupérer les IDs des commandes en préparation
-    commandes_ids = Commande.objects.filter(
-        Q(etats__enum_etat__libelle__in=etats_preparation),
-        etats__date_fin__isnull=True
-    ).values_list('id', flat=True).distinct()
-    
-    # Récupérer les commandes avec leurs relations
-    return Commande.objects.filter(
-        id__in=commandes_ids
-    ).select_related('client', 'ville', 'ville__region').prefetch_related('paniers__article', 'etats')
+    # Préparer un Prefetch optimisé pour les états
+    etats_qs = (
+        EtatCommande.objects.only('id', 'commande_id', 'date_debut', 'date_fin', 'enum_etat_id', 'operateur_id')
+            .select_related('enum_etat', 'operateur')
+            .order_by('date_debut')
+    )
+
+    # Récupérer les commandes en une seule requête avec annotations pour trier côté DB
+    # current_etat_date = date_debut max des états actifs de préparation
+    qs = (
+        Commande.objects.filter(
+            Q(etats__enum_etat__libelle__in=etats_preparation),
+            etats__date_fin__isnull=True
+        )
+        .select_related('client', 'ville', 'ville__region')
+        .prefetch_related(
+            Prefetch('etats', queryset=etats_qs),
+            'paniers__article'
+        )
+        .annotate(
+            current_etat_date=Max(
+                'etats__date_debut',
+                filter=Q(etats__enum_etat__libelle__in=etats_preparation, etats__date_fin__isnull=True)
+            )
+        )
+        .order_by('-current_etat_date', '-id')
+        .distinct()
+    )
+
+    # Limiter les colonnes ramenées par Commande (évite de gros transferts)
+    qs = qs.only('id', 'id_yz', 'num_cmd', 'total_cmd', 'client', 'ville')
+    return qs
 
 
 def _get_etat_actuel_preparation(commande):
@@ -481,6 +504,7 @@ def liste_prepa(request):
     filter_type = request.GET.get('filter', 'all')
     search_query = request.GET.get('search', '')
     items_per_page = int(request.GET.get('items_per_page', 10))
+    etat_param = request.GET.get('etat', '').strip()
     
     # Récupérer et filtrer les commandes
     commandes = _get_commandes_en_preparation()
@@ -497,11 +521,18 @@ def liste_prepa(request):
             search_query.lower() in (cmd.client.numero_tel or '').lower()
         ]
     
-    # Enrichir les commandes
-    commandes_enrichies = [_enrichir_commande(cmd) for cmd in commandes_filtrees]
+    # Filtre serveur par État (actif)
+    if etat_param:
+        etat_lower = etat_param.lower()
+        filtered_by_state = []
+        for cmd in commandes_filtrees:
+            etat_actif = cmd.etats.filter(date_fin__isnull=True).select_related('enum_etat').first()
+            if etat_actif and etat_lower in etat_actif.enum_etat.libelle.lower():
+                filtered_by_state.append(cmd)
+        commandes_filtrees = filtered_by_state
     
-    # Trier par date d'affectation
-    commandes_enrichies.sort(
+    # Trier par date d'affectation sur la liste brute (avant enrichissement)
+    commandes_filtrees.sort(
         key=lambda x: x.etats.filter(date_fin__isnull=True).first().date_debut 
         if x.etats.filter(date_fin__isnull=True).first() 
         else timezone.now(), 
@@ -512,18 +543,32 @@ def liste_prepa(request):
     stats_par_type = _calculer_statistiques(operateur_profile)
     
     # Statistiques générales
-    total_affectees = len(commandes_enrichies)
-    valeur_totale = sum(cmd.total_cmd or 0 for cmd in commandes_enrichies)
+    total_affectees = len(commandes_filtrees)
+    valeur_totale = sum(getattr(cmd, 'total_cmd', 0) or 0 for cmd in commandes_filtrees)
     date_limite_urgence = timezone.now() - timedelta(days=1)
-    commandes_urgentes = sum(1 for cmd in commandes_enrichies if 
+    commandes_urgentes = sum(1 for cmd in commandes_filtrees if 
         cmd.etats.filter(date_debut__lt=date_limite_urgence).exists()
     )
     
-    # Pagination
+    # Pagination côté serveur
     from django.core.paginator import Paginator
-    paginator = Paginator(commandes_enrichies, items_per_page)
+    try:
+        items_per_page = int(items_per_page)
+        if items_per_page <= 0:
+            items_per_page = 10
+    except (ValueError, TypeError):
+        items_per_page = 10
+    paginator = Paginator(commandes_filtrees, items_per_page)
     page_number = request.GET.get('page', 1)
     commandes_page = paginator.get_page(page_number)
+    
+    # Enrichir uniquement la page courante (optimisation mémoire/CPU)
+    try:
+        current_list = list(commandes_page.object_list)
+        enriched_current = [_enrichir_commande(cmd) for cmd in current_list]
+        commandes_page.object_list = enriched_current
+    except Exception:
+        pass
     
     # Contexte
     context = {
@@ -533,6 +578,8 @@ def liste_prepa(request):
         'search_query': search_query,
         'filter_type': filter_type,
         'items_per_page': items_per_page,
+        'etat': etat_param,
+        'page_obj': commandes_page,
         'stats': {
             'total_affectees': total_affectees,
             'valeur_totale': valeur_totale,
@@ -930,13 +977,7 @@ def traiter_commande_retournee_api(request, commande_id):
                 etat_retournee.terminer_etat(operateur_profile)
                 
                 # Créer une opération pour tracer l'action
-                Operation.objects.create(
-                    commande=commande,
-                    type_operation='TRAITEMENT_RETOUR',
-                    operateur=operateur_profile,
-                    conclusion=f"Commande retournée traitée par {operateur_profile.nom_complet}. Traitement terminé avec date de confirmation.",
-                    commentaire=commentaire
-                )
+               
                 
                 # Compter les variantes traitées pour le message de confirmation
                 variantes_traitees = commande.paniers.filter(variante__isnull=False).count()
@@ -1451,12 +1492,7 @@ def detail_prepa(request, pk):
                     operateur=operateur_profile
                 )
                 # Log de l'opération
-                Operation.objects.create(
-                    commande=commande,
-                    type_operation='PREPARATION_TERMINEE',
-                    operateur=operateur_profile,
-                    conclusion=f"Commande marquée comme préparée par {operateur_profile.nom_complet}."
-                )
+               
             messages.success(request, f"La commande {commande.id_yz} a bien été marquée comme préparée.")
             return redirect('Superpreparation:detail_prepa', pk=commande.pk)
         elif action == 'signaler_probleme':
@@ -1498,12 +1534,6 @@ def detail_prepa(request, pk):
                 else:
                     log_conclusion = f"Problème signalé par {operateur_profile.nom_complet}. Opérateur d'origine non trouvé, commande renvoyée au pool de confirmation."
                     messages.warning(request, f"La commande {commande.id_yz} a été renvoyée au pool de confirmation (opérateur d'origine non trouvé).")
-                Operation.objects.create(
-                    commande=commande,
-                    type_operation='PROBLEME_SIGNALÉ',
-                    operateur=operateur_profile,
-                    conclusion=log_conclusion
-                )
             return redirect('Superpreparation:liste_prepa')
     # Avant le return render dans detail_prepa
     commande_renvoi_id = None
@@ -2005,28 +2035,12 @@ def modifier_commande_prepa(request, commande_id):
                     commentaire = request.POST.get('commentaire', '').strip()
 
                     
-
                     if not type_operation or not commentaire:
-
                         return JsonResponse({
-
                             'success': False,
-
                             'error': 'Type d\'opération et commentaire requis'
-
                         })
-
-                    
-
-                    # Créer la nouvelle opération
-
-                    operation = Operation.objects.create(
-                        commande=commande,
-                        type_operation=type_operation,
-                        conclusion=commentaire,
-                        operateur=operateur
-                    )
-                    
+                    # Créer la nouvelle opération                    
                     return JsonResponse({
                         'success': True,
                         'message': 'Opération ajoutée avec succès',
@@ -2077,12 +2091,7 @@ def modifier_commande_prepa(request, commande_id):
                     commande.total_cmd = float(total_commande)
                     commande.save()
                     # Créer une opération pour consigner la modification
-                    Operation.objects.create(
-                        commande=commande,
-                        type_operation='MODIFICATION_QUANTITES',
-                        conclusion=f"Modification en masse des quantités d'articles par l'opérateur de préparation.",
-                        operateur=operateur
-                    )
+                    
                     return JsonResponse({
                         'success': True,
                         'message': f'{len(modifications)} quantité(s) modifiée(s) avec succès',
@@ -2193,12 +2202,7 @@ def modifier_commande_prepa(request, commande_id):
                     )['total'] or 0
 
                     # Créer une opération pour consigner la modification
-                    Operation.objects.create(
-                        commande=commande,
-                        type_operation='MODIFICATION_QUANTITE',
-                        conclusion=f"Quantité d'article modifiée de {ancienne_quantite} à {nouvelle_quantite}.",
-                        operateur=operateur
-                    )
+                    
 
                     
                     return JsonResponse({
@@ -2241,12 +2245,7 @@ def modifier_commande_prepa(request, commande_id):
                             })
                     commande.save()
                     # Créer une opération pour consigner la modification
-                    Operation.objects.create(
-                        commande=commande,
-                        type_operation='MODIFICATION_PREPA',
-                        conclusion=f"La commande a été modifiée par l'opérateur.",
-                        operateur=operateur
-                    )
+                    
                     messages.success(request, f"Commande {commande.id_yz} mise à jour avec succès.")
                     return redirect('Superpreparation:detail_prepa', pk=commande.id)
                 except Exception as e:
@@ -2278,12 +2277,7 @@ def modifier_commande_prepa(request, commande_id):
 
                     commande.save()
                     # Créer une opération pour consigner la modification
-                    Operation.objects.create(
-                        commande=commande,
-                        type_operation='MODIFICATION_PREPA',
-                        conclusion=f"La commande a été modifiée par l'opérateur.",
-                        operateur=operateur
-                    )
+                    
                     messages.success(request, f"Les modifications de la commande {commande.id_yz} ont été enregistrées avec succès.")
                     return redirect('Superpreparation:detail_prepa', pk=commande.id)
         except Exception as e:
@@ -2447,275 +2441,137 @@ def modifier_commande_superviseur(request, commande_id):
         # Pas de profil: continuer (le décorateur a déjà validé l'accès via groupes)
 
         operateur = None
-
-    
-
     # Récupérer la commande avec ses relations
-
     commande = get_object_or_404(Commande.objects.select_related('client', 'ville', 'ville__region'), id=commande_id)
-
     
-
     # Pour les superviseurs, on ne vérifie pas l'affectation spécifique
-
     # Ils peuvent modifier toutes les commandes en préparation
-
-    
-
     if request.method == 'POST':
-
         try:
-
             # ================ GESTION DES ACTIONS AJAX SPÉCIFIQUES ================
-
             action = request.POST.get('action')
-
             
-
             if action == 'add_article':
-
                 # Ajouter un nouvel article immédiatement
-
                 from article.models import Article
-
                 from commande.models import Panier
-
                 
-
                 article_id = request.POST.get('article_id')
-
                 quantite = int(request.POST.get('quantite', 1))
-
                 
-
                 try:
-
                     article = Article.objects.get(id=article_id)
-
                     
-
                     # Vérifier si l'article existe déjà dans la commande
-
                     panier_existant = Panier.objects.filter(commande=commande, article=article).first()
-
                     
-
                     if panier_existant:
-
                         # Si l'article existe déjà, mettre à jour la quantité
-
                         panier_existant.quantite += quantite
-
                         panier_existant.save()
-
                         panier = panier_existant
-
                         print(f"🔄 Article existant mis à jour: ID={article.id}, nouvelle quantité={panier.quantite}")
-
                     else:
-
                         # Si l'article n'existe pas, créer un nouveau panier
-
                         panier = Panier.objects.create(
-
                             commande=commande,
-
                             article=article,
-
                             quantite=quantite,
-
                             sous_total=0  # Sera recalculé après
-
                         )
-
                         print(f"➕ Nouvel article ajouté: ID={article.id}, quantité={quantite}")
-
                     
-
                     # Recalculer le compteur après ajout (logique de confirmation)
-
                     if article.isUpsell and hasattr(article, 'prix_upsell_1') and article.prix_upsell_1 is not None:
-
                         # Compter la quantité totale d'articles upsell (après ajout)
-
                         total_quantite_upsell = commande.paniers.filter(article__isUpsell=True).aggregate(
-
                             total=Sum('quantite')
-
                         )['total'] or 0
-
                         
-
                         # Le compteur ne s'incrémente qu'à partir de 2 unités d'articles upsell
-
                         # 0-1 unités upsell → compteur = 0
-
                         # 2+ unités upsell → compteur = total_quantite_upsell - 1
-
                         if total_quantite_upsell >= 2:
-
                             commande.compteur = total_quantite_upsell - 1
-
                         else:
-
                             commande.compteur = 0
-
                         
-
                         commande.save()
-
-                        
-
                         # Recalculer TOUS les articles de la commande avec le nouveau compteur
-
                         commande.recalculer_totaux_upsell()
-
                     else:
-
                         # Pour les articles normaux, juste calculer le sous-total
-
                         from commande.templatetags.commande_filters import get_prix_upsell_avec_compteur
-
                         prix_unitaire = get_prix_upsell_avec_compteur(article, commande.compteur)
-
                         sous_total = prix_unitaire * panier.quantite
-
                         panier.sous_total = float(sous_total)
-
                         panier.save()
-
-                    
-
+                
                     # Recalculer le total de la commande avec frais de livraison
-
                     total_articles = commande.paniers.aggregate(
-
                         total=Sum('sous_total')
-
                     )['total'] or 0
-
                     frais_livraison = commande.ville.frais_livraison if commande.ville else 0
-
                     commande.total_cmd = float(total_articles) #+ float(frais_livraison)
-
                     commande.save()
-
                     
-
                     # Calculer les statistiques upsell pour la réponse
-
                     articles_upsell = commande.paniers.filter(article__isUpsell=True)
-
                     total_quantite_upsell = articles_upsell.aggregate(
-
                         total=Sum('quantite')
-
                     )['total'] or 0
-
                     
-
                     return JsonResponse({
-
                         'success': True,
-
                         'message': f'Article {article.nom} ajouté avec succès',
-
                         'article_id': article.id,
-
                         'article_nom': article.nom,
-
                         'quantite': panier.quantite,
-
                         'sous_total': float(panier.sous_total),
-
                         'compteur_upsell': commande.compteur,
-
                         'total_quantite_upsell': total_quantite_upsell,
-
                         'total_commande': float(commande.total_cmd),
-
                         'frais_livraison': float(frais_livraison),
-
                         'total_final': float(commande.total_cmd) + float(frais_livraison)
-
                     })
-
                     
-
                 except Article.DoesNotExist:
-
                     return JsonResponse({'success': False, 'message': 'Article non trouvé'})
-
                 except Exception as e:
-
                     print(f"❌ Erreur lors de l'ajout d'article: {e}")
-
                     return JsonResponse({'success': False, 'message': f'Erreur: {str(e)}'})
-
             
-
             elif action in ['modify_quantity', 'modifier_quantite_directe', 'update_article']:
-
                 # Modifier la quantité d'un article existant
-
                 from commande.models import Panier
-
                 
-
                 panier_id = request.POST.get('panier_id')
-
                 # Les différentes actions peuvent envoyer des noms différents
-
                 quantite_str = request.POST.get('nouvelle_quantite') or request.POST.get('quantite') or request.POST.get('new_quantity')
-
                 try:
-
                     nouvelle_quantite = int(quantite_str) if quantite_str is not None else 1
-
                 except ValueError:
-
                     nouvelle_quantite = 1
-
                 
-
                 try:
-
                     panier = Panier.objects.get(id=panier_id, commande=commande)
-
                     article = panier.article
-
                     
-
                     if nouvelle_quantite <= 0:
-
                         # Supprimer l'article si quantité <= 0
-
                         panier.delete()
-
                         message = f'Article {article.nom} supprimé de la commande'
-
                     else:
-
                         # Mettre à jour la quantité
-
                         panier.quantite = nouvelle_quantite
-
                         
-
                         # Recalculer le sous-total
-
                         if article.isUpsell and hasattr(article, 'prix_upsell_1') and article.prix_upsell_1 is not None:
-
                             # Recalculer le compteur upsell
-
                             total_quantite_upsell = commande.paniers.filter(article__isUpsell=True).aggregate(
-
                                 total=Sum('quantite')
-
                             )['total'] or 0
-
                             
-
                             if total_quantite_upsell >= 2:
 
                                 commande.compteur = total_quantite_upsell - 1
@@ -2813,159 +2669,68 @@ def modifier_commande_superviseur(request, commande_id):
                     article_nom = panier.article.nom
 
                     etait_upsell = panier.article.isUpsell  # Sauvegarder avant suppression
-
-
-
                     panier.delete()
-
                     
-
                     # Recalculer le compteur upsell si nécessaire
-
                     if etait_upsell:
-
                         total_quantite_upsell = commande.paniers.filter(article__isUpsell=True).aggregate(
-
                             total=Sum('quantite')
-
                         )['total'] or 0
-
                         
-
                         if total_quantite_upsell >= 2:
-
                             commande.compteur = total_quantite_upsell - 1
-
                         else:
-
                             commande.compteur = 0
-
                         
-
                         commande.save()
-
                         commande.recalculer_totaux_upsell()
-
                     
-
                     # Recalculer le total de la commande
-
                     total_articles = commande.paniers.aggregate(
-
                         total=Sum('sous_total')
-
                     )['total'] or 0
-
                     frais_livraison = commande.ville.frais_livraison if commande.ville else 0
-
                     commande.total_cmd = float(total_articles) #+ float(frais_livraison)
-
                     commande.save()
-
                     
-
                     return JsonResponse({
-
                         'success': True,
-
                         'message': f'Article {article_nom} supprimé avec succès',
-
                         'compteur_upsell': commande.compteur,
-
                         'articles_count': commande.paniers.count(),
-
                         'total_commande': float(commande.total_cmd),
-
                         'frais_livraison': float(frais_livraison),
-
                         'total_final': float(commande.total_cmd) + float(frais_livraison)
-
                     })
-
                     
-
                 except Panier.DoesNotExist:
-
                     return JsonResponse({'success': False, 'message': 'Article non trouvé dans la commande'})
-
                 except Exception as e:
-
                     print(f"❌ Erreur lors de la suppression d'article: {e}")
-
                     return JsonResponse({'success': False, 'message': f'Erreur: {str(e)}'})
-
             
-
             else:
-
                 # Soumission du formulaire principal (pas d'action AJAX)
-
                 try:
-
                     nouvelle_adresse = request.POST.get('adresse', '').strip()
-
                     nouvelle_ville_id = request.POST.get('ville_id')
-
-
-
                     if nouvelle_adresse:
-
                         commande.adresse = nouvelle_adresse
-
-
-
                     if nouvelle_ville_id:
-
                         try:
-
                             nouvelle_ville = Ville.objects.get(id=nouvelle_ville_id)
-
                             commande.ville = nouvelle_ville
-
                         except Ville.DoesNotExist:
-
                             messages.error(request, "Ville sélectionnée non trouvée.")
-
                             return redirect('Superpreparation:modifier_commande_superviseur', commande_id=commande.id)
-
-
-
                     commande.save()
-
-
-
-                    # Journaliser l'opération
-
-                    Operation.objects.create(
-
-                        commande=commande,
-
-                        type_operation='MODIFICATION_PREPA',
-
-                        conclusion=request.POST.get('commentaire_operateur', "Modifications enregistrées par le superviseur."),
-
-                        operateur=operateur
-
-                    )
-
-
-
                     messages.success(request, f"Les modifications de la commande {commande.id_yz} ont été enregistrées avec succès.")
-
                     return redirect('Superpreparation:detail_prepa', pk=commande.id)
-
                 except Exception as e:
-
                     messages.error(request, f"Erreur lors de l'enregistrement: {str(e)}")
-
                     return redirect('Superpreparation:modifier_commande_superviseur', commande_id=commande.id)
-
-                
-
         except Exception as e:
-
             print(f"❌ Erreur générale dans modifier_commande_superviseur: {e}")
-
             return JsonResponse({'success': False, 'message': f'Erreur: {str(e)}'})
 
     
@@ -3601,12 +3366,7 @@ def api_finaliser_commande(request, commande_id):
                 enum_etat=etat_preparee,
                 operateur=operateur_profile
             )
-            Operation.objects.create(
-                commande=commande,
-                type_operation='PREPARATION_TERMINEE',
-                operateur=operateur_profile,
-                conclusion=f"Commande préparée par {operateur_profile.nom_complet} (via API)."
-            )
+            
         return JsonResponse({
             'success': True,
             'message': f'La commande {commande.id_yz} a été préparée avec succès.'
@@ -4576,7 +4336,7 @@ def cloturer_envoi(request):
                     .distinct()
                 )
             etat_enum, _ = EnumEtatCmd.objects.get_or_create(
-                libelle='En livraison',
+                libelle='Mise en distribution',
                 defaults={'ordre': 17, 'couleur': '#8B5CF6'}
             )
 
@@ -6015,13 +5775,7 @@ def api_finaliser_preparation(request, commande_id):
         )
         
         # Créer une opération pour tracer l'action
-        Operation.objects.create(
-            commande=commande,
-            type_operation='FINALISATION_PREPARATION',
-            operateur=operateur,
-            date_operation=timezone.now(),
-            description=f'Préparation finalisée par le superviseur {operateur.nom} {operateur.prenom}'
-        )
+       
         
         print(f"✅ Préparation finalisée pour la commande {commande.id_yz} par {operateur.nom}")
         
@@ -6113,19 +5867,44 @@ def export_commandes_envoi_excel(request, envoi_id):
             print(f"🚫 ERREUR - Création workbook échouée: {wb_error}")
             raise wb_error
         
-        # TEST SIMPLE: Ajoutons juste quelques données de base
+        # Ajout structuré et stylé des données dans le fichier Excel
         try:
-            # En-tête simple
-            ws['A1'] = f"EXPORT COMMANDES - ENVOI {envoi.numero_envoi}"
+            # En-tête global
+            title_cell = ws['A1']
+            title_cell.value = f"EXPORT COMMANDES - ENVOI {envoi.numero_envoi}"
+            title_cell.font = Font(size=14, bold=True)
             ws['A2'] = f"Région: {envoi.region.nom_region}"
             ws['A3'] = f"Date: {timezone.now().strftime('%d/%m/%Y %H:%M')}"
-            
-            # En-têtes des colonnes
-            headers = ['N° Commande', 'Client', 'Téléphone', 'Adresse', 'Ville', 'Région', 'Total', 'Panier']
+
+            # En-têtes des colonnes (structuré)
+            # Demande: supprimer "ID YZ" et "N° Externe", renommer "Articles" en "Panier"
+            headers = ['N° Commande', 'Client', 'Téléphone', 'Adresse', 'Ville', 'Région', 'Total (DH)', 'Panier']
+            header_fill = PatternFill("solid", fgColor="1E3A8A")  # var(--preparation-border-accent) approchée
+            header_font = Font(color="FFFFFF", bold=True)
+            center = Alignment(horizontal='center', vertical='center')
+            wrap = Alignment(wrap_text=True, vertical='top')
+
             for col, header in enumerate(headers, 1):
-                ws.cell(row=5, column=col, value=header)
+                cell = ws.cell(row=5, column=col, value=header)
+                cell.fill = header_fill
+                cell.font = header_font
+                cell.alignment = center
             
             print(f"🔍 DEBUG - En-têtes ajoutés")
+
+            # Largeurs de colonnes lisibles
+            col_widths = {
+                1: 16,  # N° Commande
+                2: 28,  # Client
+                3: 16,  # Téléphone
+                4: 40,  # Adresse
+                5: 18,  # Ville
+                6: 18,  # Région
+                7: 14,  # Total (DH)
+                8: 80,  # Panier
+            }
+            for idx, width in col_widths.items():
+                ws.column_dimensions[openpyxl.utils.get_column_letter(idx)].width = width
             
             # Données simplifiées des commandes
             row = 6
@@ -6158,19 +5937,37 @@ def export_commandes_envoi_excel(request, envoi_id):
                         except Exception as p_err:
                             print(f"⚠️ ERREUR panier commande {commande.id}: {p_err}")
                             continue
-                    panier_str = "\n".join(items_texts) if items_texts else ""
+                    # Articles sur la même ligne, séparateur lisible
+                    panier_str = " | ".join(items_texts) if items_texts else ""
 
                     # Ecrire la ligne
-                    ws.cell(row=row, column=1, value=commande.num_cmd)
+                    thin = Side(border_style="thin", color="E5E7EB")
+                    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+                    ws.cell(row=row, column=1, value=str(getattr(commande, 'id', '')))  # N° Commande (ID interne)
                     ws.cell(row=row, column=2, value=client_nom)
                     ws.cell(row=row, column=3, value=getattr(commande.client, 'numero_tel', '') if commande.client else '')
                     ws.cell(row=row, column=4, value=adresse_livraison)
                     ws.cell(row=row, column=5, value=ville_nom)
                     ws.cell(row=row, column=6, value=region_nom)
-                    # Total commande (montant total des articles)
-                    ws.cell(row=row, column=7, value=float(getattr(commande, 'total_cmd', 0) or 0))
+                    # Total commande (montant total)
+                    total_cell = ws.cell(row=row, column=7, value=float(getattr(commande, 'total_cmd', 0) or 0))
+                    total_cell.number_format = '#,##0.00'
                     panier_cell = ws.cell(row=row, column=8, value=panier_str)
-                    panier_cell.alignment = Alignment(wrap_text=True, vertical='top')
+                    # Pas de retour à la ligne: une seule ligne pour tout le panier
+                    panier_cell.alignment = Alignment(wrap_text=False, vertical='top')
+
+                    # Appliquer bordures et alignements par défaut
+                    for col in range(1, 9):
+                        c = ws.cell(row=row, column=col)
+                        c.border = border
+                        if col in (1, 3, 5, 6, 7):
+                            c.alignment = center
+                        else:
+                            if col in (4, 8):
+                                c.alignment = wrap
+                            else:
+                                c.alignment = Alignment(vertical='center')
 
                     row += 1
 
@@ -6179,6 +5976,10 @@ def export_commandes_envoi_excel(request, envoi_id):
                     continue
             
             print(f"🔍 DEBUG - {row-6} lignes de données ajoutées")
+
+            # Auto-filter et freeze header
+            ws.auto_filter.ref = f"A5:H{max(5, row-1)}"
+            ws.freeze_panes = 'A6'
             
         except Exception as data_error:
             print(f"🚫 ERREUR - Ajout des données: {data_error}")
@@ -6344,47 +6145,12 @@ def liste_articles(request):
             price_query                         # Recherche par prix
         ).distinct()
     
-    # Gestion de la pagination flexible
-    items_per_page = request.GET.get('items_per_page', 12)
-    start_range = request.GET.get('start_range', '')
-    end_range = request.GET.get('end_range', '')
-    
-    # Conserver une copie des articles non paginés pour les statistiques
+    # Désactivation de la pagination côté serveur: renvoyer tous les éléments
+    items_per_page = 'all'
+    start_range = ''
+    end_range = ''
     articles_non_pagines = articles
-    
-    # Gestion de la plage personnalisée
-    if start_range and end_range:
-        try:
-            start_idx = int(start_range) - 1  # Index commence à 0
-            end_idx = int(end_range)
-            if start_idx >= 0 and end_idx > start_idx:
-                articles = list(articles)[start_idx:end_idx]
-                # Créer un paginator factice pour la plage
-                paginator = Paginator(articles, len(articles))
-                page_obj = paginator.get_page(1)
-        except (ValueError, TypeError):
-            # En cas d'erreur, utiliser la pagination normale
-            items_per_page = 12
-            paginator = Paginator(articles, items_per_page)
-            page_number = request.GET.get('page', 1)
-            page_obj = paginator.get_page(page_number)
-    else:
-        # Pagination normale
-        page_number = request.GET.get('page', 1)
-        if items_per_page == 'all':
-            # Afficher tous les articles
-            paginator = Paginator(articles, articles.count())
-            page_obj = paginator.get_page(1)
-        else:
-            try:
-                items_per_page = int(items_per_page)
-                if items_per_page <= 0:
-                    items_per_page = 12
-            except (ValueError, TypeError):
-                items_per_page = 12
-            
-            paginator = Paginator(articles, items_per_page)
-            page_obj = paginator.get_page(page_number)
+    page_obj = articles
     
     # Statistiques mises à jour selon les filtres appliqués
     all_articles = Article.objects.all().filter(actif=True)
@@ -6477,7 +6243,19 @@ def liste_articles(request):
                 'success': False,
                 'error': f'Erreur dans la génération des templates: {str(e)}'
             }, status=500)
-
+    # Requête classique: rendre la page complète
+    context = {
+        'page_obj': page_obj,
+        'items_per_page': items_per_page,
+        'start_range': start_range,
+        'end_range': end_range,
+        'search': search,
+        'filtre_phase': filtre_phase,
+        'filtre_promotion': filtre_promotion,
+        'filtre_stock': filtre_stock,
+        'stats': stats,
+    }
+    return render(request, 'Superpreparation/liste_articles.html', context)
 def api_qr_codes_articles(request):
     """API pour récupérer les QR codes des articles d'une commande (format 10x10)"""
     try:
@@ -7957,6 +7735,8 @@ def liste_variantes(request):
     """Liste des variantes d'articles avec recherche, filtres et pagination"""
     variantes_articles = VarianteArticle.objects.filter(actif=True).select_related(
         'article', 'couleur', 'pointure', 'article__categorie'
+    ).prefetch_related(
+        'article__promotions'
     ).order_by('article__nom')
     
     # Formulaire de promotion pour la modal
@@ -8026,47 +7806,10 @@ def liste_variantes(request):
             price_query                                   # Recherche par prix
         ).distinct()
     
-    # Gestion de la pagination flexible
-    items_per_page = request.GET.get('items_per_page', 12)
-    start_range = request.GET.get('start_range', '')
-    end_range = request.GET.get('end_range', '')
-    
-    # Conserver une copie des variantes non paginées pour les statistiques
-    variantes_non_paginees = variantes_articles
-    
-    # Gestion de la plage personnalisée
-    if start_range and end_range:
-        try:
-            start_idx = int(start_range) - 1  # Index commence à 0
-            end_idx = int(end_range)
-            if start_idx >= 0 and end_idx > start_idx:
-                variantes_articles = list(variantes_articles)[start_idx:end_idx]
-                # Créer un paginator factice pour la plage
-                paginator = Paginator(variantes_articles, len(variantes_articles))
-                page_obj = paginator.get_page(1)
-        except (ValueError, TypeError):
-            # En cas d'erreur, utiliser la pagination normale
-            items_per_page = 12
-            paginator = Paginator(variantes_articles, items_per_page)
-            page_number = request.GET.get('page', 1)
-            page_obj = paginator.get_page(page_number)
-    else:
-        # Pagination normale
-        page_number = request.GET.get('page', 1)
-        if items_per_page == 'all':
-            # Afficher toutes les variantes
-            paginator = Paginator(variantes_articles, variantes_articles.count())
-            page_obj = paginator.get_page(1)
-        else:
-            try:
-                items_per_page = int(items_per_page)
-                if items_per_page <= 0:
-                    items_per_page = 12
-            except (ValueError, TypeError):
-                items_per_page = 12
-            
-            paginator = Paginator(variantes_articles, items_per_page)
-            page_obj = paginator.get_page(page_number)
+    # Pagination côté serveur - 50 éléments par page pour de bonnes performances
+    paginator = Paginator(variantes_articles, 50)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
     
     # Statistiques mises à jour selon les filtres appliqués
     all_variantes_articles = VarianteArticle.objects.filter(actif=True)
@@ -8107,18 +7850,15 @@ def liste_variantes(request):
             'page_obj': page_obj
         }, request=request)
         
-        html_pagination = render_to_string('Superpreparation/partials/_articles_pagination.html', {
+        html_pagination = render_to_string('Superpreparation/partials/_variantes_pagination.html', {
             'page_obj': page_obj,
             'search': search,
             'filtre_phase': filtre_phase,
             'filtre_promotion': filtre_promotion,
             'filtre_stock': filtre_stock,
-            'items_per_page': items_per_page,
-            'start_range': start_range,
-            'end_range': end_range
         }, request=request)
         
-        html_pagination_info = render_to_string('Superpreparation/partials/_articles_pagination_info.html', {
+        html_pagination_info = render_to_string('Superpreparation/partials/_variantes_pagination_info.html', {
             'page_obj': page_obj
         }, request=request)
         
@@ -8129,7 +7869,7 @@ def liste_variantes(request):
             'html_grid_body': html_grid_body,
             'html_pagination': html_pagination,
             'html_pagination_info': html_pagination_info,
-            'total_count': variantes_non_paginees.count()
+            'total_count': paginator.count
         })
 
     context = {
@@ -8140,9 +7880,6 @@ def liste_variantes(request):
         'filtre_phase': filtre_phase,
         'filtre_promotion': filtre_promotion,
         'filtre_stock': filtre_stock,
-        'items_per_page': items_per_page,
-        'start_range': start_range,
-        'end_range': end_range,
     }
     return render(request, 'Superpreparation/Liste_variante_article.html', context)
 def creer_variantes_ajax(request):

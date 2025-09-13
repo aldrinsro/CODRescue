@@ -61,12 +61,62 @@
         display: table-cell;
     }
 }
+
+/* Affinage compact du tableau (espaces lignes/colonnes réduits) */
+#cmdTable th, #cmdTable td { padding: 6px 8px !important; line-height: 1.2; }
+#cmdTable th { font-size: 0.75rem; }
+#cmdTable td { font-size: 0.75rem; }
+#cmdTable .action-button { padding: 4px 8px; font-size: 0.75rem; }
+#cmdTable .status-badge, #cmdTable .etat-badge { padding: 2px 6px; font-size: 0.65rem; }
+@media (max-width: 1024px){
+    #cmdTable th, #cmdTable td { padding: 4px 6px !important; font-size: 0.7rem; }
+}
+
+/* Cartes statistiques (design unifié envois) */
+.stats-card {
+    background: white;
+    border: 2px solid var(--preparation-text-light);
+    border-radius: 16px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    position: relative;
+    overflow: hidden;
+    padding: 24px;
+}
+.stats-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--preparation-primary), var(--preparation-light));
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+.stats-card:hover {
+    border-color: var(--preparation-border-accent);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    transform: translateY(-5px);
+}
+.stats-card:hover::before { transform: scaleX(1); }
+
+.stats-icon {
+    background: linear-gradient(135deg, var(--preparation-primary) 0%, var(--preparation-light) 100%);
+    color: white;
+    border-radius: 50%;
+    width: 60px; height: 60px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.3s ease;
+}
+.stats-card:hover .stats-icon {
+    background: linear-gradient(135deg, var(--preparation-light) 0%, var(--preparation-primary) 100%);
+    transform: scale(1.1);
+}
 </style>
 {% endblock %}
 
 {% block content %}
 {% csrf_token %}
-<div class="main-content transition-all duration-300 max-w-screen-2xl xl:max-w-[1440px] mx-auto px-3 sm:px-4 lg:px-6 compact-page" id="mainContent">
+<div class="main-content transition-all duration-300 max-w-full 2xl:max-w-[1600px] mx-auto px-3 sm:px-4 lg:px-6 compact-page" id="mainContent">
     <!-- Toast notifications container -->
     <div class="toast-container" id="toastContainer"></div>
 
@@ -93,63 +143,19 @@
         </div>
     </div>
 
-    <!-- Statistiques -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-        <!-- Aujourd'hui -->
-        <div class="stats-card group rounded-xl shadow-lg p-4 transition-all duration-300 hover:shadow-2xl border animate-slideInUp" style="animation-delay: 0.1s;">
-                <div class="flex items-center">
-                <div class="stats-icon group-hover:scale-110 transition-all duration-300">
-                        <i class="fas fa-calendar-day text-xl"></i>
-            </div>
-                    <div class="ml-3">
-                    <p class="text-xs font-medium text-gray-600">Aujourd'hui</p>
-                    <p class="text-2xl font-bold text-gray-900 group-hover:text-green-600 transition-colors">{{ confirmees_aujourd_hui|default:0 }}</p>
-            </div>
-        </div>
-            </div>
-        <!-- Cette semaine -->
-        <div class="stats-card group rounded-xl shadow-lg p-4 transition-all duration-300 hover:shadow-2xl border animate-slideInUp" style="animation-delay: 0.2s;">
-                <div class="flex items-center">
-                <div class="stats-icon group-hover:scale-110 transition-all duration-300">
-                        <i class="fas fa-calendar-week text-xl"></i>
-            </div>
-                    <div class="ml-3">
-                    <p class="text-xs font-medium text-gray-600">Cette semaine</p>
-                    <p class="text-2xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">{{ confirmees_semaine|default:0 }}</p>
-        </div>
-            </div>
-        </div>
-        <!-- Ce mois -->
-        <div class="stats-card group rounded-xl shadow-lg p-4 transition-all duration-300 hover:shadow-2xl border animate-slideInUp" style="animation-delay: 0.3s;">
-                <div class="flex items-center">
-                <div class="stats-icon group-hover:scale-110 transition-all duration-300">
-                        <i class="fas fa-calendar-alt text-xl"></i>
-                    </div>
-                    <div class="ml-3">
-                    <p class="text-xs font-medium text-gray-600">Ce mois</p>
-                    <p class="text-2xl font-bold text-gray-900 group-hover:text-purple-600 transition-colors">{{ confirmees_mois|default:0 }}</p>
-                </div>
-            </div>
-        </div>
-        <!-- Total -->
-        <div class="stats-card group rounded-xl shadow-lg p-4 transition-all duration-300 hover:shadow-2xl border animate-slideInUp" style="animation-delay: 0.4s;">
-                <div class="flex items-center">
-                <div class="stats-icon group-hover:scale-110 transition-all duration-300">
-                    <i class="fas fa-check-double text-xl"></i>
-                    </div>
-                    <div class="ml-3">
-                    <p class="text-xs font-medium text-gray-600">Total Confirmées</p>
-                    <p class="text-2xl font-bold text-gray-900 group-hover:text-yellow-600 transition-colors">{{ total_confirmees|default:0 }}</p>
-                </div>
-            </div>
-            </div>
-        </div>
+    <!-- Statistiques (composant unifié) -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        {% include 'Superpreparation/includes/stats-card.html' with icon='fa-calendar-day' label="Aujourd'hui" value=confirmees_aujourd_hui|default:0 delay=0.1 %}
+        {% include 'Superpreparation/includes/stats-card.html' with icon='fa-calendar-week' label='Cette semaine' value=confirmees_semaine|default:0 delay=0.2 %}
+        {% include 'Superpreparation/includes/stats-card.html' with icon='fa-calendar-alt' label='Ce mois' value=confirmees_mois|default:0 delay=0.3 %}
+        {% include 'Superpreparation/includes/stats-card.html' with icon='fa-check-double' label='Total Confirmées' value=total_confirmees|default:0 delay=0.4 %}
+    </div>
 
         <!-- Section d'informations -->
     <div class="info-section mb-4">
         <h2 class="section-title flex items-center justify-between cursor-pointer select-none" id="infoSectionToggle" aria-expanded="true">
             <span class="flex items-center">
-                <i class="fas fa-info-circle text-blue-600"></i>
+            <i class="fas fa-info-circle text-blue-600"></i>
                 <span class="ml-2">Informations générales</span>
             </span>
             <i class="fas fa-chevron-up text-gray-500 transition-transform duration-200" id="infoSectionChevron"></i>
@@ -186,7 +192,7 @@
     </div>
 
     <div class="overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
-        {% include 'Superpreparation/includes/smart-search-toolbar.html' %}
+    {% include 'Superpreparation/includes/smart-search-toolbar.html' %}
         <!-- Emplacement standard du bouton colonnes (aligné à droite, comme avant) -->
         <div id="columnsButtonContainer" class="flex justify-end mt-2"></div>
     </div>
@@ -211,7 +217,7 @@
             <button id="bulkPrintQrBtn" class="px-3 py-1.5 rounded-lg font-medium transition-all shadow-sm opacity-50 cursor-not-allowed bg-[var(--preparation-primary)] text-white flex items-center gap-2 text-sm" disabled>
                 <i class="fas fa-qrcode"></i> Imprimer QR articles
             </button>
-
+            
 
             <span id="selectionCountBadge" class="hidden ml-2 text-xs font-semibold px-2 py-1 rounded-full bg-blue-100 text-blue-700">
                 0 sélectionnée(s)
@@ -244,8 +250,8 @@
 
     <!-- Tableau des commandes confirmées -->
     {% if page_obj.object_list %}
-    <div class="table-responsive mb-6 theme-card rounded-xl shadow-lg overflow-x-auto" id="tableScrollContainer">
-        <table id="cmdTable" class="min-w-full divide-y divide-gray-200 min-w-[1000px] lg:min-w-[1200px] xl:min-w-[1400px] text-xs sm:text-sm">
+    <div class="table-responsive mb-6 theme-card rounded-xl shadow-lg overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0" id="tableScrollContainer">
+        <table id="cmdTable" class="min-w-full divide-y divide-gray-200 text-xs sm:text-sm">
             <thead class="bg-[var(--preparation-primary)] border-b-[3px] border-[var(--preparation-primary)] text-white sticky top-0 z-10">
                 <tr>
                     <th class="px-3 py-2 text-left column-select">
@@ -269,95 +275,9 @@
         </table>
     </div>
 
-    <!-- Contrôles de pagination flexible (style Excel) -->
-    <div class="theme-pagination-controls pagination-controls transition-all duration-300">
-        <div class="flex flex-col lg:flex-row items-center justify-between space-y-4 lg:space-y-0">
-            <!-- Section Éléments par page -->
-            <div class="flex items-center space-x-3">
-                <div class="flex items-center space-x-2">
-                    <i class="fas fa-list-ol text-sm" style="color: var(--preparation-primary);"></i>
-                    <label class="text-xs font-semibold text-gray-700">Éléments par page:</label>
-                </div>
-                <select id="itemsPerPageSelect" class="theme-input px-3 py-1.5 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm transition-all duration-200 hover:border-gray-300 focus:shadow-md text-sm">
-                    <option value="25" {% if items_per_page == 25 %}selected{% endif %}>25</option>
-                    <option value="50" {% if items_per_page == 50 %}selected{% endif %}>50</option>
-                    <option value="100" {% if items_per_page == 100 %}selected{% endif %}>100</option>
-                    <option value="250" {% if items_per_page == 250 %}selected{% endif %}>250</option>
-                    <option value="500" {% if items_per_page == 500 %}selected{% endif %}>500</option>
-                    <option value="1000" {% if items_per_page == 1000 %}selected{% endif %}>1000</option>
-                    <option value="2500" {% if items_per_page == 2500 %}selected{% endif %}>2500</option>
-                    <option value="5000" {% if items_per_page == 5000 %}selected{% endif %}>5000</option>
-                    <option value="10000" {% if items_per_page == 10000 %}selected{% endif %}>10000</option>
-                    <option value="all" {% if items_per_page == 'all' %}selected{% endif %}>Tous</option>
-                </select>
-            </div>
-            
-            <!-- Section Plage personnalisée -->
-            <div class="flex items-center space-x-3">
-                <div class="flex items-center space-x-2">
-                    <i class="fas fa-arrows-alt-h text-sm" style="color: var(--preparation-primary);"></i>
-                    <label class="text-xs font-semibold text-gray-700">Plage personnalisée:</label>
-                </div>
-                <div class="flex items-center space-x-2 bg-gray-50 rounded-lg p-2 border border-gray-200">
-                    <div class="flex items-center space-x-2">
-                        <input type="number" id="startRangeInput" placeholder="Début" min="1" value="{{ start_range|default:'' }}" 
-                               class="theme-input px-2 py-1 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-16 text-center bg-white shadow-sm transition-all duration-200 hover:border-gray-300 focus:shadow-md text-sm">
-                        <span class="text-gray-500 text-xs font-medium">à</span>
-                        <input type="number" id="endRangeInput" placeholder="Fin" min="1" value="{{ end_range|default:'' }}" 
-                               class="theme-input px-2 py-1 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-16 text-center bg-white shadow-sm transition-all duration-200 hover:border-gray-300 focus:shadow-md text-sm">
-                    </div>
-                    <div class="flex items-center space-x-1">
-                        <button id="applyRangeBtn" class="px-3 py-1 text-white rounded-md transition-all duration-200 transform hover:scale-105 shadow-sm hover:shadow-md text-xs font-medium bg-[var(--preparation-primary)] border border-[var(--preparation-primary)] hover:brightness-95">
-                            <i class="fas fa-check mr-1"></i>Appliquer
-                        </button>
-                        <button id="clearRangeBtn" class="px-3 py-1 bg-gradient-to-r from-red-400 to-red-500 text-white rounded-md hover:from-red-500 hover:to-red-600 transition-all duration-200 transform hover:scale-105 shadow-sm hover:shadow-md text-xs font-medium">
-                            <i class="fas fa-times mr-1"></i>Effacer
-                        </button>
-                    </div>
-        </div>
-            </div>
-            
-            <!-- Section Statistiques -->
-            <div class="flex items-center space-x-2">
-                <div class="flex items-center space-x-2 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg px-3 py-1.5 border border-blue-200">
-                    <i class="fas fa-chart-bar text-sm" style="color: var(--preparation-primary);"></i>
-                    <span class="text-xs font-semibold text-gray-700">Total: <span class="text-blue-600 font-bold">{{ page_obj.paginator.count }}</span> commandes confirmées</span>
-                                </div>
-            </div>
-        </div>
-        
-        <!-- Indicateur de statut -->
-        <div class="mt-3 pt-3 border-t border-gray-200">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-4">
-                    <div class="flex items-center space-x-2">
-                        <div class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
-                        <span class="text-xs text-gray-600">Pagination active</span>
-                    </div>
-                    {% if start_range and end_range %}
-                    <div class="flex items-center space-x-2">
-                        <i class="fas fa-filter text-xs text-blue-500"></i>
-                        <span class="text-xs text-blue-600 font-medium">Plage personnalisée: {{ start_range }} - {{ end_range }}</span>
-                    </div>
-                                {% endif %}
-                </div>
-                <div class="flex items-center space-x-2">
-                    <i class="fas fa-info-circle text-xs text-gray-400"></i>
-                    <span class="text-xs text-gray-500">Utilisez les contrôles ci-dessus pour personnaliser l'affichage</span>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- Pagination (client) -->
+    <div data-superprep-pagination data-items-selector="tbody tr" data-container-selector="table" data-per-page="25"></div>
 
-    <!-- Pagination -->
-    <div id="paginationControls" class="flex justify-center mt-8">
-        {% include 'Superpreparation/partials/_confirmees_pagination.html' %}
-    </div>
-
-    <!-- Informations de pagination -->
-    <div id="paginationInfoContainer">
-        {% include 'Superpreparation/partials/_confirmees_pagination_info.html' %}
-    </div>
 {% endif %}
 </div>
 
@@ -880,86 +800,7 @@
         initSuiviCommandesSearch('confirmées');
     });
 
-// Script de gestion de la sidebar avec adaptation du tableau
-document.addEventListener('DOMContentLoaded', function() {
-    const menuToggle = document.getElementById('menu-toggle');
-    const body = document.body;
-    const sidebar = document.getElementById('sidebar');
-    const tableScroll = document.getElementById('tableScrollContainer');
-    
-    // Fonction pour adapter le tableau selon l'état de la sidebar
-    function adaptTableToSidebar() {
-        const table = document.querySelector('.table-responsive table');
-        if (table) {
-            if (body.classList.contains('sidebar-collapsed')) {
-                // Sidebar fermée - plus d'espace disponible
-                table.style.minWidth = '1400px';
-                console.log('📊 Tableau adapté: sidebar fermée (1400px)');
-            } else {
-                // Sidebar ouverte - espace réduit
-                table.style.minWidth = '1200px';
-                console.log('📊 Tableau adapté: sidebar ouverte (1200px)');
-            }
-        }
-    }
-    
-    if (menuToggle) {
-        menuToggle.addEventListener('click', function() {
-            console.log('🔄 Menu toggle clicked');
-            body.classList.toggle('sidebar-open');
-            body.classList.toggle('sidebar-collapsed');
-            
-            // Animation du hamburger
-            menuToggle.classList.toggle('hamburger-active');
-            
-            // Adapter le tableau après le changement d'état
-            setTimeout(adaptTableToSidebar, 300); // Attendre la transition CSS
-        });
-    }
-    
-    // Observer les changements de classes du body pour détecter tout changement de la sidebar (via autres scripts)
-    const bodyClassObserver = new MutationObserver((mutations) => {
-        for (const mutation of mutations) {
-            if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-                setTimeout(adaptTableToSidebar, 50);
-            }
-        }
-    });
-    bodyClassObserver.observe(body, { attributes: true });
-
-    // Écouter la fin de transition de la sidebar (largeur/transform) pour recalculer
-    if (sidebar) {
-        sidebar.addEventListener('transitionend', (e) => {
-            if (e.propertyName === 'width' || e.propertyName === 'transform' || e.propertyName === 'left') {
-                setTimeout(adaptTableToSidebar, 50);
-            }
-        });
-    }
-    
-    // Gestion du redimensionnement
-    window.addEventListener('resize', () => {
-        console.log('📐 Redimensionnement détecté:', window.innerWidth);
-        if (window.innerWidth > 1023) {
-            body.classList.add('sidebar-open');
-            body.classList.remove('sidebar-collapsed');
-            console.log('🖥️ Redimensionnement: mode desktop');
-        } else {
-            body.classList.add('sidebar-collapsed');
-            body.classList.remove('sidebar-open');
-            console.log('📱 Redimensionnement: mode mobile');
-        }
-        
-        // Adapter le tableau après le redimensionnement
-        setTimeout(adaptTableToSidebar, 100);
-    });
-    
-    // Initialiser l'adaptation du tableau
-    adaptTableToSidebar();
-    
-    console.log('✅ Script de sidebar initialisé pour commandes-confirmees avec adaptation du tableau');
-    
-    // Code d'impression multiple supprimé - système d'impression unifié
-});
+// Suppression de l'adaptation JS forcée aux largeurs de sidebar: la table est fluide et gérée par CSS
 
 // Ombres directionnelles lors du scroll horizontal (UX dashboard)
 document.addEventListener('DOMContentLoaded', function() {
@@ -1695,12 +1536,9 @@ function startAutoRefresh() {
     }, 30000);
     }
 
-    // Start auto-refresh when page loads
+    // Start auto-refresh when page loads (welcome toast removed)
     document.addEventListener('DOMContentLoaded', function() {
-        // Show welcome message
-        setTimeout(() => {
-        showToast('Bienvenue dans la gestion des commandes confirmées !', 'info', 3000);
-    }, 1000);
+        // Intentionally left blank: no automatic welcome notifications
     });
 
     // Keyboard shortcuts
@@ -1963,4 +1801,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 {% endblock %} 
 
+{% block extra_js %}
+{{ block.super }}
 <script src="{% static 'js/Superpreparation/responsive-pages/page_cmd_confim.js' %}"></script>
+{% endblock %}

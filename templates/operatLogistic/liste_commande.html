@@ -161,7 +161,9 @@
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
                 {% for commande in page_obj %}
-                <tr class="hover:bg-gray-50 transition-colors">
+                <tr class="hover:bg-gray-50 transition-colors" 
+                    data-commande-id="{{ commande.id }}" 
+                    data-commande-id-yz="{{ commande.id_yz }}">
                     <td class="px-4 py-4 whitespace-nowrap">
                         <div class="text-sm font-medium text-gray-900">{{ commande.id_yz }}</div>
                     </td>
@@ -206,7 +208,7 @@
                     </td>
                     <td class="px-4 py-4 whitespace-nowrap">
                         {% for etat in commande.etats.all %}
-                            {% if etat.enum_etat.libelle == 'En livraison' and etat.date_fin == None %}
+                            {% if etat.enum_etat.libelle == 'Mise en distribution' and etat.date_fin == None %}
                                 <div class="text-sm text-gray-900">{{ etat.date_debut|date:"d/m/Y" }}</div>
                                 <div class="text-xs text-gray-500">{{ etat.date_debut|date:"H:i" }}</div>
                             {% endif %}
@@ -217,6 +219,11 @@
                             <a href="{% url 'operatLogistic:detail_commande' commande.id %}" class="text-blue-600 hover:text-blue-800 transition-colors" title="Voir les détails">
                                 <i class="fas fa-eye"></i>
                             </a>
+                            <button onclick="ouvrirModalActionsSav({{ commande.id }}, '{{ commande.id_yz }}')" 
+                            class="text-orange-600 hover:text-orange-900 transition-colors ml-2"
+                            title="Actions SAV">
+                        <i class="fas fa-tools"></i>
+                             </button>
                         </div>
                     </td>
                 </tr>
@@ -225,6 +232,7 @@
         </table>
     </div>
     
+<<<<<<< HEAD
     <!-- Pagination -->
     {% if page_obj.has_other_pages %}
     <div class="flex items-center justify-between bg-white px-4 py-3 sm:px-6 rounded-lg shadow-md mt-4">
@@ -279,4 +287,571 @@
     {% endif %}
 </div>
 
+=======
+    <!-- Pagination globale -->
+    {% include 'operatLogistic/partials/_pagination.html' with commandes=page_obj %}
+    {% endif %}
+</div>
+
+<!-- Modale des Actions SAV -->
+<div id="savActionsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-10 mx-auto p-6 border w-full max-w-2xl shadow-lg rounded-lg bg-white">
+        <div class="text-center">
+            <h3 class="text-xl leading-6 font-bold text-gray-900 mb-2">Actions de Livraison (SAV)</h3>
+            <p class="text-sm text-gray-600 mb-6">Commande <span id="commandeIdDisplay" class="font-semibold text-blue-600"></span></p>
+            
+            <!-- Grille des actions SAV -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <button onclick="openSavModal('Livrée', {{ commande.id }})" class="sav-action-card bg-green-50 hover:bg-green-100 border-2 border-green-200 hover:border-green-300 rounded-lg p-4 transition-all duration-200">
+                    <div class="flex flex-col items-center">
+                        <i class="fas fa-check-circle text-3xl text-green-500 mb-2"></i>
+                        <span class="font-semibold text-green-800">Livrée</span>
+                        <span class="text-xs text-green-600 mt-1">Livraison réussie</span>
+                    </div>
+                </button>
+                
+                
+                <button onclick="openSavModal('Retournée', {{ commande.id }})" class="sav-action-card bg-red-50 hover:bg-red-100 border-2 border-red-200 hover:border-red-300 rounded-lg p-4 transition-all duration-200">
+                    <div class="flex flex-col items-center">
+                        <i class="fas fa-times-circle text-3xl text-red-500 mb-2"></i>
+                        <span class="font-semibold text-red-800">Retournée (SAV)</span>
+                        <span class="text-xs text-red-600 mt-1">Retourner la commande</span>
+                    </div>
+                </button>
+                <button onclick="openSavModal('Reportée', {{ commande.id }})" class="sav-action-card bg-orange-50 hover:bg-orange-100 border-2 border-orange-200 hover:border-orange-300 rounded-lg p-4 transition-all duration-200">
+                    <div class="flex flex-col items-center">
+                        <i class="fas fa-times-circle text-3xl text-orange-500 mb-2"></i>
+                        <span class="font-semibold text-orange-500-800">Reportée (SAV)</span>
+                        <span class="text-xs text-orange-600 mt-1">Reportée </span>
+                    </div>
+                </button>
+            </div>
+            
+        </div>
+        
+            
+            <div class="flex justify-center">
+                <button id="cancelSavActionsBtn" onclick="fermerModalActionsSav()" class="px-6 py-2 bg-gray-500 text-white text-base font-medium rounded-md shadow-sm hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300 transition-colors">
+                    <i class="fas fa-times mr-2"></i>Fermer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modale SAV pour changer l'état -->
+<div id="savModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-20 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white">
+        <div class="mt-3 text-center">
+            <h3 class="text-lg leading-6 font-medium text-gray-900" id="savModalTitle">Mettre à jour l'état</h3>
+            <div class="mt-2 px-7 py-3">
+                <form id="savForm" method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="nouvel_etat" id="nouvel_etat_input">
+                    <div class="text-left">
+                        <!-- Champ date de report (caché par défaut) -->
+                        <div id="dateReportDiv" class="mb-4 hidden">
+                            <h3 class="text-lg font-medium text-gray-900 mb-4">Date de report de la commande</h3>
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <label for="date_report" class="block text-sm font-medium text-gray-700">
+                                    Nouvelle date de livraison pour tous les articles
+                                </label>
+                                <input type="date" 
+                                       name="date_report" 
+                                       id="date_report"
+                                       class="w-full mt-2 p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                                       required>
+                                <p class="mt-2 text-sm text-gray-500">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    Cette date sera appliquée à tous les articles de la commande
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <!-- Champ date de livraison (caché par défaut) -->
+                        <div id="dateLivraisonDiv" class="mb-4 hidden">
+                            <h3 class="text-lg font-medium text-gray-900 mb-4">Date de livraison</h3>
+                            <div class="bg-green-50 p-4 rounded-lg">
+                                <label for="date_livraison" class="block text-sm font-medium text-gray-700">
+                                    <i class="fas fa-calendar-check mr-1 text-green-600"></i>
+                                    Date de livraison effective
+                                </label>
+                                <input type="date" 
+                                       name="date_livraison" 
+                                       id="date_livraison"
+                                       class="w-full mt-2 p-2 border border-green-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                                       required>
+                                <p class="mt-2 text-sm text-gray-600">
+                                    <i class="fas fa-info-circle mr-1 text-green-600"></i>
+                                    Veuillez indiquer la date à laquelle la commande a été effectivement livrée
+                                </p>
+                            </div>
+                        </div>
+
+                        <label for="commentaire" class="text-sm font-medium text-gray-700">Commentaire (obligatoire)</label>
+                        <select name="commentaire" id="commentaire" class="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" required>
+                            <option value="">Sélectionner un commentaire...</option>
+                            <optgroup label="Livraison" class="optgroup-livraison" style="display: none;">
+                                <option value="Commande livrée avec succès">Commande livrée avec succès</option>
+                                <option value="Livraison effectuée dans les délais">Livraison effectuée dans les délais</option>
+                                <option value="Client satisfait de la livraison">Client satisfait de la livraison</option>
+                            </optgroup>
+                            <optgroup label="Problèmes de qualité" class="optgroup-problemes">
+                                <option value="Article défectueux détecté">Article défectueux détecté</option>
+                                <option value="Problème de qualité signalé par le client">Problème de qualité signalé par le client</option>
+                                <option value="Article endommagé lors du transport">Article endommagé lors du transport</option>
+                                <option value="Défaut de fabrication constaté">Défaut de fabrication constaté</option>
+                            </optgroup>
+                            <optgroup label="Retours et échanges" class="optgroup-retours">
+                                <option value="Retour demandé par le client">Retour demandé par le client</option>
+                                <option value="Échange de taille demandé">Échange de taille demandé</option>
+                                <option value="Échange de couleur demandé">Échange de couleur demandé</option>
+                                <option value="Article non conforme à la commande">Article non conforme à la commande</option>
+                            </optgroup>
+                            <optgroup label="Communication client" class="optgroup-communication">
+                                <option value="Client non joignable">Client non joignable</option>
+                                <option value="Adresse de livraison incorrecte">Adresse de livraison incorrecte</option>
+                                <option value="Client absent au moment de la livraison">Client absent au moment de la livraison</option>
+                                <option value="Refus de livraison par le client">Refus de livraison par le client</option>
+                            </optgroup>
+                            <optgroup label="Autres" class="optgroup-autres">
+                                <option value="Demande spéciale du client">Demande spéciale du client</option>
+                                <option value="Modification de commande demandée">Modification de commande demandée</option>
+                                <option value="Urgence signalée par le client">Urgence signalée par le client</option>
+                                <option value="Autre motif - voir détails">Autre motif - voir détails</option>
+                            </optgroup>
+                        </select>
+                        <!-- Champ de commentaire personnalisé (masqué par défaut) -->
+                        <div id="commentairePersonnalise" class="mt-2 hidden">
+                            <label for="commentaireCustom" class="text-sm font-medium text-gray-700">Commentaire personnalisé</label>
+                            <textarea name="commentaireCustom" id="commentaireCustom" rows="3" class="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" placeholder="Décrivez le problème ou la situation..."></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="items-center px-4 py-3">
+                <button id="confirmSavBtn" onclick="soumettreFormulaireSav()" class="px-4 py-2 bg-green-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-300">
+                    Confirmer la mise à jour
+                </button>
+                <button id="cancelSavBtn" onclick="fermerModalSav()" class="px-4 py-2 bg-gray-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300 mt-2">
+                    Annuler
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modale de Livraison Partielle -->
+<div id="livraisonPartielleModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-10 mx-auto p-5 border w-full max-w-4xl shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-xl font-bold text-gray-900 flex items-center">
+                    <i class="fas fa-box-open mr-3 text-blue-600"></i>
+                    Livraison Partielle
+                </h3>
+                <button onclick="fermerModalLivraisonPartielle()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6 rounded-lg">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-info-circle text-blue-400"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm text-blue-700">
+                            <strong>Instructions :</strong> Sélectionnez les articles que vous allez livrer au client. 
+                            Les articles non sélectionnés seront automatiquement renvoyés aux opérateurs de préparation 
+                            pour traitement (remplacement, correction, etc.).
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <form id="livraisonPartielleForm" method="POST">
+                {% csrf_token %}
+                
+                <!-- Ces champs seront remplis dynamiquement par JavaScript juste avant la soumission -->
+                <input type="hidden" name="articles_livres" id="articlesLivresJsonInput">
+                <input type="hidden" name="articles_renvoyes" id="articlesRenvoyesJsonInput">
+                
+                <!-- Section Articles à Livrer -->
+                <div class="mb-8">
+                    <h4 class="text-lg font-semibold text-green-700 mb-4 flex items-center">
+                        <i class="fas fa-check-circle mr-2"></i>
+                        Articles à Livrer au Client
+                    </h4>
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="articlesALivrerContainer">
+                            <!-- Les articles seront ajoutés dynamiquement par JavaScript -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section Articles à Renvoyer -->
+                <div class="mb-8">
+                    <h4 class="text-lg font-semibold text-orange-700 mb-4 flex items-center">
+                        <i class="fas fa-undo mr-2"></i>
+                        Articles à Renvoyer
+                    </h4>
+                    <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="articlesARenvoyerContainer">
+                            <!-- Les articles non sélectionnés apparaîtront ici dynamiquement -->
+                        </div>
+                        <div id="aucunArticleRenvoyer" class="text-center py-8 text-gray-500">
+                            <i class="fas fa-info-circle text-2xl mb-2"></i>
+                            <p>Aucun article à renvoyer. Tous les articles seront livrés.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Résumé -->
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+                    <h4 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-calculator mr-2"></i>
+                        Résumé de la Livraison Partielle
+                    </h4>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-green-600" id="totalArticlesLivres">0</div>
+                            <div class="text-sm text-gray-600">Articles à livrer</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-orange-600" id="totalArticlesRenvoyes">0</div>
+                            <div class="text-sm text-gray-600">Articles à renvoyer</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-blue-600" id="totalValeurLivree">0.00 DH</div>
+                            <div class="text-sm text-gray-600">Valeur livrée</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-purple-600" id="totalCommandeLivraison">0.00 DH</div>
+                            <div class="text-sm text-gray-600">Total commande original</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Pourcentage de livraison -->
+                    <div class="mt-4 text-center">
+                        <div class="text-lg font-medium text-gray-700">
+                            Pourcentage de livraison: <span id="pourcentageLivraison" class="text-blue-600 font-bold">100%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+                            <div id="barreProgresLivraison" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 100%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Commentaire -->
+                <div class="mb-6">
+                    <label for="commentaireLivraisonPartielle" class="block text-sm font-medium text-gray-700 mb-2">
+                        Commentaire sur la livraison partielle (obligatoire)
+                    </label>
+                    <select name="commentaire" 
+                              id="commentaireLivraisonPartielle" 
+                              class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            required>
+                        <option value="">Sélectionner un commentaire...</option>
+                        <optgroup label="Problèmes de qualité">
+                            <option value="Article défectueux détecté">Article défectueux détecté</option>
+                            <option value="Problème de qualité signalé par le client">Problème de qualité signalé par le client</option>
+                            <option value="Article endommagé lors du transport">Article endommagé lors du transport</option>
+                            <option value="Défaut de fabrication constaté">Défaut de fabrication constaté</option>
+                        </optgroup>
+                        <optgroup label="Modifications demandées">
+                            <option value="Échange de taille demandé">Échange de taille demandé</option>
+                            <option value="Échange de couleur demandé">Échange de couleur demandé</option>
+                            <option value="Article non conforme à la commande">Article non conforme à la commande</option>
+                            <option value="Modification de commande demandée">Modification de commande demandée</option>
+                        </optgroup>
+                        <optgroup label="Autres">
+                            <option value="Demande spéciale du client">Demande spéciale du client</option>
+                            <option value="Urgence signalée par le client">Urgence signalée par le client</option>
+                            <option value="Autre motif - voir détails">Autre motif - voir détails</option>
+                        </optgroup>
+                    </select>
+                    <!-- Champ de commentaire personnalisé (masqué par défaut) -->
+                    <div id="commentairePersonnaliseLivraisonPartielle" class="mt-2 hidden">
+                        <label for="commentaireCustomLivraisonPartielle" class="text-sm font-medium text-gray-700">Commentaire personnalisé</label>
+                        <textarea name="commentaireCustom" 
+                                  id="commentaireCustomLivraisonPartielle" 
+                                  rows="3" 
+                                  class="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" 
+                                  placeholder="Décrivez le problème ou la situation..."></textarea>
+                    </div>
+                </div>
+
+                <!-- Boutons d'action -->
+                <div class="flex justify-end space-x-4">
+                    <button type="button" 
+                            onclick="fermerModalLivraisonPartielle()" 
+                            class="px-6 py-2 bg-gray-500 text-white font-medium rounded-lg hover:bg-gray-600 transition-colors">
+                        Annuler
+                    </button>
+                    <button type="submit" 
+                            id="confirmerLivraisonPartielleBtn"
+                            class="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i class="fas fa-check mr-2"></i>
+                        Confirmer la Livraison Partielle
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<!-- Inclusion du fichier JavaScript pour les modals -->
+<script src="{% static 'js/OperteurSAV/modals.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Améliorer l'expérience utilisateur avec des animations
+    const animateElements = document.querySelectorAll('.animate-slideInUp');
+    animateElements.forEach((element, index) => {
+        setTimeout(() => {
+            element.style.opacity = '1';
+            element.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+    
+    // Gestion des formulaires de filtre
+    const presetSelect = document.querySelector('select[name="preset"]');
+    const customDateForm = document.querySelector('form input[name="start_date"]').closest('form');
+    
+    if (presetSelect) {
+        presetSelect.addEventListener('change', function() {
+            if (this.value === 'custom') {
+                // Afficher le formulaire de dates personnalisées
+                customDateForm.style.display = 'flex';
+                // Masquer le select
+                this.style.display = 'none';
+            } else if (this.value) {
+                // Soumettre le formulaire pour appliquer le preset
+                this.form.submit();
+            }
+        });
+    }
+    
+    // Gestion du formulaire de dates personnalisées
+    if (customDateForm) {
+        const startDateInput = customDateForm.querySelector('input[name="start_date"]');
+        const endDateInput = customDateForm.querySelector('input[name="end_date"]');
+        
+        // Validation des dates
+        function validateDates() {
+            if (startDateInput.value && endDateInput.value) {
+                const startDate = new Date(startDateInput.value);
+                const endDate = new Date(endDateInput.value);
+                
+                if (startDate > endDate) {
+                    alert('La date de début ne peut pas être postérieure à la date de fin.');
+                    return false;
+                }
+            }
+            return true;
+        }
+        
+        // Ajouter la validation avant soumission
+        customDateForm.addEventListener('submit', function(e) {
+            if (!validateDates()) {
+                e.preventDefault();
+            }
+        });
+        
+        // Validation en temps réel
+        [startDateInput, endDateInput].forEach(input => {
+            input.addEventListener('change', validateDates);
+        });
+    }
+    
+    // Bouton pour revenir au select de presets
+    const backToPresetsBtn = document.createElement('button');
+    backToPresetsBtn.type = 'button';
+    backToPresetsBtn.className = 'px-3 py-1 text-sm text-gray-600 hover:text-gray-800 transition-colors';
+    backToPresetsBtn.innerHTML = '<i class="fas fa-arrow-left mr-1"></i>Retour aux presets';
+    backToPresetsBtn.style.display = 'none';
+    
+    if (customDateForm && presetSelect) {
+        customDateForm.parentNode.insertBefore(backToPresetsBtn, customDateForm);
+        
+        backToPresetsBtn.addEventListener('click', function() {
+            customDateForm.style.display = 'none';
+            presetSelect.style.display = 'block';
+            presetSelect.value = '';
+            this.style.display = 'none';
+        });
+        
+        // Afficher le bouton si on est en mode personnalisé
+        if (presetSelect.value === 'custom' || (startDateInput && startDateInput.value)) {
+            customDateForm.style.display = 'flex';
+            presetSelect.style.display = 'none';
+            backToPresetsBtn.style.display = 'block';
+        }
+    }
+    
+    // Améliorer l'affichage des messages de résultats
+    const messageContainer = document.querySelector('.bg-blue-50');
+    if (messageContainer && ({{ filter_start_date|yesno:"true,false" }} || {{ filter_preset|yesno:"true,false" }})) {
+        messageContainer.style.display = 'block';
+    }
+    
+    console.log('✅ Interface de filtre initialisée avec succès');
+});
+
+// ================== GESTION DE LA MODALE SAV ==================
+
+// Variables globales pour la modale SAV
+let currentCommandeId = null;
+let currentCommandeIdYz = null;
+
+function openSavActionsModal(commandeId, commandeIdYz) {
+    currentCommandeId = commandeId;
+    currentCommandeIdYz = commandeIdYz;
+    document.getElementById('commandeIdDisplay').textContent = commandeIdYz;
+    document.getElementById('savActionsModal').classList.remove('hidden');
+}
+
+function openSavModal(etat, commandeId = null) {
+    // Si un ID de commande est fourni, l'utiliser, sinon utiliser currentCommandeId
+    if (commandeId) {
+        currentCommandeId = commandeId;
+    }
+    
+    // Vérifier qu'on a un ID de commande
+    if (!currentCommandeId) {
+        alert('❌ Erreur: Impossible de déterminer l\'ID de la commande');
+        return;
+    }
+    
+    document.getElementById('nouvel_etat_input').value = etat;
+    
+    // Titre et couleur selon l'état
+    let titre = '';
+    let couleur = '';
+    let icone = '';
+    
+    switch(etat) {
+        case 'Livrée':
+            titre = 'Marquer comme Livrée';
+            couleur = 'text-green-600';
+            icone = 'fa-check-circle';
+            break;
+        case 'Livrée Partiellement':
+            titre = 'Marquer comme Livrée Partiellement';
+            couleur = 'text-blue-600';
+            icone = 'fa-box-open';
+            break;
+        case 'Retournée':
+            titre = 'Retourner la Commande';
+            couleur = 'text-red-600';
+            icone = 'fa-times-circle';
+            break;
+        default:
+            titre = 'Mettre à jour l\'état';
+            couleur = 'text-gray-600';
+            icone = 'fa-edit';
+    }
+    
+    // Mettre à jour le titre de la modale
+    document.getElementById('savModalTitle').innerHTML = `
+        <i class="fas ${icone} ${couleur} mr-2"></i>${titre}
+    `;
+    
+    // Réinitialiser le formulaire
+    document.getElementById('commentaire').value = '';
+    
+    // Masquer le champ de commentaire personnalisé
+    const commentairePersonnalise = document.getElementById('commentairePersonnalise');
+    if (commentairePersonnalise) {
+        commentairePersonnalise.classList.add('hidden');
+    }
+    
+    // Gérer l'affichage des options de commentaire selon l'état
+    const optgroupLivraison = document.querySelector('.optgroup-livraison');
+    const optgroupLivraisonPartielle = document.querySelector('.optgroup-livraison-partielle');
+    const optgroupRetours = document.querySelector('.optgroup-retours');
+    const optgroupProblemes = document.querySelector('.optgroup-problemes');
+    const optgroupCommunication = document.querySelector('.optgroup-communication');
+    const optgroupAutres = document.querySelector('.optgroup-autres');
+    
+    // Masquer toutes les options par défaut
+    if (optgroupLivraison) optgroupLivraison.style.display = 'none';
+    if (optgroupLivraisonPartielle) optgroupLivraisonPartielle.style.display = 'none';
+    if (optgroupRetours) optgroupRetours.style.display = 'none';
+    if (optgroupProblemes) optgroupProblemes.style.display = 'none';
+    if (optgroupCommunication) optgroupCommunication.style.display = 'none';
+    if (optgroupAutres) optgroupAutres.style.display = 'none';
+    
+    // Afficher les options selon l'état
+    switch(etat) {
+        case 'Livrée':
+            if (optgroupLivraison) optgroupLivraison.style.display = 'block';
+            if (optgroupAutres) optgroupAutres.style.display = 'block';
+            break;
+        case 'Livrée Partiellement':
+            if (optgroupLivraisonPartielle) optgroupLivraisonPartielle.style.display = 'block';
+            if (optgroupAutres) optgroupAutres.style.display = 'block';
+            break;
+        case 'Retournée':
+            if (optgroupRetours) optgroupRetours.style.display = 'block';
+            if (optgroupProblemes) optgroupProblemes.style.display = 'block';
+            if (optgroupCommunication) optgroupCommunication.style.display = 'block';
+            if (optgroupAutres) optgroupAutres.style.display = 'block';
+            break;
+    }
+    
+    // Ouvrir le modal
+    document.getElementById('savModal').classList.remove('hidden');
+}
+
+function fermerModalSav() {
+    const actionsModal = document.getElementById('savActionsModal');
+    if (actionsModal) {
+        actionsModal.classList.add('hidden');
+    }
+    currentCommandeId = null;
+    currentCommandeIdYz = null;
+}
+
+// Gestion du select de commentaire
+const commentaireSelect = document.getElementById('commentaire');
+const commentairePersonnalise = document.getElementById('commentairePersonnalise');
+const commentaireCustom = document.getElementById('commentaireCustom');
+
+if (commentaireSelect && commentairePersonnalise && commentaireCustom) {
+    commentaireSelect.addEventListener('change', function() {
+        if (this.value === 'Autre motif - voir détails') {
+            commentairePersonnalise.classList.remove('hidden');
+            commentaireCustom.required = true;
+        } else {
+            commentairePersonnalise.classList.add('hidden');
+            commentaireCustom.required = false;
+            commentaireCustom.value = '';
+        }
+    });
+}
+
+// Gestion du formulaire SAV
+const savForm = document.getElementById('savForm');
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const savModal = document.getElementById('savModal');
+        if (savModal && !savModal.classList.contains('hidden')) {
+            savModal.classList.add('hidden');
+            savForm.reset();
+            const commentairePersonnalise = document.getElementById('commentairePersonnalise');
+            if (commentairePersonnalise) {
+                commentairePersonnalise.classList.add('hidden');
+            }
+        }
+    }
+});
+
+// ================== FIN GESTION MODALE SAV ==================
+</script>
+>>>>>>> dev_jesse
 {% endblock %} 
