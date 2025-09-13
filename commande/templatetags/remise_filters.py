@@ -275,16 +275,53 @@ def get_prix_effectif_panier(panier):
                 'est_remise': True
             }
     
-    # Aucune remise appliquée - utiliser la logique standard
-    prix_info_standard = get_prix_affichage_remise(article, quantite)
-    prix_unitaire_standard = Decimal(str(prix_info_standard['prix']))
-    
+    # Aucune remise appliquée - utiliser la logique standard MAIS exclure les calculs upsell
+    # si le panier a une remise disponible (pour éviter les conflits)
+
+    # Vérifier si l'article a des prix de remise configurés
+    article_a_remise_disponible = any([
+        getattr(article, 'prix_remise_1', None),
+        getattr(article, 'prix_remise_2', None),
+        getattr(article, 'prix_remise_3', None),
+        getattr(article, 'prix_remise_4', None)
+    ])
+
+    # Pour tous les articles sans remise appliquée, utiliser les prix upsell selon le compteur de la commande
+    from commande.templatetags.commande_filters import get_prix_upsell_avec_compteur
+
+    # Obtenir le prix selon le compteur actuel de la commande
+    commande = panier.commande
+    compteur_actuel = commande.compteur
+    prix_avec_compteur = get_prix_upsell_avec_compteur(article, compteur_actuel)
+
+    # Déterminer le libellé selon le compteur
+    if compteur_actuel > 0 and hasattr(article, 'isUpsell') and article.isUpsell:
+        libelle = f'Prix upsell niveau {compteur_actuel}'
+        couleur_classe = 'text-green-600'
+        icone = 'fas fa-arrow-up'
+    elif hasattr(article, 'has_promo_active') and article.has_promo_active:
+        libelle = 'Prix promotion'
+        couleur_classe = 'text-red-600'
+        icone = 'fas fa-fire'
+    elif article.phase == 'LIQUIDATION':
+        libelle = 'Prix liquidation'
+        couleur_classe = 'text-orange-600'
+        icone = 'fas fa-tags'
+    elif article.phase == 'EN_TEST':
+        libelle = 'Prix test'
+        couleur_classe = 'text-blue-600'
+        icone = 'fas fa-flask'
+    else:
+        libelle = 'Prix normal'
+        couleur_classe = 'text-gray-600'
+        icone = 'fas fa-tag'
+
     return {
-        'prix_unitaire': float(prix_unitaire_standard),
-        'sous_total': float(prix_unitaire_standard * quantite),
-        'libelle': prix_info_standard['libelle'],
-        'couleur_classe': prix_info_standard['couleur_classe'],
-        'icone': prix_info_standard['icone'],
+        'prix_unitaire': float(prix_avec_compteur),
+        'sous_total': float(prix_avec_compteur * quantite),
+        'libelle': libelle,
+        'couleur_classe': couleur_classe,
+        'icone': icone,
         'est_remise': False
     }
 

@@ -1,7 +1,7 @@
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from django.utils import timezone
-from .models import Commande, EtatCommande, EnumEtatCmd
+from .models import Commande, EtatCommande, EnumEtatCmd, Panier
 import logging
 
 logger = logging.getLogger(__name__)

@@ -89,6 +89,7 @@ class Commande(models.Model):
     payement  = models.CharField(default='Non payé', verbose_name="Payement", choices=PAYER_CHOICES)
     frais_livraison = models.BooleanField(default=True, verbose_name="Frais de livraison")
     Date_livraison = models.DateTimeField(null=True, blank=True, verbose_name="Date de livraison")
+    Date_paiement = models.DateTimeField(null=True, blank=True, verbose_name="Date de paiement")
 
 
     # Relation avec Envoi pour les exports journaliers  
@@ -222,7 +223,7 @@ class Commande(models.Model):
                     panier.sous_total = float(nouveau_sous_total)
                     panier.save()
                 
-                nouveau_total += nouveau_sous_total
+                nouveau_total += float(nouveau_sous_total)
         
         # Ajouter les frais de livraison au total SEULEMENT si frais_livraison = True
         if self.frais_livraison:
@@ -240,6 +241,55 @@ class Commande(models.Model):
     def sous_total_articles(self):
         """Retourne le sous-total des articles sans les frais de livraison"""
         return sum(panier.sous_total for panier in self.paniers.all())
+
+    def calculer_quantite_upsell_effective(self):
+        """
+        Calcule la quantité totale d'articles upsell en EXCLUANT SEULEMENT :
+        1. Ceux avec remise appliquée (remise_appliquer=True)
+
+        Les articles avec prix de remise disponibles mais pas appliqués participent au calcul.
+
+        Returns:
+            int: Quantité totale d'articles upsell effectifs pour le calcul
+        """
+        from django.db.models import Sum
+
+        # Compter seulement les paniers upsell SANS remise appliquée
+        total_quantite_upsell = self.paniers.filter(
+            article__isUpsell=True,
+            remise_appliquer=False  # EXCLU seulement les paniers avec remise appliquée
+        ).aggregate(total=Sum('quantite'))['total'] or 0
+
+        print(f"🔧 calculer_quantite_upsell_effective: {total_quantite_upsell} (excluant seulement les remises appliquées)")
+        return total_quantite_upsell
+
+    def recalculer_compteur_upsell(self):
+        """
+        Recalcule le compteur upsell en tenant compte des remises appliquées.
+        Cette méthode doit être appelée chaque fois qu'une remise est appliquée/désactivée.
+        """
+        total_quantite_upsell_effective = self.calculer_quantite_upsell_effective()
+        ancien_compteur = self.compteur
+
+        # Appliquer la logique : compteur = max(0, total_quantite_upsell_effective - 1)
+        if total_quantite_upsell_effective >= 2:
+            self.compteur = total_quantite_upsell_effective - 1
+        else:
+            self.compteur = 0
+
+        if ancien_compteur != self.compteur:
+            self.save(update_fields=['compteur'])
+            print(f"🔄 Compteur upsell recalculé: {ancien_compteur} → {self.compteur} (quantité effective: {total_quantite_upsell_effective})")
+
+        return self.compteur
+
+    def mettre_a_jour_compteur_si_necessaire(self):
+        """
+        Version simplifiée qui met à jour automatiquement le compteur sans signal.
+        À appeler dans les vues après changement de remise.
+        """
+        self.recalculer_compteur_upsell()
+        self.recalculer_totaux_upsell()
     
     @property
     def total_articles(self):
@@ -422,13 +472,13 @@ class Panier(models.Model):
         if self.article:
             article_en_liquidation = self.article.phase == 'LIQUIDATION'
             article_en_promotion = hasattr(self.article, 'has_promo_active') and self.article.has_promo_active
-            
+
             if (article_en_liquidation or article_en_promotion) and self.remise_appliquer:
                 motif = "liquidation" if article_en_liquidation else "promotion"
                 print(f"⚠️ PROTECTION: Article {self.article.nom} en {motif} - remise_appliquer forcé à False")
                 self.remise_appliquer = False
                 self.type_remise_appliquee = ''
-        
+
         super().save(*args, **kwargs)
     
     def __str__(self):
