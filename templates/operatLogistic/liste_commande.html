@@ -686,7 +686,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 const endDate = new Date(endDateInput.value);
                 
                 if (startDate > endDate) {
-                    alert('La date de début ne peut pas être postérieure à la date de fin.');
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Attention',
+                        text: 'La date de début ne peut pas être postérieure à la date de fin.'
+                    });
                     return false;
                 }
             }
@@ -761,7 +765,11 @@ function openSavModal(etat, commandeId = null) {
     
     // Vérifier qu'on a un ID de commande
     if (!currentCommandeId) {
-        alert('❌ Erreur: Impossible de déterminer l\'ID de la commande');
+        Swal.fire({
+            icon: 'error',
+            title: 'Erreur',
+            text: 'Impossible de déterminer l\'ID de la commande'
+        });
         return;
     }
     

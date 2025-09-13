@@ -542,7 +542,11 @@ function openSavModal(etat, commandeId = null) {
     
     // Vérifier qu'on a un ID de commande
     if (!currentCommandeId) {
-        alert('❌ Erreur: Impossible de déterminer l\'ID de la commande');
+        Swal.fire({
+            icon: 'error',
+            title: 'Erreur',
+            text: 'Impossible de déterminer l\'ID de la commande'
+        });
         return;
     }
     
@@ -928,7 +932,11 @@ function openSavActionsModal(commandeId, commandeIdYz) {
         const row = document.querySelector(`tr[data-commande-id="${commandeId}"]`);
         if (!row) {
             console.error('Commande non trouvée:', commandeId);
-            alert('Erreur: Commande non trouvée');
+            Swal.fire({
+                icon: 'error',
+                title: 'Erreur',
+                text: 'Commande non trouvée'
+            });
             return;
         }
         
@@ -976,7 +984,11 @@ function openSavActionsModal(commandeId, commandeIdYz) {
         
     } catch (error) {
         console.error('Erreur lors de l\'ouverture de la modale SAV:', error);
-        alert('Erreur lors de l\'ouverture de la modale');
+        Swal.fire({
+            icon: 'error',
+            title: 'Erreur',
+            text: 'Erreur lors de l\'ouverture de la modale'
+        });
     }
 }
 
@@ -992,7 +1004,11 @@ function selectSavAction(etat) {
     // Vérifier que nous avons un ID valide
     if (!commandeId) {
         console.error('❌ Debug - ID de commande manquant:', { currentCommandeId, commandeId });
-        alert('Erreur: Impossible de déterminer l\'ID de la commande');
+        Swal.fire({
+            icon: 'error',
+            title: 'Erreur',
+            text: 'Impossible de déterminer l\'ID de la commande'
+        });
             return;
         }
         
@@ -1045,7 +1061,11 @@ function confirmerPaiement() {
     // Récupérer la date de paiement
     const datePaiement = document.getElementById('datePaiement').value;
     if (!datePaiement) {
-        alert('⚠️ Veuillez sélectionner une date de paiement');
+        Swal.fire({
+            icon: 'warning',
+            title: 'Attention',
+            text: 'Veuillez sélectionner une date de paiement'
+        });
         return;
     }
 
@@ -1091,14 +1111,22 @@ function confirmerPaiement() {
             } else {
             // Fermer la modale de confirmation
             document.getElementById('confirmPayeModal').classList.add('hidden');
-            alert(`Erreur: ${data.error}`);
+            Swal.fire({
+                icon: 'error',
+                title: 'Erreur',
+                text: data.error
+            });
             }
         })
         .catch(error => {
         console.error('Erreur:', error);
         // Fermer la modale de confirmation
         document.getElementById('confirmPayeModal').classList.add('hidden');
-        alert('Erreur de réseau lors de la mise à jour du paiement.');
+        Swal.fire({
+            icon: 'error',
+            title: 'Erreur',
+            text: 'Erreur de réseau lors de la mise à jour du paiement.'
+        });
     });
 }
 
@@ -1145,7 +1173,11 @@ document.addEventListener('DOMContentLoaded', function() {
             // Validation du formulaire SAV
             const commentaire = document.getElementById('commentaire').value.trim();
             if (commentaire === '') {
-                alert('⚠️ Le commentaire est obligatoire');
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Attention',
+                    text: 'Le commentaire est obligatoire'
+                });
                 return;
             }
             
@@ -1153,7 +1185,11 @@ document.addEventListener('DOMContentLoaded', function() {
             if (commentaire === 'Autre motif - voir détails') {
                 const commentaireCustom = document.getElementById('commentaireCustom');
                 if (!commentaireCustom || !commentaireCustom.value.trim()) {
-                    alert('⚠️ Le commentaire personnalisé est obligatoire pour "Autre motif"');
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Attention',
+                        text: 'Le commentaire personnalisé est obligatoire pour "Autre motif"'
+                    });
                     return;
                 }
             }
@@ -1169,7 +1205,11 @@ document.addEventListener('DOMContentLoaded', function() {
             // Définir l'URL de soumission avec l'ID de la commande
             const commandeId = currentCommandeId;
             if (!commandeId) {
-                alert('❌ Erreur: Impossible de déterminer l\'ID de la commande');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erreur',
+                    text: 'Impossible de déterminer l\'ID de la commande'
+                });
                 return;
             }
             
@@ -1186,7 +1226,11 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    alert(`✅ ${data.message}`);
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Succès',
+                        text: data.message
+                    });
                     // Fermer la modale SAV
                     document.getElementById('savModal').classList.add('hidden');
                     // Fermer aussi la modale des actions SAV
@@ -1200,12 +1244,20 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     // Pas de redirection - rester sur la même page
                 } else {
-                    alert(`❌ Erreur: ${data.error}`);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Erreur',
+                        text: data.error
+                    });
                 }
             })
             .catch(error => {
                 console.error('Erreur:', error);
-                alert('❌ Une erreur est survenue lors de la soumission');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erreur',
+                    text: 'Une erreur est survenue lors de la soumission'
+                });
             });
         });
     }
@@ -1269,7 +1321,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 const endDate = new Date(endDateInput.value);
                 
                 if (startDate > endDate) {
-                    alert('La date de début ne peut pas être postérieure à la date de fin.');
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Attention',
+                        text: 'La date de début ne peut pas être postérieure à la date de fin.'
+                    });
                     return false;
                 }
             }

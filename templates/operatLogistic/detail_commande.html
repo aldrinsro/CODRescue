@@ -1701,7 +1701,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Modifier l'article
                 const quantite = parseInt(quantiteInput.value);
                 if (!quantite || quantite <= 0) {
-                    alert('Veuillez saisir une quantité valide.');
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Attention',
+                        text: 'Veuillez saisir une quantité valide.'
+                    });
                     return;
                 }
                 
@@ -1784,12 +1788,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 const quantite = parseInt(quantiteInput.value);
                 
                 if (!articleId) {
-                    alert('Veuillez sélectionner un article.');
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Attention',
+                        text: 'Veuillez sélectionner un article.'
+                    });
                     return;
                 }
                 
                 if (!quantite || quantite <= 0) {
-                    alert('Veuillez saisir une quantité valide.');
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Attention',
+                        text: 'Veuillez saisir une quantité valide.'
+                    });
                     return;
                 }
                 
