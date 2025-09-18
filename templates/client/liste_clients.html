@@ -171,6 +171,86 @@
                 </button>
             </div>
 
+            <!-- Filtres avancés -->
+            <div class="border-t pt-4">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-700 flex items-center">
+                        <i class="fas fa-filter mr-2" style="color: var(--admin-accent-color);"></i>
+                        Filtres Avancés
+                    </h3>
+                    <button type="button" onclick="toggleFilters()" class="text-sm text-gray-500 hover:text-gray-700 transition-colors">
+                        <i class="fas fa-chevron-down mr-1" id="filterToggleIcon"></i>
+                        <span id="filterToggleText">Afficher les filtres</span>
+                    </button>
+                </div>
+                
+                <div id="filtersContainer" class="hidden space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <!-- Filtre par statut -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Statut</label>
+                            <select id="statusFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-offset-2 transition-all" style="border-color: #99dddd; focus:ring-color: var(--admin-color);">
+                                <option value="">Tous les clients</option>
+                                <option value="with_orders">Avec commandes</option>
+                                <option value="without_orders">Sans commandes</option>
+                                <option value="with_errors">Avec commandes erronées</option>
+                                <option value="with_duplicates">Avec commandes doublons</option>
+                            </select>
+                        </div>
+
+                        <!-- Filtre par ville -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Ville</label>
+                            <select id="cityFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-offset-2 transition-all" style="border-color: #99dddd; focus:ring-color: var(--admin-color);">
+                                <option value="">Toutes les villes</option>
+                                <!-- Les options seront chargées dynamiquement -->
+                            </select>
+                        </div>
+
+                        <!-- Filtre par nombre de commandes -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Nombre de commandes</label>
+                            <select id="ordersCountFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-offset-2 transition-all" style="border-color: #99dddd; focus:ring-color: var(--admin-color);">
+                                <option value="">Tous</option>
+                                <option value="0">0 commande</option>
+                                <option value="1">1 commande</option>
+                                <option value="2-5">2-5 commandes</option>
+                                <option value="6-10">6-10 commandes</option>
+                                <option value="10+">Plus de 10 commandes</option>
+                            </select>
+                        </div>
+
+                        <!-- Filtre par date de création -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Date de création</label>
+                            <select id="dateFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-offset-2 transition-all" style="border-color: #99dddd; focus:ring-color: var(--admin-color);">
+                                <option value="">Toutes les dates</option>
+                                <option value="today">Aujourd'hui</option>
+                                <option value="week">Cette semaine</option>
+                                <option value="month">Ce mois</option>
+                                <option value="quarter">Ce trimestre</option>
+                                <option value="year">Cette année</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Boutons d'action pour les filtres -->
+                    <div class="flex justify-between items-center pt-4 border-t">
+                        <div class="flex gap-2">
+                            <button type="button" onclick="applyFilters()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors shadow-sm">
+                                <i class="fas fa-search mr-2"></i>Appliquer les filtres
+                            </button>
+                            <button type="button" onclick="clearFilters()" class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors shadow-sm">
+                                <i class="fas fa-times mr-2"></i>Effacer les filtres
+                            </button>
+                        </div>
+                        <div class="text-sm text-gray-500">
+                            <span id="activeFiltersCount">0</span> filtre(s) actif(s)
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Indicateur de chargement -->
             <div id="loadingIndicator" class="hidden text-center py-4">
                 <div class="inline-flex items-center">
@@ -449,8 +529,16 @@
     let currentStartRange = '{{ start_range|default:"" }}';
     let currentEndRange = '{{ end_range|default:"" }}';
     let currentSearchQuery = '{{ search_query|default:"" }}';
+    
+    // Variables pour les filtres
+    let currentFilters = {
+        status: '',
+        city: '',
+        ordersCount: '',
+        date: ''
+    };
 
-    function loadClients(searchQuery = '', page = 1, itemsPerPage = null, startRange = null, endRange = null) {
+    function loadClients(searchQuery = '', page = 1, itemsPerPage = null, startRange = null, endRange = null, filters = null) {
         const loadingIndicator = document.getElementById('loadingIndicator');
         const tableContainer = document.getElementById('clientsTableContainer');
         
@@ -464,6 +552,14 @@
         if (itemsPerPage !== null) params.append('items_per_page', itemsPerPage);
         if (startRange !== null) params.append('start_range', startRange);
         if (endRange !== null) params.append('end_range', endRange);
+        
+        // Ajouter les filtres
+        if (filters) {
+            if (filters.status) params.append('status_filter', filters.status);
+            if (filters.city) params.append('city_filter', filters.city);
+            if (filters.ordersCount) params.append('orders_count_filter', filters.ordersCount);
+            if (filters.date) params.append('date_filter', filters.date);
+        }
         
         // Faire la requête AJAX
         fetch(`{% url 'client:recherche_ajax' %}?${params.toString()}`, {
@@ -501,12 +597,16 @@
                 if (startRange !== null) currentStartRange = startRange;
                 if (endRange !== null) currentEndRange = endRange;
                 currentSearchQuery = searchQuery;
+                if (filters) currentFilters = filters;
                 
                 // Réinitialiser les gestionnaires d'événements pour les checkboxes
                 initializeCheckboxes();
                 
                 // Réattacher les event listeners pour la pagination flexible
                 attachEventListeners();
+                
+                // Mettre à jour le compteur de filtres actifs
+                updateActiveFiltersCount();
             } else if (data.html) {
                 // Fallback pour l'ancienne méthode (si la vue AJAX renvoie encore 'html')
                 tableContainer.innerHTML = data.html;
@@ -608,7 +708,93 @@
         if (searchInput) {
             searchInput.value = '';
         }
-        loadClients('', 1);
+        loadClients('', 1, null, null, null, currentFilters);
+    }
+
+    // Fonctions pour gérer les filtres
+    function toggleFilters() {
+        const filtersContainer = document.getElementById('filtersContainer');
+        const toggleIcon = document.getElementById('filterToggleIcon');
+        const toggleText = document.getElementById('filterToggleText');
+        
+        if (filtersContainer.classList.contains('hidden')) {
+            filtersContainer.classList.remove('hidden');
+            toggleIcon.classList.remove('fa-chevron-down');
+            toggleIcon.classList.add('fa-chevron-up');
+            toggleText.textContent = 'Masquer les filtres';
+        } else {
+            filtersContainer.classList.add('hidden');
+            toggleIcon.classList.remove('fa-chevron-up');
+            toggleIcon.classList.add('fa-chevron-down');
+            toggleText.textContent = 'Afficher les filtres';
+        }
+    }
+
+    function applyFilters() {
+        const filters = {
+            status: document.getElementById('statusFilter').value,
+            city: document.getElementById('cityFilter').value,
+            ordersCount: document.getElementById('ordersCountFilter').value,
+            date: document.getElementById('dateFilter').value
+        };
+        
+        const searchInput = document.getElementById('searchInput');
+        const searchQuery = searchInput ? searchInput.value : '';
+        
+        loadClients(searchQuery, 1, null, null, null, filters);
+    }
+
+    function clearFilters() {
+        // Réinitialiser tous les filtres
+        document.getElementById('statusFilter').value = '';
+        document.getElementById('cityFilter').value = '';
+        document.getElementById('ordersCountFilter').value = '';
+        document.getElementById('dateFilter').value = '';
+        
+        // Réinitialiser les variables de filtres
+        currentFilters = {
+            status: '',
+            city: '',
+            ordersCount: '',
+            date: ''
+        };
+        
+        // Recharger les clients sans filtres
+        const searchInput = document.getElementById('searchInput');
+        const searchQuery = searchInput ? searchInput.value : '';
+        loadClients(searchQuery, 1, null, null, null, currentFilters);
+    }
+
+    function updateActiveFiltersCount() {
+        const count = Object.values(currentFilters).filter(value => value !== '').length;
+        const countElement = document.getElementById('activeFiltersCount');
+        if (countElement) {
+            countElement.textContent = count;
+        }
+    }
+
+    function loadCities() {
+        // Charger les villes disponibles pour le filtre
+        fetch('{% url "client:api_cities" %}')
+            .then(response => response.json())
+            .then(data => {
+                const cityFilter = document.getElementById('cityFilter');
+                if (cityFilter && data.success) {
+                    // Vider les options existantes (sauf la première)
+                    cityFilter.innerHTML = '<option value="">Toutes les villes</option>';
+                    
+                    // Ajouter les villes
+                    data.cities.forEach(city => {
+                        const option = document.createElement('option');
+                        option.value = city;
+                        option.textContent = city;
+                        cityFilter.appendChild(option);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Erreur lors du chargement des villes:', error);
+            });
     }
 
     // Fonction pour initialiser les gestionnaires d'événements des checkboxes
@@ -872,7 +1058,7 @@
                 
                 // Attendre 500ms après la dernière frappe avant de lancer la recherche
                 searchTimeout = setTimeout(() => {
-                    loadClients(searchQuery, 1);
+                    loadClients(searchQuery, 1, null, null, null, currentFilters);
                 }, 500);
             });
         }
@@ -882,6 +1068,12 @@
         
         // Initialiser la pagination flexible
         attachEventListeners();
+        
+        // Charger les villes pour le filtre
+        loadCities();
+        
+        // Initialiser le compteur de filtres actifs
+        updateActiveFiltersCount();
         
         // Gestion de la modale des paniers
         const closeClientPaniersModal = document.getElementById('closeClientPaniersModal');

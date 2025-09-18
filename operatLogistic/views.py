@@ -14,8 +14,6 @@ from commande.models  import Commande, Envoi, EnumEtatCmd, EtatCommande, Operati
 from article.models   import Article
 
 
-
-
 @login_required
 def dashboard(request):
     """Page d'accueil de l'interface opérateur logistique."""
@@ -778,7 +776,7 @@ def livraison_partielle(request, commande_id):
             )
             
             # 3. Créer le nouvel état avec le commentaire
-            commentaire_etat = f"Livraison partielle effectuée. {commentaire}"
+            commentaire_etat = f"{commentaire}"
                 
             EtatCommande.objects.create(
                 commande=commande,

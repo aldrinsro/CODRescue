@@ -227,8 +227,8 @@
                             </span>
                         </div>
                             <div>
-                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                <i class="fas fa-clock mr-1"></i>{{ commande.Date_paiement|date:"d/m/Y " }}
+                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-900">
+                                <i class="fas fa-calendar mr-1"></i>{{ commande.Date_paiement|date:"d/m/Y " }}
                             </span>
                             </div>
                         {% else %}
@@ -892,7 +892,7 @@ function afficherContenuPanierComplet(data) {
                             <div class="flex items-center">
                                 <span class="text-lg font-bold text-gray-600">${panier.quantite}x</span>
                             </div>
-                            <div class="text-sm text-gray-600 mt-1">${panier.prix_unitaire} DH</div>
+                            <div class="text-sm text-gray-600 mt-1">${panier.prix_actuel} DH</div>
                             <div class="text-sm font-semibold text-blue-600 mt-1">${panier.sous_total} DH</div>
                         </div>
                     </div>

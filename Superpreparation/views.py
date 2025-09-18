@@ -1633,6 +1633,8 @@ def api_articles_commande(request, commande_id):
         }, status=500)
 
 
+
+
 @superviseur_preparation_required
 def api_commande_produits(request, commande_id):
     """API pour récupérer les produits d'une commande pour les étiquettes"""

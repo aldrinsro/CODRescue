@@ -127,7 +127,7 @@
                                                     </span>
                                                     
                                                     <span class="inline-flex items-center px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">
-                                                        <i class="fas fa-euro-sign mr-1"></i>{{ article_retourne.prix_unitaire_origine }} Dhs
+                                                        {{ article_retourne.prix_unitaire_origine }} DHS 
                                                     </span>
                                                 </div>
                                             </div>
@@ -220,10 +220,7 @@
                                         </div>
                                     </div>
                                     <div class="ml-6">
-                                        <a href="{% url 'operatLogistic:liste_articles_retournes' %}" 
-                                           class="inline-flex items-center px-3 py-2 bg-orange-600 text-white rounded-md text-sm hover:bg-orange-700 transition-colors">
-                                            <i class="fas fa-list mr-2"></i>Voir tous les retours
-                                        </a>
+                              
                                     </div>
                                 </div>
                             </div>

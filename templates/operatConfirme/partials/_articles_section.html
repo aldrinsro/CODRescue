@@ -59,18 +59,18 @@
                             {% endif %}
                         {% elif panier.article.phase == 'LIQUIDATION' %}
                         <span class="inline-flex items-center px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full text-xs font-medium ml-2" title="Les articles en liquidation ne peuvent pas avoir de remise">
-                            <i class="fas fa-ban mr-1"></i>Liquidation
+                            Liquidation
                         </span>
                         {% elif panier.article.has_promo_active %}
                         <span class="inline-flex items-center px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-medium ml-2" title="Les articles en promotion ne peuvent pas avoir de remise">
-                            <i class="fas fa-fire mr-1"></i>Promotion
+                            Promotion
                         </span>
                         {% endif %}
                         
                         <!-- Badge pour remise appliquée -->
                         {% if panier.remise_appliquer and panier.article.phase != 'LIQUIDATION' and not panier.article.has_promo_active %}
                         <span class="badge-remise inline-flex items-center px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium ml-2">
-                            <i class="fas fa-percent mr-1"></i>Remise appliquée
+                           Remise appliquée
                         </span>
                         {% endif %}
 
