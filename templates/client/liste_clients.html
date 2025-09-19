@@ -201,10 +201,7 @@
                         <!-- Filtre par ville -->
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Ville</label>
-                            <select id="cityFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-offset-2 transition-all" style="border-color: #99dddd; focus:ring-color: var(--admin-color);">
-                                <option value="">Toutes les villes</option>
-                                <!-- Les options seront chargées dynamiquement -->
-                            </select>
+                            <input type="text" id="cityFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-offset-2 transition-all" style="border-color: #99dddd; focus:ring-color: var(--admin-color);" placeholder="Saisir une ville...">
                         </div>
 
                         <!-- Filtre par nombre de commandes -->
@@ -750,7 +747,8 @@
         document.getElementById('cityFilter').value = '';
         document.getElementById('ordersCountFilter').value = '';
         document.getElementById('dateFilter').value = '';
-        
+
+
         // Réinitialiser les variables de filtres
         currentFilters = {
             status: '',
@@ -773,29 +771,6 @@
         }
     }
 
-    function loadCities() {
-        // Charger les villes disponibles pour le filtre
-        fetch('{% url "client:api_cities" %}')
-            .then(response => response.json())
-            .then(data => {
-                const cityFilter = document.getElementById('cityFilter');
-                if (cityFilter && data.success) {
-                    // Vider les options existantes (sauf la première)
-                    cityFilter.innerHTML = '<option value="">Toutes les villes</option>';
-                    
-                    // Ajouter les villes
-                    data.cities.forEach(city => {
-                        const option = document.createElement('option');
-                        option.value = city;
-                        option.textContent = city;
-                        cityFilter.appendChild(option);
-                    });
-                }
-            })
-            .catch(error => {
-                console.error('Erreur lors du chargement des villes:', error);
-            });
-    }
 
     // Fonction pour initialiser les gestionnaires d'événements des checkboxes
     function initializeCheckboxes() {
@@ -1070,12 +1045,15 @@
         attachEventListeners();
         
         // Charger les villes pour le filtre
-        loadCities();
-        
+        // loadCities(); // Fonction manquante - à définir si nécessaire
+
         // Initialiser le compteur de filtres actifs
         updateActiveFiltersCount();
-        
-        // Gestion de la modale des paniers
+    });
+
+
+    // Gestion de la modale des paniers
+    document.addEventListener('DOMContentLoaded', function() {
         const closeClientPaniersModal = document.getElementById('closeClientPaniersModal');
         const clientPaniersModal = document.getElementById('clientPaniersModal');
         
@@ -1109,6 +1087,7 @@
 .animate-slideInUp {
     animation: slideInUp 0.6s ease-out forwards;
 }
+
 </style>
 {% endblock extra_js %}
 {% endblock content %} 

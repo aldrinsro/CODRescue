@@ -1,60 +1,138 @@
 {% if page_obj.has_other_pages and page_obj.object_list %}
-<div class="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6 mt-6">
-    <div class="flex flex-1 justify-between sm:hidden">
+<!-- Pagination moderne avec design amélioré -->
+<div class="flex flex-col sm:flex-row items-center justify-between bg-gradient-to-r from-white to-gray-50 rounded-xl shadow-lg border border-gray-100 px-6 py-4 mt-8 transition-all duration-300 hover:shadow-xl">
+    <!-- Version mobile -->
+    <div class="flex flex-1 justify-between sm:hidden w-full mb-4 sm:mb-0">
         {% if page_obj.has_previous %}
-            <button onclick="changePage({{ page_obj.previous_page_number }})" class="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Précédent</button>
+            <button onclick="changePage({{ page_obj.previous_page_number }})"
+                    class="pagination-btn-mobile flex items-center space-x-2 px-4 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium transition-all duration-300 hover:from-blue-600 hover:to-blue-700 hover:scale-105 shadow-md hover:shadow-lg">
+                <i class="fas fa-chevron-left"></i>
+                <span>Précédent</span>
+            </button>
         {% endif %}
         {% if page_obj.has_next %}
-            <button onclick="changePage({{ page_obj.next_page_number }})" class="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Suivant</button>
+            <button onclick="changePage({{ page_obj.next_page_number }})"
+                    class="pagination-btn-mobile flex items-center space-x-2 px-4 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium transition-all duration-300 hover:from-blue-600 hover:to-blue-700 hover:scale-105 shadow-md hover:shadow-lg">
+                <span>Suivant</span>
+                <i class="fas fa-chevron-right"></i>
+            </button>
         {% endif %}
     </div>
-    <div class="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
-        <div>
-            <p class="text-sm text-gray-700">
-                Affichage de <span class="font-medium">{{ page_obj.start_index }}</span> à <span class="font-medium">{{ page_obj.end_index }}</span> sur <span class="font-medium">{{ page_obj.paginator.count }}</span> résultats
-            </p>
+
+    <!-- Version desktop -->
+    <div class="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between w-full">
+        <!-- Informations de pagination -->
+        <div class="flex items-center space-x-2">
+            <div class="flex items-center space-x-1 bg-blue-50 rounded-lg px-3 py-1.5 border border-blue-200">
+                <i class="fas fa-info-circle text-blue-500 text-sm"></i>
+                <p class="text-sm text-blue-700 font-medium">
+                    <span class="font-bold">{{ page_obj.start_index }}</span> à
+                    <span class="font-bold">{{ page_obj.end_index }}</span> sur
+                    <span class="font-bold text-blue-800">{{ page_obj.paginator.count }}</span> résultats
+                </p>
+            </div>
         </div>
-        <div>
-            <ul class="flex items-center -space-x-px">
-                {% if page_obj.has_previous %}
-                    <li>
-                        <button onclick="changePage(1)" class="px-3 py-2 leading-tight bg-white border rounded-l-lg hover:bg-gray-100" style="color: var(--admin-color); border-color: var(--admin-light-accent);">
-                            <i class="fas fa-angle-double-left"></i>
-                        </button>
-                    </li>
-                    <li>
-                        <button onclick="changePage({{ page_obj.previous_page_number }})" class="px-3 py-2 leading-tight bg-white border hover:bg-gray-100" style="color: var(--admin-color); border-color: var(--admin-light-accent);">
-                            <i class="fas fa-angle-left"></i>
-                        </button>
-                    </li>
+
+        <!-- Contrôles de pagination -->
+        <div class="flex items-center space-x-1">
+            {% if page_obj.has_previous %}
+                <!-- Première page -->
+                <button onclick="changePage(1)"
+                        class="pagination-btn w-10 h-10 flex items-center justify-center rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300 transition-all duration-300 hover:scale-110 shadow-sm hover:shadow-md">
+                    <i class="fas fa-angle-double-left text-sm"></i>
+                </button>
+                <!-- Page précédente -->
+                <button onclick="changePage({{ page_obj.previous_page_number }})"
+                        class="pagination-btn w-10 h-10 flex items-center justify-center rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300 transition-all duration-300 hover:scale-110 shadow-sm hover:shadow-md">
+                    <i class="fas fa-chevron-left text-sm"></i>
+                </button>
+            {% endif %}
+
+            <!-- Pages numérotées avec design moderne -->
+            {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                    <!-- Page actuelle -->
+                    <span class="pagination-current w-10 h-10 flex items-center justify-center rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold shadow-lg transform scale-110 border-2 border-blue-400">
+                        {{ num }}
+                    </span>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <!-- Pages adjacentes -->
+                    <button onclick="changePage({{ num }})"
+                            class="pagination-btn w-10 h-10 flex items-center justify-center rounded-lg bg-white border border-gray-200 text-gray-700 font-medium hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300 transition-all duration-300 hover:scale-110 shadow-sm hover:shadow-md">
+                        {{ num }}
+                    </button>
                 {% endif %}
-                
-                {% for num in page_obj.paginator.page_range %}
-                    {% if page_obj.number == num %}
-                        <li>
-                            <span class="px-3 py-2 leading-tight text-white border" style="background-color: var(--admin-color); border-color: var(--admin-color);">{{ num }}</span>
-                        </li>
-                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                        <li>
-                            <button onclick="changePage({{ num }})" class="px-3 py-2 leading-tight bg-white border hover:bg-gray-100" style="color: var(--admin-color); border-color: var(--admin-light-accent);">{{ num }}</button>
-                        </li>
-                    {% endif %}
-                {% endfor %}
-                
-                {% if page_obj.has_next %}
-                    <li>
-                        <button onclick="changePage({{ page_obj.next_page_number }})" class="px-3 py-2 leading-tight bg-white border hover:bg-gray-100" style="color: var(--admin-color); border-color: var(--admin-light-accent);">
-                            <i class="fas fa-angle-right"></i>
-                        </button>
-                    </li>
-                    <li>
-                        <button onclick="changePage({{ page_obj.paginator.num_pages }})" class="px-3 py-2 leading-tight bg-white border rounded-r-lg hover:bg-gray-100" style="color: var(--admin-color); border-color: var(--admin-light-accent);">
-                            <i class="fas fa-angle-double-right"></i>
-                        </button>
-                    </li>
-                {% endif %}
-            </ul>
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+                <!-- Page suivante -->
+                <button onclick="changePage({{ page_obj.next_page_number }})"
+                        class="pagination-btn w-10 h-10 flex items-center justify-center rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300 transition-all duration-300 hover:scale-110 shadow-sm hover:shadow-md">
+                    <i class="fas fa-chevron-right text-sm"></i>
+                </button>
+                <!-- Dernière page -->
+                <button onclick="changePage({{ page_obj.paginator.num_pages }})"
+                        class="pagination-btn w-10 h-10 flex items-center justify-center rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300 transition-all duration-300 hover:scale-110 shadow-sm hover:shadow-md">
+                    <i class="fas fa-angle-double-right text-sm"></i>
+                </button>
+            {% endif %}
         </div>
     </div>
 </div>
+
+<!-- Styles CSS intégrés pour la pagination -->
+<style>
+.pagination-btn {
+    position: relative;
+    overflow: hidden;
+}
+
+.pagination-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.3), transparent);
+    transition: left 0.5s;
+}
+
+.pagination-btn:hover::before {
+    left: 100%;
+}
+
+.pagination-current {
+    animation: pulse-current 2s infinite;
+}
+
+@keyframes pulse-current {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+    }
+    50% {
+        box-shadow: 0 0 0 8px rgba(59, 130, 246, 0);
+    }
+}
+
+.pagination-btn-mobile {
+    position: relative;
+    overflow: hidden;
+}
+
+.pagination-btn-mobile::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transition: left 0.5s;
+}
+
+.pagination-btn-mobile:hover::before {
+    left: 100%;
+}
+</style>
 {% endif %}

@@ -781,7 +781,7 @@ def modifier_article(request, id):
                         variantes_mises_a_jour += 1
                         couleur_nom = variante.couleur.nom if variante.couleur else "Aucune couleur"
                         pointure_nom = variante.pointure.pointure if variante.pointure else "Aucune pointure"
-                        messages.success(request, f"Quantité mise à jour pour {couleur_nom} / {pointure_nom} : {ancienne_quantite} → {variante.qte_disponible}")
+
                         
                     except (ValueError, VarianteArticle.DoesNotExist) as e:
                         messages.error(request, f"Erreur lors de la mise à jour de la variante {variante_id}: {str(e)}")
