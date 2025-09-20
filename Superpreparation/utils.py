@@ -26,10 +26,42 @@ def creer_mouvement_stock(article, quantite, type_mouvement, operateur, commande
             # Déterminer sur quelle variante appliquer le mouvement
             if variante:
                 # Mouvement sur une variante spécifique
-                variante_obj = VarianteArticle.objects.select_for_update().get(
-                    pk=variante.pk, article=article_qs
-                )
-                variantes_a_mettre_a_jour = [variante_obj]
+                try:
+                    variante_obj = VarianteArticle.objects.select_for_update().get(
+                        pk=variante.pk, article=article_qs
+                    )
+                    variantes_a_mettre_a_jour = [variante_obj]
+                except VarianteArticle.DoesNotExist:
+                    # La variante n'existe plus, utiliser la variante par défaut de l'article
+                    print(f"⚠️ ATTENTION: Variante {variante.pk} introuvable pour l'article {article_qs.id}")
+                    print(f"   Recherche d'une variante de remplacement...")
+
+                    # Chercher une variante active de l'article
+                    variante_de_remplacement = VarianteArticle.objects.select_for_update().filter(
+                        article=article_qs, actif=True
+                    ).first()
+
+                    if variante_de_remplacement:
+                        print(f"   ✅ Variante de remplacement trouvée: {variante_de_remplacement.id}")
+                        variantes_a_mettre_a_jour = [variante_de_remplacement]
+                    else:
+                        # Créer une variante par défaut si aucune n'existe
+                        print(f"   ⚠️ Aucune variante active trouvée, création d'une variante par défaut...")
+                        from article.models import Couleur, Pointure
+                        couleur_defaut, _ = Couleur.objects.get_or_create(nom="Standard", defaults={'actif': True})
+                        pointure_defaut, _ = Pointure.objects.get_or_create(pointure="Unique", defaults={'actif': True})
+
+                        variante_defaut = VarianteArticle.objects.create(
+                            article=article_qs,
+                            couleur=couleur_defaut,
+                            pointure=pointure_defaut,
+                            prix_unitaire=article_qs.prix_unitaire,
+                            prix_actuel=article_qs.prix_actuel,
+                            qte_disponible=0,
+                            actif=True
+                        )
+                        variantes_a_mettre_a_jour = [variante_defaut]
+                        print(f"   ✅ Variante par défaut créée: {variante_defaut.id}")
             else:
                 # Mouvement global : répartir sur toutes les variantes actives
                 variantes_a_mettre_a_jour = list(

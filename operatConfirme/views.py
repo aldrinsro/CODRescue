@@ -326,12 +326,34 @@ def confirmer_commande_ajax(request, commande_id):
                 article = panier.article
                 variante = panier.variante
                 quantite_commandee = panier.quantite
-                
-                # Déterminer le stock à vérifier (variante ou article principal)
+
+                # Vérifier l'intégrité de la variante référencée
                 if variante:
-                    stock_disponible = variante.qte_disponible
-                    nom_article = f"{article.nom} - {variante.couleur}/{variante.pointure}"
-                    print(f"📦 DEBUG: Variante {nom_article} (ID:{variante.id})")
+                    # Vérifier que la variante existe encore et appartient bien à l'article
+                    try:
+                        variante_verifiee = VarianteArticle.objects.get(
+                            id=variante.id,
+                            article=article,
+                            actif=True
+                        )
+                        stock_disponible = variante_verifiee.qte_disponible
+                        nom_article = f"{article.nom} - {variante_verifiee.couleur}/{variante_verifiee.pointure}"
+                        print(f"📦 DEBUG: Variante {nom_article} (ID:{variante_verifiee.id})")
+                        # Utiliser la variante vérifiée
+                        variante = variante_verifiee
+                    except VarianteArticle.DoesNotExist:
+                        # La variante n'existe plus, basculer sur l'article principal
+                        print(f"⚠️ ATTENTION: Variante {variante.id} introuvable pour l'article {article.id}")
+                        print(f"   Basculement vers l'article principal...")
+                        variante = None
+                        stock_disponible = article.qte_disponible
+                        nom_article = f"{article.nom} (article principal - variante supprimée)"
+                        print(f"📦 DEBUG: Article principal {nom_article} (ID:{article.id})")
+
+                        # Mettre à jour le panier pour supprimer la référence incorrecte
+                        panier.variante = None
+                        panier.save()
+                        print(f"🔧 DEBUG: Panier {panier.id} corrigé (variante supprimée)")
                 else:
                     stock_disponible = article.qte_disponible
                     nom_article = article.nom
@@ -349,25 +371,23 @@ def confirmer_commande_ajax(request, commande_id):
                     })
                     print(f"❌ DEBUG: Stock insuffisant pour {nom_article}")
                 else:
-                    # Décrémenter le stock via mouvements sur variantes (pas d'écriture sur Article.qte_disponible)
+                    # Décrémentation directe et simple du stock
                     ancien_stock = stock_disponible
-                    from Superpreparation.utils import creer_mouvement_stock as creer_mouvement_stock_prepa
-                    creer_mouvement_stock_prepa(
-                        article=article,
-                        quantite=quantite_commandee,
-                        type_mouvement='ajustement_neg' if quantite_commandee > 0 else 'ajustement_pos',
-                        operateur=operateur,
-                        commande=commande,
-                        commentaire=f"Décrément lors de la confirmation commande {commande.id_yz}",
-                        variante=variante,  # Passer la variante si elle existe
-                    )
-                    
-                    # Récupérer le nouveau stock
+
+                    # Décrémenter directement le stock sur la variante ou l'article
                     if variante:
+                        # Décrémenter sur la variante
+                        variante.qte_disponible = max(0, variante.qte_disponible - quantite_commandee)
+                        variante.save()
                         nouveau_stock = variante.qte_disponible
+                        print(f"✅ DEBUG: Stock variante mis à jour: {ancien_stock} → {nouveau_stock}")
                     else:
+                        # Décrémenter sur l'article principal
+                        article.qte_disponible = max(0, article.qte_disponible - quantite_commandee)
+                        article.save()
                         nouveau_stock = article.qte_disponible
-                    
+                        print(f"✅ DEBUG: Stock article mis à jour: {ancien_stock} → {nouveau_stock}")
+
                     articles_decrémentes.append({
                         'article': nom_article,
                         'ancien_stock': ancien_stock,
@@ -1645,17 +1665,26 @@ def modifier_commande(request, commande_id):
                     
                                         # Vérifier si l'article avec cette variante existe déjà dans la commande
                     if variante_id_int:
-                        variante_obj = VarianteArticle.objects.get(id=variante_id_int)
-                        panier_existant = Panier.objects.filter(
-                            commande=commande, 
-                            article=article, 
-                            variante=variante_obj
-                        ).first()
+                        try:
+                            variante_obj = VarianteArticle.objects.get(id=variante_id_int, actif=True)
+                            panier_existant = Panier.objects.filter(
+                                commande=commande,
+                                article=article,
+                                variante=variante_obj
+                            ).first()
+                            print(f"✅ Variante vérifiée: {variante_obj.id}")
+                        except VarianteArticle.DoesNotExist:
+                            print(f"❌ ERREUR: Variante {variante_id_int} introuvable ou inactive")
+                            return JsonResponse({
+                                'success': False,
+                                'error': f'La variante sélectionnée (ID: {variante_id_int}) n\'existe pas ou n\'est pas active.',
+                                'message': 'Veuillez sélectionner une variante valide ou contacter l\'administrateur.'
+                            })
                     else:
                         variante_obj = None
                         panier_existant = Panier.objects.filter(
-                            commande=commande, 
-                            article=article, 
+                            commande=commande,
+                            article=article,
                             variante__isnull=True
                         ).first()
                     
@@ -1667,10 +1696,20 @@ def modifier_commande(request, commande_id):
                         print(f"🔄 Article existant mis à jour: ID={article.id}, nouvelle quantité={panier.quantite}")
                     else:
                         # Si l'article n'existe pas, créer un nouveau panier
-                        variante_obj = None
                         if variante_id_int:
-                            variante_obj = VarianteArticle.objects.get(id=variante_id_int)
-                        
+                            try:
+                                variante_obj = VarianteArticle.objects.get(id=variante_id_int, article=article, actif=True)
+                                print(f"✅ Variante trouvée pour nouveau panier: {variante_obj.id}")
+                            except VarianteArticle.DoesNotExist:
+                                print(f"❌ ERREUR: Variante {variante_id_int} introuvable pour nouveau panier, article {article.id}")
+                                return JsonResponse({
+                                    'success': False,
+                                    'error': f'La variante sélectionnée (ID: {variante_id_int}) n\'existe pas ou n\'est pas active.',
+                                    'message': 'Impossible d\'ajouter l\'article avec une variante invalide. Veuillez sélectionner une variante valide.'
+                                })
+                        else:
+                            variante_obj = None
+
                         panier = Panier.objects.create(
                             commande=commande,
                             article=article,
