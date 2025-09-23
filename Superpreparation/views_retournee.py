@@ -20,8 +20,6 @@ from .decorators import superviseur_preparation_required
 @superviseur_preparation_required
 def liste_articles_retournes_service(request):
     """Liste des articles retournés en attente de traitement - Version Superpreparation"""
-   
-
     # Récupérer les articles retournés avec préfetch des relations
     articles_retournes = ArticleRetourne.objects.select_related(
         'commande', 'article', 'variante', 'operateur_retour'
@@ -76,14 +74,12 @@ def liste_articles_retournes_service(request):
         ]
     }
 
-    return render(request, 'Superpreparation/service/articles_retournes/liste.html', context)
+    return render(request, 'Superpreparation/articles_retournes/liste.html', context)
 
 
 @superviseur_preparation_required
 def detail_article_retourne_service(request, retour_id):
     """Détail d'un article retourné - Version Superpreparation"""
-  
-
     article_retourne = get_object_or_404(
         ArticleRetourne.objects.select_related(
             'commande', 'article', 'variante', 'operateur_retour', 'operateur_traitement'
@@ -103,7 +99,6 @@ def detail_article_retourne_service(request, retour_id):
             {'name': f'Retour #{article_retourne.id}', 'url': None}
         ]
     }
-
     return render(request, 'Superpreparation/service/articles_retournes/detail.html', context)
 
 

@@ -1,7 +1,7 @@
 from django.urls import path
 from django.shortcuts import redirect
 from . import views
-from . import service_views
+from . import views_retournee
 from .barre_recherche_globale import views as search_views
 
 app_name = 'Superpreparation'
@@ -169,14 +169,14 @@ urlpatterns = [
 
     # === NOUVELLES URLs : SERVICE - GESTION DES ARTICLES RETOURNÉS ===
     # Pages principales du service
-    path('service/articles-retournes/', service_views.liste_articles_retournes_service, name='service_liste_articles_retournes'),
-    path('service/articles-retournes/<int:retour_id>/', service_views.detail_article_retourne_service, name='service_detail_article_retourne'),
-    path('service/articles-retournes/statistiques/', service_views.statistiques_retours_service, name='service_statistiques_retours'),
+    path('service/articles-retournes/', views_retournee.liste_articles_retournes_service, name='service_liste_articles_retournes'),
+    path('service/articles-retournes/<int:retour_id>/', views_retournee.detail_article_retourne_service, name='service_detail_article_retourne'),
+    path('service/articles-retournes/statistiques/', views_retournee.statistiques_retours_service, name='service_statistiques_retours'),
 
     # APIs pour le traitement des articles retournés
-    path('service/api/traiter-article-retourne/<int:retour_id>/', service_views.traiter_article_retourne_service, name='service_traiter_article_retourne'),
-    path('service/api/reintegrer-automatique/', service_views.reintegrer_automatique_service, name='service_reintegrer_automatique'),
-    path('service/api/articles-retournes-modal/', service_views.api_articles_retournes_modal, name='service_api_articles_retournes_modal'),
+    path('service/api/traiter-article-retourne/<int:retour_id>/', views_retournee.traiter_article_retourne_service, name='service_traiter_article_retourne'),
+    path('service/api/reintegrer-automatique/', views_retournee.reintegrer_automatique_service, name='service_reintegrer_automatique'),
+    path('service/api/articles-retournes-modal/', views_retournee.api_articles_retournes_modal, name='service_api_articles_retournes_modal'),
 
 
 ]

@@ -1,0 +1,1310 @@
+{% extends 'composant_generale/Superpreparation/base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }} - YZ-CMD{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+    /* Variables CSS harmonisées avec le thème de supervision */
+    :root {
+        /* Utilisation des couleurs du thème de base Superpreparation */
+        --preparation-primary: #070F2B; /* Couleur principale navy */
+        --preparation-dark: #050A1F;   /* Plus sombre */
+        --preparation-light: #0E1D3D;  /* Plus clair */
+        --preparation-text-light: #E6F0FF; /* Texte très clair */
+        --preparation-border-accent: #1E3A8A; /* Accent (indigo) */
+        --preparation-hover-bg: #0B1733; /* Arrière-plan au survol */
+        --preparation-success: #10b981;
+        --preparation-warning: #f59e0b;
+        --preparation-error: #ef4444;
+        --preparation-info: #3b82f6;
+    }
+
+    @keyframes slideInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+    }
+    
+    @keyframes bounce {
+        0%, 20%, 53%, 80%, 100% { transform: translate3d(0,0,0); }
+        40%, 43% { transform: translate3d(0, -30px, 0); }
+        70% { transform: translate3d(0, -15px, 0); }
+        90% { transform: translate3d(0, -4px, 0); }
+    }
+    
+    .animate-slideInUp {
+        animation: slideInUp 0.6s ease-out forwards;
+        opacity: 0;
+    }
+    
+    .animate-fadeIn {
+        animation: fadeIn 0.5s ease-out forwards;
+    }
+    
+    .animate-pulse {
+        animation: pulse 2s infinite;
+    }
+    
+    .animate-bounce {
+        animation: bounce 1s;
+    }
+
+    /* Styles harmonisés avec le thème de supervision */
+    .theme-header {
+        background: linear-gradient(135deg, var(--preparation-primary) 0%, var(--preparation-light) 100%);
+        border: 2px solid var(--preparation-border-accent);
+        box-shadow: 0 4px 15px rgba(7, 15, 43, 0.3);
+        border-radius: 16px;
+        padding: 24px;
+    }
+
+    .theme-card {
+        background: white;
+        border: 2px solid var(--preparation-text-light);
+        border-radius: 16px;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        padding: 24px;
+    }
+
+    .theme-card:hover {
+        border-color: var(--preparation-border-accent);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        transform: translateY(-3px);
+    }
+
+    .theme-button-primary {
+        background: linear-gradient(135deg, var(--preparation-primary) 0%, var(--preparation-light) 100%);
+        border: 2px solid var(--preparation-border-accent);
+        color: white;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(7, 15, 43, 0.2);
+        position: relative;
+        overflow: hidden;
+        font-weight: 600;
+        padding: 12px 24px;
+        border-radius: 12px;
+    }
+
+    .theme-button-primary:hover {
+        background: linear-gradient(135deg, var(--preparation-light) 0%, var(--preparation-primary) 100%);
+        border-color: var(--preparation-border-accent);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(7, 15, 43, 0.3);
+        color: white;
+    }
+
+    .theme-button-primary:active {
+        transform: translateY(0);
+    }
+
+    .theme-button-primary::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+        transition: left 0.5s;
+    }
+
+    .theme-button-primary:hover::before {
+        left: 100%;
+    }
+
+    .theme-button-secondary {
+        background: white;
+        border: 2px solid var(--preparation-text-light);
+        color: var(--preparation-primary);
+        transition: all 0.3s ease;
+        font-weight: 600;
+        padding: 12px 24px;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .theme-button-secondary:hover {
+        background: var(--preparation-hover-bg);
+        border-color: var(--preparation-border-accent);
+        transform: translateY(-2px);
+        color: var(--preparation-primary);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    }
+
+    .theme-input {
+        border: 2px solid var(--preparation-text-light);
+        transition: all 0.3s ease;
+        border-radius: 8px;
+        padding: 8px 12px;
+    }
+
+    .theme-input:focus {
+        border-color: var(--preparation-border-accent);
+        box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+        outline: none;
+    }
+
+    /* Styles spécifiques pour les cartes de statistiques */
+    .stats-card {
+        background: white;
+        border: 2px solid var(--preparation-text-light);
+        border-radius: 16px;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        position: relative;
+        overflow: hidden;
+        padding: 24px;
+    }
+
+    .stats-card:hover {
+        border-color: var(--preparation-border-accent);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        transform: translateY(-5px);
+    }
+
+    .stats-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, var(--preparation-primary), var(--preparation-light));
+        transform: scaleX(0);
+        transition: transform 0.3s ease;
+    }
+
+    .stats-card:hover::before {
+        transform: scaleX(1);
+    }
+
+    /* Styles pour les icônes des statistiques */
+    .stats-icon {
+        background: linear-gradient(135deg, var(--preparation-primary) 0%, var(--preparation-light) 100%);
+        color: white;
+        border-radius: 50%;
+        padding: 16px;
+        transition: all 0.3s ease;
+        position: relative;
+        width: 60px;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .stats-card:hover .stats-icon {
+        background: linear-gradient(135deg, var(--preparation-light) 0%, var(--preparation-primary) 100%);
+        transform: scale(1.1) rotate(5deg);
+    }
+
+    /* Informations générales — aligné sur la page Retournées */
+    .info-section { background:#fff; border:1px solid #e5e7eb; border-radius:12px; box-shadow:0 1px 2px rgba(0,0,0,.04); padding:12px 16px; }
+    .section-title { font-weight:600; color:#111827; padding-bottom:8px; border-bottom:1px solid #f3f4f6; }
+    .info-item { display:flex; align-items:center; gap:12px; background:#f9fafb; border:1px solid #e5e7eb; border-radius:10px; padding:12px; transition:all .3s ease; opacity:0; animation: fadeInUp .5s ease-out forwards; }
+    .info-item:nth-child(1){animation-delay:.05s} .info-item:nth-child(2){animation-delay:.15s} .info-item:nth-child(3){animation-delay:.25s}
+    .info-item:hover { background:#f3f4f6; box-shadow: inset 0 0 0 1px #e5e7eb; }
+    .info-icon { width:40px; height:40px; border-radius:9999px; display:flex; align-items:center; justify-content:center; color:#fff; box-shadow:0 4px 10px rgba(0,0,0,.12); font-size:1rem; }
+    .info-icon.green { background:linear-gradient(135deg,#10b981,#059669); }
+    .info-icon.blue { background:linear-gradient(135deg,#3b82f6,#2563eb); }
+    .info-icon.purple { background:linear-gradient(135deg,#8b5cf6,#7c3aed); }
+    .info-icon.orange { background:linear-gradient(135deg,#f59e0b,#d97706); }
+    .info-section:hover { border-color: var(--preparation-border-accent); box-shadow: 0 4px 10px rgba(0,0,0,.08); }
+    @keyframes fadeInUp { from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:translateY(0)} }
+
+    /* Toast notifications */
+    .toast-container {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        pointer-events: none;
+    }
+
+    .toast {
+        background: white;
+        border: 2px solid var(--preparation-border-accent);
+        border-radius: 12px;
+        padding: 16px 20px;
+        margin-bottom: 10px;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+        transform: translateX(100%);
+        transition: all 0.3s ease;
+        pointer-events: auto;
+        max-width: 400px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .toast.show {
+        transform: translateX(0);
+    }
+
+    .toast.success {
+        border-left: 4px solid var(--preparation-success);
+    }
+
+    .toast.error {
+        border-left: 4px solid var(--preparation-error);
+    }
+
+    .toast.info {
+        border-left: 4px solid var(--preparation-info);
+    }
+
+    .toast.warning {
+        border-left: 4px solid var(--preparation-warning);
+    }
+
+    .toast::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: linear-gradient(90deg, var(--preparation-primary), var(--preparation-light));
+        transform: scaleX(0);
+        transition: transform 3s linear;
+    }
+
+    .toast.show::before {
+        transform: scaleX(1);
+    }
+
+    /* Loading spinner */
+    .loading-spinner {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 3px solid rgba(255,255,255,.3);
+        border-radius: 50%;
+        border-top-color: #fff;
+        animation: spin 1s ease-in-out infinite;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    /* Tooltip styles */
+    .tooltip {
+        position: relative;
+        cursor: help;
+    }
+
+    .tooltip::after {
+        content: attr(data-tooltip);
+        position: absolute;
+        bottom: 125%;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0,0,0,0.8);
+        color: white;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        white-space: nowrap;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+        z-index: 1000;
+    }
+
+    .tooltip::before {
+        content: '';
+        position: absolute;
+        bottom: 125%;
+        left: 50%;
+        transform: translateX(-50%);
+        border: 5px solid transparent;
+        border-top-color: rgba(0,0,0,0.8);
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+        z-index: 1000;
+    }
+
+    .tooltip:hover::after,
+    .tooltip:hover::before {
+        opacity: 1;
+        visibility: visible;
+        bottom: 135%;
+    }
+
+    /* Progress bar for operations */
+    .progress-bar {
+        width: 100%;
+        height: 4px;
+        background: #e5e7eb;
+        border-radius: 2px;
+        overflow: hidden;
+        margin-top: 8px;
+    }
+
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--preparation-primary), var(--preparation-light));
+        width: 0%;
+        transition: width 0.3s ease;
+    }
+
+    /* Empty state improvements */
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        border-radius: 16px;
+        border: 2px dashed var(--preparation-text-light);
+    }
+
+    .empty-state-icon {
+        font-size: 4rem;
+        color: var(--preparation-text-light);
+        margin-bottom: 20px;
+        animation: pulse 2s infinite;
+    }
+
+    /* Responsive improvements */
+    @media (max-width: 768px) {
+        .stats-card {
+            margin-bottom: 16px;
+        }
+        
+        .toast {
+            max-width: calc(100vw - 40px);
+            right: 0;
+        }
+    }
+
+    /* Améliorations spécifiques pour la visibilité */
+    .page-header {
+        background: linear-gradient(135deg, var(--preparation-primary) 0%, var(--preparation-light) 100%);
+        color: white;
+        border: 2px solid var(--preparation-border-accent);
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 4px 15px rgba(7, 15, 43, 0.3);
+        margin-bottom: 32px;
+    }
+
+    .section-title {
+        color: var(--preparation-primary);
+        font-size: 1.5rem;
+        font-weight: bold;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .status-badge.en-cours {
+        background: #dcfce7;
+        color: #166534;
+        border: 1px solid #bbf7d0;
+    }
+
+    .status-badge.cloture {
+        background: #f3f4f6;
+        color: #374151;
+        border: 1px solid #d1d5db;
+    }
+
+    .status-badge.disponible {
+        background: #dbeafe;
+        color: #1e40af;
+        border: 1px solid #bfdbfe;
+    }
+
+    .status-badge.existant {
+        background: #fef2f2;
+        color: #dc2626;
+        border: 1px solid #fecaca;
+    }
+
+    .status-badge.livree-partiellement {
+        background: #fef3c7;
+        color: #d97706;
+        border: 1px solid #fde68a;
+    }
+
+    .info-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 16px;
+        background: #f8fafc;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        transition: all 0.3s ease;
+    }
+
+    .info-item:hover {
+        background: #f1f5f9;
+        border-color: var(--preparation-border-accent);
+        transform: translateY(-2px);
+    }
+
+    .info-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        color: white;
+    }
+
+    .info-icon.blue {
+        background: linear-gradient(135deg, var(--preparation-primary) 0%, var(--preparation-light) 100%);
+    }
+
+    .info-icon.green {
+        background: linear-gradient(135deg, #059669 0%, var(--preparation-success) 100%);
+    }
+
+    .info-icon.purple {
+        background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%);
+    }
+
+    .info-icon.orange {
+        background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+    }
+
+    /* Styles pour le tableau */
+    .table-container {
+        background: white;
+        border: 2px solid var(--preparation-text-light);
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+    }
+
+    .table-container:hover {
+        border-color: var(--preparation-border-accent);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    }
+
+    .table-header {
+        background: linear-gradient(135deg, var(--preparation-primary) 0%, var(--preparation-light) 100%);
+        color: white;
+    }
+
+    .table-row {
+        transition: all 0.3s ease;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .table-row:hover {
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        transform: translateX(4px);
+    }
+
+    .table-cell {
+        padding: 16px;
+        vertical-align: middle;
+    }
+
+    /* Styles pour les boutons d'action */
+    .action-button {
+        background: linear-gradient(135deg, var(--preparation-primary) 0%, var(--preparation-light) 100%);
+        border: 2px solid var(--preparation-border-accent);
+        color: white;
+        transition: all 0.3s ease;
+        font-weight: 600;
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .action-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(7, 15, 43, 0.3);
+        color: white;
+    }
+
+    /* Styles pour les badges d'état */
+    .etat-badge {
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .etat-badge.livree-partiellement {
+        background: #fef3c7;
+        color: #d97706;
+        border: 1px solid #fde68a;
+    }
+
+    .etat-badge.urgente {
+        background: #fee2e2;
+        color: #dc2626;
+        border: 1px solid #fecaca;
+        animation: pulse 2s infinite;
+    }
+
+    /* Compact table rules and min-width per column for readability */
+    .compact-page #cmdTable { font-size: 12px; }
+    .compact-page #cmdTable th,
+    .compact-page #cmdTable td { padding: 6px 8px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
+    .compact-page #cmdTable th:nth-child(1), .compact-page #cmdTable td:nth-child(1) { width: 90px; min-width: 90px; }   /* N° Commande */
+    .compact-page #cmdTable th:nth-child(2), .compact-page #cmdTable td:nth-child(2) { width: 100px; min-width: 100px; } /* N° Ext. */
+    .compact-page #cmdTable th:nth-child(3), .compact-page #cmdTable td:nth-child(3) { width: 160px; min-width: 160px; } /* Client */
+    .compact-page #cmdTable th:nth-child(4), .compact-page #cmdTable td:nth-child(4) { width: 110px; min-width: 110px; } /* Tél. */
+    .compact-page #cmdTable th:nth-child(5), .compact-page #cmdTable td:nth-child(5) { width: 120px; min-width: 120px; } /* Ville Clt */
+    .compact-page #cmdTable th:nth-child(6), .compact-page #cmdTable td:nth-child(6) { width: 140px; min-width: 140px; } /* Ville & Région */
+    .compact-page #cmdTable th:nth-child(7), .compact-page #cmdTable td:nth-child(7) { width: 110px; min-width: 110px; } /* Date début */
+    .compact-page #cmdTable th:nth-child(8), .compact-page #cmdTable td:nth-child(8) { width: 100px; min-width: 100px; } /* Total */
+    .compact-page #cmdTable th:nth-child(9), .compact-page #cmdTable td:nth-child(9) { width: 100px; min-width: 100px; } /* État */
+    .compact-page #cmdTable th:nth-child(10), .compact-page #cmdTable td:nth-child(10) { width: 110px; min-width: 110px; }/* Panier */
+    .compact-page #cmdTable th:nth-child(11), .compact-page #cmdTable td:nth-child(11) { width: 100px; min-width: 100px; }/* Actions */
+
+    /* Styles pour le bouton Articles retournés */
+    .articles-button {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease-in-out;
+    }
+
+    .articles-button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(234, 88, 12, 0.15);
+    }
+
+    .articles-badge {
+        animation: bounce 2s infinite;
+    }
+
+    .articles-badge-pulse {
+        animation: pulse 2s infinite;
+    }
+
+    @media (max-width: 640px) {
+        .articles-button span:not(.articles-badge) {
+            display: none;
+        }
+        .articles-button i {
+            margin-right: 0 !important;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="main-content transition-all duration-300 compact-page" id="mainContent">
+    <!-- Toast notifications container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- En-tête de la page -->
+    <div class="page-header">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center">
+        <div>
+            <h1 class="text-3xl font-bold flex items-center mb-2">
+                    <i class="fas fa-truck-loading mr-3 text-yellow-300"></i>
+                    {{ page_title|default:'Suivi - Commandes Livrées Partiellement' }}
+            </h1>
+                <p class="text-white opacity-90">{{ page_subtitle|default:'Suivi et gestion des commandes livrées partiellement' }}</p>
+            </div>
+            <div class="flex items-center gap-6 mt-4 md:mt-0">
+                <div class="text-center">
+                    <div class="text-3xl font-bold text-white">{{ stats.total_commandes|default:0 }}</div>
+                    <div class="text-sm text-white opacity-80">Commandes partiellement livrées</div>
+                </div>
+                <div class="text-center border-l border-white/30 pl-6 ml-6">
+                    <div class="text-3xl font-bold text-white">{{ stats.commandes_urgentes|default:0 }}</div>
+                    <div class="text-sm text-white opacity-80">Urgentes</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <!-- Total des commandes -->
+        <div class="stats-card animate-slideInUp" style="animation-delay: 0.1s;">
+                <div class="flex items-center">
+                <div class="stats-icon">
+                        <i class="fas fa-truck text-2xl"></i>
+                    </div>
+                    <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">Livrées Partiellement</p>
+                    <p class="text-3xl font-bold text-gray-900">{{ stats.total_commandes|default:0 }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Valeur totale -->
+        <div class="stats-card animate-slideInUp" style="animation-delay: 0.2s;">
+                <div class="flex items-center">
+                <div class="stats-icon">
+                        <i class="fas fa-coins text-2xl"></i>
+                    </div>
+                    <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">Valeur Totale</p>
+                    <p class="text-3xl font-bold text-gray-900">{{ stats.valeur_totale|floatformat:0|default:0 }} DH</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Commandes urgentes -->
+        <div class="stats-card animate-slideInUp" style="animation-delay: 0.3s;">
+                <div class="flex items-center">
+                <div class="stats-icon">
+                        <i class="fas fa-exclamation-triangle text-2xl"></i>
+                    </div>
+                    <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">Nombres d'articles defecteux </p>
+                    <p class="text-3xl font-bold text-gray-900">{{ stats.commandes_urgentes|default:0 }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Articles retournés à traiter -->
+        <div class="stats-card animate-slideInUp cursor-pointer hover:shadow-lg transition-all duration-200" style="animation-delay: 0.4s;" onclick="ouvrirModaleArticlesRetournes()">
+                <div class="flex items-center">
+                <div class="stats-icon bg-orange-500">
+                        <i class="fas fa-undo text-2xl"></i>
+                    </div>
+                    <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">Articles à Traiter</p>
+                    <p class="text-3xl font-bold text-orange-600">{{ articles_retournes_stats.total_en_attente|default:0 }}</p>
+                    <p class="text-xs text-gray-500">Cliquer pour voir</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+   
+
+    <!-- Barre de recherche intelligente -->
+{% include 'Superpreparation/includes/smart-search-toolbar.html' %}
+        
+    <div class="flex justify-end mb-2">
+        <button id="columnToggle" onclick="toggleColumnVisibility()" 
+                class="inline-flex items-center px-3 py-2 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium rounded transition-colors h-10" title="Sélectionner les colonnes">
+            <i class="fas fa-columns mr-2 text-gray-500"></i>
+            Sélectionner les colonnes
+        </button>
+    </div>
+
+    <!-- Tableau des commandes -->
+    <div class="table-container">
+        <div class="overflow-x-auto" id="tableScrollContainer">
+            <table id="cmdTable" class="min-w-full text-xs sm:text-sm" style="table-layout:auto;">
+                <thead class="table-header sticky top-0 z-10">
+                    <tr>
+                        <th class="table-cell text-left text-xs font-medium text-white uppercase tracking-wider">Articles & Variantes</th>
+                        <th class="table-cell text-left text-xs font-medium text-white uppercase tracking-wider">N° Commande</th>
+                        <th class="table-cell text-left text-xs font-medium text-white uppercase tracking-wider">Client</th>
+                        <th class="table-cell text-left text-xs font-medium text-white uppercase tracking-wider">Tél.</th>
+                        <th class="table-cell text-left text-xs font-medium text-white uppercase tracking-wider">Ville Clt</th>
+                        <th class="table-cell text-left text-xs font-medium text-white uppercase tracking-wider">Ville & Région</th>
+                        <th class="table-cell text-left text-xs font-medium text-white uppercase tracking-wider">Date de Retour </th>
+                        <th class="table-cell text-left text-xs font-medium text-white uppercase tracking-wider">Raison </th>
+                        <th class="table-cell text-left text-xs font-medium text-white uppercase tracking-wider">Prix à la commande </th>
+                        <th class="table-cell text-left text-xs font-medium text-white uppercase tracking-wider">État</th>
+                        <th class="table-cell text-center text-xs font-medium text-white uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% if commandes_livrees_partiellement %}
+                        {% for commande in commandes_livrees_partiellement %}
+                        <tr class="table-row commande-row" 
+                            data-id-yz="{{ commande.id_yz }}"
+                            data-num-cmd="{{ commande.num_cmd|default:'' }}"
+                            data-client="{{ commande.client.prenom }} {{ commande.client.nom }}"
+                            data-phone="{{ commande.client.numero_tel|default:'' }}"
+                            data-email="{{ commande.client.email|default:'' }}"
+                            data-ville-client="{{ commande.ville_init|default:'' }}"
+                            data-ville-region="{% if commande.ville %}{{ commande.ville.nom }} {{ commande.ville.region.nom_region }}{% endif %}"
+                            data-adresse="{% if commande.client.adresse %}{{ commande.client.adresse }}{% endif %}"
+                            data-date-livraison="{% if commande.etat_actuel %}{{ commande.etat_actuel.date_debut|date:'d/m/Y' }}{% endif %}"
+                            data-total="{{ commande.total_cmd }}"
+                            data-etat="Livrée partiellement"
+                            data-operateur="{% if commande.etat_actuel.operateur %}{{ commande.etat_actuel.operateur.nom }} {{ commande.etat_actuel.operateur.prenom }}{% endif %}">
+                            
+                            <td class="table-cell whitespace-nowrap text-sm font-medium text-gray-900">
+                                {{ commande.id_yz }}
+                            </td>
+                            <td class="table-cell whitespace-nowrap text-sm text-gray-500">{{ commande.num_cmd|default:"-" }}</td>
+                            
+                            <!-- Colonne Client -->
+                            <td class="table-cell whitespace-nowrap">
+                                <div class="text-sm font-medium text-gray-900">{{ commande.client.prenom }} {{ commande.client.nom }}</div>
+                                {% if commande.client.email %}
+                                <div class="text-xs text-gray-500">{{ commande.client.email }}</div>
+                                {% endif %}
+                            </td>
+                            
+                            <!-- Colonne Téléphone -->
+                            <td class="table-cell whitespace-nowrap">
+                                {% if commande.client.numero_tel %}
+                                <div class="text-sm text-gray-900 font-medium">
+                                    <i class="fas fa-phone mr-1"></i>
+                                    {{ commande.client.numero_tel }}
+                                </div>
+                                {% else %}
+                                <div class="text-sm text-gray-500">Non renseigné</div>
+                                {% endif %}
+                            </td>
+                            
+                            <!-- Colonne Ville Client -->
+                            <td class="table-cell whitespace-nowrap text-sm">
+                                {% if commande.ville_init and commande.ville_init != '' %}
+                                    <div style="color: var(--preparation-primary);" class="font-medium">{{ commande.ville_init }}</div>
+                                {% else %}
+                                    <div style="color: var(--preparation-primary);">Non spécifiée</div>
+                                {% endif %}
+                            </td>
+                            
+                            <!-- Colonne Ville & Région (ville de livraison) -->
+                            <td class="table-cell whitespace-nowrap">
+                                {% if commande.ville %}
+                                    <div class="text-sm text-gray-900">{{ commande.ville.nom }}</div>
+                                    <div class="text-xs text-gray-500">{{ commande.ville.region.nom_region }}</div>
+                                {% else %}
+                                    <div class="text-sm text-gray-500">Non définie</div>
+                                {% endif %}
+                            </td>
+                            
+                            <td class="table-cell whitespace-nowrap">
+                                {% with etat_actuel=commande.etat_actuel %}
+                                    {% if etat_actuel %}
+                                        <div class="text-sm text-gray-900">{{ etat_actuel.date_debut|date:"d/m/Y" }}</div>
+                                        <div class="text-xs text-gray-500">{{ etat_actuel.date_debut|date:"H:i" }}</div>
+                                    {% else %}
+                                        <div class="text-sm text-gray-500">Non définie</div>
+                                    {% endif %}
+                                {% endwith %}
+                            </td>
+                            
+                            <td class="table-cell whitespace-nowrap">
+                                <div class="text-sm font-bold text-green-600">{{ commande.total_cmd|floatformat:2 }} DH</div>
+                            </td>
+
+                            <td class="table-cell whitespace-nowrap">
+                                <span class="etat-badge livree-partiellement">
+                                    <i class="fas fa-truck mr-1"></i>
+                                    Livrée partiellement
+                                </span>
+                            </td>
+                            
+                            <td class="table-cell whitespace-nowrap text-center">
+                                <a href="{% url 'Superpreparation:detail_prepa' commande.pk %}"
+                                   class="action-button"
+                                   title="Voir le panier de cette commande">
+                                    <i class="fas fa-shopping-cart"></i>
+                                    {{ commande.paniers.count }} article{{ commande.paniers.count|pluralize }}
+                                </a>
+                            </td>
+
+                            <!-- Nouvelle colonne Actions -->
+                            <td class="table-cell whitespace-nowrap text-center">
+                                <div class="flex justify-center space-x-2">
+                                    <button onclick="ouvrirModaleArticlesRetournes()"
+                                            class="action-button articles-button relative bg-orange-50 text-orange-600 hover:bg-orange-100 border border-orange-200 hover:border-orange-300 transition-all duration-200"
+                                            title="Voir les articles retournés à traiter ({{ articles_retournes_stats.total_en_attente }} en attente)">
+                                        <i class="fas fa-undo mr-1"></i>
+                                        <span class="hidden sm:inline">Articles</span>
+                                        {% if articles_retournes_stats.total_en_attente > 0 %}
+                                        <span class="articles-badge absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-600 rounded-full min-w-[20px] h-5">
+                                            {{ articles_retournes_stats.total_en_attente }}
+                                        </span>
+                                        {% endif %}
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="11" class="table-cell whitespace-nowrap text-center">
+                                <div class="empty-state">
+                                    <div class="empty-state-icon">
+                                        <i class="fas fa-truck"></i>
+                                    </div>
+                                    <h3 class="text-xl font-medium text-gray-800 mb-2">Aucun articles Retournées pour l'instant </h3>
+                                    <p class="text-gray-600 mb-4">Toutes les commandes ont été livrées complètement ou ne sont pas encore livrées.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Pagination (client) -->
+    <div data-superprep-pagination data-items-selector="tbody tr" data-container-selector="table" data-per-page="25"></div>
+</div>
+
+<script>
+// Info section repliable avec persistance (aligné Retournées)
+document.addEventListener('DOMContentLoaded', function() {
+    const toggle = document.getElementById('infoSectionToggle');
+    const body = document.getElementById('infoSectionBody');
+    const chevron = document.getElementById('infoSectionChevron');
+    const STORAGE_KEY = 'yz.infoSection.livrees_partiellement.open';
+    if (!toggle || !body || !chevron) return;
+
+    function setOpen(open) {
+        if (open) {
+            body.classList.remove('hidden');
+            toggle.setAttribute('aria-expanded', 'true');
+            chevron.style.transform = 'rotate(0deg)';
+            localStorage.setItem(STORAGE_KEY, '1');
+        } else {
+            body.classList.add('hidden');
+            toggle.setAttribute('aria-expanded', 'false');
+            chevron.style.transform = 'rotate(180deg)';
+            localStorage.setItem(STORAGE_KEY, '0');
+        }
+    }
+
+    const saved = localStorage.getItem(STORAGE_KEY);
+    setOpen(saved !== '0');
+
+    toggle.addEventListener('click', () => {
+        const isOpen = toggle.getAttribute('aria-expanded') === 'true';
+        setOpen(!isOpen);
+    });
+});
+    // Toast notification system
+    function showToast(message, type = 'info', duration = 4000) {
+        const toastContainer = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        
+        const icon = {
+            success: 'fas fa-check-circle',
+            error: 'fas fa-exclamation-circle',
+            info: 'fas fa-info-circle',
+            warning: 'fas fa-exclamation-triangle'
+        }[type];
+        
+        toast.innerHTML = `
+            <div class="flex items-center">
+                <i class="${icon} mr-3 text-lg"></i>
+                <div class="flex-1">
+                    <p class="font-medium">${message}</p>
+                </div>
+                <button onclick="this.parentElement.parentElement.remove()" class="ml-3 text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+        
+        toastContainer.appendChild(toast);
+        
+        // Show animation
+        setTimeout(() => toast.classList.add('show'), 100);
+        
+        // Auto remove
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+        }, duration);
+    }
+
+    // Start auto-refresh when page loads
+document.addEventListener('DOMContentLoaded', function() {
+        // Welcome toast removed
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        if (e.ctrlKey || e.metaKey) {
+            switch(e.key) {
+                case 'r':
+                    e.preventDefault();
+                    window.location.reload();
+                    showToast('Page actualisée !', 'info');
+                    break;
+            }
+        }
+});
+</script>
+
+<!-- Modale des Articles Retournés à Traiter -->
+<div id="modaleArticlesRetournes" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-10 mx-auto p-6 border w-full max-w-6xl shadow-lg rounded-lg bg-white">
+        <div class="flex justify-between items-start mb-6">
+            <div>
+                <h3 class="text-xl font-bold text-gray-900 flex items-center">
+                    <i class="fas fa-undo mr-2 text-orange-600"></i>
+                    Service - Articles Retournés à Traiter
+                </h3>
+                <p class="text-sm text-gray-600 mt-1">Articles retournés lors de livraisons partielles en attente de traitement</p>
+            </div>
+            <button onclick="fermerModaleArticlesRetournes()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                <i class="fas fa-times text-2xl"></i>
+            </button>
+        </div>
+
+        <!-- Contenu de la modale -->
+        <div id="contenuArticlesRetournes" class="space-y-4">
+            <div class="text-center py-8">
+                <i class="fas fa-spinner fa-spin text-3xl text-blue-600 mb-4"></i>
+                <p class="text-gray-600">Chargement des articles retournés...</p>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex justify-between items-center mt-6 pt-4 border-t border-gray-200">
+            <button onclick="fermerModaleArticlesRetournes()" class="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors">
+                <i class="fas fa-times mr-2"></i>Fermer
+            </button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<!-- Script de recherche intelligente -->
+<script src="{% static 'js/Superpreparation/Suivi_des_Commandes/suivi-commandes-smart-search.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof initSuiviCommandesSearch === 'function') {
+        initSuiviCommandesSearch('livrees_partiellement');
+    }
+});
+
+// === GESTION DES ARTICLES RETOURNÉS ===
+
+function ouvrirModaleArticlesRetournes() {
+    console.log('Ouverture de la modale des articles retournés');
+    document.getElementById('modaleArticlesRetournes').classList.remove('hidden');
+    chargerArticlesRetournes();
+}
+
+function fermerModaleArticlesRetournes() {
+    console.log('Fermeture de la modale des articles retournés');
+    document.getElementById('modaleArticlesRetournes').classList.add('hidden');
+}
+
+function chargerArticlesRetournes() {
+    console.log('Chargement des articles retournés...');
+    const contenu = document.getElementById('contenuArticlesRetournes');
+
+    // Afficher le spinner
+    contenu.innerHTML = `
+        <div class="text-center py-8">
+            <i class="fas fa-spinner fa-spin text-3xl text-blue-600 mb-4"></i>
+            <p class="text-gray-600">Chargement des articles retournés...</p>
+        </div>
+    `;
+
+    fetch('{% url "Superpreparation:service_api_articles_retournes_modal" %}', {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                afficherArticlesRetournes(data.articles);
+            } else {
+                contenu.innerHTML = `
+                    <div class="text-center py-8 text-red-600">
+                        <i class="fas fa-exclamation-triangle text-3xl mb-4"></i>
+                        <p>Erreur: ${data.error}</p>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            contenu.innerHTML = `
+                <div class="text-center py-8 text-red-600">
+                    <i class="fas fa-exclamation-triangle text-3xl mb-4"></i>
+                    <p>Erreur de réseau lors du chargement</p>
+                </div>
+            `;
+        });
+}
+
+function afficherArticlesRetournes(articles) {
+    const contenu = document.getElementById('contenuArticlesRetournes');
+
+    if (articles.length === 0) {
+        contenu.innerHTML = `
+            <div class="text-center py-8">
+                <i class="fas fa-check-circle text-3xl text-green-600 mb-4"></i>
+                <p class="text-gray-600">Aucun article retourné en attente de traitement</p>
+            </div>
+        `;
+        return;
+    }
+
+    let html = `
+        <div class="mb-4 p-3 bg-blue-50 rounded-lg">
+            <div class="flex items-center justify-between">
+                <span class="text-sm text-blue-800">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    ${articles.length} article(s) retourné(s) en attente de traitement
+                </span>
+                <div class="text-xs text-blue-600">
+                    Affichage des ${Math.min(articles.length, 50)} premiers résultats
+                </div>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Article & Variante</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Commande</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantité</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Retour</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Raison</th>
+                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+    `;
+
+    articles.forEach(article => {
+        const canReintegrate = article.peut_etre_reintegre;
+
+        html += `
+            <tr class="hover:bg-gray-50">
+                <td class="px-4 py-4 whitespace-nowrap">
+                    <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                        <div class="text-sm font-medium text-gray-900 mb-1">${article.article_nom}</div>
+                        <div class="text-xs text-gray-500 mb-2">Réf: ${article.article_reference}</div>
+                        ${article.variante_info.has_variante ? `
+                            <div class="border-t border-gray-200 pt-2 mt-2">
+                                <div class="text-xs font-medium text-gray-700 mb-1">Variante associée :</div>
+                                <div class="space-y-1">
+                                    ${article.variante_info.reference_variante ? `
+                                        <div class="text-xs text-gray-600">
+                                            <i class="fas fa-barcode mr-1"></i>Réf: ${article.variante_info.reference_variante}
+                                        </div>
+                                    ` : ''}
+                                    <div class="flex flex-wrap gap-1">
+                                        ${article.variante_info.couleur ? `
+                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                <i class="fas fa-palette mr-1"></i>${article.variante_info.couleur}
+                                            </span>
+                                        ` : ''}
+                                        ${article.variante_info.pointure ? `
+                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                <i class="fas fa-ruler mr-1"></i>Taille ${article.variante_info.pointure}
+                                            </span>
+                                        ` : ''}
+                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${article.variante_info.stock_disponible > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                                            <i class="fas fa-boxes mr-1"></i>Stock: ${article.variante_info.stock_disponible}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        ` : `
+                            <div class="border-t border-gray-200 pt-2 mt-2">
+                                <div class="text-xs text-red-400 italic flex items-center">
+                                    <i class="fas fa-exclamation-triangle mr-1"></i>
+                                    Aucune variante associée
+                                </div>
+                            </div>
+                        `}
+                    </div>
+                </td>
+                <td class="px-4 py-4 whitespace-nowrap">
+                    <div class="text-sm font-medium text-gray-900">${article.commande_info.id_yz}</div>
+                    <div class="text-xs text-gray-500">${article.commande_info.num_cmd}</div>
+                </td>
+                <td class="px-4 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">${article.commande_info.client_nom}</div>
+                </td>
+                <td class="px-4 py-4 whitespace-nowrap">
+                    <div class="text-sm font-bold text-orange-600">${article.quantite_retournee}x</div>
+                    <div class="text-xs text-gray-500">${article.prix_unitaire} DH</div>
+                </td>
+                <td class="px-4 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">${article.date_retour}</div>
+                </td>
+                <td class="px-4 py-4">
+                    <div class="text-sm text-gray-900 max-w-xs truncate" title="${article.raison_retour}">
+                        ${article.raison_retour}
+                    </div>
+                </td>
+                <td class="px-4 py-4 whitespace-nowrap text-center">
+                    <div class="flex justify-center space-x-2">
+                        ${canReintegrate ? `
+                            <button onclick="traiterArticle(${article.id}, 'reintegrer_stock')"
+                                    class="text-green-600 hover:text-green-900 transition-colors"
+                                    title="Réintégrer en stock">
+                                <i class="fas fa-check-circle"></i>
+                            </button>
+                        ` : ''}
+                        <button onclick="traiterArticle(${article.id}, 'marquer_defectueux')"
+                                class="text-red-600 hover:text-red-900 transition-colors"
+                                title="Marquer défectueux">
+                            <i class="fas fa-times-circle"></i>
+                        </button>
+                        <button onclick="traiterArticle(${article.id}, 'marquer_traite')"
+                                class="text-blue-600 hover:text-blue-900 transition-colors"
+                                title="Marquer traité">
+                            <i class="fas fa-check"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    });
+
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+
+    contenu.innerHTML = html;
+}
+
+function traiterArticle(articleId, action) {
+    const actions = {
+        'reintegrer_stock': 'réintégrer en stock',
+        'marquer_defectueux': 'marquer comme défectueux',
+        'marquer_traite': 'marquer comme traité'
+    };
+
+    if (!confirm(`Êtes-vous sûr de vouloir ${actions[action]} cet article ?`)) {
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('action', action);
+    formData.append('commentaire', `Traitement via Superpreparation - ${new Date().toLocaleString()}`);
+
+    const url = `{% url "Superpreparation:service_traiter_article_retourne" 0 %}`.replace('0', articleId);
+    console.log('Fetching URL:', url);
+
+    fetch(url, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': '{{ csrf_token }}'
+        }
+    })
+    .then(response => {
+        console.log('Response status:', response.status);
+        console.log('Response headers:', response.headers.get('content-type'));
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            showToast(data.message, 'success');
+            // Recharger les articles
+            chargerArticlesRetournes();
+            // Mettre à jour le compteur dans le card
+            location.reload();
+        } else {
+            showToast(`Erreur: ${data.error}`, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showToast('Erreur de réseau lors du traitement', 'error');
+    });
+}
+
+function reintegrerTousLesArticles() {
+    if (!confirm('Êtes-vous sûr de vouloir réintégrer automatiquement tous les articles éligibles ?')) {
+        return;
+    }
+
+    fetch('{% url "Superpreparation:service_reintegrer_automatique" %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.message, 'success');
+            // Recharger les articles
+            chargerArticlesRetournes();
+            // Recharger la page pour mettre à jour les statistiques
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            showToast(`Erreur: ${data.error}`, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showToast('Erreur de réseau lors de la réintégration automatique', 'error');
+    });
+}
+
+// Fermer la modale en cliquant en dehors
+document.addEventListener('click', function(e) {
+    const modale = document.getElementById('modaleArticlesRetournes');
+    if (e.target === modale) {
+        fermerModaleArticlesRetournes();
+    }
+});
+
+// Fermer avec Échap
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const modale = document.getElementById('modaleArticlesRetournes');
+        if (!modale.classList.contains('hidden')) {
+            fermerModaleArticlesRetournes();
+        }
+    }
+});
+</script>
+{% endblock %}
