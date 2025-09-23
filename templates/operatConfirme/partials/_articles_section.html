@@ -67,12 +67,7 @@
                         </span>
                         {% endif %}
                         
-                        <!-- Badge pour remise appliquée -->
-                        {% if panier.remise_appliquer and panier.article.phase != 'LIQUIDATION' and not panier.article.has_promo_active %}
-                        <span class="badge-remise inline-flex items-center px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium ml-2">
-                           Remise appliquée
-                        </span>
-                        {% endif %}
+              
 
                     </div>
                     <div class="text-sm text-gray-500">
