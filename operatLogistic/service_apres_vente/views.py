@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.utils import timezone
 from django.http import JsonResponse
-from commande.models import Commande, EtatCommande, EnumEtatCmd, Envoi, Operation
+from commande.models import Commande, EtatCommande, EnumEtatCmd
 from django.db import transaction
 from datetime import datetime
 import json

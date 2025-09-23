@@ -855,6 +855,7 @@ def livraison_partielle(request, commande_id):
                             from commande.templatetags.remise_filters import get_prix_effectif_panier
                             prix_info_retour = get_prix_effectif_panier(panier)
                             prix_unitaire_retour = prix_info_retour['prix_unitaire']
+
                             
                             # Créer l'enregistrement de retour complet
                             article_retourne = ArticleRetourne.objects.create(
@@ -904,6 +905,7 @@ def livraison_partielle(request, commande_id):
                     'statut_retour': article_retourne.statut_retour,
                     'date_retour': article_retourne.date_retour.isoformat()
                 })
+        
             
             # 6. Recalculer le compteur upsell après livraison partielle
             from django.db.models import Sum
@@ -1065,6 +1067,125 @@ def livraison_partielle(request, commande_id):
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
 
+
+
+
+@login_required
+@require_POST
+def marque_retournee(request, commande_id):
+    """Gérer une livraison partielle avec sélection d'articles."""
+
+    try : 
+        operateur = Operateur.objects.get(user=request.user,type_operateur='LOGISTIQUE')
+    except Operateur.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Profil d\'opérateur logistique non trouvé.'})
+    
+    try : 
+        commande= get_object_or_404(Commande,id=commande_id)
+
+         # Vérifier que la commande est bien en cours de livraison
+        if not commande.etat_actuel or commande.etat_actuel.enum_etat.libelle != 'Mise en distribution':
+            return JsonResponse({
+                'success': False, 
+                'error': 'Cette commande n\'est pas en Mise en distribution. Seules les commandes en Mise en distribution peuvent être livrées partiellement.'
+            })
+        
+        articles_retournees = request.POST.get('articles_retournes','[]')
+        
+        commentaire = request.POST.get('commentaire', '').strip()
+        
+        if not commentaire :
+            return JsonResponse({'success': False, 'error': 'Un commentaire est obligatoire pour expliquer la livraison partielle.'})
+        
+        # 1. Terminer l'état "En cours de livraison" actuel
+        etat_actuel= commande.etat_actuel
+        etat_actuel.terminer_etat(operateur)
+
+
+        etat_retournee, _ = EnumEtatCmd.objects.get_or_create(
+            libelle='Retournée',
+            defaults={'ordre': 32, 'couleur': '#f73b3b'}
+        )
+            
+        #3. Créer le nouvel état avec le commentaire
+        commentaire_etat = f"{commentaire}"
+
+        EtatCommande.objects.create(
+                commande=commande,
+                enum_etat=etat_retournee,
+                operateur=operateur,
+                date_debut=timezone.now(),
+                commentaire=commentaire_etat
+        )
+        # NOUVELLE LOGIQUE: Stocker les articles retournés en base de données
+        from commande.models import ArticleRetourne
+        articles_retournes_crees = []
+
+        with transaction.atomic():
+            # Récupérer tous les paniers de la commande
+            paniers = commande.paniers.all()
+            print(f"🔧 DEBUG RETOUR TOTAL: {paniers.count()} paniers à traiter")
+
+            for panier in paniers:
+                try:
+                    # Calculer le prix unitaire effectif au moment du retour
+                    from commande.templatetags.remise_filters import get_prix_effectif_panier
+                    prix_info = get_prix_effectif_panier(panier)
+                    prix_unitaire_actuel = prix_info['prix_unitaire']
+
+                    # Créer l'enregistrement de retour pour chaque article/variante
+                    article_retourne = ArticleRetourne.objects.create(
+                        commande=commande,
+                        article=panier.article,
+                        variante=panier.variante,
+                        quantite_retournee=panier.quantite,
+                        prix_unitaire_origine=prix_unitaire_actuel,
+                        raison_retour=f"Commande entièrement retournée - {commentaire}",
+                        operateur_retour=operateur,
+                        statut_retour='en_attente'
+                    )
+                    articles_retournes_crees.append(article_retourne)
+                    print(f"✅ Article retourné créé: {panier.article.nom} - Quantité: {panier.quantite}")
+
+                except Exception as e:
+                    print(f"❌ Erreur lors de la création du retour pour panier {panier.id}: {e}")
+
+            # Supprimer tous les paniers car la commande est entièrement retournée
+            paniers.delete()
+            print(f"🗑️ Tous les paniers supprimés - Commande entièrement retournée")
+
+            # Mettre le total de la commande à 0
+            commande.total_cmd = 0
+            commande.save()
+
+            # Enregistrer l'opération
+            operation_data = {
+                'commentaire': commentaire,
+                'articles_retournes_count': len(articles_retournes_crees),
+                'type_retour': 'commande_complete',
+                'total_articles_retournes': sum(ar.quantite_retournee for ar in articles_retournes_crees)
+            }
+
+            Operation.objects.create(
+                commande=commande,
+                type_operation='RETOUR_COMPLET',
+                conclusion=json.dumps(operation_data, ensure_ascii=False),
+                operateur=operateur
+            )
+
+            return JsonResponse({
+                'success': True,
+                'message': f'Commande marquée comme retournée avec succès. {len(articles_retournes_crees)} article(s) retourné(s).',
+                'articles_retournes_count': len(articles_retournes_crees),
+                'total_quantite_retournee': sum(ar.quantite_retournee for ar in articles_retournes_crees)
+            })
+
+    except Exception as e:
+        print(f"❌ Erreur dans marque_retournee: {e}")
+        import traceback
+        print(f"❌ TRACEBACK: {traceback.format_exc()}")
+        return JsonResponse({'success': False, 'error': str(e)})
+    
 
 @login_required
 def api_panier_commande(request, commande_id):
