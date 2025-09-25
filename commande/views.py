@@ -275,20 +275,10 @@ def creer_commande(request):
                 ville_id = request.POST.get('ville_livraison')
                 adresse = request.POST.get('adresse')
                 source = request.POST.get('source')
-                payement = request.POST.get('payement', 'Non payé')
+                payement = request.POST.get('payement')
                 frais_livraison_actif = request.POST.get('frais_livraison_actif') == 'true'
 
-                # Gérer la date de paiement
-                date_paiement = None
-                if payement == 'Payé':
-                    date_paiement_str = request.POST.get('date_paiement')
-                    if date_paiement_str:
-                        from django.utils.dateparse import parse_date
-                        from django.utils import timezone
-                        date_seule = parse_date(date_paiement_str)
-                        if date_seule:
-                            # Convertir la date en datetime avec l'heure actuelle
-                            date_paiement = timezone.make_aware(timezone.datetime.combine(date_seule, timezone.now().time()))
+              
 
 
 
@@ -301,7 +291,6 @@ def creer_commande(request):
                     origine='ADMIN',  # Définir l'origine comme Administrateur
                     source=source,
                     payement=payement,
-                    Date_paiement=date_paiement,
                     frais_livraison=frais_livraison_actif
                 )
 

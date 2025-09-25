@@ -1261,13 +1261,19 @@ function calculerTotal() {
         }
     });
     
-    // Ajouter les frais de livraison
+    // Ajouter les frais de livraison si activés
     const fraisLivraisonField = document.getElementById('frais_livraison');
+    const fraisLivraisonActif = document.getElementById('frais_livraison_actif');
     let fraisLivraison = 0;
-    
-    if (fraisLivraisonField && fraisLivraisonField.value) {
+
+    // Vérifier si les frais de livraison sont activés
+    const fraisActifs = fraisLivraisonActif && fraisLivraisonActif.value === 'true';
+
+    if (fraisActifs && fraisLivraisonField && fraisLivraisonField.value) {
         fraisLivraison = parserMontant(fraisLivraisonField.value);
-        console.log('🚚 Frais de livraison:', formaterMontant(fraisLivraison), 'DH');
+        console.log('🚚 Frais de livraison activés:', formaterMontant(fraisLivraison), 'DH');
+    } else if (!fraisActifs) {
+        console.log('🚫 Frais de livraison désactivés');
     }
     
     // Calculer le total final (articles + frais de livraison)

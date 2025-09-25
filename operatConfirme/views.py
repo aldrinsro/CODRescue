@@ -2860,14 +2860,13 @@ def creer_commande(request):
                 type_client = request.POST.get('type_client')
                 ville_id = request.POST.get('ville_livraison')
                 adresse = request.POST.get('adresse', '').strip()
-                is_upsell = request.POST.get('is_upsell') == 'on'
                 total_cmd = request.POST.get('total_cmd', 0)
                 source = request.POST.get('source')
                 payement = request.POST.get('payement', 'Non payé')
-                frais_livraison_actif = request.POST.get('frais_livraison_actif') == 'true'
+                frais_livraison_actif = request.POST.get('frais_livraison_actif', '').lower() == 'true'
 
                 # Log des données reçues
-                logging.info(f"Données de création de commande reçues: type_client={type_client}, ville_id={ville_id}, adresse={adresse}, is_upsell={is_upsell}, total_cmd={total_cmd}")
+                logging.info(f"Données de création de commande reçues: type_client={type_client}, ville_id={ville_id}, adresse={adresse}, total_cmd={total_cmd}, frais_livraison_actif={frais_livraison_actif}")
 
                 # Valider la présence de la ville et de l'adresse
                 if not ville_id or not adresse:
