@@ -331,8 +331,14 @@
                                         </div>
                                     {% endif %}
                                     <div>
-                                        <div class="font-medium text-gray-900">{{ panier.article.nom }}</div>
-                                        <div class="text-xs text-gray-500">{{ panier.article.reference }}</div>
+                                        <div class="font-medium text-gray-900">{{ panier.article.reference}}</div>
+                                        <div class="text-xs text-gray-500">
+                                            <span class="inline-flex items-center px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+                                                <i class="fas fa-ruler-vertical mr-1"></i>{{ panier.variante.pointure }} </span>
+                                               <span class="inline-flex items-center px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">
+                                                <i class="fas fa-palette mr-1"></i>{{ panier.variante.couleur }}
+                                                </span>
+                                        </div>
                                     </div>
                                 </div>
                             </td>

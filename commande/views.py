@@ -10,7 +10,7 @@ from django.contrib import messages
 from django.core import serializers
 from django.http import JsonResponse, HttpResponse # Import HttpResponse for partial rendering
 import json
-from .models import Commande, Panier, EnumEtatCmd, Operation
+from .models import Commande, Panier, EnumEtatCmd, EtatCommande, Operation
 from client.models import Client
 from parametre.models import Ville, Operateur, Region # Import Region
 from article.models import Article
@@ -274,11 +274,24 @@ def creer_commande(request):
                 # Récupérer les autres données de la commande
                 ville_id = request.POST.get('ville_livraison')
                 adresse = request.POST.get('adresse')
-                is_upsell = request.POST.get('is_upsell') == 'on'
                 source = request.POST.get('source')
                 payement = request.POST.get('payement', 'Non payé')
                 frais_livraison_actif = request.POST.get('frais_livraison_actif') == 'true'
-                
+
+                # Gérer la date de paiement
+                date_paiement = None
+                if payement == 'Payé':
+                    date_paiement_str = request.POST.get('date_paiement')
+                    if date_paiement_str:
+                        from django.utils.dateparse import parse_date
+                        from django.utils import timezone
+                        date_seule = parse_date(date_paiement_str)
+                        if date_seule:
+                            # Convertir la date en datetime avec l'heure actuelle
+                            date_paiement = timezone.make_aware(timezone.datetime.combine(date_seule, timezone.now().time()))
+
+
+
                 # Créer la commande
                 commande = Commande.objects.create(
                     client=client,
@@ -288,8 +301,28 @@ def creer_commande(request):
                     origine='ADMIN',  # Définir l'origine comme Administrateur
                     source=source,
                     payement=payement,
+                    Date_paiement=date_paiement,
                     frais_livraison=frais_livraison_actif
                 )
+
+                # Créer automatiquement l'état "Non affectée" pour la nouvelle commande
+                try:
+                    etat_non_affectee = EnumEtatCmd.objects.get(libelle='Non affectée')
+                    EtatCommande.objects.create(
+                        commande=commande,
+                        enum_etat=etat_non_affectee
+                    )
+                except EnumEtatCmd.DoesNotExist:
+                    # Si l'état "Non affectée" n'existe pas, on le crée
+                    etat_non_affectee = EnumEtatCmd.objects.create(
+                        libelle='Non affectée',
+                        ordre=0,
+                        couleur='#6B7280'
+                    )
+                    EtatCommande.objects.create(
+                        commande=commande,
+                        enum_etat=etat_non_affectee
+                    )
                 
                 # Traiter les articles du panier
                 total_commande = 0

@@ -128,13 +128,13 @@
                                 <i class="fas fa-toggle-off" id="frais_icon"></i>
                             </button>
                         </div>
-                        <input type="hidden" name="frais_livraison_actif" id="frais_livraison_actif" value="false">
+                        <input type="hidden" name="frais_livraison_actif" id="frais_livraison_actif" value="true">
                     </div>
                     
                     <div>
                         <label for="region_livraison" class="block text-sm font-medium mb-2" style="color: var(--admin-color);">Région de livraison</label>
                         <input type="text" id="region_livraison" name="region_livraison" class="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed" readonly>
-                    </div>
+                    </div> 
                     
                     <div>
                         <label for="delai_livraison" class="block text-sm font-medium mb-2" style="color: var(--admin-color);">Délai de livraison</label>
@@ -176,10 +176,16 @@
                     <!-- Statut de paiement -->
                     <div>
                         <label for="payement" class="block text-sm font-medium mb-2" style="color: var(--admin-color);">Statut de paiement :</label>
-                        <select name="payement" id="payement" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--admin-accent-color)] focus:border-transparent transition duration-200">
+                        <select name="payement" id="payement" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--admin-accent-color)] focus:border-transparent transition duration-200" onchange="gererAffichageDatePaiement()">
                             <option value="Non payé" selected>Non payé</option>
                             <option value="Payé">Payé</option>
                         </select>
+                    </div>
+
+                    <!-- Date de paiement (masqué par défaut) -->
+                    <div id="date-paiement-container" class="hidden">
+                        <label for="date_paiement" class="block text-sm font-medium mb-2" style="color: var(--admin-color);">Date de paiement :</label>
+                        <input type="date" name="date_paiement" id="date_paiement" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--admin-accent-color)] focus:border-transparent transition duration-200">
                     </div>
                 </div>
             </div>
@@ -495,10 +501,7 @@ function remplirTableauArticles() {
                         <div class="font-medium text-gray-900 text-xs sm:text-sm truncate">${article.nom}</div>
                         <div class="text-gray-500 text-xs truncate">${article.reference}</div>
                 <div class="mt-1">${badges}</div>
-                        <div class="text-xs text-gray-500 mt-1 truncate">
-                    ${article.couleur ? `Couleur: ${article.couleur}` : ''} 
-                    ${article.pointure ? ` | Taille: ${article.pointure}` : ''}
-                        </div>
+                    
                     </div>
                 </div>
             </td>
@@ -1012,7 +1015,7 @@ function ajouterVarianteAuPanierAdmin(articleData, variante, quantiteInitiale = 
                             <div class="font-medium">${quantiteInitiale}</div>
                         </div>
                         <div class="text-center min-w-0">
-                            <div class="text-sm text-gray-500">Prix unitaire</div>
+                            <div class="text-sm text-gray-500">Prix actuel</div>
                             <div class="font-medium text-green-600">${variante.prix_actuel?.toFixed(2) || '0.00'} DH</div>
                         </div>
                         <div class="text-center min-w-0">
@@ -1292,6 +1295,34 @@ document.getElementById('recherche_telephone').addEventListener('input', functio
     }
 });
 
+// Fonction pour gérer l'affichage du champ date de paiement
+function gererAffichageDatePaiement() {
+    const payementSelect = document.getElementById('payement');
+    const datePaiementContainer = document.getElementById('date-paiement-container');
+    const datePaiementInput = document.getElementById('date_paiement');
+
+    if (payementSelect.value === 'Payé') {
+        // Afficher le champ date de paiement
+        datePaiementContainer.classList.remove('hidden');
+        datePaiementInput.required = true;
+
+        // Définir la date et heure actuelles par défaut
+        if (!datePaiementInput.value) {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+         
+
+            datePaiementInput.value = `${year}-${month}-${day}`;
+        }
+    } else {
+        // Masquer le champ date de paiement
+        datePaiementContainer.classList.add('hidden');
+        datePaiementInput.required = false;
+        datePaiementInput.value = '';
+    }
+}
 
 // Initialisation
 window.addEventListener('load', function() {
