@@ -2940,19 +2940,33 @@ def creer_commande(request):
                             quantite = int(quantite)
                             if quantite > 0:
                                 article = Article.objects.get(pk=article_id)
-                                
-                                # Utiliser prix_actuel si disponible, sinon prix_unitaire
-                                prix_a_utiliser = float(article.prix_actuel if article.prix_actuel is not None else article.prix_unitaire)
-                                
+
+                                # Gérer la variante si elle est spécifiée
+                                variante = None
+                                if variante_id:
+                                    try:
+                                        variante = VarianteArticle.objects.get(pk=variante_id, article=article)
+                                        # Utiliser le prix de la variante si disponible
+                                        prix_a_utiliser = float(variante.prix_actuel if variante.prix_actuel is not None else article.prix_actuel if article.prix_actuel is not None else article.prix_unitaire)
+                                        logging.info(f"Variante {variante.id} - Article {article.id}: prix_variante={variante.prix_actuel}, prix_utilisé={prix_a_utiliser}")
+                                    except VarianteArticle.DoesNotExist:
+                                        logging.warning(f"Variante {variante_id} non trouvée pour l'article {article_id}")
+                                        variante = None
+                                        prix_a_utiliser = float(article.prix_actuel if article.prix_actuel is not None else article.prix_unitaire)
+                                else:
+                                    # Pas de variante, utiliser le prix de l'article
+                                    prix_a_utiliser = float(article.prix_actuel if article.prix_actuel is not None else article.prix_unitaire)
+
                                 # Log pour comprendre le calcul du prix
-                                logging.info(f"Article {article.id}: prix_unitaire={article.prix_unitaire}, prix_actuel={article.prix_actuel}, prix_utilisé={prix_a_utiliser}")
-                                
+                                logging.info(f"Article {article.id}, Variante {variante.id if variante else 'N/A'}: prix_utilisé={prix_a_utiliser}")
+
                                 sous_total = float(prix_a_utiliser * quantite)
                                 total_calcule += sous_total
-                                
+
                                 Panier.objects.create(
                                     commande=commande,
                                     article=article,
+                                    variante=variante,
                                     quantite=quantite,
                                     sous_total=float(sous_total)
                                 )

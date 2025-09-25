@@ -243,7 +243,7 @@ function selectionnerArticle(index) {
  * Fonction pour ajouter un article au panier (sans variantes)
  */
 function ajouterArticleAuPanier(articleData, quantiteInitiale = 1) {
-    console.log('📦 Ajout article au panier:', articleData.nom);
+    console.log('📦 MODIF TEST - Ajout article au panier:', articleData.nom);
     
     // Créer un ID unique pour cet article
     const articleId = `article-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -720,6 +720,8 @@ function fermerModalVariantes(event) {
     if (modal) {
         modal.classList.add('hidden');
         modal.style.display = 'none';
+        modal.style.visibility = 'hidden';
+        modal.style.opacity = '0';
         console.log('✅ Modal fermé avec succès');
     } else {
         console.error('❌ Modal non trouvé lors de la fermeture');
@@ -823,12 +825,12 @@ function ajouterVariantesSelectionnees(event) {
             showNotification(`⚠️ ${erreurs} variante(s) n'ont pas pu être ajoutées`, 'warning');
         }
         
-        // Ne fermer le modal que si au moins une variante a été ajoutée avec succès
+        // Ne fermer les modals que si au moins une variante a été ajoutée avec succès
         if (ajoutees > 0) {
-            console.log('🎯 Variantes ajoutées avec succès, fermeture du modal des variantes');
-            // Temporairement désactiver la fermeture automatique pour déboguer
-            // fermerModalVariantes();
-            showNotification('✅ Variantes ajoutées de l\'article sélectionné ! Cliquez sur "Retour" pour fermer le modal ou le "X".', 'success');
+            console.log('🎯 Variantes ajoutées avec succès, fermeture des modals');
+            fermerModalVariantes();
+            fermerModalAjouterArticle();
+            showNotification(`✅ ${ajoutees} variante(s) ajoutée(s) au panier avec succès !`, 'success');
         } else {
             console.log('⚠️ Aucune variante ajoutée, le modal reste ouvert');
             showNotification('❌ Aucune variante n\'a pu être ajoutée au panier', 'error');
@@ -864,130 +866,180 @@ function ajouterVarianteAuPanier(articleData, variante, quantiteInitiale = 1) {
     } else if (typeof ajouterVarianteAuPanierConfirmation === 'function') {
         ajouterVarianteAuPanierConfirmation(articleData, variante, quantiteInitiale);
     } else {
-        // Fonction par défaut pour la page de création
+        // Fonction par défaut - créer directement la variante dans le panier
+        console.log('⚠️ Aucune fonction spécifique trouvée, utilisation de la fonction par défaut');
         ajouterVarianteAuPanierConfirmation(articleData, variante, quantiteInitiale);
     }
+}
+
+/**
+ * Fonction pour vérifier si une variante existe déjà dans le panier
+ */
+function varianteExisteDansLePanier(varianteId) {
+    const articlesContainer = document.getElementById('articles-container');
+    if (!articlesContainer) {
+        return false;
+    }
+
+    const variantes = articlesContainer.querySelectorAll('[data-variante-id]');
+    for (let element of variantes) {
+        if (element.getAttribute('data-variante-id') === varianteId.toString()) {
+            return element; // Retourner l'élément s'il existe
+        }
+    }
+    return false;
+}
+
+/**
+ * Fonction pour incrémenter la quantité d'une variante existante
+ */
+function incrementerQuantiteVarianteExistante(varianteElement) {
+    const quantiteInput = varianteElement.querySelector('input[type="number"]');
+    if (quantiteInput) {
+        const nouvelleQuantite = parseInt(quantiteInput.value) + 1;
+        quantiteInput.value = nouvelleQuantite;
+
+        // Déclencher l'événement de changement pour recalculer le total
+        const changeEvent = new Event('change', { bubbles: true });
+        quantiteInput.dispatchEvent(changeEvent);
+
+        return true;
+    }
+    return false;
 }
 
 /**
  * Fonction pour ajouter une variante au panier (spécifique à la page de création)
  */
 function ajouterVarianteAuPanierConfirmation(articleData, variante, quantiteInitiale = 1) {
-    console.log('📦 Ajout variante au panier (création):', {
+    console.log('📦 Ajout variante au panier (confirmation):', {
         article: articleData.nom,
         variante: variante,
         quantite: quantiteInitiale
     });
-    
+
     console.log('🔍 Vérification des éléments DOM...');
-    
+
     try {
         // Vérifier que les données sont valides
         if (!articleData || !variante) {
             throw new Error('Données d\'article ou de variante manquantes');
         }
-        
+
+        // Vérifier si la variante existe déjà dans le panier
+        const varianteExistante = varianteExisteDansLePanier(variante.id);
+        if (varianteExistante) {
+            // La variante existe déjà, incrémenter sa quantité
+            if (incrementerQuantiteVarianteExistante(varianteExistante)) {
+                console.log('✅ Quantité de la variante mise à jour');
+                showNotification(`✅ Quantité mise à jour pour ${articleData.nom} (${variante.couleur} - ${variante.pointure})`, 'success');
+                return;
+            } else {
+                showNotification(`⚠️ Impossible de mettre à jour la quantité pour ${articleData.nom} (${variante.couleur} - ${variante.pointure})`, 'warning');
+                return;
+            }
+        }
+
         // Créer un ID unique pour cette variante
         const varianteId = `variante-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        
+
         // Créer la carte d'article
         const articleCard = document.createElement('div');
         articleCard.className = 'bg-white border border-gray-200 rounded-lg p-3 sm:p-4 shadow-sm hover:shadow-md transition-shadow';
         articleCard.id = varianteId;
         articleCard.setAttribute('data-article-id', articleData.id);
         articleCard.setAttribute('data-variante-id', variante.id);
-    
-    // Calculer le sous-total
-    const prix = variante.prix_actuel || variante.prix_unitaire || 0;
-    const quantite = quantiteInitiale;
-    const sousTotal = (prix * quantite).toFixed(2);
-    
-    // Générer les badges
-    let badges = '';
-    if (articleData.has_promo_active) badges += '<span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 mr-1">🔥 PROMO</span>';
-    if (articleData.phase === 'LIQUIDATION') badges += '<span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 mr-1">🏷️ LIQUIDATION</span>';
-    if (articleData.phase === 'EN_TEST') badges += '<span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mr-1">🧪 TEST</span>';
-    if (articleData.isUpsell) badges += '<span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 mr-1">⬆️ UPSELL</span>';
-    
-    // Badge spécifique à la variante
-    badges += `<span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 mr-1">🎨 ${variante.couleur || 'N/A'}</span>`;
-    badges += `<span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 mr-1">📏 ${variante.pointure || 'N/A'}</span>`;
-    
-    articleCard.innerHTML = `
-        <div class="flex items-start justify-between">
-            <div class="flex-1 min-w-0">
-                <div class="flex items-start space-x-3">
-                    <!-- Image de l'article -->
-                    <div class="flex-shrink-0">
-                        <div class="w-12 h-12 sm:w-16 sm:h-16 rounded-lg overflow-hidden bg-gray-100 border border-gray-200 shadow-sm">
-                            ${articleData.image_url ? 
-                                `<img src="${articleData.image_url}" alt="Image de ${articleData.nom}" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" onload="this.nextElementSibling.style.display='none';">` : 
-                                ''
-                            }
-                            <div class="w-full h-full flex items-center justify-center text-gray-400 ${articleData.image_url ? 'hidden' : ''}">
-                                <i class="fas fa-image text-sm"></i>
+
+        // Calculer le sous-total
+        const prix = variante.prix_actuel || variante.prix_unitaire || 0;
+        const quantite = quantiteInitiale;
+        const sousTotal = (prix * quantite).toFixed(2);
+
+        // Générer les badges
+        let badges = '';
+        if (articleData.has_promo_active) badges += '<span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 mr-1">🔥 PROMO</span>';
+        if (articleData.phase === 'LIQUIDATION') badges += '<span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 mr-1">🏷️ LIQUIDATION</span>';
+        if (articleData.phase === 'EN_TEST') badges += '<span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mr-1">🧪 TEST</span>';
+        if (articleData.isUpsell) badges += '<span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 mr-1">⬆️ UPSELL</span>';
+
+        // Badge spécifique à la variante
+        badges += `<span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 mr-1">🎨 ${variante.couleur || 'N/A'}</span>`;
+        badges += `<span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 mr-1">📏 ${variante.pointure || 'N/A'}</span>`;
+
+        articleCard.innerHTML = `
+            <div class="flex items-start justify-between">
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-start space-x-3">
+                        <!-- Image de l'article -->
+                        <div class="flex-shrink-0">
+                            <div class="w-12 h-12 sm:w-16 sm:h-16 rounded-lg overflow-hidden bg-gray-100 border border-gray-200 shadow-sm">
+                                ${articleData.image_url ?
+                                    `<img src="${articleData.image_url}" alt="Image de ${articleData.nom}" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" onload="this.nextElementSibling.style.display='none';">` :
+                                    ''
+                                }
+                                <div class="w-full h-full flex items-center justify-center text-gray-400 ${articleData.image_url ? 'hidden' : ''}">
+                                    <i class="fas fa-image text-sm"></i>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    
-                    <!-- Informations de l'article -->
-                    <div class="flex-1 min-w-0">
-                        <h4 class="text-sm sm:text-base font-medium text-gray-900 truncate">${articleData.nom}</h4>
-                        <p class="text-xs sm:text-sm text-gray-500 truncate">${articleData.reference}</p>
-                        <div class="mt-1 flex flex-wrap gap-1">${badges}</div>
-                        <div class="mt-2 flex items-center space-x-4">
-                            <div class="text-xs sm:text-sm text-gray-600">
-                                <span class="font-medium">Prix:</span> ${prix.toFixed(2)} DH
-                            </div>
-                            <div class="text-xs sm:text-sm text-gray-600">
-                                <span class="font-medium">Quantité:</span> 
-                                <input type="number" min="1" value="${quantite}" 
-                                       class="w-16 px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                                       onchange="mettreAJourQuantiteVariante('${varianteId}', this.value)">
+
+                        <!-- Informations de l'article -->
+                        <div class="flex-1 min-w-0">
+                            <h4 class="text-sm sm:text-base font-medium text-gray-900 truncate">${articleData.nom}</h4>
+                            <p class="text-xs sm:text-sm text-gray-500 truncate">${articleData.reference}</p>
+                            <div class="mt-1 flex flex-wrap gap-1">${badges}</div>
+                            <div class="mt-2 flex items-center space-x-4">
+                                <div class="text-xs sm:text-sm text-gray-600">
+                                    <span class="font-medium">Prix:</span> ${prix.toFixed(2)} DH
+                                </div>
+                                <div class="text-xs sm:text-sm text-gray-600">
+                                    <span class="font-medium">Quantité:</span>
+                                    <input type="number" min="1" value="${quantite}"
+                                           class="w-16 px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                           onchange="mettreAJourQuantiteVariante('${varianteId}', this.value)">
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
+
+                <!-- Actions -->
+                <div class="flex flex-col items-end space-y-2">
+                    <div class="text-lg font-bold text-green-600">${sousTotal} DH</div>
+                    <button type="button" onclick="supprimerArticleDuPanier(this)"
+                            class="px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs transition-colors">
+                        <i class="fas fa-trash mr-1"></i>Supprimer
+                    </button>
+                </div>
             </div>
-            
-            <!-- Actions -->
-            <div class="flex flex-col items-end space-y-2">
-                <div class="text-lg font-bold text-green-600">${sousTotal} DH</div>
-                <button type="button" onclick="supprimerArticleDuPanier(this)" 
-                        class="px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs transition-colors">
-                    <i class="fas fa-trash mr-1"></i>Supprimer
-                </button>
-            </div>
-        </div>
-    `;
-    
-    // Ajouter au conteneur des articles
-    console.log('🔍 Recherche du conteneur articles-container...');
-    const articlesContainer = document.getElementById('articles-container');
-    console.log('🔍 Conteneur trouvé:', !!articlesContainer);
-    
-    if (articlesContainer) {
-        console.log('🔄 Ajout de la carte au conteneur...');
-        articlesContainer.appendChild(articleCard);
-        console.log('✅ Carte ajoutée au conteneur');
-        
-        // Recalculer le total
-        console.log('🔄 Vérification de la fonction calculerTotal...');
-        if (typeof calculerTotal === 'function') {
-            console.log('🔄 Appel de calculerTotal...');
-            calculerTotal();
-            console.log('✅ calculerTotal appelé');
+        `;
+
+        // Ajouter au conteneur des articles
+        console.log('🔍 Recherche du conteneur articles-container...');
+        const articlesContainer = document.getElementById('articles-container');
+        console.log('🔍 Conteneur trouvé:', !!articlesContainer);
+
+        if (articlesContainer) {
+            console.log('🔄 Ajout de la carte au conteneur...');
+            articlesContainer.appendChild(articleCard);
+            console.log('✅ Carte ajoutée au conteneur');
+
+            // Recalculer le total
+            console.log('🔄 Vérification de la fonction calculerTotal...');
+            if (typeof calculerTotal === 'function') {
+                console.log('🔄 Appel de calculerTotal...');
+                calculerTotal();
+                console.log('✅ calculerTotal appelé');
+            } else {
+                console.warn('⚠️ Fonction calculerTotal non trouvée');
+            }
+
+            console.log('✅ Variante ajoutée au panier:', varianteId);
         } else {
-            console.warn('⚠️ Fonction calculerTotal non trouvée');
+            console.error('❌ Conteneur des articles non trouvé');
+            throw new Error('Conteneur des articles non trouvé');
         }
-        
-        console.log('✅ Variante ajoutée au panier:', varianteId);
-    } else {
-        console.error('❌ Conteneur des articles non trouvé');
-        console.error('❌ Éléments disponibles:', document.querySelectorAll('[id*="container"]'));
-        throw new Error('Conteneur des articles non trouvé');
-    }
-    
+
     } catch (error) {
         console.error('❌ Erreur dans ajouterVarianteAuPanierConfirmation:', error);
         console.error('❌ Stack trace:', error.stack);
