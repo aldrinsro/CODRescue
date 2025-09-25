@@ -1,7 +1,7 @@
 {% for commande in page_obj %}
 <tr class="hover:bg-gray-50 transition-colors">
     <td class="px-4 py-3 text-sm font-medium text-gray-900 border-r border-b border-gray-200">
-        YZ-{{ commande.id_yz }}
+        {{ commande.id_yz }}
     </td>
     <td class="px-4 py-3 text-sm text-gray-500 border-r border-b border-gray-200">
         {{ commande.num_cmd|default:"-" }}

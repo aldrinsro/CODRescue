@@ -517,10 +517,25 @@ class EtatCommande(models.Model):
     
     @property
     def duree(self):
-        """Retourne la durée de cet état"""
+        """Retourne la durée de cet état au format Xj HH:MM:SS"""
         if self.date_fin:
-            return self.date_fin - self.date_debut
-        return timezone.now() - self.date_debut
+            delta = self.date_fin - self.date_debut
+        else:
+            delta = timezone.now() - self.date_debut
+
+        # Conversion en secondes
+        total_seconds = int(delta.total_seconds())
+
+        jours, reste = divmod(total_seconds, 86400)  # 86400 sec = 1 jour
+        heures, reste = divmod(reste, 3600)
+        minutes, secondes = divmod(reste, 60)
+
+        if jours > 0:
+            return f"{jours}j {heures:02d}h : {minutes:02d}m : {secondes:02d}s"
+        elif heures > 0:
+            return f"{heures:02d}h : {minutes:02d}m : {secondes:02d}s"
+        else:
+            return f"{minutes:02d}m : {secondes:02d}s"
 
 
 class Operation(models.Model):

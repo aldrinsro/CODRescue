@@ -421,7 +421,7 @@
                                 {% if etat.operateur %}
                                     <div class="flex items-center">
                                         <i class="fas fa-user mr-2 text-gray-400"></i>
-                                        {{ etat.operateur.mail }}
+                                        {{ etat.operateur.get_full_name }}
                                     </div>
                                 {% else %}
                                     <span class="text-gray-400">-</span>
@@ -451,15 +451,19 @@
     </div>
 
     <!-- Actions -->
+     
     <div class="bg-white rounded-xl shadow-lg border p-6 md:p-8" style="border-color: var(--admin-accent-color);">
         <h2 class="text-2xl font-bold flex items-center mb-6" style="color: var(--admin-color);">
             <i class="fas fa-tools mr-2"></i>Actions
         </h2>
         
+        
+        {%if commande.etat_actuel.enum_etat.libelle not in etats_non_modifiables   %}
         <div class="flex flex-wrap gap-4">
             <a href="{% url 'commande:modifier' commande.pk %}" class="inline-flex items-center px-6 py-3 text-white rounded-lg font-medium shadow-md transition-colors duration-300" style="background-color: var(--admin-color); hover:background-color: var(--admin-gradient-end);">
                 <i class="fas fa-edit mr-2"></i> Modifier la commande
             </a>
+        {% endif %}
             
             <a href="{% url 'commande:confirmees' %}" class="inline-flex items-center px-6 py-3 bg-gray-500 text-white rounded-lg font-medium hover:bg-gray-600 transition-colors shadow-md">
                 <i class="fas fa-list mr-2"></i> Retour aux commandes confirmées

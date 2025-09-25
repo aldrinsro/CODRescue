@@ -236,11 +236,13 @@ def detail_commande(request, pk):
     commande = get_object_or_404(Commande, pk=pk)
     paniers = Panier.objects.filter(commande=commande)
     historique_etats = commande.historique_etats.all()
+    etats_non_modifiables = ["Livrée", "Livrée Partiellement", "Retournée"]
 
     context = {
         'commande': commande,
         'paniers': paniers,
         'historique_etats': historique_etats,
+        'etats_non_modifiables': etats_non_modifiables 
     }
     return render(request, 'commande/detail.html', context)
 
