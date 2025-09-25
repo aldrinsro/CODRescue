@@ -1522,8 +1522,9 @@ def affecter_commandes(request):
                 continue
         
         return JsonResponse({
-            'success': True, 
-            'message': f'{commandes_affectees} commande(s) affectée(s) à {operateur.get_full_name()}'
+            'success': True,
+            'message': f'{commandes_affectees} commande(s) affectée(s) à {operateur.get_full_name()}',
+            'commandes_affectees': commandes_affectees
         })
         
     except Exception as e:

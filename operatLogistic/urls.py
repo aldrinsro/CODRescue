@@ -25,6 +25,11 @@ urlpatterns = [
 
     # URL pour la livraison partielle
     path('commande/<int:commande_id>/livraison-partielle/', views.livraison_partielle, name='livraison_partielle'),
+
+    #URL Gestion des commandes Retournées 
+    path('commandes/<int:commande_id>/retourne',views.marque_retournee,name='Retournee'),
+
+    
     # URL pour voir les commandes renvoyées en préparation
     # API pour les articles
     path('api/articles/', views.api_articles, name='api_articles'),

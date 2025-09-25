@@ -1068,8 +1068,6 @@ def livraison_partielle(request, commande_id):
         return JsonResponse({'success': False, 'error': str(e)})
 
 
-
-
 @login_required
 @require_POST
 def marque_retournee(request, commande_id):

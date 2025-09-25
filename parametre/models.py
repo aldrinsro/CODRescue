@@ -117,6 +117,16 @@ class Operateur(models.Model):
     def is_superviseur(self):
         """Propriété qui indique si l'opérateur est un superviseur"""
         return self.type_operateur == 'SUPERVISEUR_PREPARATION'
+
+    @property
+    def commandes_count(self):
+        """Retourne le nombre de commandes actuellement affectées à cet opérateur"""
+        from commande.models import EtatCommande
+        return EtatCommande.objects.filter(
+            operateur=self,
+            enum_etat__libelle__in=['Affectée','En cours de confirmation','Report de confirmation'],
+            date_fin__isnull=True
+        ).count()
     
     @classmethod
     def get_superviseurs(cls):

@@ -539,7 +539,7 @@ const operateursData = {
             id: {{ operateur.id }},
                             nom_complet: "{{ operateur.nom_complet|escapejs }}",
             mail: "{{ operateur.mail|default:'Non spécifié'|escapejs }}",
-            commandes_count: {{ operateur.commandes_actives.count|default:0 }}
+            commandes_count: {{ operateur.commandes_count|default:0 }}
         }{% if not forloop.last %},{% endif %}
         {% endfor %}
     ]
