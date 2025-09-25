@@ -1596,6 +1596,8 @@ def api_commandes_confirmees(request):
             'success': False,
             'error': str(e)
         }, status=500)
+    
+
 @superviseur_preparation_required
 def api_articles_commande(request, commande_id):
     """API pour récupérer les articles d'une commande avec leurs codes-barres"""
@@ -1644,8 +1646,6 @@ def api_articles_commande(request, commande_id):
             'success': False,
             'error': str(e)
         }, status=500)
-
-
 
 
 @superviseur_preparation_required
@@ -6916,7 +6916,7 @@ def modifier_article(request, id):
             
             # Mettre à jour le prix actuel pour qu'il soit égal au prix unitaire
             # sauf si l'article est en promotion active
-            if not article.has_promo_active:
+            if not article.has_promo_active  and article.phase != 'LIQUIDATION':
                 article.prix_actuel = article.prix_unitaire
             
             article.save()

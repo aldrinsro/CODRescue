@@ -754,8 +754,8 @@ def modifier_article(request, id):
                 article.Prix_liquidation = None
             
             # Mettre à jour le prix actuel pour qu'il soit égal au prix unitaire
-            # sauf si l'article est en promotion active
-            if not article.has_promo_active:
+            # sauf si l'article est en promotion active ou en liquidation
+            if not article.has_promo_active and article.phase != 'LIQUIDATION':
                 article.prix_actuel = article.prix_unitaire
             
             article.save()
@@ -2167,7 +2167,7 @@ def supprimer_genre(request, genre_id):
         messages.error(request, f'Erreur lors de la suppression : {str(e)}')
         return redirect('article:gestion_couleurs_pointures')
     
-
+    
 @login_required
 @require_POST
 def creer_couleur(request):

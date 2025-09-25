@@ -617,16 +617,15 @@
                         <i class="fas fa-tag mr-2"></i>Mettre en liquidation
                     </button>
                     <button type="button" disabled class="inline-flex items-center bg-gray-300 text-gray-500 px-4 py-2 rounded-lg text-md font-medium cursor-not-allowed opacity-60">
+                        <i class="fas fa-database mr-2"></i>Liquidation DB
+                    </button>
+                    <button type="button" disabled class="inline-flex items-center bg-gray-300 text-gray-500 px-4 py-2 rounded-lg text-md font-medium cursor-not-allowed opacity-60">
                         <i class="fas fa-flask mr-2"></i>Mettre en test
                     </button>
                     {% else %}
                     <a href="#" onclick="document.getElementById('id_phase').value='EN_COURS'; this.closest('form').submit(); return false;" 
                        class="inline-flex items-center bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-md font-medium transition-all shadow-md hover:shadow-lg">
                         <i class="fas fa-check-circle mr-2"></i>Mettre par défaut
-                    </a>
-                    <a href="#" onclick="document.getElementById('id_phase').value='LIQUIDATION'; this.closest('form').submit(); return false;" 
-                       class="inline-flex items-center bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-md font-medium transition-all shadow-md hover:shadow-lg">
-                        <i class="fas fa-tag mr-2"></i>Mettre en liquidation
                     </a>
                     <a href="#" onclick="document.getElementById('id_phase').value='EN_TEST'; this.closest('form').submit(); return false;" 
                        class="inline-flex items-center bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-md font-medium transition-all shadow-md hover:shadow-lg">
