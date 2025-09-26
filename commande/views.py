@@ -277,11 +277,7 @@ def creer_commande(request):
                 source = request.POST.get('source')
                 payement = request.POST.get('payement')
                 frais_livraison_actif = request.POST.get('frais_livraison_actif') == 'true'
-
-              
-
-
-
+                
                 # Créer la commande
                 commande = Commande.objects.create(
                     client=client,
