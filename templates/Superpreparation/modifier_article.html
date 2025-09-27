@@ -584,30 +584,7 @@
                     </div>
                 </div>
                 
-                <!-- Nouveaux champs pour prix_uspell_final et Prix_liquidation -->
-                <div class="mt-6 pt-4 border-t" style="border-color: var(--preparation-text-light);">
-                    <h4 class="text-md font-semibold mb-3" style="color: var(--preparation-primary);">Prix spéciaux</h4>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label for="id_prix_uspell_final" class="block text-sm font-semibold mb-2" style="color: #023535;">Prix gros (DH):</label>
-                            <input type="number" name="prix_uspell_final" id="id_prix_uspell_final" 
-                                   value="{{ article.prix_uspell_final|floatformat:"-2"|default:'' }}" 
-                                   step="0.01" min="0" 
-                                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200" 
-                                   placeholder="Ex: 599.99">
-                            <small class="text-gray-600">Prix spécial pour les ventes en gros</small>
-                        </div>
-                        <div>
-                            <label for="id_Prix_liquidation" class="block text-sm font-semibold mb-2" style="color: #023535;">Prix de liquidation (DH):</label>
-                            <input type="number" name="Prix_liquidation" id="id_Prix_liquidation" 
-                                   value="{{ article.Prix_liquidation|floatformat:"-2"|default:'' }}" 
-                                   step="0.01" min="0" 
-                                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200" 
-                                   placeholder="Ex: 199.99">
-                            <small class="text-gray-600">Prix spécial pour la liquidation</small>
-                        </div>
-                    </div>
-                </div>
+         
                 
                 <!-- Section des prix de remise -->
                 <div class="mt-6 pt-4 border-t" style="border-color: var(--preparation-text-light);">
@@ -649,6 +626,20 @@
                         </div>
                     </div>
                 </div>
+                       <!-- Nouveaux champs pour prix_uspell_final et Prix_liquidation -->
+                <div class="mt-6 pt-4 border-t" style="border-color: var(--preparation-text-light);">
+                    <div class="grid grid-cols-1 md:grid-cols-1 gap-4">
+                        <div>
+                            <label for="id_Prix_liquidation" class="block text-sm font-semibold mb-2" style="color: #023535;">Prix de liquidation (DH):</label>
+                            <input type="number" name="Prix_liquidation" id="id_Prix_liquidation" 
+                                   value="{{ article.Prix_liquidation|floatformat:"-2"|default:'' }}" 
+                                   step="0.01" min="0" 
+                                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200" 
+                                   placeholder="Ex: 199.99">
+                            <small class="text-gray-600">Prix spécial pour la liquidation</small>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Ajouter un champ caché pour la phase qui sera mise à jour par le bouton -->
@@ -668,19 +659,12 @@
                         <i class="fas fa-check-circle mr-2"></i>Mettre par défaut
                     </button>
                     <button type="button" disabled class="inline-flex items-center bg-gray-300 text-gray-500 px-4 py-2 rounded-lg text-md font-medium cursor-not-allowed opacity-60">
-                        <i class="fas fa-tag mr-2"></i>Mettre en liquidation
-                    </button>
-                    <button type="button" disabled class="inline-flex items-center bg-gray-300 text-gray-500 px-4 py-2 rounded-lg text-md font-medium cursor-not-allowed opacity-60">
                         <i class="fas fa-flask mr-2"></i>Mettre en test
                     </button>
                     {% else %}
                     <a href="#" onclick="document.getElementById('id_phase').value='EN_COURS'; this.closest('form').submit(); return false;" 
                        class="inline-flex items-center bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-md font-medium transition-all shadow-md hover:shadow-lg">
                         <i class="fas fa-check-circle mr-2"></i>Mettre par défaut
-                    </a>
-                    <a href="#" onclick="document.getElementById('id_phase').value='LIQUIDATION'; this.closest('form').submit(); return false;" 
-                       class="inline-flex items-center bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-md font-medium transition-all shadow-md hover:shadow-lg">
-                        <i class="fas fa-tag mr-2"></i>Mettre en liquidation
                     </a>
                     <a href="#" onclick="document.getElementById('id_phase').value='EN_TEST'; this.closest('form').submit(); return false;" 
                        class="inline-flex items-center bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-md font-medium transition-all shadow-md hover:shadow-lg">

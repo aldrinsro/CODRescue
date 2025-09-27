@@ -1,7 +1,6 @@
 from django.urls import path
 from django.shortcuts import redirect
-from . import views
-from . import views_retournee
+from . import views, views_retournee,views_articles
 from .barre_recherche_globale import views as search_views
 
 app_name = 'Superpreparation'
@@ -60,7 +59,7 @@ urlpatterns = [
     path('commande/<int:commande_id>/modifier-quantite/', views.modifier_quantite_article_prepa, name='modifier_quantite_article_prepa'),
     path('commande/<int:commande_id>/supprimer-article/', views.supprimer_article_commande_prepa, name='supprimer_article_commande_prepa'),
     path('commande/<int:commande_id>/prix-upsell/', views.api_prix_upsell_articles, name='api_prix_upsell_articles'),
-    path('commande/<int:commande_id>/diagnostiquer-compteur/', views.diagnostiquer_compteur, name='diagnostiquer_compteur'),
+    path('commande/<int:commande_id>/diagnostiquer-compteur/', views_articles.diagnostiquer_compteur, name='diagnostiquer_compteur'),
     path('api/article/<int:article_id>/variantes/', views.get_article_variants, name='get_article_variants'),
     
 
@@ -105,67 +104,67 @@ urlpatterns = [
 
     # === NOUVELLES URLs : GESTION DES PROMOTIONS (SUPERPREPARATION) === 
     # Pages principales des promotions
-    path('promotions/', views.liste_promotions, name='liste_promotions'),
-    path('promotions/creer/', views.creer_promotion, name='creer_promotion'),
-    path('promotions/<int:id>/', views.detail_promotion, name='detail_promotion'),
-    path('promotions/modifier/<int:id>/', views.modifier_promotion, name='modifier_promotion'),
-    path('promotions/supprimer/<int:id>/', views.supprimer_promotion, name='supprimer_promotion'),
-    path('promotions/activer-desactiver/<int:id>/', views.activer_desactiver_promotion, name='activer_desactiver_promotion'),
-    path('promotions/gerer-automatiquement/', views.gerer_promotions_automatiquement, name='gerer_promotions_automatiquement'),
+    path('promotions/', views_articles.liste_promotions, name='liste_promotions'),
+    path('promotions/creer/', views_articles.creer_promotion, name='creer_promotion'),
+    path('promotions/<int:id>/', views_articles.detail_promotion, name='detail_promotion'),
+    path('promotions/modifier/<int:id>/', views_articles.modifier_promotion, name='modifier_promotion'),
+    path('promotions/supprimer/<int:id>/', views_articles.supprimer_promotion, name='supprimer_promotion'),
+    path('promotions/activer-desactiver/<int:id>/', views_articles.activer_desactiver_promotion, name='activer_desactiver_promotion'),
+    path('promotions/gerer-automatiquement/', views_articles.gerer_promotions_automatiquement, name='gerer_promotions_automatiquement'),
     
     # === NOUVELLES URLs : GESTION DES ARTICLES STOCK (SUPERPREPARATION) === 
     # Pages principales
-    path('gestion-articles/', views.liste_articles, name='liste_articles'),
+    path('gestion-articles/', views_articles.liste_articles, name='liste_articles'),
     # Redirection pour compatibilité avec l'ancienne URL
-    path('articles/', views.liste_articles, name='liste_articles_redirect'),
-    path('gestion-articles/detail/<int:id>/', views.detail_article, name='detail_article'),
-    path('gestion-articles/modifier/<int:id>/', views.modifier_article, name='modifier_article'),
-    path('gestion-articles/creer/', views.creer_article, name='creer_article'),
-    path('gestion-articles/supprimer/<int:id>/', views.supprimer_article, name='supprimer_article'),
-    path('gestion-articles/supprimer-masse/', views.supprimer_articles_masse, name='supprimer_masse'),
+    path('articles/', views_articles.liste_articles, name='liste_articles_redirect'),
+    path('gestion-articles/detail/<int:id>/', views_articles.detail_article, name='detail_article'),
+    path('gestion-articles/modifier/<int:id>/', views_articles.modifier_article, name='modifier_article'),
+    path('gestion-articles/creer/', views_articles.creer_article, name='creer_article'),
+    path('gestion-articles/supprimer/<int:id>/', views_articles.supprimer_article, name='supprimer_article'),
+    path('gestion-articles/supprimer-masse/', views_articles.supprimer_articles_masse, name='supprimer_masse'),
 
 
     # Gestion des variantes d'articles
-    path('gestion-articles/variantes/', views.liste_variantes, name='liste_variantes'),
-    path('gestion-articles/variantes/creer-ajax/', views.creer_variantes_ajax, name='creer_variantes_ajax'),
-    path('gestion-articles/variantes/supprimer/<int:id>/', views.supprimer_variante, name='supprimer_variante'),
-    path('gestion-articles/variantes/supprimer-masse/', views.supprimer_variantes_masse, name='supprimer_variante_masse'),
+    path('gestion-articles/variantes/', views_articles.liste_variantes, name='liste_variantes'),
+    path('gestion-articles/variantes/creer-ajax/', views_articles.creer_variantes_ajax, name='creer_variantes_ajax'),
+    path('gestion-articles/variantes/supprimer/<int:id>/', views_articles.supprimer_variante, name='supprimer_variante'),
+    path('gestion-articles/variantes/supprimer-masse/', views_articles.supprimer_variantes_masse, name='supprimer_variante_masse'),
 
     
     # Filtres par catégorie
-    path('gestion-articles/categorie/<str:categorie>/', views.articles_par_categorie, name='par_categorie'),
+    path('gestion-articles/categorie/<str:categorie>/', views_articles.articles_par_categorie, name='par_categorie'),
     
     # Gestion du stock
-    path('gestion-articles/stock-faible/', views.stock_faible, name='stock_faible'),
-    path('gestion-articles/rupture-stock/', views.rupture_stock, name='rupture_stock'),
+    path('gestion-articles/stock-faible/', views_articles.stock_faible, name='stock_faible'),
+    path('gestion-articles/rupture-stock/', views_articles.rupture_stock, name='rupture_stock'),
     # Alias pour compatibilité avec anciens liens
-    path('gestion-articles/alertes-stock/', views.stock_faible, name='alertes_stock'),
+    path('gestion-articles/alertes-stock/', views_articles.stock_faible, name='alertes_stock'),
     
     # Gestion des phases
-    path('gestion-articles/changer-phase/<int:id>/', views.changer_phase, name='changer_phase'),
-    path('gestion-articles/appliquer-liquidation/<int:id>/', views.appliquer_liquidation, name='appliquer_liquidation'),
-    path('gestion-articles/appliquer-liquidation-prix-db/<int:id>/', views.appliquer_liquidation_prix_db, name='appliquer_liquidation_prix_db'),
-    path('gestion-articles/reinitialiser-prix/<int:id>/', views.reinitialiser_prix, name='reinitialiser_prix'),
+    path('gestion-articles/changer-phase/<int:id>/', views_articles.changer_phase, name='changer_phase'),
+    path('gestion-articles/appliquer-liquidation/<int:id>/', views_articles.appliquer_liquidation, name='appliquer_liquidation'),
+    path('gestion-articles/appliquer-liquidation-prix-db/<int:id>/', views_articles.appliquer_liquidation_prix_db, name='appliquer_liquidation_prix_db'),
+    path('gestion-articles/reinitialiser-prix/<int:id>/', views_articles.reinitialiser_prix, name='reinitialiser_prix'),
     
     # URLs pour la gestion des couleurs et pointures
-    path('gestion-articles/gestion-couleurs-pointures/', views.gestion_couleurs_pointures, name='gestion_couleurs_pointures'),
-    path('gestion-articles/pointures/creer/', views.creer_pointure, name='creer_pointure'),
-    path('gestion-articles/pointures/modifier/<int:pointure_id>/', views.modifier_pointure, name='modifier_pointure'),
-    path('gestion-articles/pointures/supprimer/<int:pointure_id>/', views.supprimer_pointure, name='supprimer_pointure'),
+    path('gestion-articles/gestion-couleurs-pointures/', views_articles.gestion_couleurs_pointures, name='gestion_couleurs_pointures'),
+    path('gestion-articles/pointures/creer/', views_articles.creer_pointure, name='creer_pointure'),
+    path('gestion-articles/pointures/modifier/<int:pointure_id>/', views_articles.modifier_pointure, name='modifier_pointure'),
+    path('gestion-articles/pointures/supprimer/<int:pointure_id>/', views_articles.supprimer_pointure, name='supprimer_pointure'),
 
-    path('gestion-articles/couleurs/creer/', views.creer_couleur, name='creer_couleur'),
-    path('gestion-articles/couleurs/modifier/<int:couleur_id>/', views.modifier_couleur, name='modifier_couleur'),
-    path('gestion-articles/couleurs/supprimer/<int:couleur_id>/', views.supprimer_couleur, name='supprimer_couleur'),
+    path('gestion-articles/couleurs/creer/', views_articles.creer_couleur, name='creer_couleur'),
+    path('gestion-articles/couleurs/modifier/<int:couleur_id>/', views_articles.modifier_couleur, name='modifier_couleur'),
+    path('gestion-articles/couleurs/supprimer/<int:couleur_id>/', views_articles.supprimer_couleur, name='supprimer_couleur'),
     
     # URLs pour la gestion des catégories
-    path('gestion-articles/categories/creer/', views.creer_categorie, name='creer_categorie'),
-    path('gestion-articles/categories/modifier/<int:categorie_id>/', views.modifier_categorie, name='modifier_categorie'),
-    path('gestion-articles/categories/supprimer/<int:categorie_id>/', views.supprimer_categorie, name='supprimer_categorie'),
+    path('gestion-articles/categories/creer/', views_articles.creer_categorie, name='creer_categorie'),
+    path('gestion-articles/categories/modifier/<int:categorie_id>/', views_articles.modifier_categorie, name='modifier_categorie'),
+    path('gestion-articles/categories/supprimer/<int:categorie_id>/', views_articles.supprimer_categorie, name='supprimer_categorie'),
     
     # URLs pour la gestion des genres
-    path('gestion-articles/genres/creer/', views.creer_genre, name='creer_genre'),
-    path('gestion-articles/genres/modifier/<int:genre_id>/', views.modifier_genre, name='modifier_genre'),
-    path('gestion-articles/genres/supprimer/<int:genre_id>/', views.supprimer_genre, name='supprimer_genre'),
+    path('gestion-articles/genres/creer/', views_articles.creer_genre, name='creer_genre'),
+    path('gestion-articles/genres/modifier/<int:genre_id>/', views_articles.modifier_genre, name='modifier_genre'),
+    path('gestion-articles/genres/supprimer/<int:genre_id>/', views_articles.supprimer_genre, name='supprimer_genre'),
 
     # === NOUVELLES URLs : SERVICE - GESTION DES ARTICLES RETOURNÉS ===
     # Pages principales du service
