@@ -269,7 +269,7 @@ def get_prix_effectif_panier(panier):
             return {
                 'prix_unitaire': float(prix_unitaire_effectif),
                 'sous_total': float(sous_total_actuel),
-                'libelle': 'Prix remisé (personnalisé)',
+                'libelle': 'Prix remisé',
                 'couleur_classe': 'text-purple-600',
                 'icone': 'fas fa-percent',
                 'est_remise': True

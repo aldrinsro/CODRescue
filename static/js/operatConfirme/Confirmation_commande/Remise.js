@@ -23,7 +23,6 @@ let currentArticleRemise = null;
  * @param {number} panierId - ID du panier
  */
 function ouvrirModalRemise(panierId) {
-    console.log('🔄 Ouverture de la modale de remise pour panier ID:', panierId);
 
     currentPanierId = panierId;
 
@@ -55,19 +54,7 @@ function ouvrirModalRemise(panierId) {
         articleData = JSON.parse(cleanDataStr);
         console.log('✅ Données article parsées:', articleData);
 
-        // Vérifier si l'article est en phase LIQUIDATION ou en promotion
-        if (articleData.phase === 'LIQUIDATION') {
-            console.warn('⚠️ Tentative d\'ouverture de modale remise sur un article en liquidation');
-            alert('Les articles en liquidation ne peuvent pas avoir de remise appliquée.');
-            return;
-        }
-
-        if (articleData.has_promo_active) {
-            console.warn('⚠️ Tentative d\'ouverture de modale remise sur un article en promotion');
-            alert('Les articles en promotion ne peuvent pas avoir de remise appliquée.');
-            return;
-        }
-
+        
     } catch (error) {
         console.error('❌ Erreur lors du traitement des données article:', error);
         console.error('❌ Données JSON brutes:', articleCard.getAttribute('data-article'));
@@ -545,7 +532,11 @@ function updateUIAfterRemise(typeRemise, nouveauPrix, economie, serverData) {
         
         // Recharger la section des articles au lieu de mettre à jour manuellement
         setTimeout(() => {
-            rechargerSectionArticles();
+            if (typeof rafraichirSectionArticles === 'function') {
+                rafraichirSectionArticles();
+            } else {
+                rechargerSectionArticles();
+            }
         }, 500); // Petit délai pour que la notification soit visible
         
     } catch (error) {
@@ -612,8 +603,7 @@ document.addEventListener('DOMContentLoaded', function() {
  * @param {number} panierId - ID du panier
  */
 function activerRemise(panierId) {
-    console.log('🔄 Activation de la remise pour panier ID:', panierId);
-    
+
     // Vérifier si l'article est en phase LIQUIDATION
     const articleCard = document.querySelector(`[data-article-id="${panierId}"]`);
     if (!articleCard) {
@@ -621,7 +611,7 @@ function activerRemise(panierId) {
         alert('Erreur: Article non trouvé.');
         return;
     }
-    
+
     try {
         const articleData = JSON.parse(articleCard.getAttribute('data-article'));
         if (articleData.phase === 'LIQUIDATION') {
@@ -629,7 +619,7 @@ function activerRemise(panierId) {
             alert('Les articles en liquidation ne peuvent pas avoir de remise appliquée.');
             return;
         }
-        
+
         if (articleData.has_promo_active) {
             console.warn('⚠️ Tentative d\'activation de remise sur un article en promotion');
             alert('Les articles en promotion ne peuvent pas avoir de remise appliquée.');
@@ -638,7 +628,7 @@ function activerRemise(panierId) {
     } catch (error) {
         console.error('❌ Erreur lors de la lecture des données article:', error);
     }
-    
+
     // Vérifier le token CSRF
     const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
     if (!csrfToken) {
@@ -646,32 +636,32 @@ function activerRemise(panierId) {
         alert('Erreur: Token CSRF non trouvé. Veuillez rafraîchir la page.');
         return;
     }
-    
+
     // Confirmation avant activation
     if (!confirm('Voulez-vous activer la remise pour cet article ?')) {
         return;
     }
-    
+
     // Désactiver le bouton pendant la requête
     const button = document.getElementById(`btn-activer-remise-${panierId}`);
     if (button) {
         button.disabled = true;
         button.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Activation...';
     }
-    
+
     // Construire l'URL et l'afficher - Correction du préfixe URL
     const currentUrl = window.location.href;
     const baseUrl = window.location.origin;
     const url = `${baseUrl}/operateur-confirme/api/panier/${panierId}/activer-remise/`;
-    
+
     console.log('🌐 URL de la requête:', url);
     console.log('🔑 Token CSRF:', csrfToken.value.substring(0, 10) + '...');
     console.log('🔍 Current URL:', currentUrl);
     console.log('🔍 Base URL:', baseUrl);
-    
+
     // Test simple : vérifier si l'URL existe avant de faire la requête
     console.log('🧪 Test: Vérification de l\'existence de l\'URL...');
-    
+
     // Envoyer la requête AJAX
     fetch(url, {
         method: 'POST',
@@ -685,78 +675,42 @@ function activerRemise(panierId) {
         console.log('📡 Réponse reçue:', response.status, response.statusText);
         console.log('📡 Headers:', response.headers);
         console.log('📡 Response OK:', response.ok);
-        
+
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
-        
+
         // Vérifier le type de contenu
         const contentType = response.headers.get('content-type');
         console.log('📡 Content-Type:', contentType);
-        
+
         if (!contentType || !contentType.includes('application/json')) {
             return response.text().then(text => {
                 console.error('❌ Réponse non-JSON reçue:', text.substring(0, 500));
                 throw new Error('Le serveur a retourné du HTML au lieu de JSON');
             });
         }
-        
+
         return response.json();
     })
     .then(data => {
         if (!data.success) {
             throw new Error(data.message || 'Erreur lors de l\'activation de la remise');
         }
-        
+
         console.log('✅ Remise activée avec succès:', data);
-        
-        // Masquer le bouton d'activation
-        if (button) {
-            button.style.display = 'none';
+
+        // Masquer le bouton "Activer remise" et afficher le bouton "Désactiver remise"
+        const btnActiver = document.getElementById(`btn-activer-remise-${panierId}`);
+        const btnDesactiver = document.getElementById(`btn-desactiver-remise-${panierId}`);
+
+        if (btnActiver) {
+            btnActiver.style.display = 'none';
         }
-        
-        // Activer le bouton de remise
-        const btnRemise = document.getElementById(`btn-remise-${panierId}`);
-        if (btnRemise) {
-            btnRemise.disabled = false;
-            btnRemise.classList.remove('opacity-50', 'cursor-not-allowed');
+        if (btnDesactiver) {
+            btnDesactiver.style.display = 'inline-flex';
         }
-        
-        // Afficher le badge "remise appliquée"
-        const articleTitle = document.querySelector(`[data-article-id="${panierId}"] .article-title`);
-        if (articleTitle) {
-            const existingBadge = articleTitle.querySelector('.badge-remise');
-            if (!existingBadge) {
-                const badge = document.createElement('span');
-                badge.className = 'badge-remise inline-flex items-center px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium ml-2';
-                badge.innerHTML = '<i class="fas fa-percent mr-1"></i>Remise appliquée';
-                articleTitle.appendChild(badge);
-            }
-        }
-        
-        // Mettre à jour l'affichage des prix si les données sont disponibles
-        if (data.prix_unitaire && data.nouveau_sous_total) {
-            // Mettre à jour le prix unitaire
-            const prixUnitaireElement = document.getElementById(`prix-unitaire-${panierId}`);
-            if (prixUnitaireElement) {
-                prixUnitaireElement.textContent = `${data.prix_unitaire.toFixed(2)} DH`;
-                prixUnitaireElement.className = 'font-medium text-purple-600';
-            }
-            
-            // Mettre à jour le libellé du prix
-            const prixLibelleElement = document.getElementById(`prix-libelle-${panierId}`);
-            if (prixLibelleElement) {
-                prixLibelleElement.innerHTML = '<i class="fas fa-percent mr-1"></i>Prix remise 1 appliquée';
-                prixLibelleElement.className = 'text-xs text-purple-600 mt-1';
-            }
-            
-            // Mettre à jour le sous-total
-            const sousTotalElement = document.getElementById(`sous-total-${panierId}`);
-            if (sousTotalElement) {
-                sousTotalElement.textContent = `${data.nouveau_sous_total.toFixed(2)} DH`;
-            }
-        }
-        
+
         // Notification de succès
         const notification = document.createElement('div');
         notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
@@ -767,23 +721,28 @@ function activerRemise(panierId) {
             </div>
         `;
         document.body.appendChild(notification);
-        
+
         setTimeout(() => {
             if (notification.parentNode) {
                 notification.parentNode.removeChild(notification);
             }
         }, 3000);
-        
+
+        // Ouvrir automatiquement le modal de remise après activation
+        setTimeout(() => {
+            ouvrirModalRemise(panierId);
+        }, 1000);
+
     })
     .catch(error => {
         console.error('❌ Erreur lors de l\'activation de la remise:', error);
-        
+
         // Réactiver le bouton en cas d'erreur
         if (button) {
             button.disabled = false;
             button.innerHTML = '<i class="fas fa-check mr-1"></i>Activer remise';
         }
-        
+
         alert('Erreur lors de l\'activation de la remise:\n' + error.message);
     });
 }
@@ -834,71 +793,7 @@ function desactiverRemise(panierId) {
         }
         
         console.log('✅ Remise désactivée avec succès:', data);
-        
-        // Masquer le bouton de désactivation
-        if (button) {
-            button.style.display = 'none';
-        }
-        
-        // Afficher le bouton d'activation
-        const articleTitle = document.querySelector(`[data-article-id="${panierId}"] .article-title`);
-        if (articleTitle) {
-            const existingActivateBtn = articleTitle.querySelector(`#btn-activer-remise-${panierId}`);
-            if (!existingActivateBtn) {
-                const activateBtn = document.createElement('button');
-                activateBtn.type = 'button';
-                activateBtn.id = `btn-activer-remise-${panierId}`;
-                activateBtn.className = 'inline-flex items-center px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium ml-2 hover:bg-green-200 transition-colors';
-                activateBtn.title = 'Activer la remise';
-                activateBtn.onclick = () => activerRemise(panierId);
-                activateBtn.innerHTML = '<i class="fas fa-check mr-1"></i>Activer remise';
-                
-                // Insérer après le badge variante s'il existe, sinon après le nom
-                const varianteBadge = articleTitle.querySelector('span[class*="bg-blue-100"]');
-                if (varianteBadge) {
-                    varianteBadge.parentNode.insertBefore(activateBtn, varianteBadge.nextSibling);
-                } else {
-                    articleTitle.appendChild(activateBtn);
-                }
-            }
-        }
-        
-        // Désactiver le bouton de remise
-        const btnRemise = document.getElementById(`btn-remise-${panierId}`);
-        if (btnRemise) {
-            btnRemise.disabled = true;
-            btnRemise.classList.add('opacity-50', 'cursor-not-allowed');
-        }
-        
-        // Supprimer le badge "remise appliquée"
-        const badge = document.querySelector(`[data-article-id="${panierId}"] .badge-remise`);
-        if (badge) {
-            badge.remove();
-        }
-        
-        // Mettre à jour l'affichage des prix si les données sont disponibles
-        if (data.prix_unitaire && data.nouveau_sous_total) {
-            // Restaurer le prix unitaire normal
-            const prixUnitaireElement = document.getElementById(`prix-unitaire-${panierId}`);
-            if (prixUnitaireElement) {
-                prixUnitaireElement.textContent = `${data.prix_unitaire.toFixed(2)} DH`;
-                prixUnitaireElement.className = 'font-medium text-gray-600';
-            }
-            
-            // Restaurer le libellé du prix normal
-            const prixLibelleElement = document.getElementById(`prix-libelle-${panierId}`);
-            if (prixLibelleElement) {
-                prixLibelleElement.innerHTML = '<i class="fas fa-tag mr-1"></i>Prix normal';
-                prixLibelleElement.className = 'text-xs text-gray-600 mt-1';
-            }
-            
-            // Mettre à jour le sous-total
-            const sousTotalElement = document.getElementById(`sous-total-${panierId}`);
-            if (sousTotalElement) {
-                sousTotalElement.textContent = `${data.nouveau_sous_total.toFixed(2)} DH`;
-            }
-        }
-        
+
         // Notification de succès
         const notification = document.createElement('div');
         notification.className = 'fixed top-4 right-4 bg-orange-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
@@ -909,12 +804,21 @@ function desactiverRemise(panierId) {
             </div>
         `;
         document.body.appendChild(notification);
-        
+
         setTimeout(() => {
             if (notification.parentNode) {
                 notification.parentNode.removeChild(notification);
             }
         }, 3000);
+
+        // Actualiser la section des articles après désactivation
+        setTimeout(() => {
+            if (typeof rafraichirSectionArticles === 'function') {
+                rafraichirSectionArticles();
+            } else {
+                rechargerSectionArticles();
+            }
+        }, 500);
         
     })
     .catch(error => {
