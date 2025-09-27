@@ -530,14 +530,9 @@ function updateUIAfterRemise(typeRemise, nouveauPrix, economie, serverData) {
             }
         }, 3000);
         
-        // Recharger la section des articles au lieu de mettre à jour manuellement
-        setTimeout(() => {
-            if (typeof rafraichirSectionArticles === 'function') {
-                rafraichirSectionArticles();
-            } else {
-                rechargerSectionArticles();
-            }
-        }, 500); // Petit délai pour que la notification soit visible
+        // Forcer le rechargement complet de la page immédiatement
+        console.log('🔄 Rechargement de la page pour afficher le prix de remise...');
+        window.location.reload();
         
     } catch (error) {
         console.error('❌ Erreur lors de l\'application du prix de remise:', error);
@@ -728,10 +723,19 @@ function activerRemise(panierId) {
             }
         }, 3000);
 
-        // Ouvrir automatiquement le modal de remise après activation
+        // Actualiser la section des articles après activation
+        setTimeout(() => {
+            if (typeof rafraichirSectionArticles === 'function') {
+                rafraichirSectionArticles();
+            } else {
+                rechargerSectionArticles();
+            }
+        }, 500);
+
+        // Ouvrir le modal de choix de prix de remise après l'actualisation
         setTimeout(() => {
             ouvrirModalRemise(panierId);
-        }, 1000);
+        }, 1500); // Délai plus long pour laisser le temps à l'actualisation de se terminer
 
     })
     .catch(error => {
