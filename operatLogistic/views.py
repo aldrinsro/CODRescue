@@ -1126,10 +1126,14 @@ def marque_retournee(request, commande_id):
 
             for panier in paniers:
                 try:
+                    print(f"🔧 DEBUG: Traitement du panier {panier.id} - Article: {panier.article.nom}")
+
                     # Calculer le prix unitaire effectif au moment du retour
                     from commande.templatetags.remise_filters import get_prix_effectif_panier
                     prix_info = get_prix_effectif_panier(panier)
                     prix_unitaire_actuel = prix_info['prix_unitaire']
+
+                    print(f"🔧 DEBUG: Prix unitaire calculé: {prix_unitaire_actuel}")
 
                     # Créer l'enregistrement de retour pour chaque article/variante
                     article_retourne = ArticleRetourne.objects.create(
@@ -1143,18 +1147,26 @@ def marque_retournee(request, commande_id):
                         statut_retour='en_attente'
                     )
                     articles_retournes_crees.append(article_retourne)
-                    print(f"✅ Article retourné créé: {panier.article.nom} - Quantité: {panier.quantite}")
+                    print(f"✅ Article retourné créé avec ID {article_retourne.id}: {panier.article.nom} - Quantité: {panier.quantite}")
 
                 except Exception as e:
-                    print(f"❌ Erreur lors de la création du retour pour panier {panier.id}: {e}")
+                    print(f"❌ ERREUR DÉTAILLÉE lors de la création du retour pour panier {panier.id}: {type(e).__name__}: {e}")
+                    import traceback
+                    print(f"❌ TRACEBACK: {traceback.format_exc()}")
 
-            # Supprimer tous les paniers car la commande est entièrement retournée
-            paniers.delete()
-            print(f"🗑️ Tous les paniers supprimés - Commande entièrement retournée")
+            # NE PAS supprimer les paniers - garder les articles dans la commande
+            # paniers.delete()  # SUPPRIMÉ - Les articles restent dans la commande
+            print(f"📦 Articles conservés dans la commande - Commande marquée comme retournée")
 
-            # Mettre le total de la commande à 0
-            commande.total_cmd = 0
-            commande.save()
+            # NE PAS mettre le total à 0 - garder le total original
+            # commande.total_cmd = 0  # SUPPRIMÉ - Le total reste inchangé
+            # commande.save()  # SUPPRIMÉ
+
+            print(f"🔧 DEBUG: Nombre d'articles retournés créés: {len(articles_retournes_crees)}")
+
+            # Vérifier que les articles retournés ont bien été créés en base
+            articles_retournes_db = ArticleRetourne.objects.filter(commande=commande).count()
+            print(f"🔧 DEBUG: Nombre d'articles retournés en base pour cette commande: {articles_retournes_db}")
 
             # Enregistrer l'opération
             operation_data = {

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import EnumEtatCmd, Commande, Panier, EtatCommande, Operation, Envoi
+from .models import EnumEtatCmd, Commande, Panier, EtatCommande, Operation, Envoi, ArticleRetourne
 
 @admin.register(EnumEtatCmd)
 class EnumEtatCmdAdmin(admin.ModelAdmin):
@@ -23,13 +23,21 @@ class OperationInline(admin.TabularInline):
     extra = 0
     readonly_fields = ('date_operation',)
 
+class ArticleRetourneInline(admin.TabularInline):
+    model = ArticleRetourne
+    extra = 0
+    readonly_fields = ('date_retour',)
+    fields = ('article', 'variante', 'quantite_retournee', 'prix_unitaire_origine', 'raison_retour', 'statut_retour', 'operateur_retour', 'date_retour')
+    verbose_name = "Article retourné"
+    verbose_name_plural = "Articles retournés"
+
 @admin.register(Commande)
 class CommandeAdmin(admin.ModelAdmin):
     list_display = ('num_cmd', 'id_yz', 'date_cmd', 'total_cmd', 'etat_actuel_display', 'client', 'produit_init', 'ville', 'ville_init', 'compteur')
     list_filter = ('date_cmd', 'ville')
     search_fields = ('num_cmd', 'id_yz', 'client__numero_tel', 'client__nom', 'client__prenom', 'produit_init', 'ville_init')
     ordering = ('-date_cmd', '-date_creation')
-    inlines = [PanierInline, EtatCommandeInline, OperationInline]
+    inlines = [PanierInline, EtatCommandeInline, OperationInline, ArticleRetourneInline]
     readonly_fields = ('date_creation', 'date_modification', 'etat_actuel_display')
     
     def etat_actuel_display(self, obj):
@@ -110,3 +118,59 @@ class EnvoiAdmin(admin.ModelAdmin):
             'fields': ('operateur_creation',),
         }),
     )
+
+@admin.register(ArticleRetourne)
+class ArticleRetourneAdmin(admin.ModelAdmin):
+    list_display = ('id', 'commande_display', 'article', 'variante_display', 'quantite_retournee', 'prix_unitaire_origine', 'statut_retour', 'operateur_retour', 'date_retour')
+    list_filter = ('statut_retour', 'date_retour', 'operateur_retour')
+    search_fields = ('commande__num_cmd', 'commande__id_yz', 'article__nom', 'operateur_retour__nom', 'operateur_retour__prenom')
+    ordering = ('-date_retour',)
+    readonly_fields = ('date_retour',)
+
+    def commande_display(self, obj):
+        """Affiche les informations de la commande"""
+        return f"{obj.commande.num_cmd} (YZ: {obj.commande.id_yz})"
+    commande_display.short_description = "Commande"
+
+    def variante_display(self, obj):
+        """Affiche les informations de la variante"""
+        if obj.variante:
+            return f"{obj.variante.couleur} - {obj.variante.pointure}"
+        return "Aucune variante"
+    variante_display.short_description = "Variante"
+
+    fieldsets = (
+        ('Informations principales', {
+            'fields': ('commande', 'article', 'variante', 'quantite_retournee')
+        }),
+        ('Détails financiers', {
+            'fields': ('prix_unitaire_origine',)
+        }),
+        ('Informations de retour', {
+            'fields': ('raison_retour', 'statut_retour', 'operateur_retour', 'date_retour')
+        }),
+        ('Traitement', {
+            'fields': ('date_traitement', 'operateur_traitement', 'commentaire_traitement'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    actions = ['marquer_comme_traite', 'marquer_comme_en_attente']
+
+    def marquer_comme_traite(self, request, queryset):
+        """Marque les articles sélectionnés comme traités"""
+        updated = queryset.update(statut_retour='traite')
+        self.message_user(
+            request,
+            f'{updated} article(s) marqué(s) comme traité(s).'
+        )
+    marquer_comme_traite.short_description = "Marquer comme traité"
+
+    def marquer_comme_en_attente(self, request, queryset):
+        """Marque les articles sélectionnés comme en attente"""
+        updated = queryset.update(statut_retour='en_attente')
+        self.message_user(
+            request,
+            f'{updated} article(s) marqué(s) comme en attente.'
+        )
+    marquer_comme_en_attente.short_description = "Marquer comme en attente"

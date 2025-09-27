@@ -3,6 +3,8 @@
  * Ce fichier contient toutes les fonctions d'ouverture et fermeture des modales
  */
 
+console.log('🔧 DEBUG: modals.js chargé');
+
 // Variables globales pour les modales
 let currentCommandeId = null;
 let currentCommandeIdYz = null;
@@ -1168,6 +1170,9 @@ function submitLivraisonPartielleUnified(e) {
 window.ouvrirModalLivraisonPartielle = ouvrirModalLivraisonPartielle;
 window.fermerModalLivraisonPartielle = fermerModalLivraisonPartielle;
 window.initialiserModalLivraisonPartielle = initialiserModalLivraisonPartielle;
+window.ouvrirModalRetourComplet = ouvrirModalRetourComplet;
+window.fermerModalRetourComplet = fermerModalRetourComplet;
+window.soumettreRetourComplet = soumettreRetourComplet;
 
 // Gestion des événements clavier pour fermer les modales avec Échap
 document.addEventListener('keydown', function(event) {
@@ -1218,6 +1223,12 @@ document.addEventListener('keydown', function(event) {
         const savActionsModal = document.getElementById('savActionsModal');
         if (savActionsModal && !savActionsModal.classList.contains('hidden')) {
             fermerModalActionsSav();
+        }
+
+        // Fermer la modale de retour complet si elle est ouverte
+        const retourCompletModal = document.getElementById('retourCompletModal');
+        if (retourCompletModal && !retourCompletModal.classList.contains('hidden')) {
+            fermerModalRetourComplet();
         }
     }
 });
@@ -1285,6 +1296,14 @@ document.addEventListener('click', function(event) {
     if (savActionsModal && !savActionsModal.classList.contains('hidden')) {
         if (event.target === savActionsModal) {
             fermerModalActionsSav();
+        }
+    }
+
+    // Modale de retour complet
+    const retourCompletModal = document.getElementById('retourCompletModal');
+    if (retourCompletModal && !retourCompletModal.classList.contains('hidden')) {
+        if (event.target === retourCompletModal) {
+            fermerModalRetourComplet();
         }
     }
 });
