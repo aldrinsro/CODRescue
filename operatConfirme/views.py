@@ -3689,12 +3689,25 @@ def activer_remise_panier(request, panier_id):
                     'success': False,
                     'message': 'Les articles en promotion ne peuvent pas avoir de remise appliquée'
                 })
-            
+
+            # Vérifier que l'article a au moins un prix de remise configuré
+            prix_remise_1 = getattr(panier.article, 'prix_remise_1', None) or 0
+            prix_remise_2 = getattr(panier.article, 'prix_remise_2', None) or 0
+            prix_remise_3 = getattr(panier.article, 'prix_remise_3', None) or 0
+            prix_remise_4 = getattr(panier.article, 'prix_remise_4', None) or 0
+
+            # Vérifier si tous les prix de remise sont nuls
+            if all(prix <= 0 for prix in [prix_remise_1, prix_remise_2, prix_remise_3, prix_remise_4]):
+                print(f"❌ DEBUG: Aucun prix de remise configuré pour cet article")
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Cet article n\'a aucun prix de remise configuré. Contactez l\'administrateur.'
+                })
+
             # Activer la remise avec prix remise 1 par défaut
             print(f"✅ DEBUG: Activation de la remise pour panier {panier.id}")
-            
-            # Vérifier si l'article a un prix remise 1 configuré
-            prix_remise_1 = getattr(panier.article, 'prix_remise_1', None)
+
+            # Utiliser prix_remise_1 déjà récupéré ci-dessus
             if prix_remise_1 and prix_remise_1 > 0:
                 # Appliquer le prix remise 1 et recalculer le sous-total
                 nouveau_sous_total = float(prix_remise_1) * panier.quantite
