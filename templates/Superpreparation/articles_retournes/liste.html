@@ -628,6 +628,32 @@
             margin-right: 0 !important;
         }
     }
+
+    /* Styles pour les onglets */
+    .tab-button {
+        position: relative;
+        transition: all 0.3s ease;
+    }
+
+    .tab-button.tab-active {
+        color: var(--preparation-primary) !important;
+        border-color: var(--preparation-primary) !important;
+        background: linear-gradient(135deg, rgba(7, 15, 43, 0.05) 0%, rgba(14, 29, 61, 0.05) 100%);
+    }
+
+    .tab-button:hover {
+        background: linear-gradient(135deg, rgba(7, 15, 43, 0.02) 0%, rgba(14, 29, 61, 0.02) 100%);
+    }
+
+    .tab-button.tab-active::after {
+        content: '';
+        position: absolute;
+        bottom: -2px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: linear-gradient(90deg, var(--preparation-primary), var(--preparation-light));
+    }
 </style>
 {% endblock %}
 
@@ -649,12 +675,8 @@
             </div>
             <div class="flex items-center gap-6 mt-4 md:mt-0">
                 <div class="text-center">
-                    <div class="text-3xl font-bold text-white">{{ stats.total_commandes|default:0 }}</div>
-                    <div class="text-sm text-white opacity-80">Commandes partiellement livrées</div>
-                </div>
-                <div class="text-center border-l border-white/30 pl-6 ml-6">
-                    <div class="text-3xl font-bold text-white">{{ stats.commandes_urgentes|default:0 }}</div>
-                    <div class="text-sm text-white opacity-80">Urgentes</div>
+                    <div class="text-3xl font-bold text-white">{{ stats.total_articles|default:0 }}</div>
+                    <div class="text-sm text-white opacity-80">Les articles Retournées</div>
                 </div>
             </div>
         </div>
@@ -669,8 +691,8 @@
                         <i class="fas fa-truck text-2xl"></i>
                     </div>
                     <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-600">Livrées Partiellement</p>
-                    <p class="text-3xl font-bold text-gray-900">{{ stats.total_commandes|default:0 }}</p>
+                    <p class="text-sm font-medium text-gray-600">Articles Retournées </p>
+                    <p class="text-3xl font-bold text-gray-900">{{ stats.total_articles|default:0 }}</p>
                 </div>
             </div>
         </div>
@@ -702,7 +724,7 @@
         </div>
 
         <!-- Articles retournés à traiter -->
-        <div class="stats-card animate-slideInUp cursor-pointer hover:shadow-lg transition-all duration-200" style="animation-delay: 0.4s;" onclick="ouvrirModaleArticlesRetournes()">
+        <div class="stats-card animate-slideInUp cursor-pointer hover:shadow-lg transition-all duration-200" style="animation-delay: 0.4s;">
                 <div class="flex items-center">
                 <div class="stats-icon bg-orange-500">
                         <i class="fas fa-undo text-2xl"></i>
@@ -710,7 +732,6 @@
                     <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">Articles à Traiter</p>
                     <p class="text-3xl font-bold text-orange-600">{{ articles_retournes_stats.total_en_attente|default:0 }}</p>
-                    <p class="text-xs text-gray-500">Cliquer pour voir</p>
                 </div>
             </div>
         </div>
@@ -720,9 +741,56 @@
 
     <!-- Barre de recherche intelligente -->
 {% include 'Superpreparation/includes/smart-search-toolbar.html' %}
-        
+
+    <!-- Onglets de filtrage -->
+    <div class="mb-6">
+        <div class="border-b border-gray-200 bg-white rounded-t-lg">
+            <nav class="-mb-px flex space-x-8 px-6" aria-label="Tabs">
+                <button onclick="changerOnglet('tous')"
+                        id="tab-tous"
+                        class="tab-button border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors">
+                    <i class="fas fa-list mr-2"></i>
+                    Tous les articles
+                    <span class="ml-2 bg-gray-100 text-gray-900 py-0.5 px-2.5 rounded-full text-xs font-medium">{{ stats.total_articles }}</span>
+                </button>
+
+                <button onclick="changerOnglet('en_attente')"
+                        id="tab-en_attente"
+                        class="tab-button border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors tab-active">
+                    <i class="fas fa-clock mr-2"></i>
+                    En attente
+                    <span class="ml-2 bg-yellow-100 text-yellow-800 py-0.5 px-2.5 rounded-full text-xs font-medium">{{ stats.total_en_attente }}</span>
+                </button>
+
+                <button onclick="changerOnglet('traites')"
+                        id="tab-traites"
+                        class="tab-button border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors">
+                    <i class="fas fa-check-circle mr-2"></i>
+                    Traités
+                    <span class="ml-2 bg-green-100 text-green-800 py-0.5 px-2.5 rounded-full text-xs font-medium">{{ stats.total_traites }}</span>
+                </button>
+
+                <button onclick="changerOnglet('reintegre_stock')"
+                        id="tab-reintegre_stock"
+                        class="tab-button border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors">
+                    <i class="fas fa-box mr-2"></i>
+                    Réintégrés en stock
+                    <span class="ml-2 bg-blue-100 text-blue-800 py-0.5 px-2.5 rounded-full text-xs font-medium">{{ stats.total_reintegres }}</span>
+                </button>
+
+                <button onclick="changerOnglet('defectueux')"
+                        id="tab-defectueux"
+                        class="tab-button border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors">
+                    <i class="fas fa-times-circle mr-2"></i>
+                    Défectueux
+                    <span class="ml-2 bg-red-100 text-red-800 py-0.5 px-2.5 rounded-full text-xs font-medium">{{ stats.commandes_urgentes }}</span>
+                </button>
+            </nav>
+        </div>
+    </div>
+
     <div class="flex justify-end mb-2">
-        <button id="columnToggle" onclick="toggleColumnVisibility()" 
+        <button id="columnToggle" onclick="toggleColumnVisibility()"
                 class="inline-flex items-center px-3 py-2 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium rounded transition-colors h-10" title="Sélectionner les colonnes">
             <i class="fas fa-columns mr-2 text-gray-500"></i>
             Sélectionner les colonnes
@@ -747,196 +815,7 @@
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
-                    {% if articles_retournes %}
-                        {% for article_retourne in articles_retournes %}
-                        <tr class="table-row article-retourne-row"
-                            data-id="{{ article_retourne.id }}"
-                            data-commande-id-yz="{{ article_retourne.commande.id_yz }}"
-                            data-article-nom="{{ article_retourne.article.nom }}"
-                            data-client="{{ article_retourne.commande.client.prenom }} {{ article_retourne.commande.client.nom }}"
-                            data-statut="{{ article_retourne.statut_retour }}"
-                            data-date-retour="{{ article_retourne.date_retour|date:'d/m/Y' }}">
-
-                            <!-- Colonne Articles & Variantes -->
-                            <td class="table-cell whitespace-nowrap">
-                                <div class="bg-gray-50 p-2 rounded-lg border border-gray-200">
-                                    <div class="text-sm font-medium text-gray-900 mb-1">{{ article_retourne.article.nom }}</div>
-                                    {% if article_retourne.article.reference %}
-                                    <div class="text-xs text-gray-500 mb-1">Réf: {{ article_retourne.article.reference }}</div>
-                                    {% endif %}
-                                    {% if article_retourne.variante %}
-                                        <div class="border-t border-gray-200 pt-1 mt-1">
-                                            <div class="flex flex-wrap gap-1">
-                                                {% if article_retourne.variante.couleur %}
-                                                <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                                    <i class="fas fa-palette mr-1"></i>{{ article_retourne.variante.couleur.nom }}
-                                                </span>
-                                                {% endif %}
-                                                {% if article_retourne.variante.pointure %}
-                                                <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                                    <i class="fas fa-ruler mr-1"></i>{{ article_retourne.variante.pointure.pointure }}
-                                                </span>
-                                                {% endif %}
-                                                <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                                                    <i class="fas fa-box mr-1"></i>{{ article_retourne.quantite_retournee }}x
-                                                </span>
-                                            </div>
-                                        </div>
-                                    {% else %}
-                                        <div class="border-t border-gray-200 pt-1 mt-1">
-                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                                                <i class="fas fa-box mr-1"></i>{{ article_retourne.quantite_retournee }}x
-                                            </span>
-                                        </div>
-                                    {% endif %}
-                                </div>
-                            </td>
-
-                            <!-- Colonne N° Commande -->
-                            <td class="table-cell whitespace-nowrap">
-                                <div class="text-sm font-medium text-gray-900">{{ article_retourne.commande.id_yz }}</div>
-                                <div class="text-xs text-gray-500">{{ article_retourne.commande.num_cmd|default:"-" }}</div>
-                            </td>
-
-                            <!-- Colonne Client -->
-                            <td class="table-cell whitespace-nowrap">
-                                <div class="text-sm font-medium text-gray-900">{{ article_retourne.commande.client.prenom }} {{ article_retourne.commande.client.nom }}</div>
-                                {% if article_retourne.commande.client.email %}
-                                <div class="text-xs text-gray-500">{{ article_retourne.commande.client.email }}</div>
-                                {% endif %}
-                            </td>
-
-                    
-                       
-
-
-                            <!-- Colonne Date de Retour -->
-                            <td class="table-cell whitespace-nowrap">
-                                <div class="text-sm text-gray-900">{{ article_retourne.date_retour|date:"d/m/Y" }}</div>
-                                <div class="text-xs text-gray-500">{{ article_retourne.date_retour|date:"H:i" }}</div>
-                            </td>
-
-                            <!-- Colonne Raison -->
-                            <td class="table-cell">
-                                <div class="text-sm text-gray-900 max-w-xs truncate" title="{{ article_retourne.raison_retour }}">
-                                    {{ article_retourne.raison_retour|default:"Non spécifiée" }}
-                                </div>
-                            </td>
-
-                            <!-- Colonne Prix à la commande -->
-                            <td class="table-cell whitespace-nowrap">
-                                <div class="text-sm font-bold text-green-600">{{ article_retourne.prix_unitaire_origine|floatformat:2 }} DH</div>
-                                <div class="text-xs text-gray-500">Qté: {{ article_retourne.quantite_retournee }}x</div>
-                            </td>
-
-                            <!-- Colonne statut de Retour -->
-                            <td class="table-cell whitespace-nowrap">
-                                {% if article_retourne.statut_retour == 'en_attente' %}
-                                <span class="etat-badge en-attente bg-yellow-100 text-yellow-800 border-yellow-200">
-                                    <i class="fas fa-clock mr-1"></i>
-                                    En attente
-                                </span>
-                                {% elif article_retourne.statut_retour == 'reintegre_stock' %}
-                                <span class="etat-badge reintegre bg-green-100 text-green-800 border-green-200">
-                                    <i class="fas fa-check-circle mr-1"></i>
-                                    Réintégré
-                                </span>
-                                {% elif article_retourne.statut_retour == 'defectueux' %}
-                                <span class="etat-badge defectueux bg-red-100 text-red-800 border-red-200">
-                                    <i class="fas fa-times-circle mr-1"></i>
-                                    Défectueux
-                                </span>
-                                {% elif article_retourne.statut_retour == 'traite' %}
-                                <span class="etat-badge traite bg-blue-100 text-blue-800 border-blue-200">
-                                    <i class="fas fa-check mr-1"></i>
-                                    Traité
-                                </span>
-                                {% else %}
-                                <span class="etat-badge autre bg-gray-100 text-gray-800 border-gray-200">
-                                    {{ article_retourne.get_statut_retour_display }}
-                                </span>
-                                {% endif %}
-                            </td>
-
-                            <!-- Etat de commande  -->
-                            <td class="table-cell whitespace-nowrap">
-                                {% with etat_actuel=article_retourne.commande.etat_actuel %}
-                                    {% if etat_actuel %}
-                                        <span class="etat-badge" style="
-                                            
-                                            {% if etat_actuel.enum_etat.libelle == 'Retournée' %}
-                                                background: #fee2e2; color: #dc2626; border: 1px solid #fecaca;
-                                            {% elif etat_actuel.enum_etat.libelle == 'Livrée Partiellement' %}
-                                                background: #fef3c7; color: #d97706; border: 1px solid #fde68a;
-                                            {% else %}
-                                                background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe;
-                                            {% endif %}
-                                        ">
-                                           
-                                            {% if etat_actuel.enum_etat.libelle == 'Retournée' %}
-                                                <i class="fas fa-undo mr-1"></i>
-                                            {% elif etat_actuel.enum_etat.libelle == 'Livrée Partiellement' %}
-                                                <i class="fas fa-truck mr-1"></i>
-                                            {% else %}
-                                                <i class="fas fa-info-circle mr-1"></i>
-                                            {% endif %}
-                                            {{ etat_actuel.enum_etat.libelle }}
-                                        </span>
-                                        <div class="text-xs text-gray-500 mt-1">
-                                            {{ etat_actuel.date_debut|date:"d/m/Y H:i" }}
-                                        </div>
-                                        {% if etat_actuel.operateur %}
-                                        <div class="text-xs text-gray-400">
-                                            Par: {{ etat_actuel.operateur.prenom }} {{ etat_actuel.operateur.nom }}
-                                        </div>
-                                        {% endif %}
-                                    {% else %}
-                                        <span class="etat-badge bg-gray-100 text-gray-600 border-gray-200">
-                                            <i class="fas fa-question mr-1"></i>
-                                            Aucun état
-                                        </span>
-                                    {% endif %}
-                                {% endwith %}
-                            </td>
-
-                            <!-- Colonne Actions -->
-                            <td class="table-cell whitespace-nowrap text-center">
-                                <div class="flex justify-center space-x-1">
-                                    {% if article_retourne.statut_retour == 'en_attente' %}
-                                        {% if article_retourne.peut_etre_reintegre %}
-                                        <button onclick="traiterArticle({{ article_retourne.id }}, 'reintegrer_stock')"
-                                                class="text-green-600 hover:text-green-900 transition-colors p-1"
-                                                title="Réintégrer en stock">
-                                            <i class="fas fa-check-circle text-lg"></i>
-                                        </button>
-                                        {% endif %}
-                                        <button onclick="traiterArticle({{ article_retourne.id }}, 'marquer_defectueux')"
-                                                class="text-red-600 hover:text-red-900 transition-colors p-1"
-                                                title="Marquer défectueux">
-                                            <i class="fas fa-times-circle text-lg"></i>
-                                        </button>
-                                    {% else %}
-                                        <span class="text-gray-400 text-sm">
-                                            <i class="fas fa-lock mr-1"></i>Traité
-                                        </span>
-                                    {% endif %}
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    {% else %}
-                        <tr>
-                            <td colspan="11" class="table-cell whitespace-nowrap text-center">
-                                <div class="empty-state">
-                                    <div class="empty-state-icon">
-                                        <i class="fas fa-truck"></i>
-                                    </div>
-                                    <h3 class="text-xl font-medium text-gray-800 mb-2">Aucun articles Retournées pour l'instant </h3>
-                                    <p class="text-gray-600 mb-4">Toutes les commandes ont été livrées complètement ou ne sont pas encore livrées.</p>
-                                </div>
-                            </td>
-                        </tr>
-                    {% endif %}
+                    {% include 'Superpreparation/partials/_articles_retounees_table.html' with page_obj=page_obj  %}
                 </tbody>
             </table>
         </div>
@@ -1081,199 +960,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // === GESTION DES ARTICLES RETOURNÉS ===
 
-function ouvrirModaleArticlesRetournes() {
-    console.log('Ouverture de la modale des articles retournés');
-    document.getElementById('modaleArticlesRetournes').classList.remove('hidden');
-    chargerArticlesRetournes();
-}
-
-function fermerModaleArticlesRetournes() {
-    console.log('Fermeture de la modale des articles retournés');
-    document.getElementById('modaleArticlesRetournes').classList.add('hidden');
-}
-
-function chargerArticlesRetournes() {
-    console.log('Chargement des articles retournés...');
-    const contenu = document.getElementById('contenuArticlesRetournes');
-
-    // Afficher le spinner
-    contenu.innerHTML = `
-        <div class="text-center py-8">
-            <i class="fas fa-spinner fa-spin text-3xl text-blue-600 mb-4"></i>
-            <p class="text-gray-600">Chargement des articles retournés...</p>
-        </div>
-    `;
-
-    fetch('{% url "Superpreparation:service_api_articles_retournes_modal" %}', {
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token }}'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                afficherArticlesRetournes(data.articles);
-            } else {
-                contenu.innerHTML = `
-                    <div class="text-center py-8 text-red-600">
-                        <i class="fas fa-exclamation-triangle text-3xl mb-4"></i>
-                        <p>Erreur: ${data.error}</p>
-                    </div>
-                `;
-            }
-        })
-        .catch(error => {
-            console.error('Erreur:', error);
-            contenu.innerHTML = `
-                <div class="text-center py-8 text-red-600">
-                    <i class="fas fa-exclamation-triangle text-3xl mb-4"></i>
-                    <p>Erreur de réseau lors du chargement</p>
-                </div>
-            `;
-        });
-}
-
-function afficherArticlesRetournes(articles) {
-    const contenu = document.getElementById('contenuArticlesRetournes');
-
-    if (articles.length === 0) {
-        contenu.innerHTML = `
-            <div class="text-center py-8">
-                <i class="fas fa-check-circle text-3xl text-green-600 mb-4"></i>
-                <p class="text-gray-600">Aucun article retourné en attente de traitement</p>
-            </div>
-        `;
-        return;
-    }
-
-    let html = `
-        <div class="mb-4 p-3 bg-blue-50 rounded-lg">
-            <div class="flex items-center justify-between">
-                <span class="text-sm text-blue-800">
-                    <i class="fas fa-info-circle mr-2"></i>
-                    ${articles.length} article(s) retourné(s) en attente de traitement
-                </span>
-                <div class="text-xs text-blue-600">
-                    Affichage des ${Math.min(articles.length, 50)} premiers résultats
-                </div>
-            </div>
-        </div>
-
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Article & Variante</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Commande</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantité</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Retour</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Raison</th>
-                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-    `;
-
-    articles.forEach(article => {
-        const canReintegrate = article.peut_etre_reintegre;
-
-        html += `
-            <tr class="hover:bg-gray-50">
-                <td class="px-4 py-4 whitespace-nowrap">
-                    <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                        <div class="text-sm font-medium text-gray-900 mb-1">${article.article_nom}</div>
-                        <div class="text-xs text-gray-500 mb-2">Réf: ${article.article_reference}</div>
-                        ${article.variante_info.has_variante ? `
-                            <div class="border-t border-gray-200 pt-2 mt-2">
-                                <div class="text-xs font-medium text-gray-700 mb-1">Variante associée :</div>
-                                <div class="space-y-1">
-                                    ${article.variante_info.reference_variante ? `
-                                        <div class="text-xs text-gray-600">
-                                            <i class="fas fa-barcode mr-1"></i>Réf: ${article.variante_info.reference_variante}
-                                        </div>
-                                    ` : ''}
-                                    <div class="flex flex-wrap gap-1">
-                                        ${article.variante_info.couleur ? `
-                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                                <i class="fas fa-palette mr-1"></i>${article.variante_info.couleur}
-                                            </span>
-                                        ` : ''}
-                                        ${article.variante_info.pointure ? `
-                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                                <i class="fas fa-ruler mr-1"></i>Taille ${article.variante_info.pointure}
-                                            </span>
-                                        ` : ''}
-                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${article.variante_info.stock_disponible > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
-                                            <i class="fas fa-boxes mr-1"></i>Stock: ${article.variante_info.stock_disponible}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        ` : `
-                            <div class="border-t border-gray-200 pt-2 mt-2">
-                                <div class="text-xs text-red-400 italic flex items-center">
-                                    <i class="fas fa-exclamation-triangle mr-1"></i>
-                                    Aucune variante associée
-                                </div>
-                            </div>
-                        `}
-                    </div>
-                </td>
-                <td class="px-4 py-4 whitespace-nowrap">
-                    <div class="text-sm font-medium text-gray-900">${article.commande_info.id_yz}</div>
-                    <div class="text-xs text-gray-500">${article.commande_info.num_cmd}</div>
-                </td>
-                <td class="px-4 py-4 whitespace-nowrap">
-                    <div class="text-sm text-gray-900">${article.commande_info.client_nom}</div>
-                </td>
-                <td class="px-4 py-4 whitespace-nowrap">
-                    <div class="text-sm font-bold text-orange-600">${article.quantite_retournee}x</div>
-                    <div class="text-xs text-gray-500">${article.prix_unitaire} DH</div>
-                </td>
-                <td class="px-4 py-4 whitespace-nowrap">
-                    <div class="text-sm text-gray-900">${article.date_retour}</div>
-                </td>
-                <td class="px-4 py-4">
-                    <div class="text-sm text-gray-900 max-w-xs truncate" title="${article.raison_retour}">
-                        ${article.raison_retour}
-                    </div>
-                </td>
-                <td class="px-4 py-4 whitespace-nowrap text-center">
-                    <div class="flex justify-center space-x-2">
-                        ${canReintegrate ? `
-                            <button onclick="traiterArticle(${article.id}, 'reintegrer_stock')"
-                                    class="text-green-600 hover:text-green-900 transition-colors"
-                                    title="Réintégrer en stock">
-                                <i class="fas fa-check-circle"></i>
-                            </button>
-                        ` : ''}
-                        <button onclick="traiterArticle(${article.id}, 'marquer_defectueux')"
-                                class="text-red-600 hover:text-red-900 transition-colors"
-                                title="Marquer défectueux">
-                            <i class="fas fa-times-circle"></i>
-                        </button>
-                        <button onclick="traiterArticle(${article.id}, 'marquer_traite')"
-                                class="text-blue-600 hover:text-blue-900 transition-colors"
-                                title="Marquer traité">
-                            <i class="fas fa-check"></i>
-                        </button>
-                    </div>
-                </td>
-            </tr>
-        `;
-    });
-
-    html += `
-                </tbody>
-            </table>
-        </div>
-    `;
-
-    contenu.innerHTML = html;
-}
 
 function traiterArticle(articleId, action) {
     const actions = {
@@ -1313,7 +999,6 @@ function traiterArticle(articleId, action) {
         if (data.success) {
             showToast(data.message, 'success');
             // Recharger les articles
-            chargerArticlesRetournes();
             // Mettre à jour le compteur dans le card
             location.reload();
         } else {
@@ -1371,6 +1056,116 @@ document.addEventListener('keydown', function(e) {
             fermerModaleArticlesRetournes();
         }
     }
+});
+
+// === GESTION DES ONGLETS ===
+
+let ongletActuel = '{{ statut_filter|default:"en_attente" }}';
+
+function changerOnglet(statut) {
+    console.log('Changement vers l\'onglet:', statut);
+
+    // Mettre à jour l'onglet actuel
+    ongletActuel = statut;
+
+    // Mettre à jour les styles des onglets
+    document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.classList.remove('tab-active');
+    });
+
+    const ongletActif = document.getElementById(`tab-${statut}`);
+    if (ongletActif) {
+        ongletActif.classList.add('tab-active');
+    }
+
+    // Filtrer les lignes du tableau
+    filtrerTableauParStatut(statut);
+
+    // Mettre à jour l'URL sans recharger la page
+    const url = new URL(window.location);
+    if (statut === 'tous') {
+        url.searchParams.delete('statut');
+    } else {
+        url.searchParams.set('statut', statut);
+    }
+    window.history.pushState({}, '', url);
+}
+
+function filtrerTableauParStatut(statut) {
+    const lignes = document.querySelectorAll('.article-retourne-row');
+    let visibleCount = 0;
+
+    lignes.forEach(ligne => {
+        const statutLigne = ligne.dataset.statut;
+        let visible = false;
+
+        if (statut === 'tous') {
+            visible = true;
+        } else if (statut === 'traites') {
+            // Traités = tous sauf en_attente
+            visible = statutLigne !== 'en_attente';
+        } else {
+            visible = statutLigne === statut;
+        }
+
+        if (visible) {
+            ligne.style.display = '';
+            visibleCount++;
+        } else {
+            ligne.style.display = 'none';
+        }
+    });
+
+    // Afficher/masquer le message vide
+    const emptyState = document.querySelector('.empty-state');
+    const parentTr = emptyState ? emptyState.closest('tr') : null;
+
+    if (parentTr) {
+        if (visibleCount === 0) {
+            parentTr.style.display = '';
+            // Mettre à jour le message selon l'onglet
+            const title = emptyState.querySelector('h3');
+            const description = emptyState.querySelector('p');
+
+            if (title && description) {
+                switch(statut) {
+                    case 'en_attente':
+                        title.textContent = 'Aucun article en attente';
+                        description.textContent = 'Tous les articles retournés ont été traités.';
+                        break;
+                    case 'traites':
+                        title.textContent = 'Aucun article traité';
+                        description.textContent = 'Aucun article n\'a encore été traité.';
+                        break;
+                    case 'reintegre_stock':
+                        title.textContent = 'Aucun article réintégré';
+                        description.textContent = 'Aucun article n\'a été réintégré en stock.';
+                        break;
+                    case 'defectueux':
+                        title.textContent = 'Aucun article défectueux';
+                        description.textContent = 'Aucun article n\'a été marqué comme défectueux.';
+                        break;
+                    default:
+                        title.textContent = 'Aucun article trouvé';
+                        description.textContent = 'Aucun article ne correspond à ce filtre.';
+                }
+            }
+        } else {
+            parentTr.style.display = 'none';
+        }
+    }
+
+    console.log(`Articles visibles pour le statut "${statut}": ${visibleCount}`);
+}
+
+// Initialiser l'onglet au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+    // Récupérer le statut depuis l'URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const statutUrl = urlParams.get('statut') || 'en_attente';
+
+    // Activer l'onglet correspondant
+    changerOnglet(statutUrl);
 });
 </script>
 {% endblock %}
