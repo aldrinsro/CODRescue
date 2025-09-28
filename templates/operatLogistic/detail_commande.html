@@ -1161,6 +1161,7 @@
 
 {% block extra_js %}
 <script src="{% static 'js/OperteurSAV/retournee.js' %}"></script>
+<script src="{% static 'js/OperteurSAV/modals.js' %}"></script>
 
 
 <script>
@@ -2225,7 +2226,6 @@ window.currentPaniersData = [
 ];
 console.log('🔧 DEBUG: Données des paniers initialisées:', window.currentPaniersData);
 
-// Fonctions ouvrirModalLivraisonPartielle et fermerModalLivraisonPartielle déplacées vers static/js/OperteurSAV/modals.js
 
 function initialiserModalLivraisonPartielleTemplate() {
     console.log('DEBUG: Initialisation du modal de livraison partielle');

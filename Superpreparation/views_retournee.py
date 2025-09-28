@@ -20,11 +20,14 @@ from .decorators import superviseur_preparation_required
 @superviseur_preparation_required
 def liste_articles_retournes_service(request):
     """Liste des articles retournés en attente de traitement - Version Superpreparation"""
-    # Récupérer les articles retournés avec préfetch des relations
+    # Récupérer les articles retournés avec préfetch des relations optimisées
     articles_retournes = ArticleRetourne.objects.select_related(
-        'commande', 'article', 'variante', 'operateur_retour'
+        'commande', 'commande__client', 'commande__ville', 'commande__ville__region',
+        'article', 'variante', 'variante__couleur', 'variante__pointure',
+        'operateur_retour', 'operateur_traitement'
     ).prefetch_related(
-        'variante__couleur', 'variante__pointure'
+        'commande__etats__enum_etat',
+        'commande__etats__operateur'
     ).order_by('-date_retour')
 
     # Filtre par statut
@@ -47,23 +50,50 @@ def liste_articles_retournes_service(request):
         'total_en_attente': ArticleRetourne.objects.filter(statut_retour='en_attente').count(),
         'total_reintegres': ArticleRetourne.objects.filter(statut_retour='reintegre_stock').count(),
         'total_traites': ArticleRetourne.objects.exclude(statut_retour='en_attente').count(),
-        'valeur_total_en_attente': ArticleRetourne.objects.filter(
-            statut_retour='en_attente'
-        ).aggregate(
+        'total_commandes': articles_retournes.values('commande').distinct().count(),
+        'commandes_urgentes': ArticleRetourne.objects.filter(statut_retour='defectueux').count(),  # Nombre d'articles défectueux
+        'valeur_totale': articles_retournes.aggregate(
             total=Sum('quantite_retournee') * Sum('prix_unitaire_origine')
         )['total'] or 0
     }
 
-    # Pagination
+    # Statistiques spécifiques pour les articles retournés
+    articles_retournes_stats = {
+        'total_en_attente': stats['total_en_attente'],
+        'total_reintegres': stats['total_reintegres'],
+        'total_traites': stats['total_traites']
+    }
+
+    # Récupérer les commandes qui ont des articles retournés (pour simuler les commandes livrées partiellement)
+    commandes_avec_retours = []
+    commandes_distinctes = articles_retournes.values('commande').distinct()
+
+    for commande_data in commandes_distinctes:
+        try:
+            commande = Commande.objects.select_related(
+                'client', 'ville', 'ville__region'
+            ).prefetch_related(
+                'paniers',
+                'etats__enum_etat',
+                'etats__operateur'
+            ).get(id=commande_data['commande'])
+            commandes_avec_retours.append(commande)
+        except Commande.DoesNotExist:
+            continue
+
+    # Pagination pour les articles retournés
     paginator = Paginator(articles_retournes, 25)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
     context = {
+        'articles_retournes': articles_retournes,  # Tous les articles retournés
+        'commandes_livrees_partiellement': commandes_avec_retours,  # Commandes avec retours
         'page_obj': page_obj,
         'search_query': search_query,
         'statut_filter': statut_filter,
         'stats': stats,
+        'articles_retournes_stats': articles_retournes_stats,
         'page_title': 'Service - Gestion des Articles Retournés',
         'page_subtitle': 'Articles retournés lors des livraisons partielles',
         'active_tab': 'service',

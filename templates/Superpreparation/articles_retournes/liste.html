@@ -695,8 +695,8 @@
                         <i class="fas fa-exclamation-triangle text-2xl"></i>
                     </div>
                     <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-600">Nombres d'articles defecteux </p>
-                    <p class="text-3xl font-bold text-gray-900">{{ stats.commandes_urgentes|default:0 }}</p>
+                    <p class="text-sm font-medium text-gray-600">Articles défectueux</p>
+                    <p class="text-3xl font-bold text-red-600">{{ stats.commandes_urgentes|default:0 }}</p>
                 </div>
             </div>
         </div>
@@ -738,122 +738,188 @@
                         <th class="table-cell text-left text-xs font-medium text-white uppercase tracking-wider">Articles & Variantes</th>
                         <th class="table-cell text-left text-xs font-medium text-white uppercase tracking-wider">N° Commande</th>
                         <th class="table-cell text-left text-xs font-medium text-white uppercase tracking-wider">Client</th>
-                        <th class="table-cell text-left text-xs font-medium text-white uppercase tracking-wider">Tél.</th>
-                        <th class="table-cell text-left text-xs font-medium text-white uppercase tracking-wider">Ville Clt</th>
-                        <th class="table-cell text-left text-xs font-medium text-white uppercase tracking-wider">Ville & Région</th>
                         <th class="table-cell text-left text-xs font-medium text-white uppercase tracking-wider">Date de Retour </th>
                         <th class="table-cell text-left text-xs font-medium text-white uppercase tracking-wider">Raison </th>
-                        <th class="table-cell text-left text-xs font-medium text-white uppercase tracking-wider">Prix à la commande </th>
-                        <th class="table-cell text-left text-xs font-medium text-white uppercase tracking-wider">État</th>
+                        <th class="table-cell text-left text-xs font-medium text-white uppercase tracking-wider">Prix de l'article</th>
+                        <th class="table-cell text-left text-xs font-medium text-white uppercase tracking-wider">Statut de Retour</th>
+                        <th class="table-cell text-left text-xs font-medium text-white uppercase tracking-wider">État de la commmande</th>
                         <th class="table-cell text-center text-xs font-medium text-white uppercase tracking-wider">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
-                    {% if commandes_livrees_partiellement %}
-                        {% for commande in commandes_livrees_partiellement %}
-                        <tr class="table-row commande-row" 
-                            data-id-yz="{{ commande.id_yz }}"
-                            data-num-cmd="{{ commande.num_cmd|default:'' }}"
-                            data-client="{{ commande.client.prenom }} {{ commande.client.nom }}"
-                            data-phone="{{ commande.client.numero_tel|default:'' }}"
-                            data-email="{{ commande.client.email|default:'' }}"
-                            data-ville-client="{{ commande.ville_init|default:'' }}"
-                            data-ville-region="{% if commande.ville %}{{ commande.ville.nom }} {{ commande.ville.region.nom_region }}{% endif %}"
-                            data-adresse="{% if commande.client.adresse %}{{ commande.client.adresse }}{% endif %}"
-                            data-date-livraison="{% if commande.etat_actuel %}{{ commande.etat_actuel.date_debut|date:'d/m/Y' }}{% endif %}"
-                            data-total="{{ commande.total_cmd }}"
-                            data-etat="Livrée partiellement"
-                            data-operateur="{% if commande.etat_actuel.operateur %}{{ commande.etat_actuel.operateur.nom }} {{ commande.etat_actuel.operateur.prenom }}{% endif %}">
-                            
-                            <td class="table-cell whitespace-nowrap text-sm font-medium text-gray-900">
-                                {{ commande.id_yz }}
+                    {% if articles_retournes %}
+                        {% for article_retourne in articles_retournes %}
+                        <tr class="table-row article-retourne-row"
+                            data-id="{{ article_retourne.id }}"
+                            data-commande-id-yz="{{ article_retourne.commande.id_yz }}"
+                            data-article-nom="{{ article_retourne.article.nom }}"
+                            data-client="{{ article_retourne.commande.client.prenom }} {{ article_retourne.commande.client.nom }}"
+                            data-statut="{{ article_retourne.statut_retour }}"
+                            data-date-retour="{{ article_retourne.date_retour|date:'d/m/Y' }}">
+
+                            <!-- Colonne Articles & Variantes -->
+                            <td class="table-cell whitespace-nowrap">
+                                <div class="bg-gray-50 p-2 rounded-lg border border-gray-200">
+                                    <div class="text-sm font-medium text-gray-900 mb-1">{{ article_retourne.article.nom }}</div>
+                                    {% if article_retourne.article.reference %}
+                                    <div class="text-xs text-gray-500 mb-1">Réf: {{ article_retourne.article.reference }}</div>
+                                    {% endif %}
+                                    {% if article_retourne.variante %}
+                                        <div class="border-t border-gray-200 pt-1 mt-1">
+                                            <div class="flex flex-wrap gap-1">
+                                                {% if article_retourne.variante.couleur %}
+                                                <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                    <i class="fas fa-palette mr-1"></i>{{ article_retourne.variante.couleur.nom }}
+                                                </span>
+                                                {% endif %}
+                                                {% if article_retourne.variante.pointure %}
+                                                <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                    <i class="fas fa-ruler mr-1"></i>{{ article_retourne.variante.pointure.pointure }}
+                                                </span>
+                                                {% endif %}
+                                                <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                                                    <i class="fas fa-box mr-1"></i>{{ article_retourne.quantite_retournee }}x
+                                                </span>
+                                            </div>
+                                        </div>
+                                    {% else %}
+                                        <div class="border-t border-gray-200 pt-1 mt-1">
+                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                                                <i class="fas fa-box mr-1"></i>{{ article_retourne.quantite_retournee }}x
+                                            </span>
+                                        </div>
+                                    {% endif %}
+                                </div>
                             </td>
-                            <td class="table-cell whitespace-nowrap text-sm text-gray-500">{{ commande.num_cmd|default:"-" }}</td>
-                            
+
+                            <!-- Colonne N° Commande -->
+                            <td class="table-cell whitespace-nowrap">
+                                <div class="text-sm font-medium text-gray-900">{{ article_retourne.commande.id_yz }}</div>
+                                <div class="text-xs text-gray-500">{{ article_retourne.commande.num_cmd|default:"-" }}</div>
+                            </td>
+
                             <!-- Colonne Client -->
                             <td class="table-cell whitespace-nowrap">
-                                <div class="text-sm font-medium text-gray-900">{{ commande.client.prenom }} {{ commande.client.nom }}</div>
-                                {% if commande.client.email %}
-                                <div class="text-xs text-gray-500">{{ commande.client.email }}</div>
+                                <div class="text-sm font-medium text-gray-900">{{ article_retourne.commande.client.prenom }} {{ article_retourne.commande.client.nom }}</div>
+                                {% if article_retourne.commande.client.email %}
+                                <div class="text-xs text-gray-500">{{ article_retourne.commande.client.email }}</div>
                                 {% endif %}
                             </td>
-                            
-                            <!-- Colonne Téléphone -->
+
+                    
+                       
+
+
+                            <!-- Colonne Date de Retour -->
                             <td class="table-cell whitespace-nowrap">
-                                {% if commande.client.numero_tel %}
-                                <div class="text-sm text-gray-900 font-medium">
-                                    <i class="fas fa-phone mr-1"></i>
-                                    {{ commande.client.numero_tel }}
+                                <div class="text-sm text-gray-900">{{ article_retourne.date_retour|date:"d/m/Y" }}</div>
+                                <div class="text-xs text-gray-500">{{ article_retourne.date_retour|date:"H:i" }}</div>
+                            </td>
+
+                            <!-- Colonne Raison -->
+                            <td class="table-cell">
+                                <div class="text-sm text-gray-900 max-w-xs truncate" title="{{ article_retourne.raison_retour }}">
+                                    {{ article_retourne.raison_retour|default:"Non spécifiée" }}
                                 </div>
-                                {% else %}
-                                <div class="text-sm text-gray-500">Non renseigné</div>
-                                {% endif %}
                             </td>
-                            
-                            <!-- Colonne Ville Client -->
-                            <td class="table-cell whitespace-nowrap text-sm">
-                                {% if commande.ville_init and commande.ville_init != '' %}
-                                    <div style="color: var(--preparation-primary);" class="font-medium">{{ commande.ville_init }}</div>
-                                {% else %}
-                                    <div style="color: var(--preparation-primary);">Non spécifiée</div>
-                                {% endif %}
-                            </td>
-                            
-                            <!-- Colonne Ville & Région (ville de livraison) -->
+
+                            <!-- Colonne Prix à la commande -->
                             <td class="table-cell whitespace-nowrap">
-                                {% if commande.ville %}
-                                    <div class="text-sm text-gray-900">{{ commande.ville.nom }}</div>
-                                    <div class="text-xs text-gray-500">{{ commande.ville.region.nom_region }}</div>
+                                <div class="text-sm font-bold text-green-600">{{ article_retourne.prix_unitaire_origine|floatformat:2 }} DH</div>
+                                <div class="text-xs text-gray-500">Qté: {{ article_retourne.quantite_retournee }}x</div>
+                            </td>
+
+                            <!-- Colonne statut de Retour -->
+                            <td class="table-cell whitespace-nowrap">
+                                {% if article_retourne.statut_retour == 'en_attente' %}
+                                <span class="etat-badge en-attente bg-yellow-100 text-yellow-800 border-yellow-200">
+                                    <i class="fas fa-clock mr-1"></i>
+                                    En attente
+                                </span>
+                                {% elif article_retourne.statut_retour == 'reintegre_stock' %}
+                                <span class="etat-badge reintegre bg-green-100 text-green-800 border-green-200">
+                                    <i class="fas fa-check-circle mr-1"></i>
+                                    Réintégré
+                                </span>
+                                {% elif article_retourne.statut_retour == 'defectueux' %}
+                                <span class="etat-badge defectueux bg-red-100 text-red-800 border-red-200">
+                                    <i class="fas fa-times-circle mr-1"></i>
+                                    Défectueux
+                                </span>
+                                {% elif article_retourne.statut_retour == 'traite' %}
+                                <span class="etat-badge traite bg-blue-100 text-blue-800 border-blue-200">
+                                    <i class="fas fa-check mr-1"></i>
+                                    Traité
+                                </span>
                                 {% else %}
-                                    <div class="text-sm text-gray-500">Non définie</div>
+                                <span class="etat-badge autre bg-gray-100 text-gray-800 border-gray-200">
+                                    {{ article_retourne.get_statut_retour_display }}
+                                </span>
                                 {% endif %}
                             </td>
-                            
+
+                            <!-- Etat de commande  -->
                             <td class="table-cell whitespace-nowrap">
-                                {% with etat_actuel=commande.etat_actuel %}
+                                {% with etat_actuel=article_retourne.commande.etat_actuel %}
                                     {% if etat_actuel %}
-                                        <div class="text-sm text-gray-900">{{ etat_actuel.date_debut|date:"d/m/Y" }}</div>
-                                        <div class="text-xs text-gray-500">{{ etat_actuel.date_debut|date:"H:i" }}</div>
+                                        <span class="etat-badge" style="
+                                            
+                                            {% if etat_actuel.enum_etat.libelle == 'Retournée' %}
+                                                background: #fee2e2; color: #dc2626; border: 1px solid #fecaca;
+                                            {% elif etat_actuel.enum_etat.libelle == 'Livrée Partiellement' %}
+                                                background: #fef3c7; color: #d97706; border: 1px solid #fde68a;
+                                            {% else %}
+                                                background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe;
+                                            {% endif %}
+                                        ">
+                                           
+                                            {% if etat_actuel.enum_etat.libelle == 'Retournée' %}
+                                                <i class="fas fa-undo mr-1"></i>
+                                            {% elif etat_actuel.enum_etat.libelle == 'Livrée Partiellement' %}
+                                                <i class="fas fa-truck mr-1"></i>
+                                            {% else %}
+                                                <i class="fas fa-info-circle mr-1"></i>
+                                            {% endif %}
+                                            {{ etat_actuel.enum_etat.libelle }}
+                                        </span>
+                                        <div class="text-xs text-gray-500 mt-1">
+                                            {{ etat_actuel.date_debut|date:"d/m/Y H:i" }}
+                                        </div>
+                                        {% if etat_actuel.operateur %}
+                                        <div class="text-xs text-gray-400">
+                                            Par: {{ etat_actuel.operateur.prenom }} {{ etat_actuel.operateur.nom }}
+                                        </div>
+                                        {% endif %}
                                     {% else %}
-                                        <div class="text-sm text-gray-500">Non définie</div>
+                                        <span class="etat-badge bg-gray-100 text-gray-600 border-gray-200">
+                                            <i class="fas fa-question mr-1"></i>
+                                            Aucun état
+                                        </span>
                                     {% endif %}
                                 {% endwith %}
                             </td>
-                            
-                            <td class="table-cell whitespace-nowrap">
-                                <div class="text-sm font-bold text-green-600">{{ commande.total_cmd|floatformat:2 }} DH</div>
-                            </td>
 
-                            <td class="table-cell whitespace-nowrap">
-                                <span class="etat-badge livree-partiellement">
-                                    <i class="fas fa-truck mr-1"></i>
-                                    Livrée partiellement
-                                </span>
-                            </td>
-                            
+                            <!-- Colonne Actions -->
                             <td class="table-cell whitespace-nowrap text-center">
-                                <a href="{% url 'Superpreparation:detail_prepa' commande.pk %}"
-                                   class="action-button"
-                                   title="Voir le panier de cette commande">
-                                    <i class="fas fa-shopping-cart"></i>
-                                    {{ commande.paniers.count }} article{{ commande.paniers.count|pluralize }}
-                                </a>
-                            </td>
-
-                            <!-- Nouvelle colonne Actions -->
-                            <td class="table-cell whitespace-nowrap text-center">
-                                <div class="flex justify-center space-x-2">
-                                    <button onclick="ouvrirModaleArticlesRetournes()"
-                                            class="action-button articles-button relative bg-orange-50 text-orange-600 hover:bg-orange-100 border border-orange-200 hover:border-orange-300 transition-all duration-200"
-                                            title="Voir les articles retournés à traiter ({{ articles_retournes_stats.total_en_attente }} en attente)">
-                                        <i class="fas fa-undo mr-1"></i>
-                                        <span class="hidden sm:inline">Articles</span>
-                                        {% if articles_retournes_stats.total_en_attente > 0 %}
-                                        <span class="articles-badge absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-600 rounded-full min-w-[20px] h-5">
-                                            {{ articles_retournes_stats.total_en_attente }}
-                                        </span>
+                                <div class="flex justify-center space-x-1">
+                                    {% if article_retourne.statut_retour == 'en_attente' %}
+                                        {% if article_retourne.peut_etre_reintegre %}
+                                        <button onclick="traiterArticle({{ article_retourne.id }}, 'reintegrer_stock')"
+                                                class="text-green-600 hover:text-green-900 transition-colors p-1"
+                                                title="Réintégrer en stock">
+                                            <i class="fas fa-check-circle text-lg"></i>
+                                        </button>
                                         {% endif %}
-                                    </button>
+                                        <button onclick="traiterArticle({{ article_retourne.id }}, 'marquer_defectueux')"
+                                                class="text-red-600 hover:text-red-900 transition-colors p-1"
+                                                title="Marquer défectueux">
+                                            <i class="fas fa-times-circle text-lg"></i>
+                                        </button>
+                                    {% else %}
+                                        <span class="text-gray-400 text-sm">
+                                            <i class="fas fa-lock mr-1"></i>Traité
+                                        </span>
+                                    {% endif %}
                                 </div>
                             </td>
                         </tr>
