@@ -1164,48 +1164,29 @@ def changer_mot_de_passe_view(request):
 
 @superviseur_preparation_required
 def detail_prepa(request, pk):
-
     """Vue détaillée pour la préparation d'une commande spécifique"""
-
     try:
-
         operateur_profile = request.user.profil_operateur
         # Autoriser superviseur ou équipe préparation
         if not (operateur_profile.is_preparation or operateur_profile.is_superviseur_preparation):
             messages.error(request, "Accès non autorisé. Réservé à l'équipe préparation.")
             return redirect('Superpreparation:home')
-
-            
-
     except Operateur.DoesNotExist:
-
         messages.error(request, "Votre profil opérateur n'existe pas.")
-
         return redirect('login')
-
-
 
     # Récupérer la commande spécifique
 
     try:
-
         commande = Commande.objects.select_related(
-
             'client', 'ville', 'ville__region'
-
         ).prefetch_related(
-
             'paniers__article', 'paniers__variante', 'etats__enum_etat', 'etats__operateur'
-
         ).get(id=pk)
 
     except Commande.DoesNotExist:
-
         messages.error(request, "La commande demandée n'existe pas.")
-
         return redirect('Superpreparation:liste_prepa')
-
-
 
     # Récupérer l'état de préparation actuel (peut être affecté à n'importe quel opérateur)
 
@@ -1262,170 +1243,90 @@ def detail_prepa(request, pk):
 
     etats_commande = commande.etats.all().select_related('enum_etat', 'operateur').order_by('date_debut')
 
-    
-
     # Déterminer l'état actuel
 
     etat_actuel = etats_commande.filter(date_fin__isnull=True).first()
 
-    
-
     # Récupérer l'état précédent pour comprendre d'où vient la commande
-
     etat_precedent = None
-
     if etat_actuel:
-
         # Trouver l'état précédent (le dernier état terminé avant l'état actuel)
-
         for etat in reversed(etats_commande):
-
             if etat.date_fin and etat.date_fin < etat_actuel.date_debut:
-
                 if etat.enum_etat.libelle not in ['À imprimer', 'En préparation']:
-
                     etat_precedent = etat
-
                     break
-
-    
-
     # Analyser les articles pour les commandes livrées partiellement
 
     articles_livres = []
-
     articles_renvoyes = []
-
     is_commande_livree_partiellement = False
 
     
 
     # Import pour JSON
-
     import json
-
-
-
     # Récupérer l'état des articles renvoyés depuis l'opération de livraison partielle (si elle existe)
-
     etat_articles_renvoyes = {}
-
     operation_livraison_partielle = None
-
-    
 
     # Cas 1: La commande actuelle est la commande originale livrée partiellement
 
     if etat_actuel and etat_actuel.enum_etat.libelle == 'Livrée Partiellement':
-
         is_commande_livree_partiellement = True
-
         # Les articles dans cette commande sont ceux qui ont été livrés partiellement
 
         for panier in paniers:
-
             articles_livres.append({
-
                 'article': panier.article,
-
                 'quantite_livree': panier.quantite,
-
                 'prix': panier.article.prix_unitaire,
-
                 'sous_total': panier.sous_total
-
             })
 
-        
-
         # Chercher la commande de renvoi associée
-
         commande_renvoi = Commande.objects.filter(
-
             num_cmd__startswith=f"RENVOI-{commande.num_cmd}",
-
             client=commande.client
-
         ).first()
-
-        
-
         # La commande source pour les articles renvoyés est la commande actuelle
 
         operation_livraison_partielle = commande.operations.filter(
-
             type_operation='LIVRAISON_PARTIELLE'
-
         ).order_by('-date_operation').first()
 
-
-
     # Cas 2: La commande actuelle est une commande de renvoi suite à une livraison partielle
-
     elif etat_precedent and etat_precedent.enum_etat.libelle == 'Livrée Partiellement':
-
         is_commande_livree_partiellement = True
-
         # Chercher la commande originale qui a été livrée partiellement
-
         commande_originale = Commande.objects.filter(
-
             num_cmd=commande.num_cmd.replace('RENVOI-', ''),
-
             client=commande.client
-
         ).first()
-
-        
-
         # La commande source pour les articles renvoyés est la commande originale
-
         if commande_originale:
-
             operation_livraison_partielle = commande_originale.operations.filter(
-
                 type_operation='LIVRAISON_PARTIELLE'
-
             ).order_by('-date_operation').first()
-
-
-
     # Si une opération de livraison partielle est trouvée, extraire les états des articles renvoyés
-
     if operation_livraison_partielle:
-
         try:
-
             details = json.loads(operation_livraison_partielle.conclusion)
-
             if 'recap_articles_renvoyes' in details:
-
                 for item in details['recap_articles_renvoyes']:
-
                     etat_articles_renvoyes[item['article_id']] = item['etat']
-
         except Exception:
-
             pass
-
-
 
     # Populer articles_renvoyes si c'est une commande de renvoi ou si elle a une commande de renvoi associée
 
     if is_commande_livree_partiellement:
-
         # Si la commande actuelle est une commande de renvoi (Cas 2)
-
         if commande.num_cmd and commande.num_cmd.startswith('RENVOI-'):
-
             for panier_renvoi in paniers:
-
                 etat = etat_articles_renvoyes.get(panier_renvoi.article.id, 'bon')
-
                 articles_renvoyes.append({
-
                     'article': panier_renvoi.article,
-
                     'quantite': panier_renvoi.quantite,
                     'prix': panier_renvoi.article.prix_unitaire,
                     'sous_total': panier_renvoi.sous_total,
@@ -1571,6 +1472,9 @@ def detail_prepa(request, pk):
         'commande_renvoi_id': commande_renvoi_id,
     }
     return render(request, 'Superpreparation/detail_prepa.html', context)
+
+
+
 
 @superviseur_preparation_required
 def api_commandes_confirmees(request):

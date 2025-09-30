@@ -350,7 +350,7 @@
                 </button>
                 
                 
-                <button onclick="openSavModal('Retournée', {{ commande.id }})" class="sav-action-card bg-red-50 hover:bg-red-100 border-2 border-red-200 hover:border-red-300 rounded-lg p-4 transition-all duration-200">
+                <button onclick="ouvrirModalRetourComplet({{ commande.id }})" class="sav-action-card bg-red-50 hover:bg-red-100 border-2 border-red-200 hover:border-red-300 rounded-lg p-4 transition-all duration-200">
                     <div class="flex flex-col items-center">
                         <i class="fas fa-times-circle text-3xl text-red-500 mb-2"></i>
                         <span class="font-semibold text-red-800">Retournée (SAV)</span>
@@ -487,6 +487,7 @@
 {% block extra_js %}
 <!-- Inclusion du fichier JavaScript pour les modals -->
 <script src="{% static 'js/OperteurSAV/modals.js' %}"></script>
+<script src="{% static 'js/OperteurSAV/retournee.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Améliorer l'expérience utilisateur avec des animations
@@ -742,4 +743,8 @@ document.addEventListener('keydown', function(e) {
 
 // ================== FIN GESTION MODALE SAV ==================
 </script>
+
+<!-- Inclusion de la modale de retour complet -->
+{% include 'operatLogistic/partials/_modal_retour_complet.html' %}
+
 {% endblock %} 

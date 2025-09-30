@@ -1,0 +1,115 @@
+{% load static %}
+
+<!-- Modale de Retour Complet -->
+<div id="retourCompletModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-20 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <div class="flex items-center justify-between mb-4">
+                <h3 id="retourCompletModalTitle" class="text-lg leading-6 font-medium text-gray-900">
+                    <i class="fas fa-undo-alt mr-2 text-red-600"></i>
+                    Retour Complet - Commande
+                </h3>
+                <button onclick="fermerModalRetourComplet()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <form id="retourCompletForm" method="post">
+                {% csrf_token %}
+
+                <div class="mb-4">
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                        <div class="flex items-center mb-2">
+                            <i class="fas fa-exclamation-triangle text-red-600 mr-2"></i>
+                            <span class="font-semibold text-red-800">Attention !</span>
+                        </div>
+                        <p class="text-red-700 text-sm">
+                            Cette action va marquer <strong>toute la commande</strong> comme retournée et créer des enregistrements de retour pour tous les articles.
+                            Les articles seront automatiquement disponibles pour réintégration en stock.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label for="raisonRetourComplet" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-list mr-1"></i>
+                        Raison du retour complet <span class="text-red-500">*</span>
+                    </label>
+                    <select id="raisonRetourComplet"
+                            name="raison_retour"
+                            required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500">
+                        <option value="">Sélectionnez la raison du retour complet...</option>
+
+                        <optgroup label="Problèmes de livraison" class="optgroup-livraison">
+                            <option value="Client absent lors de la livraison">Client absent lors de la livraison</option>
+                            <option value="Adresse de livraison incorrecte">Adresse de livraison incorrecte</option>
+                            <option value="Accès difficile ou impossible">Accès difficile ou impossible</option>
+                            <option value="Livraison refusée par le client">Livraison refusée par le client</option>
+                        </optgroup>
+
+                        <optgroup label="Problèmes de qualité" class="optgroup-problemes">
+                            <option value="Article défectueux détecté">Article défectueux détecté</option>
+                            <option value="Problème de qualité signalé par le client">Problème de qualité signalé par le client</option>
+                            <option value="Article endommagé lors du transport">Article endommagé lors du transport</option>
+                            <option value="Défaut de fabrication constaté">Défaut de fabrication constaté</option>
+                        </optgroup>
+
+                        <optgroup label="Retours et échanges" class="optgroup-retours">
+                            <option value="Retour demandé par le client">Retour demandé par le client</option>
+                            <option value="Échange de taille demandé">Échange de taille demandé</option>
+                            <option value="Échange de couleur demandé">Échange de couleur demandé</option>
+                            <option value="Article non conforme à la commande">Article non conforme à la commande</option>
+                        </optgroup>
+
+                        <optgroup label="Annulations" class="optgroup-annulations">
+                            <option value="Commande annulée par le client">Commande annulée par le client</option>
+                            <option value="Paiement refusé ou problème bancaire">Paiement refusé ou problème bancaire</option>
+                            <option value="Délai de livraison dépassé">Délai de livraison dépassé</option>
+                            <option value="Stock insuffisant après confirmation">Stock insuffisant après confirmation</option>
+                        </optgroup>
+
+                        <optgroup label="Autres motifs" class="optgroup-autres">
+                            <option value="Problème de contact avec le client">Problème de contact avec le client</option>
+                            <option value="Retour pour vérification interne">Retour pour vérification interne</option>
+                            <option value="Commande en double détectée">Commande en double détectée</option>
+                            <option value="Autre motif spécifique">Autre motif spécifique</option>
+                        </optgroup>
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1">
+                        Cette raison sera enregistrée avec tous les articles retournés
+                    </p>
+                </div>
+
+                <div class="mb-4">
+                    <label for="commentaireComplementaireRetour" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-comment mr-1"></i>
+                        Commentaire complémentaire (optionnel)
+                    </label>
+                    <textarea id="commentaireComplementaireRetour"
+                              name="commentaire_complementaire"
+                              rows="3"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                              placeholder="Ajoutez des détails supplémentaires si nécessaire..."></textarea>
+                    <p class="text-xs text-gray-500 mt-1">
+                        Ce commentaire sera ajouté à la raison principale
+                    </p>
+                </div>
+
+                <div class="flex items-center justify-end space-x-3 pt-4 border-t border-gray-200">
+                    <button type="button"
+                            onclick="fermerModalRetourComplet()"
+                            class="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors">
+                        <i class="fas fa-times mr-2"></i>Annuler
+                    </button>
+                    <button type="button"
+                            id="confirmRetourCompletBtn"
+                            onclick="soumettreRetourComplet()"
+                            class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors">
+                        <i class="fas fa-undo-alt mr-2"></i>Confirmer le Retour Complet
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

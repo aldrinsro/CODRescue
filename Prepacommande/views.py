@@ -12,7 +12,7 @@ from django.core.paginator import Paginator
 
 import json
 from parametre.models import Operateur
-from commande.models import Commande, EtatCommande, EnumEtatCmd, Operation, Panier
+from commande.models import Commande, EtatCommande, EnumEtatCmd, Panier
 from django.urls import reverse
 
 import barcode
@@ -344,18 +344,7 @@ def liste_prepa(request):
                     ):
                         a_etats_ultérieurs_problematiques = True
                         break
-
-                if a_etats_ultérieurs_problematiques:
-                    continue
-
-                # Vérifier les opérations de renvoi
-                operation_renvoi = Operation.objects.filter(
-                    commande=commande, type_operation="RENVOI_PREPARATION"
-                ).first()
-
-                if operation_renvoi:
-                    continue  # Exclure les commandes renvoyées par logistique
-
+               
                 # Vérifier si c'est une commande de renvoi créée lors d'une livraison partielle
                 if commande.num_cmd and commande.num_cmd.startswith("RENVOI-"):
                     # Chercher la commande originale
@@ -382,13 +371,7 @@ def liste_prepa(request):
                 if not has_return_from_delivery:
                     # Vérifier si la commande a été affectée par un superviseur
                     # Chercher les opérations d'affectation par supervision
-                    operation_affectation_supervision = Operation.objects.filter(
-                        commande=commande,
-                        type_operation__in=[
-                            "AFFECTATION_SUPERVISION",
-                            "REAFFECTATION_SUPERVISION",
-                        ],
-                    ).first()
+                    
 
                     if operation_affectation_supervision:
                         commandes_affectees.append(commande)
@@ -451,7 +434,7 @@ def liste_prepa(request):
         # Filtrer seulement les commandes renvoyées par la logistique ET affectées à cet opérateur spécifique
         commandes_filtrees = []
         for commande in commandes_affectees:
-            from commande.models import Operation
+            
             
             # Vérifier que la commande n'a pas d'états ultérieurs problématiques
             etats_commande = commande.etats.all().order_by("date_debut")
@@ -469,9 +452,7 @@ def liste_prepa(request):
             
             if etat_actuel:
                 # Vérifier les opérations de traçabilité EN PREMIER
-                operation_renvoi = Operation.objects.filter(
-                    commande=commande, type_operation="RENVOI_PREPARATION"
-                ).first()
+               
 
                 # Si il y a une opération de renvoi explicite, inclure la commande
                 # même si elle a des états ultérieurs problématiques
@@ -747,9 +728,7 @@ def liste_prepa(request):
     
     for cmd in toutes_commandes:
         # Vérifier si c'est une commande renvoyée par la logistique
-        operation_renvoi = Operation.objects.filter(
-            commande=cmd, type_operation="RENVOI_PREPARATION"
-        ).first()
+        
         
         if operation_renvoi:
             stats_par_type["renvoyees_logistique"] += 1
@@ -846,12 +825,7 @@ def liste_prepa(request):
     commandes_affectees_supervision = 0
     for cmd in toutes_commandes:
         # Vérifier si c'est une commande renvoyée par la logistique
-        operation_renvoi = Operation.objects.filter(
-            commande=cmd, type_operation="RENVOI_PREPARATION"
-        ).first()
-
-        if operation_renvoi:
-            continue  # Déjà comptée dans renvoyees_logistique
+        
 
         # Vérifier si c'est une commande de renvoi créée lors d'une livraison partielle
         if cmd.num_cmd and cmd.num_cmd.startswith("RENVOI-"):
@@ -910,18 +884,7 @@ def liste_prepa(request):
                         has_return_from_delivery = True
                         break
 
-            if not has_return_from_delivery:
-                # Vérifier si la commande a été affectée par un superviseur
-                operation_affectation_supervision = Operation.objects.filter(
-                    commande=cmd,
-                    type_operation__in=[
-                        "AFFECTATION_SUPERVISION",
-                        "REAFFECTATION_SUPERVISION",
-                    ],
-                ).first()
-
-                if operation_affectation_supervision:
-                    commandes_affectees_supervision += 1
+            
 
     stats_par_type["affectees_supervision"] = commandes_affectees_supervision
 
@@ -1878,7 +1841,7 @@ def modifier_commande_prepa(request, commande_id):
     print(f"🔍 URL: {request.path}")
     
     import json
-    from commande.models import Commande, Operation
+    from commande.models import Commande
     from parametre.models import Ville
     
     print(f"🔍 Récupération de l'opérateur")
@@ -2363,15 +2326,7 @@ def modifier_commande_prepa(request, commande_id):
                             }
                         )
                     
-                    # Récupérer et mettre à jour l'opération
-                    operation = Operation.objects.get(
-                        id=operation_id, commande=commande
-                    )
-                    operation.conclusion = nouveau_commentaire
-                    operation.operateur = (
-                        operateur  # Mettre à jour l'opérateur qui modifie
-                    )
-                    operation.save()
+                    
                     
                     return JsonResponse(
                         {
@@ -2382,17 +2337,14 @@ def modifier_commande_prepa(request, commande_id):
                         }
                     )
                     
-                except Operation.DoesNotExist:
-                    return JsonResponse(
-                        {"success": False, "error": "Opération non trouvée"}
-                    )
+                
                 except Exception as e:
                     return JsonResponse({"success": False, "error": str(e)})
             
             elif action == "add_operation":
                 # Ajouter une nouvelle opération
                 try:
-                    from commande.models import Operation
+                
                     
                     type_operation = request.POST.get("type_operation", "").strip()
                     commentaire = request.POST.get("commentaire", "").strip()
@@ -4260,203 +4212,7 @@ def get_operateur_display_name(operateur):
         return "Opérateur inconnu"
 
 
-# === VUES DE RÉPARTITION SUPPRIMÉES (DÉPLACÉES VERS ADMIN) ===
-# Les vues de répartition ont été déplacées vers l'interface admin
-# car ce sont les administrateurs qui s'en occupent maintenant
 
-# === FONCTIONS UTILITAIRES DE RÉPARTITION SUPPRIMÉES (DÉPLACÉES VERS ADMIN) ===
-
-# === VUES DE GESTION DES ENVOIS ===
-
-
-@login_required
-def etats_livraison(request):
-    """Gestion des états de livraison - Service de préparation"""
-    try:
-        operateur_profile = request.user.profil_operateur
-        if not operateur_profile.is_preparation:
-            messages.error(request, "Accès non autorisé.")
-            return redirect("login")
-    except Operateur.DoesNotExist:
-        messages.error(request, "Profil opérateur non trouvé.")
-        return redirect("login")
-    
-    from parametre.models import Region
-    
-    # Filtres
-    date_debut = request.GET.get("date_debut")
-    date_fin = request.GET.get("date_fin")
-    region_id = request.GET.get("region")
-    statut = request.GET.get("statut")
-    
-    # Base queryset
-    commandes = (
-        Commande.objects.filter(
-            etats__enum_etat__libelle__in=[
-                "En préparation",
-                "Prête",
-                "En cours de livraison",
-                "Livrée",
-            ],
-            etats__date_fin__isnull=True,
-        )
-        .select_related("ville__region", "client")
-        .prefetch_related("etats__enum_etat", "etats__operateur__user")
-        .distinct()
-    )
-    
-    # Appliquer les filtres
-    if date_debut:
-        commandes = commandes.filter(date_creation__gte=date_debut)
-    if date_fin:
-        commandes = commandes.filter(date_creation__lte=date_fin)
-    if region_id:
-        commandes = commandes.filter(ville__region_id=region_id)
-    if statut:
-        commandes = commandes.filter(
-            etats__enum_etat__libelle=statut, etats__date_fin__isnull=True
-        )
-    
-    # Statistiques
-    stats = {
-        "total_commandes": commandes.count(),
-        "en_preparation": commandes.filter(
-            etats__enum_etat__libelle="En préparation", etats__date_fin__isnull=True
-        ).count(),
-        "pretes": commandes.filter(
-            etats__enum_etat__libelle="Prête", etats__date_fin__isnull=True
-        ).count(),
-        "livrees": commandes.filter(
-            etats__enum_etat__libelle="Livrée", etats__date_fin__isnull=True
-        ).count(),
-    }
-    
-    # Pagination
-    from django.core.paginator import Paginator
-
-    paginator = Paginator(commandes, 50)
-    page_number = request.GET.get("page")
-    commandes = paginator.get_page(page_number)
-    
-    regions = Region.objects.all()
-    
-    context = {
-        "commandes": commandes,
-        "regions": regions,
-        "stats": stats,
-    }
-
-    return render(request, "Prepacommande/etats_livraison.html", context)
-
-
-@login_required
-def export_envois(request):
-    """Export des envois journaliers - Service de préparation"""
-    try:
-        operateur_profile = request.user.profil_operateur
-        if not operateur_profile.is_preparation:
-            messages.error(request, "Accès non autorisé.")
-            return redirect("login")
-    except Operateur.DoesNotExist:
-        messages.error(request, "Profil opérateur non trouvé.")
-        return redirect("login")
-    
-    from parametre.models import Region, Operateur
-    from django.utils import timezone
-    import datetime
-    
-    # Date par défaut : aujourd'hui
-    today = timezone.now().date()
-    date_envoi = request.GET.get("date_envoi", today)
-    region_id = request.GET.get("region")
-    livreur_id = request.GET.get("livreur")
-    
-    # Obtenir tous les livreurs (opérateurs de livraison)
-    livreurs = Operateur.objects.filter(is_livraison=True, actif=True)
-    regions = Region.objects.all()
-    
-    # Simuler des envois (à remplacer par votre modèle Envoi)
-    envois = []
-    
-    # Commandes PRÉPARÉES à être envoyées
-    commandes_pretes = Commande.objects.filter(
-        etats__enum_etat__libelle="Préparée", etats__date_fin__isnull=True
-    ).select_related("ville__region")
-    
-    if region_id:
-        commandes_pretes = commandes_pretes.filter(ville__region_id=region_id)
-    
-    # Statistiques
-    stats = {
-        "total_envois": len(envois),
-        "total_commandes": 0,
-        "commandes_pretes": commandes_pretes.count(),
-        "livreurs_actifs": livreurs.filter(actif=True).count(),
-    }
-    
-    context = {
-        "envois": envois,
-        "commandes_pretes": commandes_pretes,
-        "livreurs": livreurs,
-        "regions": regions,
-        "stats": stats,
-        "today": today,
-    }
-
-    return render(request, "Prepacommande/export_envois.html", context)
-
-
-@login_required
-def creer_envoi(request):
-    """Créer un nouvel envoi"""
-    if request.method == "POST":
-        try:
-            livreur_id = request.POST.get("livreur")
-            region_id = request.POST.get("region")
-            notes = request.POST.get("notes", "")
-            commandes_selectionnees = request.POST.get(
-                "commandes_selectionnees", ""
-            ).split(",")
-            
-            # Ici vous devriez créer l'objet Envoi
-            # envoi = Envoi.objects.create(
-            #     livreur_id=livreur_id,
-            #     region_id=region_id if region_id else None,
-            #     notes=notes,
-            #     date_creation=timezone.now()
-            # )
-            
-            # Associer les commandes à l'envoi
-            # for commande_id in commandes_selectionnees:
-            #     if commande_id:
-            #         commande = Commande.objects.get(id=commande_id)
-            #         commande.envoi = envoi
-            #         commande.save()
-            
-            return JsonResponse({"success": True, "message": "Envoi créé avec succès"})
-        except Exception as e:
-            return JsonResponse({"success": False, "message": str(e)})
-    
-    return JsonResponse({"success": False, "message": "Méthode non autorisée"})
-
-
-@login_required
-def details_envoi(request, envoi_id):
-    """Afficher les détails d'un envoi"""
-    # Ici vous devriez récupérer l'envoi par son ID
-    # envoi = get_object_or_404(Envoi, id=envoi_id)
-    
-    # Pour l'exemple, retourner un contenu HTML simple
-    html_content = f"""
-    <div class="p-3">
-        <h6>Envoi ENV-{envoi_id}</h6>
-        <p><strong>Statut:</strong> En cours</p>
-        <p><strong>Date création:</strong> {timezone.now().strftime('%d/%m/%Y %H:%M')}</p>
-        <p><strong>Commandes associées:</strong> 0</p>
-    </div>
-    """
-    
-    return HttpResponse(html_content)
 
 
 # === VUES D'EXPORT ET D'IMPRESSION ===
@@ -5022,7 +4778,7 @@ def api_articles_commande_livree_partiellement(request, commande_id):
     """API pour récupérer les détails des articles d'une commande livrée partiellement"""
     import json
     from article.models import Article
-    from commande.models import Commande, EtatCommande, EnumEtatCmd, Operation
+    from commande.models import Commande, EtatCommande, EnumEtatCmd
     from parametre.models import Operateur
 
     try:
@@ -5405,20 +5161,7 @@ def api_changer_etat_commande(request, commande_id):
                 date_debut=timezone.now(),
                 commentaire=f"État changé vers {nouvel_etat} par l'opérateur de préparation"
             )
-            
-            # Créer une opération de traçabilité
-            Operation.objects.create(
-                commande=commande,
-                type_operation=f"CHANGEMENT_ETAT_{nouvel_etat.upper()}",
-                operateur=operateur,
-                date_operation=timezone.now(),
-                conclusion=json.dumps({
-                    "ancien_etat": etat_actuel_libelle,
-                    "nouvel_etat": nouvel_etat,
-                    "commentaire": f"Changement d'état de {etat_actuel_libelle} vers {nouvel_etat}"
-                }, ensure_ascii=False)
-            )
-        
+             
         return JsonResponse({
             "success": True,
             "message": f"État changé avec succès vers '{nouvel_etat}'",

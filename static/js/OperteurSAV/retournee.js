@@ -71,11 +71,20 @@ function soumettreRetourComplet() {
         return;
     }
 
-    // Validation du commentaire
-    const commentaire = document.getElementById('commentaireRetour').value.trim();
-    if (commentaire === '') {
-        alert('⚠️ Le commentaire est obligatoire');
+    // Validation de la raison du retour
+    const raisonSelect = document.getElementById('raisonRetourComplet');
+    const commentaireComp = document.getElementById('commentaireComplementaireRetour');
+
+    if (!raisonSelect.value) {
+        alert('⚠️ Veuillez sélectionner une raison pour le retour complet');
+        raisonSelect.focus();
         return;
+    }
+
+    // Construire le commentaire final
+    let commentaireFinal = raisonSelect.value;
+    if (commentaireComp.value.trim()) {
+        commentaireFinal += ` - ${commentaireComp.value.trim()}`;
     }
 
     // Vérifier que l'ID de la commande est disponible
@@ -86,6 +95,9 @@ function soumettreRetourComplet() {
 
     // Préparer les données du formulaire
     const formData = new FormData(form);
+
+    // Remplacer le commentaire par notre commentaire construit
+    formData.set('commentaire', commentaireFinal);
 
     // Définir l'URL de soumission
     const actionUrl = `/operateur-logistique/commandes/${currentCommandeId}/retourne`;

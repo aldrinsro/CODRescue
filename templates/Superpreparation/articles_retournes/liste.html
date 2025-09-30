@@ -912,6 +912,86 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
+<!-- Modale de sélection de raison pour traitement -->
+<div id="modaleRaisonTraitement" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-20 mx-auto p-6 border w-full max-w-2xl shadow-lg rounded-lg bg-white">
+        <div class="flex justify-between items-start mb-6">
+            <div>
+                <h3 class="text-xl font-bold text-gray-900 flex items-center">
+                    <i class="fas fa-edit mr-2 text-blue-600"></i>
+                    Traitement d'article retourné
+                </h3>
+                <p class="text-sm text-gray-600 mt-1" id="raisonModalSubtitle">Sélectionnez la raison du traitement</p>
+            </div>
+            <button onclick="fermerModaleRaisonTraitement()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                <i class="fas fa-times text-2xl"></i>
+            </button>
+        </div>
+
+        <!-- Formulaire de sélection de raison -->
+        <form id="formRaisonTraitement">
+            <div class="mb-6">
+                <label for="selectRaisonTraitement" class="block text-sm font-medium text-gray-700 mb-2">
+                    Raison du traitement <span class="text-red-500">*</span>
+                </label>
+                <select id="selectRaisonTraitement" name="raison_traitement"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="">Sélectionnez une raison...</option>
+
+                    <optgroup label="Problèmes de qualité" class="optgroup-problemes">
+                        <option value="Article défectueux détecté">Article défectueux détecté</option>
+                        <option value="Problème de qualité signalé par le client">Problème de qualité signalé par le client</option>
+                        <option value="Article endommagé lors du transport">Article endommagé lors du transport</option>
+                        <option value="Défaut de fabrication constaté">Défaut de fabrication constaté</option>
+                    </optgroup>
+
+                    <optgroup label="Retours et échanges" class="optgroup-retours">
+                        <option value="Retour demandé par le client">Retour demandé par le client</option>
+                        <option value="Échange de taille demandé">Échange de taille demandé</option>
+                        <option value="Échange de couleur demandé">Échange de couleur demandé</option>
+                        <option value="Article non conforme à la commande">Article non conforme à la commande</option>
+                    </optgroup>
+
+                    <optgroup label="Gestion stock" class="optgroup-stock">
+                        <option value="Article en bon état - réintégration stock">Article en bon état - réintégration stock</option>
+                        <option value="Vérification qualité effectuée">Vérification qualité effectuée</option>
+                        <option value="Article nettoyé et contrôlé">Article nettoyé et contrôlé</option>
+                    </optgroup>
+
+                    <optgroup label="Autres" class="optgroup-autres">
+                        <option value="Traitement manuel par le service">Traitement manuel par le service</option>
+                        <option value="Article remis en vente">Article remis en vente</option>
+                        <option value="Article retiré définitivement">Article retiré définitivement</option>
+                    </optgroup>
+                </select>
+            </div>
+
+            <!-- Commentaire complémentaire optionnel -->
+            <div class="mb-6">
+                <label for="commentaireComplementaire" class="block text-sm font-medium text-gray-700 mb-2">
+                    Commentaire complémentaire (optionnel)
+                </label>
+                <textarea id="commentaireComplementaire" name="commentaire_complementaire"
+                          rows="3" placeholder="Ajoutez des détails si nécessaire..."
+                          class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
+            </div>
+        </form>
+
+        <!-- Actions -->
+        <div class="flex justify-between items-center pt-4 border-t border-gray-200">
+            <button onclick="fermerModaleRaisonTraitement()"
+                    class="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors">
+                <i class="fas fa-times mr-2"></i>Annuler
+            </button>
+            <button onclick="confirmerTraitementArticle()"
+                    id="btnConfirmerTraitement"
+                    class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                <i class="fas fa-check mr-2"></i>Confirmer le traitement
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- Modale des Articles Retournés à Traiter -->
 <div id="modaleArticlesRetournes" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
     <div class="relative top-10 mx-auto p-6 border w-full max-w-6xl shadow-lg rounded-lg bg-white">
@@ -961,22 +1041,116 @@ document.addEventListener('DOMContentLoaded', function() {
 // === GESTION DES ARTICLES RETOURNÉS ===
 
 
+// Variables globales pour le traitement
+let articleIdEnCours = null;
+let actionEnCours = null;
+
 function traiterArticle(articleId, action) {
+    // Stocker les informations pour la confirmation
+    articleIdEnCours = articleId;
+    actionEnCours = action;
+
     const actions = {
         'reintegrer_stock': 'réintégrer en stock',
         'marquer_defectueux': 'marquer comme défectueux',
         'marquer_traite': 'marquer comme traité'
     };
 
-    if (!confirm(`Êtes-vous sûr de vouloir ${actions[action]} cet article ?`)) {
+    // Mettre à jour le titre de la modale
+    const subtitle = document.getElementById('raisonModalSubtitle');
+    if (subtitle) {
+        subtitle.textContent = `Action: ${actions[action]}`;
+    }
+
+    // Pré-sélectionner des options selon l'action
+    const select = document.getElementById('selectRaisonTraitement');
+    if (select) {
+        select.value = ''; // Reset
+
+        // Suggestions selon l'action
+        if (action === 'reintegrer_stock') {
+            // Pré-sélectionner une option appropriée pour la réintégration
+            setTimeout(() => {
+                const optionStock = select.querySelector('option[value="Article en bon état - réintégration stock"]');
+                if (optionStock) {
+                    optionStock.selected = true;
+                }
+            }, 100);
+        } else if (action === 'marquer_defectueux') {
+            // Pré-sélectionner une option appropriée pour défectueux
+            setTimeout(() => {
+                const optionDefaut = select.querySelector('option[value="Article défectueux détecté"]');
+                if (optionDefaut) {
+                    optionDefaut.selected = true;
+                }
+            }, 100);
+        }
+    }
+
+    // Ouvrir la modale
+    ouvrirModaleRaisonTraitement();
+}
+
+function ouvrirModaleRaisonTraitement() {
+    const modale = document.getElementById('modaleRaisonTraitement');
+    if (modale) {
+        modale.classList.remove('hidden');
+    }
+}
+
+function fermerModaleRaisonTraitement() {
+    const modale = document.getElementById('modaleRaisonTraitement');
+    if (modale) {
+        modale.classList.add('hidden');
+    }
+
+    // Reset des variables
+    articleIdEnCours = null;
+    actionEnCours = null;
+
+    // Reset du formulaire
+    const form = document.getElementById('formRaisonTraitement');
+    if (form) {
+        form.reset();
+    }
+}
+
+function confirmerTraitementArticle() {
+    // Validation
+    const select = document.getElementById('selectRaisonTraitement');
+    const commentaireComp = document.getElementById('commentaireComplementaire');
+
+    if (!select.value) {
+        alert('⚠️ Veuillez sélectionner une raison de traitement');
+        select.focus();
         return;
     }
 
-    const formData = new FormData();
-    formData.append('action', action);
-    formData.append('commentaire', `Traitement via Superpreparation - ${new Date().toLocaleString()}`);
+    if (!articleIdEnCours || !actionEnCours) {
+        alert('❌ Erreur: Informations de traitement manquantes');
+        return;
+    }
 
-    const url = `{% url "Superpreparation:service_traiter_article_retourne" 0 %}`.replace('0', articleId);
+    // Construire le commentaire final
+    let commentaireFinal = select.value;
+    if (commentaireComp.value.trim()) {
+        commentaireFinal += ` - ${commentaireComp.value.trim()}`;
+    }
+    commentaireFinal += ` (Traité le ${new Date().toLocaleString()})`;
+
+    // Désactiver le bouton pendant le traitement
+    const btnConfirmer = document.getElementById('btnConfirmerTraitement');
+    if (btnConfirmer) {
+        btnConfirmer.disabled = true;
+        btnConfirmer.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Traitement...';
+    }
+
+    // Préparer les données
+    const formData = new FormData();
+    formData.append('action', actionEnCours);
+    formData.append('commentaire', commentaireFinal);
+
+    const url = `{% url "Superpreparation:service_traiter_article_retourne" 0 %}`.replace('0', articleIdEnCours);
     console.log('Fetching URL:', url);
 
     fetch(url, {
@@ -989,7 +1163,6 @@ function traiterArticle(articleId, action) {
     })
     .then(response => {
         console.log('Response status:', response.status);
-        console.log('Response headers:', response.headers.get('content-type'));
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -998,8 +1171,8 @@ function traiterArticle(articleId, action) {
     .then(data => {
         if (data.success) {
             showToast(data.message, 'success');
-            // Recharger les articles
-            // Mettre à jour le compteur dans le card
+            fermerModaleRaisonTraitement();
+            // Recharger la page pour mettre à jour les données
             location.reload();
         } else {
             showToast(`Erreur: ${data.error}`, 'error');
@@ -1008,6 +1181,13 @@ function traiterArticle(articleId, action) {
     .catch(error => {
         console.error('Erreur:', error);
         showToast('Erreur de réseau lors du traitement', 'error');
+    })
+    .finally(() => {
+        // Restaurer le bouton
+        if (btnConfirmer) {
+            btnConfirmer.disabled = false;
+            btnConfirmer.innerHTML = '<i class="fas fa-check mr-2"></i>Confirmer le traitement';
+        }
     });
 }
 
