@@ -220,7 +220,8 @@ def get_prix_effectif_panier(panier):
     quantite = panier.quantite
     sous_total_actuel = Decimal(str(panier.sous_total))
     prix_unitaire_effectif = sous_total_actuel / Decimal(str(quantite))
-    
+
+
     # Vérifier si une remise a été explicitement appliquée
     # PROTECTION: Les articles en liquidation et en promotion ne doivent jamais être traités comme ayant une remise
     article_en_promotion = hasattr(article, 'has_promo_active') and article.has_promo_active
@@ -316,9 +317,11 @@ def get_prix_effectif_panier(panier):
         couleur_classe = 'text-gray-600'
         icone = 'fas fa-tag'
 
+    # Utiliser le sous-total réel du panier au lieu de recalculer
+    # Cela garantit l'intégrité avec les données en base
     return {
-        'prix_unitaire': float(prix_avec_compteur),
-        'sous_total': float(prix_avec_compteur * quantite),
+        'prix_unitaire': float(sous_total_actuel / Decimal(str(quantite))),
+        'sous_total': float(sous_total_actuel),
         'libelle': libelle,
         'couleur_classe': couleur_classe,
         'icone': icone,

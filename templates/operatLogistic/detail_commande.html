@@ -491,7 +491,7 @@
                     <li><strong>Diminution de quantité :</strong> Le stock sera géré par les opérateurs de préparation</li>
                 </ul>
             </div>
-                                 {% endif %}
+            {% endif %}
         
         <!-- Indicateur de livraison partielle -->
         {% if commande.etat_actuel.enum_etat.libelle == 'Livrée Partiellement' %}
@@ -553,8 +553,8 @@
                 
                 
             </div>
-                        </div>
-                        </div>
+        </div>
+        </div>
     
     <!-- Section Actions de Modification du Panier Client -->
     {% if commande.etat_actuel.enum_etat.libelle == 'En cours de livraison' %}

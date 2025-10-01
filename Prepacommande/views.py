@@ -454,11 +454,7 @@ def liste_prepa(request):
                 # Vérifier les opérations de traçabilité EN PREMIER
                
 
-                # Si il y a une opération de renvoi explicite, inclure la commande
-                # même si elle a des états ultérieurs problématiques
-                if operation_renvoi:
-                    commandes_filtrees.append(commande)
-                    continue
+                
 
                 # Vérifier si c'est une commande de renvoi créée lors d'une livraison partielle
                 if commande.num_cmd and commande.num_cmd.startswith("RENVOI-"):
@@ -730,9 +726,7 @@ def liste_prepa(request):
         # Vérifier si c'est une commande renvoyée par la logistique
         
         
-        if operation_renvoi:
-            stats_par_type["renvoyees_logistique"] += 1
-            continue
+        
         
         # Vérifier si c'est une commande de renvoi créée lors d'une livraison partielle
         if cmd.num_cmd and cmd.num_cmd.startswith("RENVOI-"):
@@ -2683,9 +2677,6 @@ def modifier_commande_prepa(request, commande_id):
     # Calculer le total des articles
     total_articles = sum(panier.sous_total for panier in paniers)
     
-    # Vérifier si c'est une commande renvoyée par la logistique
-    operation_renvoi = operations.filter(type_operation="RENVOI_PREPARATION").first()
-    is_commande_renvoyee = operation_renvoi is not None
     
     # Initialiser les variables pour les cas de livraison partielle/renvoi
     articles_livres = []
@@ -2863,7 +2854,7 @@ def modifier_commande_prepa(request, commande_id):
         "villes": villes,
         "total_articles": total_articles,
         "is_commande_renvoyee": is_commande_renvoyee,
-        "operation_renvoi": operation_renvoi,
+        
         "is_commande_livree_partiellement": is_commande_livree_partiellement,
         "articles_livres": articles_livres,
         "articles_renvoyes": articles_renvoyes,

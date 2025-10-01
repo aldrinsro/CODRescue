@@ -27,9 +27,12 @@ def dashboard(request):
     en_preparation    = Commande.objects.filter(etats__enum_etat__libelle='En préparation', etats__date_fin__isnull=True).distinct().count()
     prets_expedition  = Commande.objects.filter(etats__enum_etat__libelle='Préparée',        etats__date_fin__isnull=True).distinct().count()
     expedies          = Commande.objects.filter(etats__enum_etat__libelle='En cours de livraison', etats__date_fin__isnull=True).distinct().count()
+    # Toutes les commandes qui sont PASSÉES par l'état "Mise en distribution" (peu importe date_fin)
+    commandes_distribution = Commande.objects.filter(etats__enum_etat__libelle="Mise en distribution").distinct().count()
     
     context = {
         'operateur'        : operateur,
+        'commandes_distribution': commandes_distribution,
         'en_preparation'   : en_preparation,
         'prets_expedition' : prets_expedition,
         'expedies'         : expedies,
@@ -241,22 +244,11 @@ def liste_commandes(request):
 def detail_commande(request, commande_id):
     """Détails d'une commande pour l'opérateur logistique."""
     commande = get_object_or_404(Commande, id=commande_id)
-    
-    # S'assurer que les totaux et les prix des articles sont à jour pour l'affichage
-    # Calculer le prix de chaque article en fonction du compteur de la commande
-    for panier in commande.paniers.all():
-        prix_actuel = panier.article.prix_unitaire # Prix de base par défaut
-        if commande.compteur > 0:
-            if commande.compteur == 1 and panier.article.prix_upsell_1:
-                prix_actuel = panier.article.prix_upsell_1
-            elif commande.compteur == 2 and panier.article.prix_upsell_2:
-                prix_actuel = panier.article.prix_upsell_2
-            elif commande.compteur == 3 and panier.article.prix_upsell_3:
-                prix_actuel = panier.article.prix_upsell_3
-            elif commande.compteur >= 4 and panier.article.prix_upsell_4:
-                prix_actuel = panier.article.prix_upsell_4
-        panier.prix_actuel_pour_affichage = prix_actuel # Ajouter un attribut pour le template
-        print(f"DEBUG: Article {panier.article.nom}, Prix affiché: {panier.prix_actuel_pour_affichage}")
+
+    # Note: On ne recalcule PAS les prix pour les opérateurs logistiques
+    # Les commandes sont déjà confirmées et les prix sont "gelés"
+    # La méthode calculer_et_sauvegarder_prix() refuse automatiquement
+    # de recalculer pour les commandes confirmées (protection intégrée)
 
     context = {
         'commande'   : commande,

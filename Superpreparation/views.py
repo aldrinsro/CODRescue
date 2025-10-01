@@ -2756,45 +2756,27 @@ def modifier_commande_superviseur(request, commande_id):
     }
 
     return render(request, 'Superpreparation/modifier_commande_superviseur.html', context)
+
+
+
 def api_articles_disponibles_prepa(request):
-
     """API pour récupérer les articles disponibles pour les opérateurs de préparation"""
-
     from article.models import Article
-
-    
-
     try:
-
         # Accepter PREPARATION, SUPERVISEUR_PREPARATION et ADMIN
-
         operateur = Operateur.objects.get(user=request.user, actif=True)
-
         if operateur.type_operateur not in ['PREPARATION', 'SUPERVISEUR_PREPARATION', 'ADMIN']:
-
             return JsonResponse({'success': False, 'message': 'Accès non autorisé'}, status=403)
-
     except Operateur.DoesNotExist:
-
         # Pas de profil: continuer (le décorateur a déjà validé l'accès via groupes)
-
         operateur = None
-
-    
-
     try:
-
         search_query = request.GET.get('search', '')
-
         filter_type = request.GET.get('filter', 'tous')
-
-        
-
         # Récupérer les articles actifs
 
         articles = Article.objects.filter(actif=True)
 
-        
 
         # Appliquer les filtres selon le type
 

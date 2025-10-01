@@ -730,7 +730,7 @@
                         <i class="fas fa-undo text-2xl"></i>
                     </div>
                     <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-600">Articles à Traiter</p>
+                    <p class="text-sm font-medium text-gray-600">Articles <br> à Traiter</p>
                     <p class="text-3xl font-bold text-orange-600">{{ articles_retournes_stats.total_en_attente|default:0 }}</p>
                 </div>
             </div>
@@ -932,48 +932,14 @@ document.addEventListener('DOMContentLoaded', function() {
         <form id="formRaisonTraitement">
             <div class="mb-6">
                 <label for="selectRaisonTraitement" class="block text-sm font-medium text-gray-700 mb-2">
-                    Raison du traitement <span class="text-red-500">*</span>
+                    Type de traitement <span class="text-red-500">*</span>
                 </label>
                 <select id="selectRaisonTraitement" name="raison_traitement"
                         class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                    <option value="">Sélectionnez une raison...</option>
-
-                    <optgroup label="Problèmes de qualité" class="optgroup-problemes">
-                        <option value="Article défectueux détecté">Article défectueux détecté</option>
-                        <option value="Problème de qualité signalé par le client">Problème de qualité signalé par le client</option>
-                        <option value="Article endommagé lors du transport">Article endommagé lors du transport</option>
-                        <option value="Défaut de fabrication constaté">Défaut de fabrication constaté</option>
-                    </optgroup>
-
-                    <optgroup label="Retours et échanges" class="optgroup-retours">
-                        <option value="Retour demandé par le client">Retour demandé par le client</option>
-                        <option value="Échange de taille demandé">Échange de taille demandé</option>
-                        <option value="Échange de couleur demandé">Échange de couleur demandé</option>
-                        <option value="Article non conforme à la commande">Article non conforme à la commande</option>
-                    </optgroup>
-
-                    <optgroup label="Gestion stock" class="optgroup-stock">
-                        <option value="Article en bon état - réintégration stock">Article en bon état - réintégration stock</option>
-                        <option value="Vérification qualité effectuée">Vérification qualité effectuée</option>
-                        <option value="Article nettoyé et contrôlé">Article nettoyé et contrôlé</option>
-                    </optgroup>
-
-                    <optgroup label="Autres" class="optgroup-autres">
-                        <option value="Traitement manuel par le service">Traitement manuel par le service</option>
-                        <option value="Article remis en vente">Article remis en vente</option>
-                        <option value="Article retiré définitivement">Article retiré définitivement</option>
-                    </optgroup>
+                    <option value="">Sélectionnez le type de traitement...</option>
+                    <option value="Article vérifié et réintégré au stock">Article vérifié et réintégré au stock</option>
+                    <option value="Article non réintégrable, commande traité">Article non réintégrable, commande traité</option>
                 </select>
-            </div>
-
-            <!-- Commentaire complémentaire optionnel -->
-            <div class="mb-6">
-                <label for="commentaireComplementaire" class="block text-sm font-medium text-gray-700 mb-2">
-                    Commentaire complémentaire (optionnel)
-                </label>
-                <textarea id="commentaireComplementaire" name="commentaire_complementaire"
-                          rows="3" placeholder="Ajoutez des détails si nécessaire..."
-                          class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
             </div>
         </form>
 
@@ -1120,6 +1086,11 @@ function confirmerTraitementArticle() {
     const select = document.getElementById('selectRaisonTraitement');
     const commentaireComp = document.getElementById('commentaireComplementaire');
 
+    if (!select) {
+        alert('❌ Erreur: Élément de sélection non trouvé');
+        return;
+    }
+
     if (!select.value) {
         alert('⚠️ Veuillez sélectionner une raison de traitement');
         select.focus();
@@ -1133,7 +1104,7 @@ function confirmerTraitementArticle() {
 
     // Construire le commentaire final
     let commentaireFinal = select.value;
-    if (commentaireComp.value.trim()) {
+    if (commentaireComp && commentaireComp.value.trim()) {
         commentaireFinal += ` - ${commentaireComp.value.trim()}`;
     }
     commentaireFinal += ` (Traité le ${new Date().toLocaleString()})`;

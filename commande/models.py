@@ -480,7 +480,142 @@ class Panier(models.Model):
                 self.type_remise_appliquee = ''
 
         super().save(*args, **kwargs)
-    
+
+    def calculer_et_sauvegarder_prix(self, force_recalcul=False):
+        """
+        Calcule et sauvegarde le prix unitaire et le sous-total de ce panier en tenant compte :
+        - Des remises appliquées (remise_appliquer=True)
+        - Des prix upsell selon le compteur de la commande
+        - Des promotions actives
+        - De la phase de l'article (liquidation, test, etc.)
+
+        IMPORTANT: Ne recalcule PAS si la commande est confirmée ou dans un état avancé,
+        sauf si force_recalcul=True.
+
+        Args:
+            force_recalcul: Si True, force le recalcul même pour commandes confirmées (défaut: False)
+
+        Returns:
+            dict: {
+                'prix_unitaire': Prix unitaire calculé,
+                'sous_total': Sous-total calculé,
+                'type_prix': Type de prix appliqué,
+                'recalcule': True si le prix a été recalculé, False sinon
+            }
+        """
+        from decimal import Decimal
+
+        # Validation
+        if not self.article or self.quantite <= 0:
+            return {
+                'prix_unitaire': 0,
+                'sous_total': 0,
+                'type_prix': 'error',
+                'recalcule': False
+            }
+
+        # PROTECTION: Ne PAS recalculer si la commande est confirmée ou dans un état avancé
+        # Les prix sont "gelés" au moment de la confirmation
+        etats_proteges = [
+            'Confirmée',
+            'En préparation',
+            'Préparation en cours',
+            'Préparée',
+            'Mise en distribution',
+            'En cours de livraison',
+            'En livraison',
+            'Livrée',
+            'Livrée Partiellement',
+            'Livrée avec changement',
+            'Retournée',
+            'Reportée'
+        ]
+
+        if not force_recalcul and self.commande.etat_actuel:
+            etat_actuel_libelle = self.commande.etat_actuel.enum_etat.libelle
+            if etat_actuel_libelle in etats_proteges:
+                # Commande confirmée ou avancée - NE PAS RECALCULER
+                prix_unitaire = Decimal(str(self.sous_total)) / Decimal(str(self.quantite))
+                return {
+                    'prix_unitaire': float(prix_unitaire),
+                    'sous_total': float(self.sous_total),
+                    'type_prix': 'prix_gele',
+                    'recalcule': False,
+                    'message': f'Prix gelé - Commande en état "{etat_actuel_libelle}"'
+                }
+
+        # 1. Si une remise a été appliquée - NE PAS RECALCULER
+        if self.remise_appliquer:
+            # Protéger contre les articles en liquidation/promotion
+            if self.article.phase == 'LIQUIDATION' or (hasattr(self.article, 'has_promo_active') and self.article.has_promo_active):
+                # Forcer la suppression de la remise
+                self.remise_appliquer = False
+                self.type_remise_appliquee = ''
+                # Continuer vers le calcul normal
+            else:
+                # Conserver le prix avec remise - le sous_total est déjà correct
+                prix_unitaire = Decimal(str(self.sous_total)) / Decimal(str(self.quantite))
+                return {
+                    'prix_unitaire': float(prix_unitaire),
+                    'sous_total': float(self.sous_total),
+                    'type_prix': f'remise_{self.type_remise_appliquee}',
+                    'recalcule': False
+                }
+
+        # 2. Déterminer le prix unitaire selon les règles métier
+        prix_unitaire = None
+        type_prix = 'normal'
+
+        # Promotion active - priorité sur tout sauf remise appliquée
+        if hasattr(self.article, 'has_promo_active') and self.article.has_promo_active:
+            prix_unitaire = self.article.prix_actuel or self.article.prix_unitaire
+            type_prix = 'promotion'
+
+        # Phase liquidation
+        elif self.article.phase == 'LIQUIDATION':
+            prix_unitaire = self.article.Prix_liquidation if hasattr(self.article, 'Prix_liquidation') and self.article.Prix_liquidation else self.article.prix_actuel or self.article.prix_unitaire
+            type_prix = 'liquidation'
+
+        # Phase test
+        elif self.article.phase == 'EN_TEST':
+            prix_unitaire = self.article.prix_actuel or self.article.prix_unitaire
+            type_prix = 'test'
+
+        # Article upsell avec compteur
+        elif hasattr(self.article, 'isUpsell') and self.article.isUpsell and self.commande.compteur > 0:
+            # Calculer le prix selon le compteur
+            if self.commande.compteur == 1 and self.article.prix_upsell_1:
+                prix_unitaire = self.article.prix_upsell_1
+            elif self.commande.compteur == 2 and self.article.prix_upsell_2:
+                prix_unitaire = self.article.prix_upsell_2
+            elif self.commande.compteur == 3 and self.article.prix_upsell_3:
+                prix_unitaire = self.article.prix_upsell_3
+            elif self.commande.compteur >= 4 and self.article.prix_upsell_4:
+                prix_unitaire = self.article.prix_upsell_4
+            else:
+                prix_unitaire = self.article.prix_actuel or self.article.prix_unitaire
+            type_prix = f'upsell_niveau_{self.commande.compteur}'
+
+        # Prix normal
+        else:
+            prix_unitaire = self.article.prix_actuel or self.article.prix_unitaire
+            type_prix = 'normal'
+
+        # 3. Calculer le sous-total
+        prix_unitaire = Decimal(str(prix_unitaire))
+        sous_total = prix_unitaire * Decimal(str(self.quantite))
+
+        # 4. Sauvegarder dans le panier
+        self.sous_total = float(sous_total)
+        self.save(update_fields=['sous_total', 'remise_appliquer', 'type_remise_appliquee'])
+
+        return {
+            'prix_unitaire': float(prix_unitaire),
+            'sous_total': float(sous_total),
+            'type_prix': type_prix,
+            'recalcule': True
+        }
+
     def __str__(self):
         return f"{self.commande.num_cmd} - {self.article.nom} (x{self.quantite})"
 
