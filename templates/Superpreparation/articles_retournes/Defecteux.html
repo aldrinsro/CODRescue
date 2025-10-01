@@ -1,0 +1,85 @@
+{% extends 'Superpreparation/articles_retournes/_base_articles_retournes.html' %}
+
+{% block page_icon %}<i class="fas fa-times-circle mr-3 text-red-300"></i>{% endblock %}
+
+{% block extra_page_css %}
+<style>
+    .stats-card.highlight {
+        border-color: #ef4444;
+        box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+    }
+
+    .pulse-red {
+        animation: pulse-red 2s infinite;
+    }
+
+    @keyframes pulse-red {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+    }
+</style>
+{% endblock %}
+
+{% block stats_section %}
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <!-- Total défectueux -->
+    <div class="stats-card highlight animate-slideInUp" style="animation-delay: 0.1s;">
+        <div class="flex items-center">
+            <div class="stats-icon bg-red-500 pulse-red">
+                <i class="fas fa-times-circle text-2xl"></i>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-600">Défectueux</p>
+                <p class="text-3xl font-bold text-red-600">{{ stats.count|default:0 }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Perte estimée -->
+    <div class="stats-card animate-slideInUp" style="animation-delay: 0.2s;">
+        <div class="flex items-center">
+            <div class="stats-icon bg-orange-500">
+                <i class="fas fa-exclamation-triangle text-2xl"></i>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-600">Perte Estimée</p>
+                <p class="text-3xl font-bold text-orange-600">{{ stats.valeur_totale|floatformat:0|default:0 }} DH</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Taux de défauts -->
+    <div class="stats-card animate-slideInUp" style="animation-delay: 0.3s;">
+        <div class="flex items-center">
+            <div class="stats-icon bg-gray-500">
+                <i class="fas fa-chart-line text-2xl"></i>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-600">Taux de Défauts</p>
+                <p class="text-3xl font-bold text-gray-700">{{ stats.taux_defauts|default:0 }}%</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Alerte critique -->
+{% if stats.count > 0 %}
+<div class="bg-red-50 border-l-4 border-red-400 p-4 mb-6 rounded-r-lg">
+    <div class="flex">
+        <div class="flex-shrink-0">
+            <i class="fas fa-exclamation-circle text-red-400 text-xl pulse-red"></i>
+        </div>
+        <div class="ml-3">
+            <p class="text-sm text-red-700">
+                <span class="font-medium">{{ stats.count }} article{{ stats.count|pluralize }} défectueux</span> identifié{{ stats.count|pluralize }}.
+                Ces articles ne peuvent pas être réintégrés en stock et représentent une perte de <span class="font-bold">{{ stats.valeur_totale|floatformat:0 }} DH</span>.
+            </p>
+            <p class="text-xs text-red-600 mt-2">
+                <i class="fas fa-info-circle mr-1"></i>
+                Analysez les causes pour réduire le taux de défauts à l'avenir.
+            </p>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

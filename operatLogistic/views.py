@@ -10,8 +10,9 @@ from django.db                      import transaction
 import json
 
 from parametre.models import Operateur
-from commande.models  import Commande, Envoi, EnumEtatCmd, EtatCommande, Operation
+from commande.models  import Commande, Envoi, EnumEtatCmd, EtatCommande
 from article.models   import Article
+
 
 
 @login_required
@@ -1039,12 +1040,7 @@ def livraison_partielle(request, commande_id):
                     'frais_livraison_inclus': bool(commande.frais_livraison and commande.ville)
                 }
             }
-            Operation.objects.create(
-                commande=commande,
-                type_operation='LIVRAISON_PARTIELLE',
-                conclusion=json.dumps(operation_conclusion_data, ensure_ascii=False),
-                operateur=operateur
-            )
+           
             
             if recap_articles_retournes:
                 messages.success(request, 
@@ -1183,12 +1179,7 @@ def marque_retournee(request, commande_id):
                 'total_articles_retournes': sum(ar.quantite_retournee for ar in articles_retournes_crees)
             }
 
-            Operation.objects.create(
-                commande=commande,
-                type_operation='RETOUR_COMPLET',
-                conclusion=json.dumps(operation_data, ensure_ascii=False),
-                operateur=operateur
-            )
+          
 
             return JsonResponse({
                 'success': True,
