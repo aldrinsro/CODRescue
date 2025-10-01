@@ -27,19 +27,7 @@ SECRET_KEY = 'django-insecure-beulebpje4!9xvoqg(@rn7$j0rt2)n2%8z=!euaw%t3&3j_z8*
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = [
-    'localhost',
-    '127.0.0.1',
-    '192.168.216.128',  # Votre adresse IP locale
-    '192.168.66.128',
-    '192.168.216.*',    # Toutes les adresses de votre sous-réseau
-    '192.168.8.114',
-    '192.168.145.129',
-    '192.168.0.105',
-    '192.168.0.100',
-    '192.168.0.*',
-    
-]
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -262,16 +250,12 @@ CRISPY_TEMPLATE_PACK = 'bootstrap4'
 # CORS configuration
 CORS_ALLOW_ALL_ORIGINS = True  # Pour le développement seulement
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:8000",
-    "http://127.0.0.1:8000",
-    "http://192.168.216.128:8000",
-    "http://192.168.66.128:8000",    
-    "http://192.168.8.114:8000",
-    "http://192.168.145.129:8000",
-    "http://192.168.20.128:8000",
-    "http://192.168.0.105:8000",
-    "http://192.168.0.100:8000",
-    "http://192.168.0.*:8000",
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+]
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r'^https://[a-z0-9-]+\.trycloudflare\.com$',
+    r'^https://[a-z0-9-]+\.workers\.dev$',
 ]
 
 # Autoriser les requêtes depuis votre réseau local
@@ -283,15 +267,22 @@ TAILWIND_APP_NAME = 'theme'
 # Configuration des sessions
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 SESSION_COOKIE_AGE = 86400  # 24 heures en secondes
-SESSION_COOKIE_SECURE = not DEBUG  # Cookies sécurisés en HTTPS (False en dev, True en prod)
+SESSION_COOKIE_SECURE = True  # Force cookie sécurisé derrière le proxy HTTPS
 SESSION_COOKIE_HTTPONLY = True  # Protection XSS
+SESSION_COOKIE_SAMESITE = 'Lax'
 SESSION_SAVE_EVERY_REQUEST = True  # Rafraîchir la session à chaque requête
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False  # La session persiste même après fermeture du navigateur
 SESSION_COOKIE_NAME = 'yz_cmd_sessionid'  # Nom personnalisé du cookie de session
 
 # Protection CSRF renforcée
-CSRF_COOKIE_SECURE = not DEBUG  # False en développement, True en production
+CSRF_COOKIE_SECURE = True  # Cookie CSRF uniquement via HTTPS derrière le proxy
 CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_SAMESITE = 'Lax'
+
+# Django derrière un proxy HTTPS (Cloudflare Workers/Tunnel)
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 CSRF_TRUSTED_ORIGINS = [
     'http://localhost:8000', 
     'http://127.0.0.1:8000',
@@ -310,6 +301,9 @@ CSRF_TRUSTED_ORIGINS = [
     'http://192.168.66.128:*',
     "http://192.168.8.114:*",
     "http://192.168.20.128:*",
+    # cloudflare tunnel / workers (HTTPS)
+    'https://*.trycloudflare.com',
+    'https://*.workers.dev',
 ]
 # Désactiver l'utilisation des sessions pour le CSRF token en développement
 CSRF_USE_SESSIONS = False
