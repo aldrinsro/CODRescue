@@ -447,9 +447,25 @@ class Panier(models.Model):
         ('remise_2', 'Prix remise 2'),
         ('remise_3', 'Prix remise 3'),
         ('remise_4', 'Prix remise 4'),
-      
+
     ]
-    
+
+    CHOIX_TYPE_PRIX = [
+        ('', 'Non défini'),
+        ('normal', 'Prix normal'),
+        ('promotion', 'Prix promotion'),
+        ('liquidation', 'Prix liquidation'),
+        ('test', 'Prix test'),
+        ('upsell_niveau_1', 'Upsell niveau 1'),
+        ('upsell_niveau_2', 'Upsell niveau 2'),
+        ('upsell_niveau_3', 'Upsell niveau 3'),
+        ('upsell_niveau_4', 'Upsell niveau 4'),
+        ('remise_1', 'Prix remise 1'),
+        ('remise_2', 'Prix remise 2'),
+        ('remise_3', 'Prix remise 3'),
+        ('remise_4', 'Prix remise 4'),
+    ]
+
     commande = models.ForeignKey(Commande, on_delete=models.CASCADE, related_name='paniers')
     article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name='paniers')
     variante = models.ForeignKey(VarianteArticle, on_delete=models.SET_NULL, null=True, blank=True, related_name='paniers')
@@ -457,6 +473,7 @@ class Panier(models.Model):
     sous_total = models.FloatField()
     remise_appliquer = models.BooleanField(default=False)
     type_remise_appliquee = models.CharField(max_length=20, choices=CHOIX_TYPE_REMISE, blank=True, default='')
+    type_prix_gele = models.CharField(max_length=30, choices=CHOIX_TYPE_PRIX, blank=True, default='', verbose_name="Type de prix gelé")
     
     class Meta:
         verbose_name = "Panier"
@@ -605,9 +622,10 @@ class Panier(models.Model):
         prix_unitaire = Decimal(str(prix_unitaire))
         sous_total = prix_unitaire * Decimal(str(self.quantite))
 
-        # 4. Sauvegarder dans le panier
+        # 4. Sauvegarder dans le panier avec le type de prix gelé
         self.sous_total = float(sous_total)
-        self.save(update_fields=['sous_total', 'remise_appliquer', 'type_remise_appliquee'])
+        self.type_prix_gele = type_prix  # Sauvegarder le type de prix (liquidation, promotion, etc.)
+        self.save(update_fields=['sous_total', 'remise_appliquer', 'type_remise_appliquee', 'type_prix_gele'])
 
         return {
             'prix_unitaire': float(prix_unitaire),

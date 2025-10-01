@@ -245,10 +245,25 @@ def detail_commande(request, commande_id):
     """Détails d'une commande pour l'opérateur logistique."""
     commande = get_object_or_404(Commande, id=commande_id)
 
-    # Note: On ne recalcule PAS les prix pour les opérateurs logistiques
-    # Les commandes sont déjà confirmées et les prix sont "gelés"
-    # La méthode calculer_et_sauvegarder_prix() refuse automatiquement
-    # de recalculer pour les commandes confirmées (protection intégrée)
+    # INITIALISATION: Si des paniers n'ont pas de type_prix_gele, les initialiser
+    # Cela permet de gérer les commandes créées avant l'ajout de ce champ
+    for panier in commande.paniers.all():
+        if not panier.type_prix_gele:
+            # Déterminer le type de prix en fonction de l'état actuel
+            if panier.remise_appliquer and panier.type_remise_appliquee:
+                panier.type_prix_gele = panier.type_remise_appliquee
+            elif panier.article.phase == 'LIQUIDATION':
+                panier.type_prix_gele = 'liquidation'
+            elif hasattr(panier.article, 'has_promo_active') and panier.article.has_promo_active:
+                panier.type_prix_gele = 'promotion'
+            elif panier.article.phase == 'EN_TEST':
+                panier.type_prix_gele = 'test'
+            elif panier.article.isUpsell and commande.compteur > 0:
+                panier.type_prix_gele = f'upsell_niveau_{commande.compteur}'
+            else:
+                panier.type_prix_gele = 'normal'
+
+            panier.save(update_fields=['type_prix_gele'])
 
     context = {
         'commande'   : commande,

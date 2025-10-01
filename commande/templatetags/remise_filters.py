@@ -221,6 +221,67 @@ def get_prix_effectif_panier(panier):
     sous_total_actuel = Decimal(str(panier.sous_total))
     prix_unitaire_effectif = sous_total_actuel / Decimal(str(quantite))
 
+    # PRIORITÉ 1: Utiliser le type de prix gelé si disponible
+    # Cela permet d'afficher "Prix liquidation" ou "Prix promotion" même si l'article a changé
+    if hasattr(panier, 'type_prix_gele') and panier.type_prix_gele:
+        type_prix_gele = panier.type_prix_gele
+
+        # Mapper le type de prix gelé vers un libellé et style
+        if type_prix_gele == 'liquidation':
+            return {
+                'prix_unitaire': float(prix_unitaire_effectif),
+                'sous_total': float(sous_total_actuel),
+                'libelle': 'Prix liquidation',
+                'couleur_classe': 'text-orange-600',
+                'icone': 'fas fa-tags',
+                'est_remise': False
+            }
+        elif type_prix_gele == 'promotion':
+            return {
+                'prix_unitaire': float(prix_unitaire_effectif),
+                'sous_total': float(sous_total_actuel),
+                'libelle': 'Prix promotion',
+                'couleur_classe': 'text-red-600',
+                'icone': 'fas fa-fire',
+                'est_remise': False
+            }
+        elif type_prix_gele == 'test':
+            return {
+                'prix_unitaire': float(prix_unitaire_effectif),
+                'sous_total': float(sous_total_actuel),
+                'libelle': 'Prix test',
+                'couleur_classe': 'text-blue-600',
+                'icone': 'fas fa-flask',
+                'est_remise': False
+            }
+        elif type_prix_gele.startswith('upsell_niveau_'):
+            niveau = type_prix_gele.split('_')[-1]
+            return {
+                'prix_unitaire': float(prix_unitaire_effectif),
+                'sous_total': float(sous_total_actuel),
+                'libelle': f'Prix upsell niveau {niveau}',
+                'couleur_classe': 'text-green-600',
+                'icone': 'fas fa-arrow-up',
+                'est_remise': False
+            }
+        elif type_prix_gele.startswith('remise_'):
+            return {
+                'prix_unitaire': float(prix_unitaire_effectif),
+                'sous_total': float(sous_total_actuel),
+                'libelle': f'Prix {type_prix_gele.replace("_", " ")} appliquée',
+                'couleur_classe': 'text-purple-600',
+                'icone': 'fas fa-percent',
+                'est_remise': True
+            }
+        elif type_prix_gele == 'normal':
+            return {
+                'prix_unitaire': float(prix_unitaire_effectif),
+                'sous_total': float(sous_total_actuel),
+                'libelle': 'Prix normal',
+                'couleur_classe': 'text-gray-600',
+                'icone': 'fas fa-tag',
+                'est_remise': False
+            }
 
     # Vérifier si une remise a été explicitement appliquée
     # PROTECTION: Les articles en liquidation et en promotion ne doivent jamais être traités comme ayant une remise
