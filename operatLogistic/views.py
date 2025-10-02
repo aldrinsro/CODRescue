@@ -24,20 +24,41 @@ def dashboard(request):
         messages.error(request, "Profil d'opérateur logistique non trouvé.")
         return redirect('login')
     
-    # Statistiques simples pour le dashboard
-    en_preparation    = Commande.objects.filter(etats__enum_etat__libelle='En préparation', etats__date_fin__isnull=True).distinct().count()
-    prets_expedition  = Commande.objects.filter(etats__enum_etat__libelle='Préparée',        etats__date_fin__isnull=True).distinct().count()
-    expedies          = Commande.objects.filter(etats__enum_etat__libelle='En cours de livraison', etats__date_fin__isnull=True).distinct().count()
+
+    commandes_retournees = Commande.objects.filter(etats__enum_etat__libelle="Retournée").distinct().count()
     # Toutes les commandes qui sont PASSÉES par l'état "Mise en distribution" (peu importe date_fin)
     commandes_distribution = Commande.objects.filter(etats__enum_etat__libelle="Mise en distribution").distinct().count()
+
+    #Nombre totale de commandes 
+    total_commandes = Commande.objects.count()
+
+    # Commandes livrées (totales ou partielles)
+    livrees = Commande.objects.filter(
+    Q(etats__enum_etat__libelle="Livrée") |
+    Q(etats__enum_etat__libelle="Livrée partiellement")).distinct().count()
+
+
+    #Taux de livraison sur le nombre total de commande de manière générale
+    if total_commandes > 0 :
+        Taux_livraison_generale = round(((livrees / total_commandes)*100),2)  
+    else:
+        return 0
+    
+    if commandes_distribution > 0 :
+        Taux_livraison_sur_distribution = round(((livrees/commandes_distribution)*100),2)  
+    else:
+        return 0
+
+
+    #Taux de livraison sur les commandes mise en distributions 
     
     context = {
         'operateur'        : operateur,
         'commandes_distribution': commandes_distribution,
-        'en_preparation'   : en_preparation,
-        'prets_expedition' : prets_expedition,
-        'expedies'         : expedies,
-        'page_title'       : 'Tableau de Bord Logistique',
+        'Taux_de_livraison_generale': Taux_livraison_generale,
+        'commandes_retournees':commandes_retournees,
+        'Taux_livraison_sur_distribution':Taux_livraison_sur_distribution ,
+        'page_title': 'Tableau de Bord Logistique',
     }
     return render(request, 'composant_generale/operatLogistic/home.html', context)
 
