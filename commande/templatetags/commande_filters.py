@@ -77,6 +77,8 @@ def get_prix_upsell(article, quantite):
     Retourne le prix approprié en fonction de la quantité.
     Pour les articles upsell : le prix upsell REMPLACE le prix actuel.
     """
+   
+
     if not article.isUpsell:
         return article.prix_actuel if article.prix_actuel is not None else article.prix_unitaire
     
@@ -109,15 +111,16 @@ def get_prix_upsell_avec_compteur(article, compteur):
     - 3 unités upsell → compteur = 2 → prix upsell 2
     - 4 unités upsell → compteur = 3 → prix upsell 3
     - 5+ unités upsell → compteur = 4+ → prix upsell 4
-    
+
     Note: Les unités incluent les quantités (ex: 1 article qté 2 = 2 unités)
     Seuls les articles avec isUpsell=True utilisent les prix upsell.
     Les autres articles gardent leur prix normal.
     """
+
     # Si l'article n'est pas upsell, toujours retourner le prix normal
     if not article.isUpsell:
         return article.prix_actuel if article.prix_actuel is not None else article.prix_unitaire
-    
+
     # Pour les articles upsell, appliquer le prix selon le compteur
     if compteur == 0:
         # 0-1 articles upsell → prix normal
@@ -137,7 +140,8 @@ def get_prix_upsell_avec_compteur(article, compteur):
     else:
         # Si pas de prix upsell défini pour ce niveau, utiliser le prix actuel
         return article.prix_actuel if article.prix_actuel is not None else article.prix_unitaire
-
+        
+        
 @register.filter
 def get_prix_upsell_supplement(article, quantite):
     """

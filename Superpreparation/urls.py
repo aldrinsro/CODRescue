@@ -23,8 +23,6 @@ urlpatterns = [
 
     #Gestion des commandes confirmees
     path('commandes-confirmees/', views.commandes_confirmees, name='commandes_confirmees'),
-    path('livrees-partiellement/', views.commandes_livrees_partiellement, name='commandes_livrees_partiellement'),
-    path('retournees/', views.commandes_retournees, name='commandes_retournees'),
     path('profile/', views.profile_view, name='profile'),
     path('modifier-profile/', views.modifier_profile_view, name='modifier_profile'),
     path('changer-mot-de-passe/', views.changer_mot_de_passe_view, name='changer_mot_de_passe'),

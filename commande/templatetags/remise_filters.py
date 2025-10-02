@@ -167,11 +167,9 @@ def calcul_economie_remise(article, prix_remise):
 def format_prix_avec_devise(prix, devise='DH'):
     """
     Formate un prix avec la devise.
-    
     Args:
         prix: Le prix à formater
-        devise: La devise (défaut 'DH')
-        
+        devise: La devise (défaut 'DH')  
     Returns:
         str: Prix formaté avec devise
     """

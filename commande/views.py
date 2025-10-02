@@ -517,9 +517,7 @@ def modifier_commande(request, pk):
                     # Mise à jour de l'adresse de livraison (saisie manuelle)
                     if 'adresse' in request.POST:
                         commande.adresse = request.POST.get('adresse')
-                    
-                    # Option upsell
-                    commande.is_upsell = request.POST.get('is_upsell') == 'on'
+               
                     
                     # Note: La ville et l'adresse de livraison sont issues de la commande originale
                     # Les autres champs (ID YZ, date, client, valeur) sont en lecture seule

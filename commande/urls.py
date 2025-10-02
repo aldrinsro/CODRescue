@@ -18,6 +18,10 @@ urlpatterns = [
     path('etats/monter/<int:etat_id>/', views.monter_etat, name='monter_etat'),
     path('etats/descendre/<int:etat_id>/', views.descendre_etat, name='descendre_etat'),
     # URLs pour les pages de gestion par état
+
+
+
+
     path('non-affectees/', views.commandes_non_affectees, name='non_affectees'),
     path('affectees/', views.commandes_affectees, name='affectees'),
     path('a-traiter/', views.commandes_a_traiter, name='a_traiter'),
@@ -31,6 +35,8 @@ urlpatterns = [
     path('affecter-preparation-multiple/', views.affecter_preparation_multiple, name='affecter_preparation_multiple'),
     path('affecter-livraison/<int:commande_id>/', views.affecter_livraison, name='affecter_livraison'),
     path('affecter-livraison-multiple/', views.affecter_livraison_multiple, name='affecter_livraison_multiple'),
+
+
     # URLs pour l'affectation et changement de statut
     path('affecter/', views.affecter_commandes, name='affecter_commandes'),
     path('desaffecter/', views.desaffecter_commandes, name='desaffecter_commandes'),
@@ -39,6 +45,8 @@ urlpatterns = [
     path('changer-statut/<int:commande_id>/', views.changer_statut_commande_unique, name='changer_statut_commande_unique'),
     path('annuler/<int:pk>/', views.annuler_commande, name='annuler_commande'),
     path('statistiques-motifs/', views.statistiques_motifs_annulation, name='statistiques_motifs'),
+
+    
     # Maintenance
     path('maintenance-etats/', views.nettoyer_etats_doublons, name='maintenance_etats'),
     # Paniers

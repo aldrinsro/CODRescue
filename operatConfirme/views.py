@@ -3412,7 +3412,6 @@ def get_article_variants(request, article_id):
         # Construire la liste des variantes avec leurs informations
         variants_data = []
         for variante in variantes:
-            print(f"🔸 Variante: {variante.id} - Couleur: {variante.couleur} - Pointure: {variante.pointure} - Stock: {variante.qte_disponible}")
             
             variant_info = {
                 'id': variante.id,
@@ -3436,8 +3435,6 @@ def get_article_variants(request, article_id):
                 'reference': article.reference
             }
         }
-        
-        print(f"📤 Réponse envoyée: {len(variants_data)} variantes")
         return JsonResponse(response_data)
         
     except Exception as e:

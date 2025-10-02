@@ -758,152 +758,8 @@ def commandes_emballees(request):
 
     return render(request, 'Superpreparation/commandes_emballees.html', context)
 
-@superviseur_preparation_required
-def commandes_livrees_partiellement(request):
-    """Page de suivi (lecture seule) des commandes livrées partiellement"""
-    try:
-        operateur_profile = request.user.profil_operateur  # Autoriser superviseur ou équipe préparation
-        if not operateur_profile.is_preparation:
-            messages.error(request, "Accès non autorisé. Réservé à l'équipe préparation.")
-            return redirect('Superpreparation:home')
-    except Operateur.DoesNotExist:
-        messages.error(request, "Votre profil opérateur n'existe pas.")
 
-        
-        return redirect('login')
-    commandes_livrees_partiellement_qs = (
-        Commande.objects
-        .filter(etats__enum_etat__libelle='Livrée Partiellement')
-        .filter(etats__enum_etat__libelle='En préparation')
-        .select_related('client', 'ville', 'ville__region')
-        .prefetch_related('paniers__article', 'etats')
-        .distinct()
-    )
-    commandes_livrees_partiellement = []
-    for commande_originale in commandes_livrees_partiellement_qs:
-        commande_renvoi = Commande.objects.filter(
-            num_cmd__startswith=f"RENVOI-{commande_originale.num_cmd}",
-            client=commande_originale.client
-        ).first()
-        if commande_renvoi:
-            commande_originale.commande_renvoi = commande_renvoi
-        commandes_livrees_partiellement.append(commande_originale)
-    commandes_filtrees = commandes_livrees_partiellement
-    for commande in commandes_livrees_partiellement:
-        etat_livraison_partielle = commande.etats.filter(
-            enum_etat__libelle='Livrée Partiellement'
-        ).order_by('-date_debut').first()
-        if etat_livraison_partielle:
-            commande.date_livraison_partielle = etat_livraison_partielle.date_debut
-            commande.commentaire_livraison_partielle = etat_livraison_partielle.commentaire
-            commande.operateur_livraison = etat_livraison_partielle.operateur
-            commande.statut_actuel = "Renvoyée en préparation"
-            if hasattr(commande, 'commande_renvoi'):
-                commande.commande_renvoi_id = commande.commande_renvoi.id
-                commande.commande_renvoi_num = commande.commande_renvoi.num_cmd
-                commande.commande_renvoi_id_yz = commande.commande_renvoi.id_yz
 
-    # Récupérer les statistiques des articles retournés à traiter
-    from commande.models import ArticleRetourne
-
-    articles_retournes_stats = {
-        'total_en_attente': ArticleRetourne.objects.filter(statut_retour='en_attente').count(),
-        'total_reintegres': ArticleRetourne.objects.filter(statut_retour='reintegre_stock').count(),
-        'total_defectueux': ArticleRetourne.objects.filter(statut_retour='defectueux').count(),
-        'total_traites': ArticleRetourne.objects.exclude(statut_retour='en_attente').count(),
-    }
-
-    context = {
-        'page_title': 'Suivi - Commandes Livrées Partiellement',
-        'page_subtitle': f'Suivi en temps réel de {len(commandes_livrees_partiellement)} commande(s) livrées partiellement',
-        'profile': operateur_profile,
-        'commandes_livrees_partiellement': commandes_livrees_partiellement,
-        'commandes_count': len(commandes_livrees_partiellement),
-        'active_tab': 'livrees_partiellement',
-        'is_readonly': True,
-        'is_tracking_page': True,
-        'articles_retournes_stats': articles_retournes_stats,  # Ajout des stats
-    }
-    return render(request, 'Superpreparation/commandes_livrees_partiellement.html', context)
-
-@superviseur_preparation_required
-def commandes_retournees(request):
-    """Page de suivi (lecture seule) des commandes retournées"""
-    try:
-        operateur_profile = request.user.profil_operateur
-        if not operateur_profile.is_preparation:
-            messages.error(request, "Accès non autorisé. Réservé à l'équipe préparation.")
-            return redirect('Superpreparation:home')
-    
-    except Operateur.DoesNotExist:
-        messages.error(request, "Votre profil opérateur n'existe pas.")
-        return redirect('login')
-
-    # Récupérer le paramètre d'onglet
-    tab = request.GET.get('tab', 'actives')
-    
-    # Commandes ACTIVES (sans date_fin) - à traiter
-    commandes_actives_qs = (
-        Commande.objects
-        .filter(etats__enum_etat__libelle='Retournée', etats__date_fin__isnull=True) 
-        .prefetch_related('paniers__article', 'etats')
-        .distinct()
-    )
-
-    # Commandes TRAITÉES (avec date_fin) - déjà traitées
-    commandes_traitees_qs = (
-        Commande.objects
-        .filter(etats__enum_etat__libelle='Retournée', etats__date_fin__isnull=False) 
-        .prefetch_related('paniers__article', 'etats')
-        .distinct()
-    )
-
-    commandes_actives = list(commandes_actives_qs)
-    commandes_traitees = list(commandes_traitees_qs)
-    
-    # Enrichir avec méta d'état 'Retournée' pour les commandes actives
-    for commande in commandes_actives:
-        etat_retour = commande.etats.filter(enum_etat__libelle='Retournée').order_by('-date_debut').first()
-        if etat_retour:
-            commande.date_retournee = etat_retour.date_debut
-            commande.commentaire_retournee = etat_retour.commentaire
-            commande.operateur_retour = etat_retour.operateur
-            commande.etat_retournee = etat_retour  # Ajouter l'état complet
-    
-    # Enrichir avec méta d'état 'Retournée' pour les commandes traitées
-    for commande in commandes_traitees:
-        etat_retour = commande.etats.filter(enum_etat__libelle='Retournée').order_by('-date_debut').first()
-        if etat_retour:
-            commande.date_retournee = etat_retour.date_debut
-            commande.date_traitement = etat_retour.date_fin
-            commande.commentaire_retournee = etat_retour.commentaire
-            commande.operateur_retour = etat_retour.operateur
-            commande.operateur_traitement = etat_retour.operateur
-            commande.etat_retournee = etat_retour  # Ajouter l'état complet
-
-    # Statistiques
-    stats = {
-        'total_actives': len(commandes_actives),
-        'total_traitees': len(commandes_traitees),
-        'valeur_actives': sum(c.total_cmd for c in commandes_actives),
-        'valeur_traitees': sum(c.total_cmd for c in commandes_traitees),
-    }
-
-    context = {
-        'page_title': 'Suivi - Commandes Retournées',
-        'page_subtitle': f'Gestion des commandes retournées - {stats["total_actives"]} actives, {stats["total_traitees"]} traitées',
-        'profile': operateur_profile,
-        'commandes_retournees': commandes_actives if tab == 'actives' else commandes_traitees,
-        'commandes_actives': commandes_actives,
-        'commandes_traitees': commandes_traitees,
-        'commandes_count': len(commandes_actives) if tab == 'actives' else len(commandes_traitees),
-        'stats': stats,
-        'active_tab': 'retournees',
-        'current_tab': tab,
-        'is_readonly': True,
-        'is_tracking_page': True
-    }
-    return render(request, 'Superpreparation/commandes_retournees.html', context)
 
 @superviseur_preparation_required
 def traiter_commande_retournee_api(request, commande_id):
@@ -1018,6 +874,10 @@ def traiter_commande_retournee_api(request, commande_id):
             })
     except Exception as e:
         return JsonResponse({'success': False, 'message': f'Erreur: {str(e)}'})
+    
+
+
+    
 
 @superviseur_preparation_required
 def profile_view(request):
@@ -5314,8 +5174,7 @@ def get_article_variants(request, article_id):
         # Construire la liste des variantes avec leurs informations
         variants_data = []
         for variante in variantes:
-            print(f"🔸 Variante: {variante.id} - Couleur: {variante.couleur} - Pointure: {variante.pointure} - Stock: {variante.qte_disponible}")
-            
+           
             variant_info = {
                 'id': variante.id,
                 'couleur': variante.couleur.nom if variante.couleur else None,
@@ -5598,13 +5457,7 @@ def api_qr_codes_articles(request):
         }, status=500)
 
 
-# Fonction api_ticket_commande supprimée - en attente de nouvelles instructions
 
-# Fonction api_etiquettes_articles supprimée - en attente de nouvelles instructions
-
-# Fonction api_etiquettes_articles_multiple supprimée - en attente de nouvelles instructions
-
-# Fonction api_ticket_commande_multiple supprimée - utilise directement api_ticket_commande
 
 @superviseur_preparation_required
 @transaction.atomic
@@ -5680,6 +5533,8 @@ def api_finaliser_preparation(request, commande_id):
             'success': False, 
             'error': f'Erreur lors de la finalisation: {str(e)}'
         }, status=500)
+    
+
 @csrf_exempt
 @login_required
 def export_commandes_envoi_excel(request, envoi_id):
