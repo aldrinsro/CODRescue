@@ -606,9 +606,15 @@
             <button onclick="openSavModal('Livrée'); document.getElementById('nouvel_etat_input').value='Livrée';" class="sav-action-btn" style="background-color: #10B981;">
                 <i class="fas fa-check-circle mr-2"></i>Livrée
             </button>
+            {% if commande.paniers.count == 1 and commande.paniers.first.quantite == 1 %}
+            <button disabled class="sav-action-btn opacity-50 cursor-not-allowed" style="background-color: #3B82F6;" title="Livraison partielle impossible : un seul article avec quantité 1">
+                <i class="fas fa-box-open mr-2"></i>Livraison Partielle
+            </button>
+            {% else %}
             <button onclick="ouvrirModalLivraisonPartielle()" class="sav-action-btn" style="background-color: #3B82F6;">
                 <i class="fas fa-box-open mr-2"></i>Livraison Partielle
             </button>
+            {% endif %}
             <button onclick="ouvrirModalRetourComplet()" class="sav-action-btn" style="background-color: #EF4444;">
                 <i class="fas fa-times-circle mr-2"></i>Retournée
             </button>
