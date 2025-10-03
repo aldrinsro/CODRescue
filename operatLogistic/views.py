@@ -50,14 +50,47 @@ def dashboard(request):
         return 0
 
 
-    #Taux de livraison sur les commandes mise en distributions 
-    
+    #Taux de livraison sur les commandes mise en distributions
+
+    # Top 10 villes avec le plus de livraisons
+    from parametre.models import Ville
+
+    top_villes = Commande.objects.filter(
+        Q(etats__enum_etat__libelle="Livrée") |
+        Q(etats__enum_etat__libelle="Livrée partiellement")
+    ).values('ville').annotate(
+        nombre_livraisons=Count('id', distinct=True)
+    ).order_by('-nombre_livraisons')[:10]
+
+    # Préparer les données pour le graphique en récupérant les noms des villes
+    villes_labels = []
+    villes_data = []
+
+    for ville_stat in top_villes:
+        if ville_stat['ville']:
+            try:
+                ville_obj = Ville.objects.get(id=ville_stat['ville'])
+                villes_labels.append(ville_obj.nom)
+            except Ville.DoesNotExist:
+                villes_labels.append('Ville inconnue')
+        else:
+            villes_labels.append('Non définie')
+
+        villes_data.append(ville_stat['nombre_livraisons'])
+
+    # Convertir les données en JSON pour JavaScript
+    import json
+    villes_labels_json = json.dumps(villes_labels)
+    villes_data_json = json.dumps(villes_data)
+
     context = {
         'operateur'        : operateur,
         'commandes_distribution': commandes_distribution,
         'Taux_de_livraison_generale': Taux_livraison_generale,
         'commandes_retournees':commandes_retournees,
         'Taux_livraison_sur_distribution':Taux_livraison_sur_distribution ,
+        'villes_labels_json': villes_labels_json,
+        'villes_data_json': villes_data_json,
         'page_title': 'Tableau de Bord Logistique',
     }
     return render(request, 'composant_generale/operatLogistic/home.html', context)
