@@ -1488,33 +1488,50 @@ def modifier_commande_superviseur(request, commande_id):
             
             if action == 'add_article':
                 # Ajouter un nouvel article immédiatement
-                from article.models import Article
+                from article.models import Article, VarianteArticle
                 from commande.models import Panier
-                
+
                 article_id = request.POST.get('article_id')
+                variante_id = request.POST.get('variante_id')
                 quantite = int(request.POST.get('quantite', 1))
-                
+
+                print(f"📥 Ajout article: article_id={article_id}, variante_id={variante_id}, quantite={quantite}")
+
                 try:
                     article = Article.objects.get(id=article_id)
-                    
-                    # Vérifier si l'article existe déjà dans la commande
-                    panier_existant = Panier.objects.filter(commande=commande, article=article).first()
-                    
+                    variante = None
+
+                    # Récupérer la variante si spécifiée
+                    if variante_id:
+                        try:
+                            variante = VarianteArticle.objects.get(id=variante_id, article=article)
+                            print(f"✅ Variante trouvée: ID={variante.id}, couleur={variante.couleur}, pointure={variante.pointure}")
+                        except VarianteArticle.DoesNotExist:
+                            print(f"⚠️ Variante {variante_id} non trouvée pour l'article {article_id}")
+
+                    # Vérifier si l'article+variante existe déjà dans la commande
+                    panier_existant = Panier.objects.filter(
+                        commande=commande,
+                        article=article,
+                        variante=variante
+                    ).first()
+
                     if panier_existant:
-                        # Si l'article existe déjà, mettre à jour la quantité
+                        # Si l'article+variante existe déjà, mettre à jour la quantité
                         panier_existant.quantite += quantite
                         panier_existant.save()
                         panier = panier_existant
-                        print(f"🔄 Article existant mis à jour: ID={article.id}, nouvelle quantité={panier.quantite}")
+                        print(f"🔄 Article existant mis à jour: ID={article.id}, variante={variante.id if variante else 'None'}, nouvelle quantité={panier.quantite}")
                     else:
-                        # Si l'article n'existe pas, créer un nouveau panier
+                        # Si l'article+variante n'existe pas, créer un nouveau panier
                         panier = Panier.objects.create(
                             commande=commande,
                             article=article,
+                            variante=variante,
                             quantite=quantite,
                             sous_total=0  # Sera recalculé après
                         )
-                        print(f"➕ Nouvel article ajouté: ID={article.id}, quantité={quantite}")
+                        print(f"➕ Nouvel article ajouté: ID={article.id}, variante={variante.id if variante else 'None'}, quantité={quantite}")
                     
                     # Recalculer le compteur après ajout (logique de confirmation)
                     if article.isUpsell and hasattr(article, 'prix_upsell_1') and article.prix_upsell_1 is not None:
