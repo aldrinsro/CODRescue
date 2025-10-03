@@ -398,9 +398,7 @@
         <div>
             <h1 class="text-3xl font-bold flex items-center mb-2">
                 <i class="fas fa-edit mr-3"></i> Modifier Commande {{ commande.id_yz }}
-                <button type="button" onclick="ouvrirModalInfoTotal()" class="ml-3 text-white/80 hover:text-white">
-                    <i class="fas fa-info-circle text-lg"></i>
-                </button>
+               
             </h1>
             <p>Modification des détails de la commande en préparation</p>
             
@@ -694,7 +692,41 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Frais de livraison</label>
-                        <input type="text" id="frais-display" value="{{ commande.ville.frais_livraison|default:0 }} DH" readonly class="w-full p-3 bg-gray-100 border rounded-lg text-gray-600">
+                        <div class="flex items-center gap-2">
+                            <input type="text" id="frais-display" value="{{ commande.montant_frais_livraison|default:0 }} DH" readonly
+                                   class="flex-1 p-3 bg-gray-100 border rounded-lg text-gray-600">
+                            <div class="flex items-center gap-2">
+                                {% if commande.frais_livraison %}
+                                    <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                                    <span class="text-sm font-medium text-green-600" id="frais-status-text">Activés</span>
+                                {% else %}
+                                    <div class="w-3 h-3 rounded-full bg-gray-400"></div>
+                                    <span class="text-sm font-medium text-gray-600" id="frais-status-text">Désactivés</span>
+                                {% endif %}
+                            </div>
+                            <button type="button" id="toggle-frais-livraison"
+                                    class="px-3 py-1 text-xs font-medium rounded-lg transition-all duration-200
+                                           {% if commande.frais_livraison %}
+                                               bg-red-100 text-red-700 hover:bg-red-200 border border-red-300
+                                           {% else %}
+                                               bg-green-100 text-green-700 hover:bg-green-200 border border-green-300
+                                           {% endif %}"
+                                    onclick="toggleFraisLivraison()">
+                                {% if commande.frais_livraison %}
+                                    <i class="fas fa-times mr-1"></i>Désactiver
+                                {% else %}
+                                    <i class="fas fa-check mr-1"></i>Activer
+                                {% endif %}
+                            </button>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1" id="frais-info-text">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            {% if commande.frais_livraison %}
+                                Les frais de livraison sont inclus dans le total de la commande
+                            {% else %}
+                                Les frais de livraison ne sont pas inclus dans le total
+                            {% endif %}
+                        </p>
                     </div>
                 </div>
                 <div>
@@ -724,189 +756,233 @@
                         </button>
                     </div>
                 </div>
-                <div class="overflow-x-auto">
-                <table class="w-full bg-white rounded-lg shadow-sm border border-gray-200 mb-4">
-                    <thead>
-                        <tr class="bg-gray-50 border-b border-gray-200">
-                                <th class="px-4 py-3 text-left">Article</th>
-                                <th class="px-4 py-3 text-left">Référence</th>
-                                <th class="px-4 py-3 text-left">Couleur</th>
-                                <th class="px-4 py-3 text-left">Pointure</th>
-                                <th class="px-4 py-3 text-center">Quantité</th>
-                                <th class="px-4 py-3 text-right">
-                                    Prix 
-                                    <button type="button" onclick="ouvrirModalInfoPrix()" class="ml-1 text-blue-500 hover:text-blue-700">
-                                        <i class="fas fa-info-circle"></i>
-                                    </button>
-                                </th>
-                                <th class="px-4 py-3 text-right">
-                                    Sous-total
-                                    <button type="button" onclick="ouvrirModalInfoSousTotal()" class="ml-1 text-blue-500 hover:text-blue-700">
-                                        <i class="fas fa-info-circle"></i>
-                                    </button>
-                                </th>
-                                <th class="px-4 py-3 text-center w-36">État</th>
-                                <th class="px-4 py-3 text-center">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for panier in paniers %}
-                            <tr class="border-b border-gray-100 hover:bg-gray-50" data-panier-id="{{ panier.id }}" data-article-id="{{ panier.article.id }}">
-                                <td class="px-4 py-3">
-                                    <div class="font-medium flex items-center">
-                                        {{ panier.article.nom }}
-                                        {% if panier.article.isUpsell %}
-                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-orange-100 text-orange-700 ml-2">
-                                                <i class="fas fa-arrow-up mr-1"></i>Upsell
-                                            </span>
-                                        {% endif %}
-                                        {% for article_data in articles_renvoyes %}
-                                            {% if article_data.article.id == panier.article.id %}
-                                                {% if article_data.etat == 'defectueux' %}
-                                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700 ml-2">
-                                                        <i class="fas fa-times-circle mr-1"></i>Défectueux
-                                                    </span>
-                                                {% elif article_data.etat == 'bon' %}
-                                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700 ml-2">
-                                                        <i class="fas fa-check-circle mr-1"></i>Bon
-                                                    </span>
-                                                {% elif article_data.etat == 'inconnu' %}
-                                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-700 ml-2">
-                                                        <i class="fas fa-question-circle mr-1"></i>Inconnu
-                                                    </span>
-                                                {% endif %}
-                                            {% endif %}
-                                        {% endfor %}
-                                    </div>
-                                    {% if panier.article.description %}
-                                        <div class="text-sm text-gray-500">{{ panier.article.description|truncatechars:50 }}</div>
+
+            {% load static %}
+            {% load commande_filters %}
+            {% load remise_filters %}
+            {% load l10n %}
+            
+            {% for panier in commande.paniers.all %}
+            
+              <div class="article-card p-4 bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-all shadow-sm" 
+              data-article-id="{{ panier.id }}"
+              data-article='{"id": {{ panier.article.id|default:0 }}, "nom": "{{ panier.article.nom|default:''|escapejs }}", "reference": "{{ panier.article.reference|default:''|escapejs }}", "prix_actuel": {{ panier.article.prix_actuel|default:0|unlocalize }}, "prix_unitaire": {{ panier.article.prix_unitaire|default:0|unlocalize }}, "prix_upsell_1": {{ panier.article.prix_upsell_1|default:0|unlocalize}}, "prix_upsell_2": {{ panier.article.prix_upsell_2|default:0|unlocalize }}, "prix_upsell_3": {{ panier.article.prix_upsell_3|default:0|unlocalize }}, "prix_upsell_4": {{ panier.article.prix_upsell_4|default:0|unlocalize }}, "prix_remise_1": {{ panier.article.prix_remise_1|default:0|unlocalize }}, "prix_remise_2": {{ panier.article.prix_remise_2|default:0|unlocalize }}, "prix_remise_3": {{ panier.article.prix_remise_3|default:0|unlocalize }}, "prix_remise_4": {{ panier.article.prix_remise_4|default:0|unlocalize }}, "isUpsell": {{ panier.article.isUpsell|default_if_none:False|yesno:"true,false" }}, "pointure": "{{ panier.pointure|default:''|escapejs }}", "couleur": "{{ panier.couleur|default:''|escapejs }}", "categorie": "{{ panier.article.categorie|default:''|escapejs }}", "qte_article": {{ panier.article.qte_disponible|default:0 }}, "phase": "{{ panier.article.phase|default:''|escapejs }}", "has_promo_active": {{ panier.article.has_promo_active|default_if_none:False|yesno:"true,false" }}{% if panier.variante_id %}, "variante_id": {{ panier.variante_id|default:0 }}, "qte_variante": {{ panier.variante.qte_disponible|default:0 }}{% endif %}}'>
+              <div class="flex items-center justify-between">
+                    <!-- Informations de l'article -->
+                    <div class="flex-1">
+                        <div class="flex items-center space-x-4">
+                            <div class="flex-shrink-0">
+                                <div class="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 border-2 border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                                    {% if panier.article.image %}
+                                        <img src="/media/{{ panier.article.image }}" alt="Image de {{ panier.article.nom }}" 
+                                             class="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
+                                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                    {% elif panier.article.image_url %}
+                                        <img src="{{ panier.article.image_url }}" alt="Image de {{ panier.article.nom }}" 
+                                             class="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
+                                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                                     {% endif %}
-                                </td>
-                                <td class="px-4 py-3 text-sm">{{ panier.article.reference }}</td>
-                                <td class="px-4 py-3 text-sm">{{ panier.article.couleur }}</td>
-                                <td class="px-4 py-3 text-sm">{{ panier.article.pointure }}</td>
-                                <td class="px-4 py-3 text-center">
-                                    <div class="flex items-center justify-center gap-1">
-                                        <button type="button" onclick="modifierQuantite({{ panier.id }}, -1)" class="w-6 h-6 bg-gray-200 hover:bg-gray-300 rounded text-sm transition-colors hover:bg-red-200">-</button>
-                                        <input type="number" id="quantite-{{ panier.id }}" value="{{ panier.quantite }}" min="1" max="99" 
-                                               data-previous-value="{{ panier.quantite }}"
-                                               class="w-16 text-center font-medium border border-gray-300 rounded px-2 py-1 focus:border-blue-500 focus:outline-none"
-                                               onchange="modifierQuantiteDirecte({{ panier.id }}, this.value)"
-                                               onblur="modifierQuantiteDirecte({{ panier.id }}, this.value)">
-                                        <button type="button" onclick="modifierQuantite({{ panier.id }}, 1)" class="w-6 h-6 bg-gray-200 hover:bg-gray-300 rounded text-sm transition-colors hover:bg-green-200">+</button>
+                                    <div class="w-full h-full flex items-center justify-center text-gray-400 {% if panier.article.image or panier.article.image_url %}hidden{% endif %}">
+                                        <i class="fas fa-image text-xl"></i>
                                     </div>
-                                </td>
-                                <td class="px-4 py-3 text-right">
-                                    {% load commande_filters %}
-                                    {% with prix_info=panier.article|get_prix_avec_phase_info:commande.compteur %}
-                                        <div class="text-right">
-                                            <div class="font-medium prix-{{ prix_info.type }}" id="prix-unitaire-{{ panier.id }}">
-                                                {{ prix_info.prix|floatformat:2 }} DH
-                                            </div>
-                                            {% if prix_info.libelle != "Prix normal" %}
-                                                <div class="text-xs prix-{{ prix_info.type }} flex items-center justify-end gap-1" id="prix-libelle-{{ panier.id }}">
-                                                    {% if panier.article.isUpsell and commande.compteur > 0 %}
-                                                        <i class="fas fa-arrow-up"></i>
-                                                    {% elif panier.article.has_promo_active %}
-                                                        <i class="fas fa-fire"></i>
-                                                    {% elif panier.article.phase == 'LIQUIDATION' %}
-                                                        <i class="fas fa-percentage"></i>
-                                                    {% elif panier.article.phase == 'EN_TEST' %}
-                                                        <i class="fas fa-flask"></i>
-                                                    {% endif %}
-                                                    {{ prix_info.libelle}}
-                                                </div>
-                                            {% endif %}
-                                            {% if panier.article.prix_unitaire != prix_info.prix %}
-                                                <div class="text-xs text-gray-400 line-through">{{ panier.article.prix_unitaire|floatformat:2 }} DH</div>
-                                            {% endif %}
-                                        </div>
+                                </div>
+                            </div>
+                            <!-- Nom et référence -->
+                            <div class="min-w-0 flex-1">
+                                
+                                <div class="font-semibold text-lg article-title" style="color: #4B352A;">
+                                    {{ panier.article.nom }}
+                                    
+                                    {% if panier.variante %}
+                                    <span class="inline-flex items-center px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium ml-2">
+                                        <i class="fas fa-layer-group mr-1"></i>Variante
+                                    </span>
+                                    {% endif %}
+                                    
+                                    <!-- Bouton pour activer/désactiver remise - PROTECTION RENFORCÉE -->
+                                    {% if panier.article.phase != 'LIQUIDATION' and not panier.article.has_promo_active %}
+                                        <!-- Bouton Activer Remise -->
+                                    <button type="button" onclick="activerRemise({{ panier.id }})"
+                                            class="inline-flex items-center px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium ml-2 hover:bg-green-200 transition-colors"
+                                            title="Activer la remise pour pouvoir appliquer des prix de remise"
+                                            id="btn-activer-remise-{{ panier.id }}"
+                                            {% if panier.remise_appliquer %}style="display: none;"{% endif %}>
+                                        <i class="fas fa-check mr-1"></i>Activer remise
+                                    </button>
+            
+                                    <!-- Bouton Désactiver Remise -->
+                                    <button type="button" onclick="desactiverRemise({{ panier.id }})"
+                                            class="inline-flex items-center px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-medium ml-2 hover:bg-red-200 transition-colors"
+                                            title="Désactiver la remise et revenir au prix normal"
+                                            id="btn-desactiver-remise-{{ panier.id }}"
+                                            {% if not panier.remise_appliquer %}style="display: none;"{% endif %}>
+                                        <i class="fas fa-times mr-1"></i>Désactiver remise
+                                    </button>
+                                    {% elif panier.article.phase == 'LIQUIDATION' %}
+                                    <span class="inline-flex items-center px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full text-xs font-medium ml-2" title="Les articles en liquidation ne peuvent pas avoir de remise">
+                                        Liquidation
+                                    </span>
+                                    {% elif panier.article.has_promo_active %}
+                                    <span class="inline-flex items-center px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-medium ml-2" title="Les articles en promotion ne peuvent pas avoir de remise">
+                                        Promotion
+                                    </span>
+                                    {% endif %}
+                                    
+                          
+            
+                                </div>
+                                <div class="text-sm text-gray-500">
+                                    <i class="fas fa-hashtag mr-1"></i>Réf: 
+                                    {% if panier.variante and panier.variante.reference_variante %}
+                                    <span class="text-gray-500 ">
+                                        {{ panier.variante.reference_variante }}
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                <!-- Informations détaillées -->
+                                <div class="mt-2 flex flex-wrap gap-2">
+                                    {% if panier.variante and panier.variante.pointure %}
+                                    <span class="inline-flex items-center px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+                                        <i class="fas fa-ruler-vertical mr-1"></i>{{ panier.variante.pointure }}
+                                    </span>
+                                    {% else %}
+                                    <span class="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-xs">
+                                        <i class="fas fa-ruler-vertical mr-1"></i>Taille N/A
+                                    </span>
+                                    {% endif %}
+                                    
+                                    {% if panier.variante and panier.variante.couleur %}
+                                    <span class="inline-flex items-center px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">
+                                        <i class="fas fa-palette mr-1"></i>{{ panier.variante.couleur }}
+                                    </span>
+                                    {% elif panier.couleur %}
+                                    <span class="inline-flex items-center px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">
+                                        <i class="fas fa-palette mr-1"></i>{{ panier.couleur }}
+                                    </span>
+                                    {% else %}
+                                    <span class="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-xs">
+                                        <i class="fas fa-palette mr-1"></i>Couleur N/A
+                                    </span>
+                                    {% endif %}
+                                    
+                                    {% if panier.article.categorie %}
+                                    <span class="inline-flex items-center px-2 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-medium">
+                                        <i class="fas fa-tag mr-1"></i>{{ panier.article.categorie }}
+                                    </span>
+                                    {% else %}
+                                    <span class="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-xs">
+                                        <i class="fas fa-tag mr-1"></i>Catégorie N/A
+                                    </span>
+                                    {% endif %}
+            
+                                    <!-- Affichage du stock de la variante -->
+                                    {% if panier.variante %}
+                                    <span class="inline-flex items-center px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                                        <i class="fas fa-boxes mr-1"></i>Stock variante: {{ panier.variante.qte_disponible|default:0 }}
+                                    </span>
+                                    {% else %}
+                                    <span class="inline-flex items-center px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                                        <i class="fas fa-boxes mr-1"></i>Stock article: {{ panier.article.qte_disponible|default:0 }}
+                                    </span>
+                                    {% endif %}
+            
+                                </div>
+                            </div>
+                            
+                            <!-- Quantité -->
+                            <div class="text-center min-w-0">
+                                <div class="text-sm text-gray-500">Quantité</div>
+                                <div class="flex items-center justify-center gap-1">
+                                    <button type="button" onclick="modifierQuantite({{ panier.id }}, -1)" class="w-6 h-6 bg-gray-200 hover:bg-gray-300 rounded text-sm transition-colors hover:bg-red-200">-</button>
+                                    <input type="number" id="quantite-{{ panier.id }}" value="{{ panier.quantite }}" min="1" max="99" 
+                                           data-previous-value="{{ panier.quantite }}"
+                                           class="w-16 text-center font-medium border border-gray-300 rounded px-2 py-1 focus:border-blue-500 focus:outline-none"
+                                           onchange="modifierQuantiteDirecte({{ panier.id }}, this.value)"
+                                           onblur="modifierQuantiteDirecte({{ panier.id }}, this.value)">
+                                    <button type="button" onclick="modifierQuantite({{ panier.id }}, 1)" class="w-6 h-6 bg-gray-200 hover:bg-gray-300 rounded text-sm transition-colors hover:bg-green-200">+</button>
+                                </div>
+                            </div>
+                            
+                            <!-- Prix unitaire -->
+                            <div class="text-center min-w-0">
+                                <div class="text-sm text-gray-500">Prix actuel</div>
+                                
+                                <!-- Utiliser le filtre get_prix_effectif_panier pour la logique des remises -->
+                                {% with panier|get_prix_effectif_panier as prix_effectif %}
+                                <div class="font-medium {{ prix_effectif.couleur_classe }}" id="prix-unitaire-{{ panier.id }}">
+                                    {{ prix_effectif.prix_unitaire|floatformat:2 }} DH
+                                </div>
+                                <div class="text-xs {{ prix_effectif.couleur_classe }} mt-1" id="prix-libelle-{{ panier.id }}">
+                                    <i class="{{ prix_effectif.icone }} mr-1"></i>{{ prix_effectif.libelle }}
+                                </div>
+                                
+                                {% if prix_effectif.est_remise %}
+                                    <!-- Afficher le prix original barré si une remise est appliquée -->
+                                    {% with panier.article|get_prix_affichage_remise:panier.quantite as prix_normal %}
+                                    <div class="text-xs text-gray-400 line-through mt-1">
+                                        <i class="fas fa-arrow-down mr-1"></i>{{ prix_normal.prix|floatformat:2 }} DH
+                                    </div>
                                     {% endwith %}
-                                </td>
-                                <td class="px-4 py-3 text-right font-bold" id="sous-total-{{ panier.id }}">{{ panier.sous_total|floatformat:2 }} DH</td>
-                                <td class="px-4 py-3 text-center">
-                                    <div class="flex flex-col gap-1">
-                                        <!-- État de l'article (phase) -->
-                                        {% if panier.article.phase == 'EN_COURS' %}
-                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-700">
-                                                <i class="fas fa-play-circle mr-1"></i>En Cours
-                                            </span>
-                                        {% elif panier.article.phase == 'LIQUIDATION' %}
-                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700">
-                                                <i class="fas fa-percentage mr-1"></i>Liquidation
-                                            </span>
-                                        {% elif panier.article.phase == 'EN_TEST' %}
-                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-yellow-100 text-yellow-700">
-                                                <i class="fas fa-flask mr-1"></i>Test
-                                            </span>
-                                        {% else %}
-                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-700">
-                                                <i class="fas fa-question-circle mr-1"></i>{{ panier.article.phase }}
-                                            </span>
-                                        {% endif %}
-                                        
-                                        <!-- État de retour (si applicable) -->
-                                    {% for article_data in articles_renvoyes %}
-                                        {% if article_data.article.id == panier.article.id %}
-                                            {% if article_data.etat == 'defectueux' %}
-                                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-red-200 text-red-800">
-                                                        <i class="fas fa-exclamation-triangle mr-1"></i>Défectueux
-                                                </span>
-                                            {% elif article_data.etat == 'bon' %}
-                                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-green-200 text-green-800">
-                                                        <i class="fas fa-check-circle mr-1"></i>Retour Bon
-                                                </span>
-                                            {% else %}
-                                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-gray-200 text-gray-800">
-                                                        <i class="fas fa-question-circle mr-1"></i>{{ article_data.etat }}
-                                                </span>
-                                            {% endif %}
-                                        {% endif %}
-                                    {% endfor %}
-                                        
-                                        <!-- État upsell (si applicable) -->
-                                        {% if panier.article.isUpsell %}
-                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-700">
-                                                <i class="fas fa-arrow-up mr-1"></i>Upsell
-                                            </span>
-                                    {% endif %}
-                                        
-                                        <!-- État promotion (si applicable) -->
-                                        {% if panier.article.has_promo_active %}
-                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-orange-100 text-orange-700">
-                                                <i class="fas fa-fire mr-1"></i>Promo
-                                            </span>
-                                        {% endif %}
-                                        
-                                        <!-- État du stock (si rupture) -->
-                                        {% if panier.article.qte_disponible <= 0 %}
-                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700">
-                                                <i class="fas fa-exclamation-triangle mr-1"></i>Rupture
-                                            </span>
-                                        {% elif panier.article.qte_disponible <= 5 %}
-                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-orange-100 text-orange-700">
-                                                <i class="fas fa-exclamation mr-1"></i>Stock Faible
-                                            </span>
-                                        {% endif %}
-                                    </div>
-                                </td>
-                                <td class="px-4 py-3 text-center">
-                                    <button type="button" class="text-red-600 hover:text-red-800 hover:bg-red-50 p-2 rounded transition-colors" onclick="supprimerArticle({{ panier.id }})" title="Supprimer cet article">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="9" class="px-4 py-8 text-center text-gray-500">
-                                    <i class="fas fa-box-open text-3xl mb-2"></i>
-                                    <div>Aucun article dans le panier</div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                                {% endif %}
+                                {% endwith %}
+                            </div>
+                            
+                            <!-- Sous-total -->
+                            <div class="text-center min-w-0">
+                                <div class="text-sm text-gray-500">Sous-total</div>
+                                
+                                <!-- Utiliser le prix effectif calculé précédemment -->
+                                {% with panier|get_prix_effectif_panier as prix_effectif %}
+                                <div class="text-lg font-bold" style="color: #6d4b3b;" id="sous-total-{{ panier.id }}">
+                                    {{ prix_effectif.sous_total|floatformat:2 }} DH
+                                </div>
+                                {% endwith %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                     <!-- Boutons d'action -->
+               <div class="flex space-x-2 ml-4">
+                <!-- Bouton Remise - PROTECTION: Ne fonctionne que si remise_appliquer est activé -->
+                {% if panier.article.phase != 'LIQUIDATION' and not panier.article.has_promo_active %}
+                <button type="button" onclick="ouvrirModalRemise({{ panier.id }})"
+                        class="px-3 py-2 bg-purple-500 hover:bg-purple-600 text-white text-sm rounded-lg transition-colors flex items-center {% if not panier.remise_appliquer %}opacity-50 cursor-not-allowed{% endif %}"
+                        title="{% if panier.remise_appliquer %}Appliquer une remise{% else %}Activez d'abord la remise avec le bouton vert ci-dessus{% endif %}"
+                        id="btn-remise-{{ panier.id }}"
+                        {% if not panier.remise_appliquer %}disabled{% endif %}>
+                    <i class="fas fa-percent mr-1"></i>Remise
+                </button>
+                {% elif panier.article.phase == 'LIQUIDATION' %}
+                <button type="button"
+                        class="px-3 py-2 bg-gray-400 text-white text-sm rounded-lg flex items-center cursor-not-allowed opacity-50"
+                        title="Les articles en liquidation ne peuvent pas avoir de remise"
+                        disabled>
+                    <i class="fas fa-ban mr-1"></i>Liquidation
+                </button>
+                {% elif panier.article.has_promo_active %}
+                <button type="button"
+                        class="px-3 py-2 bg-gray-400 text-white text-sm rounded-lg flex items-center cursor-not-allowed opacity-50"
+                        title="Les articles en promotion ne peuvent pas avoir de remise"
+                        disabled>
+                    <i class="fas fa-fire mr-1"></i>Promotion
+                </button>
+                {% endif %}
+                   
+                        <button type="button" onclick="supprimerArticle({{ panier.id }})" 
+                                class="px-3 py-2 bg-red-500 hover:bg-red-600 text-white text-sm rounded-lg transition-colors flex items-center" 
+                                title="Supprimer">
+                            <i class="fas fa-trash mr-1"></i>Supprimer
+                        </button>
+                    </div>
                 </div>
+            </div>
+            {% endfor %} 
+            
+                  
+            <!-- Script pour la gestion des remises - inclus directement dans le partial -->
+            <script src="{% static 'js/operatConfirme/Confirmation_commande/Remise.js' %}"></script>
+            
+            
                 
                 <div class="flex justify-between items-center mt-4 p-4 bg-gray-50 rounded-lg">
                     <div class="text-sm text-gray-600">
@@ -922,28 +998,14 @@
                     <div class="text-right">
                         <div class="text-sm text-gray-600">Total articles</div>
                         <div class="text-2xl font-bold text-blue-600 total-commande" id="sous-total-articles">{{ commande.sous_total_articles|floatformat:2 }} DH</div>
-                        <div class="text-sm text-gray-500 total-livraison">+ {{ commande.ville.frais_livraison|default:0|floatformat:2 }} DH livraison</div>
+                        {% if commande.frais_livraison %}
+                        <div class="text-sm text-gray-500 total-livraison" id="frais-livraison-display">+ {{ commande.ville.frais_livraison|default:0|floatformat:2 }} DH livraison</div>
+                        {% endif %}
                         <div class="text-lg font-bold text-green-600 total-final-commande" id="total-commande">{{ commande.total_cmd|floatformat:2 }} DH</div>
-                        <button type="button" onclick="ouvrirModalInfoTotal()" class="text-xs text-blue-500 hover:text-blue-700 mt-1">
-                            <i class="fas fa-info-circle mr-1"></i>Détails
-                        </button>
+                        
                     </div>
                 </div>
             </div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -975,98 +1037,7 @@
     </form>
 </div>
 
-<!-- Modales améliorées -->
-<div id="modalAjoutArticle" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
-    <div class="flex items-center justify-center min-h-screen p-4">
-        <div class="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div class="p-6 border-b border-gray-200">
-                <div class="flex justify-between items-center">
-                <h3 class="text-xl font-semibold section-title">Ajouter un article</h3>
-                    <button type="button" onclick="fermerModalAjoutArticle()" class="text-gray-400 hover:text-gray-600">
-                        <i class="fas fa-times text-xl"></i>
-                    </button>
-                </div>
-            </div>
-            <div class="p-6">
-                <div class="mb-6">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Rechercher un article</label>
-                    <div class="relative">
-                        <input type="text" id="searchArticle" placeholder="Nom, référence, couleur, pointure..." 
-                               class="w-full p-4 border rounded-lg pl-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                        <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-                    </div>
-                </div>
-                
-                <!-- Légende des types d'articles -->
-                <div class="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                    <div class="flex items-center mb-2">
-                        <i class="fas fa-info-circle text-blue-600 mr-2"></i>
-                        <span class="text-sm font-medium text-blue-800">Légende des types d'articles :</span>
-                    </div>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-                        <div class="flex items-center">
-                            <i class="fas fa-box text-gray-600 mr-1"></i>
-                            <span class="text-gray-700">Normal</span>
-                        </div>
-                        <div class="flex items-center">
-                            <i class="fas fa-arrow-up text-purple-600 mr-1"></i>
-                            <span class="text-green-500">Upsell</span>
-                        </div>
-                        <div class="flex items-center">
-                            <i class="fas fa-fire text-orange-600 mr-1"></i>
-                            <span class="text-orange-700">Promotion</span>
-                        </div>
-                        <div class="flex items-center">
-                            <i class="fas fa-money-bill-wave text-red-600 mr-1"></i>
-                            <span class="text-red-700">Liquidation</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Filtres rapides -->
-                <div class="mb-4 flex flex-wrap gap-2">
-                    <button type="button" onclick="filtrerArticles('tous')" class="filter-btn active px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium flex items-center">
-                        <i class="fas fa-search mr-1"></i>
-                        TOUS
-                        <span class="ml-1 bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full" id="count-tous">0</span>
-                    </button>
-                    <button type="button" onclick="filtrerArticles('disponible')" class="filter-btn px-3 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium flex items-center">
-                        <i class="fas fa-check-circle mr-1"></i>
-                        En stock
-                        <span class="ml-1 bg-gray-500 text-white text-xs px-2 py-0.5 rounded-full" id="count-disponible">0</span>
-                    </button>
-                    <button type="button" onclick="filtrerArticles('promo')" class="filter-btn px-3 py-2 bg-orange-200 text-orange-700 rounded-lg text-sm font-medium flex items-center">
-                        <i class="fas fa-fire mr-1"></i>
-                        PROMO
-                        <span class="ml-1 bg-orange-500 text-white text-xs px-2 py-0.5 rounded-full" id="count-promo">0</span>
-                    </button>
-                    <button type="button" onclick="filtrerArticles('upsell')" class="filter-btn px-3 py-2 bg-green-500 text-green-800 rounded-lg text-sm font-medium flex items-center">
-                        <i class="fas fa-arrow-up mr-1"></i>
-                        UPSELL
-                        <span class="ml-1 bg-green-500 text-white text-xs px-2 py-0.5 rounded-full" id="count-upsell">0</span>
-                    </button>
-                    <button type="button" onclick="filtrerArticles('liquidation')" class="filter-btn px-3 py-2 bg-red-200 text-red-700 rounded-lg text-sm font-medium flex items-center">
-                        <i class="fas fa-money-bill-wave mr-1"></i>
-                        LIQUIDATION
-                        <span class="ml-1 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full" id="count-liquidation">0</span>
-                    </button>
-                    <button type="button" onclick="filtrerArticles('test')" class="filter-btn px-3 py-2 bg-yellow-200 text-yellow-700 rounded-lg text-sm font-medium flex items-center">
-                        <i class="fas fa-flask mr-1"></i>
-                        TEST
-                        <span class="ml-1 bg-yellow-500 text-white text-xs px-2 py-0.5 rounded-full" id="count-test">0</span>
-                    </button>
-                </div>
-                
-                <div id="articlesList" class="max-h-96 overflow-y-auto"></div>
-                
-                <div class="mt-6 flex justify-end space-x-3">
-                    <button type="button" onclick="fermerModalAjoutArticle()" 
-                            class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400">Annuler</button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+{% include 'composant_generale/modal_ajout_articles.html' %}
 
 
 <!-- Modales d'information sur les calculs -->
@@ -1161,102 +1132,9 @@
     </div>
 </div>
 
-<div id="modalInfoTotal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
-    <div class="flex items-center justify-center min-h-screen p-4">
-        <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full">
-            <div class="p-6 border-b border-gray-200">
-                <h3 class="text-xl font-semibold text-gray-800">
-                    <i class="fas fa-receipt text-purple-500 mr-2"></i>Détail complet du calcul - Commande {{ commande.id_yz }}
-                </h3>
-            </div>
-            <div class="p-6">
-                <div class="space-y-6">
-                    <!-- Résumé des articles -->
-                    <div class="bg-gray-50 p-4 rounded-lg">
-                        <h4 class="font-semibold text-gray-800 mb-3">
-                            <i class="fas fa-list mr-2"></i>Articles de la commande
-                        </h4>
-                        {% for panier in paniers %}
-                            {% load commande_filters %}
-                            {% with prix_info=panier.article|get_prix_avec_phase_info:commande.compteur %}
-                            <div class="flex justify-between items-center py-2 border-b border-gray-200 last:border-b-0">
-                                <div class="flex-1">
-                                    <div class="font-medium">{{ panier.article.nom }}</div>
-                                    <div class="text-sm text-gray-500">{{ panier.quantite }} × {{ prix_info.prix|floatformat:2 }} DH</div>
-                                    {% if prix_info.libelle != "Prix normal" %}
-                                        <div class="text-xs {{ prix_info.couleur_classe }}">{{ prix_info.libelle }}</div>
-                                    {% endif %}
-                                </div>
-                                <div class="text-right font-semibold">{{ panier.sous_total|floatformat:2 }} DH</div>
-                            </div>
-                            {% endwith %}
-                        {% endfor %}
-                    </div>
-                    
-                    <!-- Calcul du total -->
-                    <div class="bg-blue-50 p-4 rounded-lg">
-                        <h4 class="font-semibold text-blue-800 mb-3">
-                            <i class="fas fa-calculator mr-2"></i>Calcul du total
-                        </h4>
-                        <div class="space-y-2">
-                            <div class="flex justify-between">
-                                <span>Sous-total articles :</span>
-                                <span class="font-semibold">{{ total_articles|floatformat:2 }} DH</span>
-                            </div>
-                            {% if commande.ville.frais_livraison > 0 %}
-                                <div class="flex justify-between">
-                                    <span>Frais de livraison ({{ commande.ville.nom }}) :</span>
-                                    <span class="font-semibold">+ {{ commande.ville.frais_livraison|floatformat:2 }} DH</span>
-                                </div>
-                            {% endif %}
-                            <div class="border-t border-blue-300 pt-2 flex justify-between text-lg font-bold text-blue-800">
-                                <span>Total final :</span>
-                                <span>{{ total_articles|add:commande.ville.frais_livraison|default:0|floatformat:2 }} DH</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    {% if commande.compteur > 0 %}
-                    <!-- Informations sur l'upsell -->
-                    <div class="bg-purple-50 p-4 rounded-lg">
-                        <h4 class="font-semibold text-purple-800 mb-2">
-                            <i class="fas fa-arrow-up mr-2"></i>Niveau Upsell {{ commande.compteur }}
-                        </h4>
-                        <p class="text-sm text-purple-700">
-                            Cette commande bénéficie du niveau upsell {{ commande.compteur }}, 
-                            appliquant automatiquement les prix réduits aux articles éligibles.
-                        </p>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-            <div class="p-6 border-t border-gray-200 text-right">
-                <button type="button" onclick="fermerModalInfoTotal()" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">
-                    Fermer
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
 
-<!-- Modal de confirmation améliorée -->
-<div id="modalConfirmation" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
-    <div class="flex items-center justify-center min-h-screen p-4">
-        <div class="bg-white rounded-xl shadow-xl max-w-md w-full">
-            <div class="p-6 text-center">
-                <i class="fas fa-question-circle text-4xl text-yellow-500 mb-4"></i>
-                <h3 class="text-xl font-semibold mb-2">Confirmation</h3>
-                <p id="messageConfirmation" class="text-gray-600 mb-6"></p>
-                <div class="flex justify-center space-x-3">
-                    <button type="button" onclick="fermerModalConfirmation()" 
-                            class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg">Annuler</button>
-                    <button type="button" id="btnConfirmer" 
-                            class="btn-prepa px-4 py-2 rounded-lg">Confirmer</button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+
+{% include 'composant_generale/modal_confirmation_suppression.html' with modal_id='modalConfirmation' %}
 
 <!-- Modal d'information sur la logique upsell -->
 <div id="modalInfoUpsell" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
@@ -1412,24 +1290,47 @@
 
 {% block extra_js %}
 {{ block.super }}
+<script src="{% static 'js/modal_ajout_articles.js' %}"></script>
+
 <script>
 // Fonctions globales pour les `onclick` - définies en dehors du DOMContentLoaded
-    window.ouvrirModalAjoutArticle = function() {
+    window.ouvrirModalAjoutArticle = function(event) {
+        // Utiliser la version générique si dispo
+        if (typeof window.ouvrirModalAjouterArticle === 'function') {
+            return window.ouvrirModalAjouterArticle(event);
+        }
         console.log('🔧 Fonction ouvrirModalAjoutArticle appelée');
-        const modal = document.getElementById('modalAjoutArticle');
+        const modal = document.getElementById('articleModal') || document.getElementById('modalAjoutArticle');
         if (modal) {
             modal.classList.remove('hidden');
-        if (typeof chargerArticlesDisponibles === 'function') {
-            chargerArticlesDisponibles();
-        }
+            // Forcer l'affichage type flex si nécessaire
+            if (modal.style) {
+                modal.style.display = 'flex';
+                modal.style.visibility = 'visible';
+                modal.style.opacity = '1';
+            }
+            if (typeof chargerArticlesDisponibles === 'function') {
+                chargerArticlesDisponibles();
+            }
         } else {
-            console.error('❌ Modal modalAjoutArticle non trouvée');
+            console.error('❌ Modal articleModal/modalAjoutArticle non trouvée');
         }
     };
 
-    window.fermerModalAjoutArticle = function() {
-        const modal = document.getElementById('modalAjoutArticle');
-        if (modal) modal.classList.add('hidden');
+    window.fermerModalAjoutArticle = function(event) {
+        // Utiliser la version générique si dispo
+        if (typeof window.fermerModalAjouterArticle === 'function') {
+            return window.fermerModalAjouterArticle(event);
+        }
+        const modal = document.getElementById('articleModal') || document.getElementById('modalAjoutArticle');
+        if (modal) {
+            modal.classList.add('hidden');
+            if (modal.style) {
+                modal.style.display = 'none';
+                modal.style.visibility = 'hidden';
+                modal.style.opacity = '0';
+            }
+        }
     
         // Réinitialiser les variantes sélectionnées
         window.selectedArticleWithVariant = null;
@@ -1469,8 +1370,16 @@ window._varianteSelection = {};
 window.ouvrirModalConfirmation = function(message, action) {
     const msgElem = document.getElementById('messageConfirmation');
     if (msgElem) msgElem.textContent = message;
-    const btnConfirm = document.getElementById('btnConfirmer');
-    if (btnConfirm) btnConfirm.onclick = action;
+
+    // Le bouton peut avoir l'ID 'btnConfirmer' ou 'confirmDeleteBtn'
+    const btnConfirm = document.getElementById('btnConfirmer') || document.getElementById('confirmDeleteBtn');
+    if (btnConfirm) {
+        btnConfirm.onclick = () => {
+            action();
+            fermerModalConfirmation();
+        };
+    }
+
     const modal = document.getElementById('modalConfirmation');
     if (modal) modal.classList.remove('hidden');
 };
@@ -1532,7 +1441,7 @@ window.chargerArticlesDisponibles = function(filterType = 'tous') {
             // Calculer les statistiques basiques si pas fournies
             if (!data.stats) {
                 const stats = {
-                    'tous': articles.length,
+                    'total': articles.length,
                     'disponible': articles.filter(a => a.qte_disponible > 0).length,
                     'upsell': articles.filter(a => a.isUpsell).length,
                     'promo': articles.filter(a => a.has_reduction).length,
@@ -1600,11 +1509,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     // Appeler la fonction de mise à jour centralisée
                     mettreAJourTousLesTotaux(updatedData);
-                    
-                    // Rafraîchir la section des articles pour voir les prix upsell mis à jour
-                    setTimeout(() => {
-                        rafraichirSectionArticles();
-                    }, 2000);
+
+                    // Note: rafraichirSectionArticles() désactivé car le tableau a été remplacé par des cartes
+                    // Les totaux sont déjà mis à jour par mettreAJourTousLesTotaux()
+                    // Si un rechargement complet est nécessaire, décommenter ci-dessous:
+                    // setTimeout(() => {
+                    //     rafraichirSectionArticles();
+                    // }, 2000);
                     
                 } else {
                     // Afficher un résumé même si pas de correction
@@ -1636,50 +1547,8 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     // Fonction pour mettre à jour tous les totaux et le compteur
-    function mettreAJourTousLesTotaux(data) {
-        console.log('🔄 Mise à jour des totaux:', data);
-        
-        // Mettre à jour le compteur upsell
-        if (data.compteur !== undefined) {
-            compteurCommande = data.compteur;
-            mettreAJourCompteurUpsell(data.compteur);
-        }
-        
-        // Mettre à jour le total des articles
-        if (data.sous_total_articles !== undefined) {
-            const totalElements = document.querySelectorAll('.total-commande');
-            totalElements.forEach(element => {
-                element.textContent = `${parseFloat(data.sous_total_articles).toFixed(2)} DH`;
-            });
-        }
-        
-        // Mettre à jour le total final
-        if (data.total_commande !== undefined) {
-            const totalFinals = document.querySelectorAll('.total-final-commande');
-            totalFinals.forEach(element => {
-                element.textContent = `${parseFloat(data.total_commande).toFixed(2)} DH`;
-            });
-        }
-        
-        // Mettre à jour le nombre d'articles
-        if (data.articles_count !== undefined) {
-            const articlesCount = document.getElementById('articles-count');
-            const articlesPlural = document.getElementById('articles-plural');
-            if (articlesCount) {
-                articlesCount.textContent = data.articles_count;
-            }
-            if (articlesPlural) {
-                articlesPlural.textContent = data.articles_count > 1 ? 's' : '';
-            }
-        }
-        
-        console.log('✅ Tous les totaux mis à jour:', {
-            sous_total_articles: data.sous_total_articles,
-            total_commande: data.total_commande,
-            articles_count: data.articles_count,
-            compteur: data.compteur
-        });
-    }
+    // Note: mettreAJourTousLesTotaux() est définie plus bas (ligne ~2046) avec plus de fonctionnalités
+    // Cette définition a été supprimée pour éviter la duplication
 
     // Fonction pour mettre à jour le compteur upsell dans tous les endroits
     function mettreAJourCompteurUpsell(nouveauCompteur) {
@@ -1850,62 +1719,26 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Fonction pour rafraîchir la section des articles (utilisée seulement en cas de problème)
     function rafraichirSectionArticles() {
-        console.log('🔄 Rafraîchissement complet de la section des articles...');
-        
-        // Trouver le conteneur des articles (tableau principal)
-        const tableBody = document.querySelector('table tbody');
-        if (!tableBody) {
-            console.error('❌ Conteneur d\'articles introuvable');
-            showNotificationToast('❌ Erreur lors du rafraîchissement: conteneur introuvable', 'error');
-            return;
-        }
-        
-        // Afficher un indicateur de chargement
-        const originalContent = tableBody.innerHTML;
-        tableBody.innerHTML = '<tr><td colspan="9" class="text-center p-8"><i class="fas fa-spinner fa-spin text-2xl text-gray-500"></i><p class="mt-2">Rafraîchissement en cours...</p></td></tr>';
+        console.log('🔄 Fonction rafraichirSectionArticles() appelée');
 
-        fetch(`{% url 'Superpreparation:rafraichir_articles_commande_prepa' commande.id %}`)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    // Mettre à jour la liste des articles avec le HTML du serveur
-                    tableBody.innerHTML = data.html;
+        // Note: Cette fonction est désactivée car le tableau a été remplacé par des cartes
+        // Les mises à jour sont maintenant gérées par mettreAJourTousLesTotaux()
 
-                    // Utiliser la fonction centralisée pour mettre à jour tous les totaux
-                    mettreAJourTousLesTotaux(data);
+        console.warn('⚠️ rafraichirSectionArticles() est désactivé - Utilisez mettreAJourTousLesTotaux() à la place');
 
-                    showNotificationToast('🔄 Section des articles mise à jour.', 'info');
-                    
-                    // Déclencher des événements personnalisés pour d'autres scripts qui pourraient écouter
-                    window.dispatchEvent(new CustomEvent('articlesRefreshed', { 
-                        detail: { 
-                            articles_count: data.articles_count,
-                            total_commande: data.total_commande,
-                            sous_total_articles: data.sous_total_articles,
-                            compteur: data.compteur
-                        }
-                    }));
-                } else {
-                    tableBody.innerHTML = `<tr><td colspan="9" class="text-center p-4 bg-red-100 text-red-700 rounded-lg">${data.error || 'Erreur inconnue'}</td></tr>`;
-                    showNotificationToast(`❌ Erreur de rafraîchissement: ${data.error || 'Erreur inconnue'}`, 'error');
-                }
-            })
-            .catch(error => {
-                console.error('Erreur de rafraîchissement:', error);
-                tableBody.innerHTML = `<tr><td colspan="9" class="text-center p-4 bg-red-100 text-red-700 rounded-lg">
-                    <div class="font-bold mb-2">Erreur de connexion</div>
-                    <div class="text-sm">${error.message || 'Impossible de contacter le serveur'}</div>
-                    <button onclick="rafraichirSectionArticles()" class="mt-3 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg">
-                        <i class="fas fa-sync-alt mr-1"></i>Réessayer
-                    </button>
-                </td></tr>`;
-                showNotificationToast('❌ Erreur de connexion lors du rafraîchissement.', 'error');
-            });
+        // Si vraiment nécessaire, proposer un rechargement manuel
+        // Swal.fire({
+        //     title: 'Actualiser la page ?',
+        //     text: 'Voulez-vous recharger la page pour voir tous les changements ?',
+        //     icon: 'question',
+        //     showCancelButton: true,
+        //     confirmButtonText: 'Oui, actualiser',
+        //     cancelButtonText: 'Non'
+        // }).then((result) => {
+        //     if (result.isConfirmed) {
+        //         window.location.reload();
+        //     }
+        // });
     }
 
     // Fonction pour mettre à jour une ligne d'article spécifique
@@ -2098,77 +1931,148 @@ document.addEventListener('DOMContentLoaded', function() {
     // Fonction centralisée pour mettre à jour tous les totaux et compteurs
     function mettreAJourTousLesTotaux(data) {
         console.log('🔄 Mise à jour des totaux avec les données:', data);
-        
-        // Mettre à jour le sous-total global des articles
+
+        // 1. Mettre à jour le sous-total individuel d'un article spécifique (si panier_id fourni)
+        if (data.panier_id !== undefined && data.sous_total !== undefined) {
+            const sousTotalElement = document.getElementById(`sous-total-${data.panier_id}`);
+            if (sousTotalElement) {
+                sousTotalElement.textContent = `${parseFloat(data.sous_total).toFixed(2)} DH`;
+                console.log(`✅ Sous-total article ${data.panier_id} mis à jour:`, data.sous_total);
+            }
+        }
+
+        // 2. Mettre à jour le sous-total global des articles
         if (data.sous_total_articles !== undefined) {
             const sousTotalGlobalElement = document.getElementById('sous-total-articles');
             if (sousTotalGlobalElement) {
                 sousTotalGlobalElement.textContent = `${parseFloat(data.sous_total_articles).toFixed(2)} DH`;
-                console.log('✅ Sous-total articles mis à jour:', data.sous_total_articles);
+                console.log('✅ Sous-total articles global mis à jour:', data.sous_total_articles);
             }
         }
-        
-        // Mettre à jour le total de la commande
+
+        // 3. Mettre à jour les frais de livraison affichés et gérer leur visibilité
+        if (data.frais_livraison !== undefined) {
+            const fraisElement = document.getElementById('frais-livraison-display');
+            const fraisElements = document.querySelectorAll('.total-livraison');
+
+            // Déterminer si les frais sont activés
+            const fraisActifs = data.frais_livraison_actif !== undefined ? data.frais_livraison_actif : true;
+
+            if (fraisActifs) {
+                // Afficher et mettre à jour les frais
+                fraisElements.forEach(el => {
+                    el.textContent = `+ ${parseFloat(data.frais_livraison).toFixed(2)} DH livraison`;
+                    el.style.display = '';
+                });
+                if (fraisElement) {
+                    fraisElement.textContent = `+ ${parseFloat(data.frais_livraison).toFixed(2)} DH livraison`;
+                    fraisElement.style.display = '';
+                }
+            } else {
+                // Masquer les frais
+                fraisElements.forEach(el => {
+                    el.style.display = 'none';
+                });
+                if (fraisElement) {
+                    fraisElement.style.display = 'none';
+                }
+            }
+
+            console.log('✅ Frais de livraison mis à jour:', data.frais_livraison, '- Actifs:', fraisActifs);
+        }
+
+        // 4. Mettre à jour le total final de la commande
         if (data.total_commande !== undefined) {
+            // Header total
+            const totalHeaderElement = document.querySelector('.total-final-commande');
+            if (totalHeaderElement) {
+                totalHeaderElement.textContent = `${parseFloat(data.total_commande).toFixed(2)} DH`;
+            }
+
+            // Total dans la section récapitulatif
             const totalElement = document.getElementById('total-commande');
             if (totalElement) {
                 totalElement.textContent = `${parseFloat(data.total_commande).toFixed(2)} DH`;
-                console.log('✅ Total commande mis à jour:', data.total_commande);
             }
-            
-            // Également mettre à jour tous les éléments avec la classe total-commande
+
+            // Tous les autres éléments avec la classe total-commande
             const totalElements = document.querySelectorAll('.total-commande');
             totalElements.forEach(el => {
-                el.textContent = `${parseFloat(data.total_commande).toFixed(2)} DH`;
+                if (el.id !== 'sous-total-articles') { // Ne pas écraser le sous-total
+                    el.textContent = `${parseFloat(data.total_commande).toFixed(2)} DH`;
+                }
             });
+
+            console.log('✅ Total commande mis à jour:', data.total_commande);
         }
-        
-        // Mettre à jour le compteur d'articles
+
+        // 5. Mettre à jour le total final alternatif (si fourni)
+        if (data.total_final !== undefined) {
+            const totalFinalElements = document.querySelectorAll('.total-final-commande');
+            totalFinalElements.forEach(el => {
+                el.textContent = `${parseFloat(data.total_final).toFixed(2)} DH`;
+            });
+            console.log('✅ Total final mis à jour:', data.total_final);
+        }
+
+        // 6. Mettre à jour le compteur d'articles
         if (data.articles_count !== undefined) {
             // Compteur en haut
             const countElement = document.getElementById('articles-count');
             if (countElement) {
                 countElement.textContent = data.articles_count;
             }
-            
+
             const pluralElement = document.getElementById('articles-plural');
             if (pluralElement) {
                 pluralElement.textContent = data.articles_count > 1 ? 's' : '';
             }
-            
+
             // Compteur en bas
             const countElementBottom = document.getElementById('articles-count-bottom');
             if (countElementBottom) {
                 countElementBottom.textContent = data.articles_count;
             }
-            
+
             const pluralElementBottom = document.getElementById('articles-plural-bottom');
             if (pluralElementBottom) {
                 pluralElementBottom.textContent = data.articles_count > 1 ? 's' : '';
             }
-            
+
             console.log('✅ Compteur d\'articles mis à jour:', data.articles_count);
         }
-        
-        // Mettre à jour le compteur upsell dans tous les endroits possibles
-        if (data.compteur !== undefined) {
+
+        // 7. Mettre à jour le compteur upsell dans tous les endroits possibles
+        if (data.compteur !== undefined || data.compteur_upsell !== undefined) {
+            const compteur = data.compteur !== undefined ? data.compteur : data.compteur_upsell;
+
             // Niveau upsell dashboard
             const niveauUpsellDash = document.getElementById('niveau-upsell-dashboard');
             if (niveauUpsellDash) {
-                niveauUpsellDash.textContent = data.compteur;
+                niveauUpsellDash.textContent = compteur;
             }
-            
+
+            // Header compteur
+            const compteurHeaderElement = document.getElementById('compteur-upsell-header');
+            if (compteurHeaderElement) {
+                if (compteur > 0) {
+                    compteurHeaderElement.innerHTML = `<i class="fas fa-arrow-up mr-1"></i>Upsell Niveau ${compteur}`;
+                } else {
+                    compteurHeaderElement.innerHTML = `<i class="fas fa-info-circle mr-1"></i>Aucun upsell`;
+                }
+            }
+
             // Mettre à jour le badge upsell s'il existe
             const upsellBadge = document.getElementById('upsell-badge-container');
-            if (upsellBadge && data.compteur > 0) {
-                upsellBadge.innerHTML = `<i class="fas fa-arrow-up mr-1"></i>Upsell niveau <span id="niveau-upsell-dashboard">${data.compteur}</span>`;
-            } else if (upsellBadge && data.compteur === 0) {
+            if (upsellBadge && compteur > 0) {
+                upsellBadge.innerHTML = `<i class="fas fa-arrow-up mr-1"></i>Upsell niveau <span id="niveau-upsell-dashboard">${compteur}</span>`;
+            } else if (upsellBadge && compteur === 0) {
                 upsellBadge.innerHTML = '';
             }
-            
-            console.log('✅ Compteur upsell mis à jour:', data.compteur);
+
+            console.log('✅ Compteur upsell mis à jour:', compteur);
         }
-        
+
         console.log('✅ Tous les totaux mis à jour avec succès');
     }
 
@@ -2424,30 +2328,25 @@ document.addEventListener('DOMContentLoaded', function() {
             debugDatabaseInteraction('modifier_quantite_directe', data);
             if (data.success) {
                 if (quantite === 0) {
-                    // Supprimer la ligne du tableau si l'article a été supprimé
+                    // Supprimer la ligne/carte de l'article si supprimé
                     const tableRow = document.querySelector(`tr[data-panier-id="${panierId}"]`);
                     if (tableRow) {
                         tableRow.remove();
                     }
+                    const articleCard = document.querySelector(`.article-card[data-article-id="${panierId}"]`);
+                    if (articleCard) {
+                        articleCard.remove();
+                    }
                     showNotificationToast('Article supprimé', 'success');
                 } else {
-                    // Mettre à jour l'affichage du sous-total et du total
-                    mettreAJourTotaux(panierId, data);
                     showNotificationToast('Quantité mise à jour', 'success');
                 }
-                
-                // Mettre à jour le total général dans tous les cas
-                if (data.total_commande) {
-                    const totalElements = document.querySelectorAll('.total-commande');
-                    totalElements.forEach(element => {
-                        element.textContent = `${parseFloat(data.total_commande).toFixed(2)} DH`;
-                    });
-                }
-                
-                // Mettre à jour le compteur upsell si nécessaire
-                if (data.compteur !== undefined) {
-                    mettreAJourCompteurUpsell(data.compteur);
-                }
+
+                // Ajouter panier_id aux données pour la mise à jour
+                data.panier_id = panierId;
+
+                // Utiliser la fonction centralisée pour mettre à jour TOUS les totaux
+                mettreAJourTousLesTotaux(data);
             } else {
                 // Restaurer la valeur précédente en cas d'erreur
                 if (input) {
@@ -2692,28 +2591,39 @@ window.mettreAJourStatistiques = function(stats) {
             console.warn('Stats non définies');
             return;
         }
-        
+
+        // Mapping des clés stats vers les IDs des éléments
+        const mapping = {
+            'total': 'all',
+            'disponible': 'disponible',
+            'upsell': 'upsell',
+            'liquidation': 'liquidation',
+            'test': 'test',
+            'promo': 'promo'
+        };
+
         // Mettre à jour les compteurs avec animation
         Object.keys(stats).forEach(key => {
-            const element = document.getElementById(`count-${key}`);
+            const elementId = mapping[key] || key;
+            const element = document.getElementById(`count-${elementId}`);
             if (element) {
                 const currentValue = parseInt(element.textContent) || 0;
                 const newValue = stats[key];
-                
+
                 // Animation de mise à jour
                 element.style.transform = 'scale(1.1)';
                 element.style.color = '#3b82f6';
                 element.textContent = newValue;
-                
+
                 setTimeout(() => {
                     element.style.transform = 'scale(1)';
                     element.style.color = '';
                 }, 300);
             } else {
-                console.warn(`Element count-${key} non trouvé`);
+                console.warn(`Element count-${elementId} non trouvé (clé: ${key})`);
             }
         });
-        
+
         // Afficher un résumé des statistiques
     if (typeof window.afficherResumeStatistiques === 'function') {
         window.afficherResumeStatistiques(stats);
@@ -2828,9 +2738,9 @@ window.ajouterArticleAuPanierDepuisBouton = function(articleId) {
 
 // Fonction pour afficher les articles
 window.afficherArticles = function(articles) {
-        const container = document.getElementById('articlesList');
+        const container = document.getElementById('articlesTableBody');
         if (!container) {
-            console.warn('Container articlesList non trouvé');
+            console.warn('Container articlesTableBody non trouvé');
             return;
         }
     
@@ -2854,29 +2764,19 @@ window.afficherArticles = function(articles) {
         
     if (articlesUniques.length === 0) {
             container.innerHTML = `
-            <div class="text-center py-8 text-gray-500">
-                <i class="fas fa-search text-4xl mb-4"></i>
-                <div class="text-lg font-medium">Aucun article trouvé</div>
-                <div class="text-sm">Essayez de modifier vos critères de recherche</div>
-                </div>
+            <tr>
+                <td colspan="4" class="text-center py-8 text-gray-500">
+                    <i class="fas fa-search text-4xl mb-4"></i>
+                    <div class="text-lg font-medium">Aucun article trouvé</div>
+                    <div class="text-sm">Essayez de modifier vos critères de recherche</div>
+                </td>
+            </tr>
             `;
             return;
         }
-        
-    // Créer un tableau HTML complet avec des bordures visibles
-    const tableHTML = `
-        <div class="overflow-x-auto">
-            <table class="min-w-full bg-white border-2 border-gray-300 rounded-lg shadow-lg" style="border-collapse: collapse;">
-                <thead class="bg-gray-100">
-                    <tr>
-                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-2 border-gray-300 bg-gray-200">Article</th>
-                        <th class="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider border-2 border-gray-300 bg-gray-200">Prix</th>
-                        <th class="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider border-2 border-gray-300 bg-gray-200">Stock Général</th>
-                        <th class="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider border-2 border-gray-300 bg-gray-200">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white">
-                    ${articlesUniques.map(article => {
+
+    // Générer uniquement les lignes <tr> pour le tbody existant
+    const tableHTML = articlesUniques.map(article => {
         // Badge de type d'article
         const typeBadge = article.article_type !== 'normal' ? `
             <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${article.type_color ? article.type_color.replace('text-', 'bg-').replace('-600', '-100') : 'bg-blue-100 text-blue-600'} ${article.type_color || 'text-blue-600'} ml-2">
@@ -2929,9 +2829,6 @@ window.afficherArticles = function(articles) {
                 // Certaines variantes en rupture, d'autres disponibles
                 stockStatus = `<div class="text-center">
                     <span class="font-semibold text-green-600">${stockGeneral}</span>
-                    <div class="text-xs text-orange-600 mt-1">
-                        ${variantesDisponibles}/${totalVariantes} variantes disp.
-                    </div>
                 </div>`;
             }
         } else {
@@ -2947,53 +2844,36 @@ window.afficherArticles = function(articles) {
         
         return `
             <tr class="hover:bg-gray-50 transition-colors">
-                <td class="px-4 py-3 border-2 border-gray-300">
+                <td class="px-2 py-2">
                     <div class="flex items-center">
                         <div>
                             <div class="text-sm font-medium text-gray-900">${article.nom}</div>
-                            <div class="text-sm text-gray-500">Réf: ${article.reference || 'N/A'}</div>
+                            <div class="text-xs text-gray-500">Réf: ${article.reference || 'N/A'}</div>
                             ${typeBadge}
                         </div>
                     </div>
                 </td>
-                <td class="px-4 py-3 text-center border-2 border-gray-300">
+                <td class="px-1 py-2 text-center">
                     ${prixDisplay}
                 </td>
-                <td class="px-4 py-3 text-center border-2 border-gray-300">
+                <td class="px-1 py-2 text-center">
                     <div class="flex items-center justify-center">
                         <span class="text-sm text-gray-900">${stockStatus}</span>
                         ${infoIcon}
                     </div>
                 </td>
-                <td class="px-4 py-3 text-center border-2 border-gray-300">
-                    <div class="flex items-center justify-center gap-2">
-                        <button type="button" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors" 
-                                onclick="selectionnerArticle(${article.id}, '${article.nom.replace(/'/g, "\\'")}')" 
-                                id="btn-selectionner-${article.id}">
-                            <i class="fas fa-check mr-1"></i>Sélectionner
-                        </button>
-                        <button type="button" class="bg-purple-500 hover:bg-purple-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors hidden" 
-                                id="btn-variantes-${article.id}"
-                                onclick="ouvrirModalVariantes(${JSON.stringify(article).replace(/"/g, '&quot;')})">
-                            <i class="fas fa-layer-group mr-1"></i>Choisir variante
-                        </button>
-                        <button type="button" class="bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors hidden btn-ajouter-panier" 
-                                id="btn-ajouter-panier-${article.id}"
-                                data-article-id="${article.id}"
-                                onclick="ajouterArticleAuPanierDepuisBouton(${article.id})"
-                                ${stockGeneral <= 0 ? 'disabled' : ''}>
-                            <i class="fas fa-shopping-cart mr-1"></i>Ajouter au panier
-                        </button>
-                    </div>
+                <td class="px-1 py-2 text-center">
+                    <button type="button"
+                            class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs font-medium transition-colors"
+                            onclick="ouvrirModalVariantes(${JSON.stringify(article).replace(/"/g, '&quot;')})"
+                            ${stockGeneral <= 0 ? 'disabled' : ''}>
+                        <i class="fas fa-plus mr-1"></i>Ajouter
+                    </button>
                 </td>
             </tr>
         `;
-    }).join('')}
-                </tbody>
-            </table>
-        </div>
-    `;
-    
+    }).join('');
+
     container.innerHTML = tableHTML;
 };
     
@@ -3393,10 +3273,6 @@ window.afficherArticles = function(articles) {
         `;
     }
 
-
-
-
-
     window.ajouterArticleAuPanier = function(articleId, quantite) {
         console.log('🔄 ===== DÉBUT ajouterArticleAuPanier =====');
         console.log('📦 Paramètres reçus:', { articleId, quantite });
@@ -3463,16 +3339,10 @@ window.afficherArticles = function(articles) {
                         window.fermerModalAjoutArticle();
                     }
                     
-                    // Si nous avons les données de l'article, l'ajouter dynamiquement
-                    if (data.article_data) {
-                        ajouterLigneArticle(data.article_data);
-                        console.log('✅ Ligne d\'article ajoutée dynamiquement');
-                    } else {
-                        // Sinon, rafraîchir la section complète
-                        setTimeout(() => {
-                            rafraichirSectionArticles();
-                        }, 300);
-                    }
+                    // Note: L'ajout dynamique est désactivé car le tableau a été remplacé par des cartes
+                    // Les totaux sont mis à jour automatiquement par mettreAJourTousLesTotaux()
+                    // Pour voir le nouvel article, l'utilisateur peut recharger la page manuellement
+                    console.log('✅ Article ajouté - Rechargement recommandé pour voir l\'article dans la liste');
                     
                     // Mettre à jour tous les totaux et compteurs
                     mettreAJourTousLesTotaux(data);
@@ -3800,54 +3670,7 @@ window.afficherArticles = function(articles) {
     
     // Initialisation
     chargerRegionEtFrais();
-    
-    // Fonctions pour les modales d'information
-    window.ouvrirModalInfoPrix = function() {
-        const modal = document.getElementById('modalInfoPrix');
-        if (modal) modal.classList.remove('hidden');
-    };
-
-    window.fermerModalInfoPrix = function() {
-        const modal = document.getElementById('modalInfoPrix');
-        if (modal) modal.classList.add('hidden');
-    };
-
-    window.ouvrirModalInfoSousTotal = function() {
-        const modal = document.getElementById('modalInfoSousTotal');
-        if (modal) modal.classList.remove('hidden');
-    };
-
-    window.fermerModalInfoSousTotal = function() {
-        const modal = document.getElementById('modalInfoSousTotal');
-        if (modal) modal.classList.add('hidden');
-    };
-
-    window.ouvrirModalInfoTotal = function() {
-        const modal = document.getElementById('modalInfoTotal');
-        if (modal) modal.classList.remove('hidden');
-    };
-
-    window.fermerModalInfoTotal = function() {
-        const modal = document.getElementById('modalInfoTotal');
-        if (modal) modal.classList.add('hidden');
-    };
-
-    // Vérification que tous les éléments critiques sont présents
-    console.log('🔍 Vérification des éléments DOM:');
-    console.log('- modalAjoutArticle:', document.getElementById('modalAjoutArticle') ? '✅ OK' : '❌ MANQUANT');
-    console.log('- articlesList:', document.getElementById('articlesList') ? '✅ OK' : '❌ MANQUANT');
-    console.log('- searchArticle:', document.getElementById('searchArticle') ? '✅ OK' : '❌ MANQUANT');
-    console.log('- ville-select:', document.getElementById('ville-select') ? '✅ OK' : '❌ MANQUANT');
-    console.log('- modalInfoUpsell:', document.getElementById('modalInfoUpsell') ? '✅ OK' : '❌ MANQUANT');
-    console.log('- compteur-upsell-header:', document.getElementById('compteur-upsell-header') ? '✅ OK' : '❌ MANQUANT');
-    
-    // Vérification des fonctions critiques
-    console.log('🔍 Vérification des fonctions critiques:');
-    console.log('- modifierQuantiteArticle:', typeof modifierQuantiteArticle === 'function' ? '✅ OK' : '❌ MANQUANT');
-    console.log('- selectionnerArticle:', typeof window.selectionnerArticle === 'function' ? '✅ OK' : '❌ MANQUANT');
-    console.log('- afficherArticles:', typeof afficherArticles === 'function' ? '✅ OK' : '❌ MANQUANT');
-    console.log('- handleError:', typeof handleError === 'function' ? '✅ OK' : '❌ MANQUANT');
-    
+     
     // Fonction de validation globale
     function validerFonctionsCritiques() {
         const fonctionsRequises = [
@@ -3874,10 +3697,7 @@ window.afficherArticles = function(articles) {
     // Exécuter la validation
     validerFonctionsCritiques();
     
-    // Test de la fonction modifierQuantiteArticle
-    console.log('🧪 Test de la fonction modifierQuantiteArticle:');
-    console.log('- Fonction accessible:', typeof window.modifierQuantiteArticle === 'function' ? '✅ OUI' : '❌ NON');
-    
+
     // Créer un système de fallback si la fonction n'est pas accessible
     if (typeof window.modifierQuantiteArticle !== 'function') {
         console.warn('⚠️ Création d\'un fallback pour modifierQuantiteArticle');
@@ -4106,7 +3926,7 @@ window.afficherArticles = function(articles) {
     };
     
     // Event listeners pour fermer les modales en cliquant à l'extérieur
-    const modals = ['modalAjoutArticle', 'modalInfoUpsell', 'modalInfoPrix', 'modalInfoSousTotal', 'modalInfoTotal', 'modalConfirmation'];
+    const modals = ['articleModal', 'modalAjoutArticle', 'modalInfoUpsell', 'modalInfoPrix', 'modalInfoSousTotal', 'modalInfoTotal', 'modalConfirmation'];
     
     modals.forEach(modalId => {
         const modal = document.getElementById(modalId);
@@ -4143,7 +3963,8 @@ window.afficherArticles = function(articles) {
     document.addEventListener('keydown', function(event) {
         if (event.key === 'Escape') {
             // Fermer la première modale ouverte
-            if (!document.getElementById('modalAjoutArticle').classList.contains('hidden')) {
+            const ajoutModal = document.getElementById('articleModal') || document.getElementById('modalAjoutArticle');
+            if (ajoutModal && !ajoutModal.classList.contains('hidden')) {
                 fermerModalAjoutArticle();
             } else if (!document.getElementById('modalInfoUpsell').classList.contains('hidden')) {
                 fermerModalInfoUpsell();
@@ -4205,11 +4026,7 @@ window.afficherArticles = function(articles) {
             });
     }
 
-    // Initialisation du système upsell
-    console.log('🚀 Initialisation du système upsell...');
-    console.log(`📊 Compteur initial: ${compteurCommande}`);
-    console.log(`📦 Articles dans le panier: ${document.querySelectorAll('tr[data-panier-id]').length}`);
-    
+
     // Vérifier que l'élément compteur existe
     const compteurHeader = document.getElementById('compteur-upsell-header');
     if (!compteurHeader) {
@@ -4640,139 +4457,566 @@ window.afficherArticles = function(articles) {
     window.ouvrirModalVariantes = function(article) {
         try {
             console.log('🎯 Ouverture modal variantes pour article:', article);
-            
-            const modal = document.getElementById('modalVariantes');
+
+            // Vérifier que l'article a un ID valide
+            if (!article || !article.id) {
+                console.error('❌ Article invalide ou sans ID:', article);
+                showToast('❌ Erreur: Article invalide', 'error');
+                return;
+            }
+
+            const modal = document.getElementById('variantModal');
             if (!modal) {
                 console.error('❌ Modal variantes non trouvé');
                 return;
             }
-            
+
+            // Mettre à jour les informations de l'article
+            const articleNom = document.getElementById('articleNom');
+            const articleReference = document.getElementById('articleReference');
+            if (articleNom) articleNom.textContent = article.nom || 'Article';
+            if (articleReference) articleReference.textContent = `Réf: ${article.reference || ''}`;
+
+            // Stocker l'article actuel AVANT d'ouvrir la modal
+            window.currentArticle = article;
+            console.log('🔍 DEBUG ouvrirModalVariantes - window.currentArticle défini:', window.currentArticle);
+
             modal.classList.remove('hidden');
-            modal.classList.add('flex');
-            
+            modal.style.display = 'flex';
+
             // Charger les variantes de l'article
             chargerVariantesArticle(article);
-            
+
         } catch (e) {
             console.error('❌ Erreur ouverture modal variantes:', e);
         }
     };
 
     window.fermerModalVariantes = function() {
-        const modal = document.getElementById('modalVariantes');
+        const modal = document.getElementById('variantModal');
         if (modal) {
             modal.classList.add('hidden');
-            modal.classList.remove('flex');
+            modal.style.display = 'none';
         }
+
+        // Nettoyer les variables globales
+        window.currentArticle = null;
+        window.variantsData = null;
+        window.selectedVariants = [];
     };
 
     function chargerVariantesArticle(article) {
-        const variantsList = document.getElementById('variantsList');
-        if (!variantsList) {
-            console.error('❌ Container variantsList non trouvé');
+        const variantsTableContainer = document.getElementById('variantsTableContainer');
+        if (!variantsTableContainer) {
+            console.error('❌ Container variantsTableContainer non trouvé');
             return;
         }
-        
+
+        console.log('🔍 Chargement des variantes pour l\'article:', article);
+
         // Afficher un indicateur de chargement
-        variantsList.innerHTML = '<div class="text-center py-4"><i class="fas fa-spinner fa-spin mr-2"></i>Chargement des variantes...</div>';
-        
+        variantsTableContainer.innerHTML = `
+            <div class="text-center py-8">
+                <i class="fas fa-spinner fa-spin text-4xl text-blue-500 mb-3"></i>
+                <p class="text-gray-600">Chargement des variantes...</p>
+            </div>
+        `;
+
         // Appel AJAX pour récupérer les variantes
-        fetch(`{% url 'Superpreparation:get_article_variants' 0 %}`.replace('0', article.id))
-            .then(response => response.json())
+        const url = `{% url 'Superpreparation:get_article_variants' 0 %}`.replace('0', article.id);
+        console.log('📡 URL de requête:', url);
+
+        fetch(url)
+            .then(response => {
+                console.log('📥 Réponse HTTP:', response.status, response.statusText);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                return response.json();
+            })
             .then(data => {
+                console.log('📦 Données reçues:', data);
                 if (data.success) {
-                    console.log('✅ Variantes chargées:', data.variants);
-                    afficherVariantes(data.variants, article);
+                    console.log('✅ Variantes chargées:', data.variants.length, 'variantes');
+                    if (data.variants.length === 0) {
+                        variantsTableContainer.innerHTML = `
+                            <div class="text-center py-8">
+                                <i class="fas fa-info-circle text-4xl text-blue-500 mb-3"></i>
+                                <p class="text-gray-600 font-medium">Cet article n'a pas de variantes</p>
+                                <p class="text-sm text-gray-500 mt-2">Il sera ajouté tel quel à la commande</p>
+                            </div>
+                        `;
+                    } else {
+                        afficherVariantes(data.variants, article);
+                    }
                 } else {
                     console.error('❌ Erreur chargement variantes:', data.error);
-                    variantsList.innerHTML = '<div class="text-center py-4 text-red-500">Erreur lors du chargement des variantes</div>';
+                    variantsTableContainer.innerHTML = `
+                        <div class="text-center py-8">
+                            <i class="fas fa-exclamation-triangle text-4xl text-red-500 mb-3"></i>
+                            <p class="text-red-600 font-medium">${data.error || 'Erreur lors du chargement des variantes'}</p>
+                        </div>
+                    `;
                 }
             })
             .catch(error => {
                 console.error('❌ Erreur réseau:', error);
-                variantsList.innerHTML = '<div class="text-center py-4 text-red-500">Erreur de connexion</div>';
+                variantsTableContainer.innerHTML = `
+                    <div class="text-center py-8">
+                        <i class="fas fa-wifi-slash text-4xl text-red-500 mb-3"></i>
+                        <p class="text-red-600 font-medium">Erreur de connexion: ${error.message}</p>
+                        <button onclick="chargerVariantesArticle(window.currentArticle)"
+                                class="mt-4 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg">
+                            <i class="fas fa-sync-alt mr-2"></i>Réessayer
+                        </button>
+                    </div>
+                `;
             });
     }
 
     function afficherVariantes(variants, article) {
-        const variantsList = document.getElementById('variantsList');
-        
-        if (!variants || variants.length === 0) {
-            variantsList.innerHTML = '<div class="text-center py-4 text-gray-500">Aucune variante disponible</div>';
+        const variantsTableContainer = document.getElementById('variantsTableContainer');
+        if (!variantsTableContainer) {
+            console.error('❌ Container variantsTableContainer non trouvé');
             return;
         }
 
-        // Créer un tableau HTML complet pour les variantes avec des bordures visibles
-        const tableHTML = `
+        if (!variants || variants.length === 0) {
+            variantsTableContainer.innerHTML = '<div class="text-center py-4 text-gray-500">Aucune variante disponible</div>';
+            return;
+        }
+
+        console.log('📊 Affichage de', variants.length, 'variantes');
+        console.log('📦 Container trouvé:', variantsTableContainer);
+
+        // Créer le tableau croisé (couleur × pointure)
+        const { tableHtml, variantMap } = creerTableauCroise(variants);
+
+        console.log('📝 HTML généré (premiers 500 caractères):', tableHtml.substring(0, 500));
+        console.log('📏 Longueur HTML:', tableHtml.length);
+
+        variantsTableContainer.innerHTML = tableHtml;
+
+        console.log('✅ innerHTML mis à jour, contenu actuel:', variantsTableContainer.innerHTML.length, 'caractères');
+
+        // Stocker les données des variantes pour la sélection
+        window.variantsData = variantMap;
+        window.currentArticle = article;
+
+        console.log('✅ Tableau croisé créé avec', Object.keys(variantMap).length, 'variantes');
+
+        // Ajouter les event listeners pour les checkboxes
+        ajouterEventListenersCheckboxes();
+    }
+
+    function creerTableauCroise(variants) {
+        console.log('🔧 creerTableauCroise appelé avec', variants.length, 'variantes');
+        console.log('🔍 Première variante:', variants[0]);
+
+        // Extraire les valeurs uniques pour chaque attribut
+        const couleurs = [...new Set(variants.map(v => v.couleur).filter(Boolean))];
+        const pointures = [...new Set(variants.map(v => v.pointure).filter(Boolean))];
+        const tailles = [...new Set(variants.map(v => v.taille).filter(Boolean))];
+
+        console.log('📐 Dimensions détectées:');
+        console.log('  - Couleurs:', couleurs.length, couleurs);
+        console.log('  - Pointures:', pointures.length, pointures);
+        console.log('  - Tailles:', tailles.length, tailles);
+
+        // Déterminer les dimensions du tableau
+        let dimension1, dimension2, valeurs1, valeurs2;
+
+        if (couleurs.length > 0 && pointures.length > 0) {
+            dimension1 = 'couleur';
+            dimension2 = 'pointure';
+            valeurs1 = couleurs;
+            valeurs2 = pointures;
+        } else if (couleurs.length > 0 && tailles.length > 0) {
+            dimension1 = 'couleur';
+            dimension2 = 'taille';
+            valeurs1 = couleurs;
+            valeurs2 = tailles;
+        } else if (pointures.length > 0 && tailles.length > 0) {
+            dimension1 = 'pointure';
+            dimension2 = 'taille';
+            valeurs1 = pointures;
+            valeurs2 = tailles;
+        } else if (couleurs.length > 0) {
+            dimension1 = 'couleur';
+            dimension2 = null;
+            valeurs1 = couleurs;
+            valeurs2 = [];
+        } else if (pointures.length > 0) {
+            dimension1 = 'pointure';
+            dimension2 = null;
+            valeurs1 = pointures;
+            valeurs2 = [];
+        } else if (tailles.length > 0) {
+            dimension1 = 'taille';
+            dimension2 = null;
+            valeurs1 = tailles;
+            valeurs2 = [];
+        } else {
+            // Aucune dimension claire, afficher en liste simple
+            return creerListeSimple(variants);
+        }
+
+        // Créer une map pour accéder rapidement aux variantes
+        const variantMap = {};
+
+        // Si on n'a qu'une dimension, créer un tableau simple
+        if (!dimension2) {
+            return creerTableauSimple(variants, dimension1, valeurs1, variantMap);
+        }
+
+        // Tableau croisé complet
+        let tableHtml = `
             <div class="overflow-x-auto">
-                <table class="min-w-full bg-white border-2 border-gray-300 rounded-lg shadow-lg" style="border-collapse: collapse;">
-                    <thead class="bg-gray-100">
+                <table class="min-w-full border border-gray-300 rounded-lg overflow-hidden">
+                    <thead class="bg-gradient-to-r from-blue-50 to-indigo-50">
                         <tr>
-                            <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-2 border-gray-300 bg-gray-200">Variante</th>
-                            <th class="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider border-2 border-gray-300 bg-gray-200">Prix</th>
-                            <th class="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider border-2 border-gray-300 bg-gray-200">Stock</th>
-                            <th class="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider border-2 border-gray-300 bg-gray-200">Quantité</th>
-                            <th class="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider border-2 border-gray-300 bg-gray-200">Référence</th>
-                            <th class="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider border-2 border-gray-300 bg-gray-200">Action</th>
+                            <th class="px-4 py-3 text-left text-sm font-bold text-gray-700 border-b-2 border-gray-300 bg-gray-100 sticky left-0 z-10">
+                                ${dimension1.charAt(0).toUpperCase() + dimension1.slice(1)} / ${dimension2.charAt(0).toUpperCase() + dimension2.slice(1)}
+                            </th>
+        `;
+
+        // En-têtes de colonnes (pointures)
+        valeurs2.forEach(val2 => {
+            tableHtml += `
+                <th class="px-3 py-3 text-center text-sm font-bold text-gray-700 border-b-2 border-l border-gray-300 bg-blue-50 min-w-[100px]">
+                    ${val2 || 'N/A'}
+                </th>
+            `;
+        });
+
+        tableHtml += '</tr></thead><tbody class="bg-white">';
+
+        // Lignes du tableau (couleurs)
+        valeurs1.forEach((val1, rowIndex) => {
+            const bgClass = rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50';
+            tableHtml += `
+                <tr class="${bgClass} hover:bg-blue-50 transition-colors">
+                    <td class="px-4 py-3 text-left font-semibold text-gray-700 border-b border-gray-200 bg-gray-50 sticky left-0 z-10">
+                        ${val1 || 'N/A'}
+                    </td>
+            `;
+
+            // Cellules pour chaque combinaison
+            valeurs2.forEach(val2 => {
+                const variant = variants.find(v =>
+                    v[dimension1] === val1 && v[dimension2] === val2
+                );
+
+                if (variant) {
+                    const variantKey = `${variant.id}`;
+                    variantMap[variantKey] = variant;
+
+                    const stock = parseInt(variant.qte_disponible || variant.stock) || 0;
+                    const prix = variant.prix_actuel || variant.prix_unitaire || 0;
+                    const available = stock > 0;
+                    const stockBadge = available ?
+                        `<span class="px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">${stock} unité${stock > 1 ? 's' : ''}</span>` :
+                        `<span class="px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">Rupture</span>`;
+                    const bgCell = available ? 'bg-white' : 'bg-gray-100';
+
+                    tableHtml += `
+                        <td class="px-2 py-2 text-center border-b border-l border-gray-200 ${bgCell}">
+                            <div class="flex flex-col items-center gap-2">
+                                <div class="text-lg font-bold text-green-600">${prix} DH</div>
+                                ${stockBadge}
+                                ${available ? `
+                                    <label class="flex items-center justify-center cursor-pointer">
+                                        <input type="checkbox"
+                                               id="variant-${variant.id}"
+                                               class="variant-checkbox w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                               data-variant-id="${variant.id}"
+                                               data-stock="${stock}">
+                                    </label>
+                                    <input type="number"
+                                           id="qte-${variant.id}"
+                                           class="quantity-input w-16 px-2 py-1 text-center border border-gray-300 rounded text-sm hidden"
+                                           value="1"
+                                           min="1"
+                                           max="${stock}"
+                                           data-variant-id="${variant.id}">
+                                ` : ''}
+                            </div>
+                        </td>
+                    `;
+                } else {
+                    tableHtml += `
+                        <td class="px-2 py-2 text-center border-b border-l border-gray-200 bg-gray-100">
+                            <span class="text-xs text-gray-400">-</span>
+                        </td>
+                    `;
+                }
+            });
+
+            tableHtml += '</tr>';
+        });
+
+        tableHtml += '</tbody></table></div>';
+
+        // Légende et bouton de validation
+        tableHtml += `
+            <div class="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div class="flex items-start gap-4 mb-3">
+                    <div class="flex-1">
+                        <p class="text-sm text-gray-700 font-medium mb-2">
+                            <i class="fas fa-info-circle text-blue-500 mr-1"></i>Instructions :
+                        </p>
+                        <ul class="text-xs text-gray-600 space-y-1 ml-5">
+                            <li>• Cochez les variantes souhaitées</li>
+                            <li>• La quantité par défaut est 1 (modifiable après sélection)</li>
+                            <li>• Cliquez sur "Ajouter les variantes" pour valider</li>
+                        </ul>
+                    </div>
+                    <div class="text-right">
+                        <div id="selected-count" class="text-sm font-semibold text-blue-600 mb-2">
+                            <span id="count-number">0</span> sélectionnée(s)
+                        </div>
+                        <button type="button"
+                                id="btn-add-selected-variants"
+                                onclick="ajouterVariantesSelectionnees()"
+                                class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                disabled>
+                            <i class="fas fa-check-double mr-1"></i>Ajouter les variantes
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        return { tableHtml, variantMap };
+    }
+
+    function creerTableauSimple(variants, dimension, valeurs, variantMap) {
+        let tableHtml = `
+            <div class="overflow-x-auto">
+                <table class="min-w-full border border-gray-300 rounded-lg overflow-hidden">
+                    <thead class="bg-gradient-to-r from-blue-50 to-indigo-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-sm font-bold text-gray-700 border-b-2 border-gray-300">
+                                ${dimension.charAt(0).toUpperCase() + dimension.slice(1)}
+                            </th>
+                            <th class="px-4 py-3 text-center text-sm font-bold text-gray-700 border-b-2 border-gray-300">Stock</th>
+                            <th class="px-4 py-3 text-center text-sm font-bold text-gray-700 border-b-2 border-gray-300">Sélection</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white">
-                        ${variants.map(variant => {
-                            const stockDisponible = parseInt(variant.qte_disponible || variant.stock) || 0;
-                            const stockClass = stockDisponible > 0 ? 'text-green-600' : 'text-red-600';
-                            const stockStatus = stockDisponible > 0 ? 
-                                `<span class="font-semibold text-green-600">${stockDisponible}</span>` : 
-                                `<span class="font-semibold text-red-600">Rupture</span>`;
-                            
-                            return `
-                                <tr class="hover:bg-gray-50 transition-colors ${stockDisponible <= 0 ? 'opacity-50' : ''}">
-                                    <td class="px-4 py-3 border-2 border-gray-300">
-                                        <div class="text-sm font-medium text-gray-900">
-                                            ${variant.couleur || 'N/A'} - ${variant.pointure || 'N/A'}
-                                        </div>
-                                    </td>
-                                    <td class="px-4 py-3 text-center border-2 border-gray-300">
-                                        <div class="text-sm font-semibold text-green-600">${variant.prix_actuel} DH</div>
-                                    </td>
-                                    <td class="px-4 py-3 text-center border-2 border-gray-300">
-                                        <span class="text-sm ${stockClass}">${stockStatus}</span>
-                                    </td>
-                                    <td class="px-4 py-3 text-center border-2 border-gray-300">
-                                        ${stockDisponible > 0 ? `
-                                            <div class="flex items-center justify-center gap-2">
-                                                <button type="button" onclick="changeQuantiteVariante(${variant.id}, -1)" class="w-6 h-6 bg-gray-200 hover:bg-gray-300 rounded text-sm transition-colors">-</button>
-                                                <input type="number" id="qte-variante-${variant.id}" class="w-16 p-2 border rounded-lg text-center text-sm" value="1" min="1" max="${stockDisponible}">
-                                                <button type="button" onclick="changeQuantiteVariante(${variant.id}, 1)" class="w-6 h-6 bg-gray-200 hover:bg-gray-300 rounded text-sm transition-colors">+</button>
-                                            </div>
-                                        ` : `
-                                            <span class="text-red-500 text-sm font-medium">-</span>
-                                        `}
-                                    </td>
-                                    <td class="px-4 py-3 text-center border-2 border-gray-300">
-                                        <div class="text-sm text-gray-600">${variant.reference_variante || 'N/A'}</div>
-                                    </td>
-                                    <td class="px-4 py-3 text-center border-2 border-gray-300">
-                                        ${stockDisponible > 0 ? `
-                                            <button type="button" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors" 
-                                                    onclick="console.log('🖱️ Clic sur Sélectionner variante', ${variant.id}); selectionnerVariante(${variant.id}, ${article.id})">
-                                                <i class="fas fa-check mr-1"></i>Sélectionner
-                                            </button>
-                                        ` : `
-                                            <span class="text-red-500 text-sm font-medium">Indisponible</span>
-                                        `}
-                                    </td>
-                                </tr>
-                            `;
-                        }).join('')}
-                    </tbody>
-                </table>
-            </div>
         `;
-        
-        variantsList.innerHTML = tableHTML;
+
+        valeurs.forEach((valeur, index) => {
+            const variant = variants.find(v => v[dimension] === valeur);
+            if (variant) {
+                const variantKey = `${variant.id}`;
+                variantMap[variantKey] = variant;
+                const stock = parseInt(variant.qte_disponible || variant.stock) || 0;
+                const available = stock > 0;
+                const bgClass = index % 2 === 0 ? 'bg-white' : 'bg-gray-50';
+
+                tableHtml += `
+                    <tr class="${bgClass} hover:bg-blue-50">
+                        <td class="px-4 py-3 font-medium text-gray-700">${valeur || 'N/A'}</td>
+                        <td class="px-4 py-3 text-center">
+                            <span class="text-sm ${available ? 'text-green-600' : 'text-red-600'} font-semibold">
+                                ${available ? stock : 'Rupture'}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            ${available ? `
+                                <input type="checkbox"
+                                       id="variant-${variant.id}"
+                                       class="variant-checkbox w-5 h-5"
+                                       data-variant-id="${variant.id}"
+                                       data-stock="${stock}">
+                            ` : `
+                                <span class="text-gray-400">-</span>
+                            `}
+                        </td>
+                    </tr>
+                `;
+            }
+        });
+
+        tableHtml += '</tbody></table></div>';
+        return { tableHtml, variantMap };
     }
 
-    window.selectionnerVariante = function(variantId, articleId) {
+    function creerListeSimple(variants) {
+        const variantMap = {};
+        let tableHtml = `
+            <div class="space-y-2">
+        `;
+
+        variants.forEach(variant => {
+            const variantKey = `${variant.id}`;
+            variantMap[variantKey] = variant;
+            const stock = parseInt(variant.qte_disponible || variant.stock) || 0;
+            const available = stock > 0;
+
+            tableHtml += `
+                <div class="flex items-center justify-between p-3 border rounded-lg ${available ? 'bg-white hover:bg-blue-50' : 'bg-gray-100'}">
+                    <div class="flex-1">
+                        <span class="font-medium">${variant.couleur || variant.pointure || variant.taille || 'Variante'}</span>
+                        <span class="ml-3 text-sm ${available ? 'text-green-600' : 'text-red-600'}">
+                            ${available ? `Stock: ${stock}` : 'Rupture'}
+                        </span>
+                    </div>
+                    ${available ? `
+                        <input type="checkbox"
+                               id="variant-${variant.id}"
+                               class="variant-checkbox w-5 h-5"
+                               data-variant-id="${variant.id}"
+                               data-stock="${stock}">
+                    ` : ''}
+                </div>
+            `;
+        });
+
+        tableHtml += '</div>';
+        return { tableHtml, variantMap };
+    }
+
+    function ajouterEventListenersCheckboxes() {
+        const checkboxes = document.querySelectorAll('.variant-checkbox');
+        const addButton = document.getElementById('btn-add-selected-variants');
+        const countElement = document.getElementById('count-number');
+
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const variantId = this.dataset.variantId;
+                const quantityInput = document.getElementById(`qte-${variantId}`);
+
+                if (this.checked) {
+                    if (quantityInput) {
+                        quantityInput.classList.remove('hidden');
+                    }
+                } else {
+                    if (quantityInput) {
+                        quantityInput.classList.add('hidden');
+                        quantityInput.value = 1;
+                    }
+                }
+
+                // Mettre à jour le compteur
+                const selectedCount = document.querySelectorAll('.variant-checkbox:checked').length;
+                if (countElement) {
+                    countElement.textContent = selectedCount;
+                }
+
+                // Activer/désactiver le bouton d'ajout
+                if (addButton) {
+                    addButton.disabled = selectedCount === 0;
+                }
+            });
+        });
+    }
+
+    window.ajouterVariantesSelectionnees = function() {
+        console.log('🚀 Ajout des variantes sélectionnées');
+
+        const selectedCheckboxes = document.querySelectorAll('.variant-checkbox:checked');
+
+        if (selectedCheckboxes.length === 0) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Aucune sélection',
+                text: 'Veuillez sélectionner au moins une variante',
+                timer: 2000
+            });
+            return;
+        }
+
+        const article = window.currentArticle;
+        if (!article || !article.id) {
+            console.error('❌ Article non défini');
+            Swal.fire({
+                icon: 'error',
+                title: 'Erreur',
+                text: 'Informations de l\'article manquantes'
+            });
+            return;
+        }
+
+        console.log('📦 Article:', article);
+        console.log('📊 Nombre de variantes sélectionnées:', selectedCheckboxes.length);
+
+        // Créer un tableau de promesses pour ajouter chaque variante
+        const promises = [];
+
+        selectedCheckboxes.forEach(checkbox => {
+            const variantId = checkbox.dataset.variantId;
+            const quantityInput = document.getElementById(`qte-${variantId}`);
+            const quantite = quantityInput ? parseInt(quantityInput.value) || 1 : 1;
+
+            console.log(`➕ Ajout variante ${variantId}, quantité: ${quantite}`);
+
+            // Ajouter la variante via AJAX
+            const formData = new FormData();
+            formData.append('action', 'add_article');
+            formData.append('article_id', article.id);
+            formData.append('variante_id', variantId);
+            formData.append('quantite', quantite);
+            formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+            const promise = fetch(window.location.href, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log(`✅ Variante ${variantId} ajoutée`);
+                    return { success: true, variantId };
+                } else {
+                    console.error(`❌ Erreur ajout variante ${variantId}:`, data.message);
+                    return { success: false, variantId, error: data.message };
+                }
+            })
+            .catch(error => {
+                console.error(`❌ Erreur réseau variante ${variantId}:`, error);
+                return { success: false, variantId, error: error.message };
+            });
+
+            promises.push(promise);
+        });
+
+        // Attendre que toutes les variantes soient ajoutées
+        Promise.all(promises).then(results => {
+            const successCount = results.filter(r => r.success).length;
+            const failCount = results.filter(r => !r.success).length;
+
+            console.log(`✅ ${successCount} variante(s) ajoutée(s), ❌ ${failCount} échec(s)`);
+
+            if (successCount > 0) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Succès',
+                    text: `${successCount} variante(s) ajoutée(s) à la commande`,
+                    timer: 2000,
+                    showConfirmButton: false
+                }).then(() => {
+                    // Fermer le modal et recharger la page
+                    fermerModalVariantes();
+                    window.location.reload();
+                });
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erreur',
+                    text: 'Impossible d\'ajouter les variantes'
+                });
+            }
+        });
+    };
+
+    // ========== ANCIEN SYSTÈME SUPPRIMÉ ==========
+    // Les anciennes fonctions selectionnerVariante, changeQuantiteVariante et afficherVariantesEnRupture
+    // ont été supprimées et remplacées par le nouveau système de tableau croisé avec sélection multiple
+
+    // Fonction pour afficher les variantes en rupture (conservée pour compatibilité)
+    window.afficherVariantesEnRupture = function(variantId, articleId) {
         console.log('🔄 ===== DÉBUT selectionnerVariante =====');
         console.log('📦 Variante ID reçu:', variantId);
         console.log('📦 Article ID reçu:', articleId);
@@ -5037,20 +5281,7 @@ window.afficherArticles = function(articles) {
             `;
         }
         
-        // Afficher le modal avec SweetAlert2
-        Swal.fire({
-            title: '<div class="flex items-center gap-2"><i class="fas fa-exclamation-triangle text-red-500"></i><span>Variantes en rupture</span></div>',
-            html: `
-                <div class="text-left">
-                    <p class="mb-4 text-sm text-gray-600">Les variantes suivantes sont actuellement en rupture de stock :</p>
-                    ${variantesHTML}
-                </div>
-            `,
-            icon: 'info',
-            confirmButtonText: 'Compris',
-            confirmButtonColor: '#3085d6',
-            width: '600px'
-        });
+  
     };
 
     // Fonction de test pour valider le calcul du stock général
@@ -5098,45 +5329,153 @@ window.afficherArticles = function(articles) {
         } else {
             showNotificationToast('❌ Test du calcul de stock échoué!', 'error');
         }
-        
+
         return success;
     };
 
+    // ============= GESTION DES FRAIS DE LIVRAISON =============
+
+    // Fonction pour basculer le statut des frais de livraison
+    window.toggleFraisLivraison = function() {
+        const button = document.getElementById('toggle-frais-livraison');
+        const statusText = document.getElementById('frais-status-text');
+        const statusDot = statusText.previousElementSibling;
+        const infoText = document.getElementById('frais-info-text');
+
+        // Désactiver le bouton pendant la requête
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Chargement...';
+
+        // Déterminer le nouveau statut (inverser l'actuel)
+        const currentStatus = statusText.textContent.trim() === 'Activés';
+        const nouveauStatut = !currentStatus;
+
+        // Préparer les données à envoyer
+        const formData = new FormData();
+        formData.append('action', 'toggle_frais_livraison');
+        formData.append('frais_livraison_actif', nouveauStatut.toString());
+        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+        // Envoyer la requête AJAX
+        fetch(window.location.href, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Mettre à jour l'interface
+                if (data.nouveau_statut) {
+                    // Frais activés
+                    statusText.textContent = 'Activés';
+                    statusText.className = 'text-sm font-medium text-green-600';
+                    statusDot.className = 'w-3 h-3 rounded-full bg-green-500';
+                    button.innerHTML = '<i class="fas fa-times mr-1"></i>Désactiver';
+                    button.className = 'px-3 py-1 text-xs font-medium rounded-lg transition-all duration-200 bg-red-100 text-red-700 hover:bg-red-200 border border-red-300';
+                    infoText.innerHTML = '<i class="fas fa-info-circle mr-1"></i>Les frais de livraison sont inclus dans le total de la commande';
+                } else {
+                    // Frais désactivés
+                    statusText.textContent = 'Désactivés';
+                    statusText.className = 'text-sm font-medium text-gray-600';
+                    statusDot.className = 'w-3 h-3 rounded-full bg-gray-400';
+                    button.innerHTML = '<i class="fas fa-check mr-1"></i>Activer';
+                    button.className = 'px-3 py-1 text-xs font-medium rounded-lg transition-all duration-200 bg-green-100 text-green-700 hover:bg-green-200 border border-green-300';
+                    infoText.innerHTML = '<i class="fas fa-info-circle mr-1"></i>Les frais de livraison ne sont pas inclus dans le total';
+                }
+
+                // Ajouter le statut des frais aux données
+                data.frais_livraison_actif = data.nouveau_statut;
+
+                // Utiliser la fonction centralisée pour mettre à jour TOUS les totaux
+                mettreAJourTousLesTotaux(data);
+
+                // Afficher un message de succès
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Succès',
+                    text: data.message,
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+
+            } else {
+                // Afficher l'erreur
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erreur',
+                    text: data.error || 'Erreur lors du changement du statut'
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Erreur',
+                text: 'Erreur de connexion'
+            });
+        })
+        .finally(() => {
+            // Réactiver le bouton
+            button.disabled = false;
+        });
+    };
 
 });
+
 </script>
 
 <!-- Modal de sélection des variantes -->
-<div id="modalVariantes" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
-    <div class="flex items-center justify-center min-h-screen p-4">
-        <div class="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div class="p-6 border-b border-gray-200">
-                <div class="flex justify-between items-center">
-                    <h3 class="text-xl font-semibold text-gray-800">
-                        <i class="fas fa-layer-group text-blue-500 mr-2"></i>
-                        <span>Sélectionner une variante</span>
-                    </h3>
-                    <button type="button" class="text-gray-400 hover:text-gray-600">
-                        <span class="text-gray-500 hover:text-gray-700 cursor-pointer transition-colors" onclick="fermerModalVariantes()">
-                            <i class="fas fa-times text-xl"></i>
-                        </span>
-                    </button>
-                </div>
+<div id="variantModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50 p-4" style="backdrop-filter: blur(8px); display: none;">
+    <div class="bg-white rounded-xl p-4 sm:p-6 w-full max-w-7xl mx-auto shadow-2xl max-h-[95vh] overflow-y-auto">
+        <h3 class="text-base sm:text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
+            <div class="flex items-center">
+                <i class="fas fa-table text-blue-500 mr-2 sm:mr-3"></i>
+                <span class="text-sm sm:text-base">Sélectionner des variantes - Tableau croisé</span>
             </div>
-            <div class="p-6">
-                <div class="mb-4">
-                    <p class="text-sm text-gray-600">Sélectionnez une variante de l'article pour l'ajouter au panier :</p>
-                </div>
-                
-                <!-- Liste des variantes -->
-                <div id="variantsList">
-                    <!-- Les variantes seront chargées dynamiquement ici -->
-                </div>
-                
-                <div class="mt-6 flex justify-end space-x-3">
-                    <button type="button" onclick="fermerModalVariantes()" 
-                            class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400">Fermer</button>
-                </div>
+            <span class="text-gray-500 hover:text-gray-700 cursor-pointer transition-colors" onclick="fermerModalVariantes()">
+                <i class="fas fa-times text-lg sm:text-xl"></i>
+            </span>
+        </h3>
+
+        <!-- Informations de l'article sélectionné -->
+        <div id="articleInfo" class="mb-4 p-3 sm:p-4 bg-gray-50 rounded-lg">
+            <h4 id="articleNom" class="font-medium text-gray-900 text-sm sm:text-base"></h4>
+            <p id="articleReference" class="text-xs sm:text-sm text-gray-600"></p>
+        </div>
+
+        <!-- Tableau croisé des variantes -->
+        <div id="variantsTableContainer" class="mb-4 overflow-x-auto">
+            <div class="text-center py-6 sm:py-8 text-gray-500">
+                <i class="fas fa-table text-3xl sm:text-4xl mb-3 sm:mb-4 text-gray-300"></i>
+                <p class="text-base sm:text-lg">Sélectionnez un article pour voir ses variantes</p>
+            </div>
+        </div>
+
+        <!-- Informations des variantes sélectionnées -->
+        <div id="selectedVariantsInfo" class="mb-4 p-3 sm:p-4 bg-blue-50 border border-blue-200 rounded-lg hidden">
+            <h5 class="font-medium text-blue-900 mb-2 text-sm sm:text-base">Variantes sélectionnées:</h5>
+            <div id="selectedVariantsDetails" class="text-xs sm:text-sm text-blue-800"></div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row justify-between items-center mt-6 gap-3">
+            <button type="button" id="clearSelectionBtn" onclick="effacerSelectionVariantes()"
+                    class="w-full sm:w-auto px-3 sm:px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors hidden text-sm sm:text-base">
+                <i class="fas fa-times mr-1 sm:mr-2"></i>Effacer la sélection
+            </button>
+
+            <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
+                <button type="button" id="addSelectedVariantsBtn" onclick="ajouterVariantesSelectionnees()"
+                        class="w-full sm:w-auto px-3 sm:px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors hidden text-sm sm:text-base">
+                    <i class="fas fa-plus mr-1 sm:mr-2"></i>Ajouter les variantes sélectionnées
+                </button>
+                <button type="button" onclick="fermerModalVariantes()"
+                        class="w-full sm:w-auto px-3 sm:px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg transition-colors text-sm sm:text-base">
+                    Retour
+                </button>
             </div>
         </div>
     </div>

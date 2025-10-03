@@ -1448,743 +1448,18 @@ def api_commande_produits(request, commande_id):
             "<ul class=\"ticket-products\">" + "".join(elements_html) + "</ul>"
             if elements_html else "PRODUITS NON SPÉCIFIÉS"
         )
-
         
-
         return JsonResponse({
             'success': True,
             'produits': produits_text,
             'nombre_articles': total_qte,
         })
-
-        
-
     except Commande.DoesNotExist:
-
         return JsonResponse({'success': False, 'message': 'Commande non trouvée'})
-
     except Exception as e:
-
         return JsonResponse({'success': False, 'message': f'Erreur: {str(e)}'})
 
-@superviseur_preparation_required
-def modifier_commande_prepa(request, commande_id):
-    """Page de modification complète d'une commande pour les opérateurs de préparation"""
-    import json
-    from commande.models import Commande, Operation
-    from parametre.models import Ville
-    
-    try:
-        # Récupérer l'opérateur
-        operateur = Operateur.objects.get(user=request.user, type_operateur='PREPARATION')
-    except Operateur.DoesNotExist:
-        messages.error(request, "Profil d'opérateur de préparation non trouvé.")
-        return redirect('login')
-    
-    # Récupérer la commande
-    commande = get_object_or_404(Commande, id=commande_id)
-    
-    # Vérifier que la commande est affectée à cet opérateur pour la préparation
-    etat_preparation = commande.etats.filter(
-        Q(enum_etat__enum_etat__libelle='À imprimer') | Q(enum_etat__enum_etat__libelle='En préparation'),
-        operateur=operateur,
-        date_fin__isnull=True
-    ).first()
-    
-    if not etat_preparation:
-        messages.error(request, "Cette commande ne vous est pas affectée pour la préparation.")
-        return redirect('Superpreparation:liste_prepa')
-    
-    if request.method == 'POST':
-        try:
-            # ================ GESTION DES ACTIONS AJAX SPÉCIFIQUES ================
-            action = request.POST.get('action')
-            
-            if action == 'add_article':
-                # Ajouter un nouvel article immédiatement
-                from article.models import Article
-                from commande.models import Panier
-                
-                article_id = request.POST.get('article_id')
-                quantite = int(request.POST.get('quantite', 1))
-                
-                try:
-                    article = Article.objects.get(id=article_id)
-                    panier_existant = Panier.objects.filter(commande=commande, article=article).first()
-                    if panier_existant:
-                        # Si l'article existe déjà, mettre à jour la quantité
-                        panier_existant.quantite += quantite
-                        panier_existant.save()
-                        panier = panier_existant
-                        print(f"🔄 Article existant mis à jour: ID={article.id}, nouvelle quantité={panier.quantite}")
-                    else:
-                        # Si l'article n'existe pas, créer un nouveau panier
-                        panier = Panier.objects.create(
-                            commande=commande,
-                            article=article,
-                            quantite=quantite,
-                            sous_total=0  # Sera recalculé après
-                        )
-                        print(f"➕ Nouvel article ajouté: ID={article.id}, quantité={quantite}")
-                    # Recalculer le compteur après ajout (logique de confirmation)
-                    if article.isUpsell and hasattr(article, 'prix_upsell_1') and article.prix_upsell_1 is not None:
-                        total_quantite_upsell = commande.paniers.filter(article__isUpsell=True).aggregate(
-                            total=Sum('quantite')
-                        )['total'] or 0
-                        # Le compteur ne s'incrémente qu'à partir de 2 unités d'articles upsell
-                        if total_quantite_upsell >= 2:
-                            commande.compteur = total_quantite_upsell - 1
-                        else:
-                            commande.compteur = 0
-                        commande.save()
-                        commande.recalculer_totaux_upsell()
-                    else:
-                        # Pour les articles normaux, juste calculer le sous-total
-                        from commande.templatetags.commande_filters import get_prix_upsell_avec_compteur
-                        prix_unitaire = get_prix_upsell_avec_compteur(article, commande.compteur)
-                        sous_total = prix_unitaire * panier.quantite
-                        panier.sous_total = float(sous_total)
-                        panier.save()
-                    total_articles = commande.paniers.aggregate(
-                        total=Sum('sous_total')
-                    )['total'] or 0
-                    frais_livraison = commande.ville.frais_livraison if commande.ville else 0
-                    commande.total_cmd = float(total_articles) #+ float(frais_livraison)
-                    commande.save()
-                    # Calculer les statistiques upsell pour la réponse
-                    articles_upsell = commande.paniers.filter(article__isUpsell=True)
-                    total_quantite_upsell = articles_upsell.aggregate(
-                        total=Sum('quantite')
-                    )['total'] or 0
-                            # Déterminer si c'était un ajout ou une mise à jour
-                    message = 'Article ajouté avec succès' if not panier_existant else f'Quantité mise à jour ({panier.quantite})'
-                    article_data = {
-                        'panier_id': panier.id,
-                        'nom': article.nom,
-                        'reference': article.reference,
-                        'couleur_fr': article.couleur or '',
-                        'couleur_ar': article.couleur or '',
-                        'pointure': article.pointure or '',
-                        'quantite': panier.quantite,
-                        'prix': panier.sous_total / panier.quantite,  # Prix unitaire
-                        'sous_total': panier.sous_total,
-                        'is_upsell': article.isUpsell,
-                        'phase': article.phase,
-                        'has_promo_active': article.has_promo_active,
-                        'qte_disponible': article.qte_disponible,
-                        'description': article.description or ''
-                    }
-                    return JsonResponse({
-                        'success': True,
-                        'message': message,
-                        'article_id': panier.id,
-                        'total_commande': float(commande.total_cmd),
-                        'nb_articles': commande.paniers.count(),
-                        'compteur': commande.compteur,
-                        'was_update': panier_existant is not None,
-                        'new_quantity': panier.quantite,
-                        'article_data': article_data,
-                        'articles_count': commande.paniers.count(),
-                        'sous_total_articles': float(sum(p.sous_total for p in commande.paniers.all())),
-                        'articles_upsell': articles_upsell.count(),
-                        'quantite_totale_upsell': total_quantite_upsell
-                    })
-                except Article.DoesNotExist:
-                    return JsonResponse({
-                        'success': False,
-                        'error': 'Article non trouvé'
-                    })
-                except Exception as e:
-                    return JsonResponse({
-                        'success': False,
-                        'error': str(e)
-                    })
-            elif action == 'replace_article':
-                # Remplacer un article existant
-                from article.models import Article
-                from commande.models import Panier
 
-                ancien_article_id = request.POST.get('ancien_article_id')
-                nouvel_article_id = request.POST.get('nouvel_article_id')
-                nouvelle_quantite = int(request.POST.get('nouvelle_quantite', 1))
-                try:
-                    ancien_panier = Panier.objects.get(id=ancien_article_id, commande=commande)
-                    ancien_article = ancien_panier.article
-                    ancien_etait_upsell = ancien_article.isUpsell
-                    ancien_panier.delete()
-                    nouvel_article = Article.objects.get(id=nouvel_article_id)
-                    total_quantite_upsell = commande.paniers.filter(article__isUpsell=True).aggregate(
-                        total=Sum('quantite')
-                    )['total'] or 0
-                    if nouvel_article.isUpsell:
-                        total_quantite_upsell += nouvelle_quantite
-                    if total_quantite_upsell >= 2:
-                        commande.compteur = total_quantite_upsell - 1
-                    else:
-                        commande.compteur = 0
-
-                    commande.save()
-
-                    commande.recalculer_totaux_upsell()
-
-                    from commande.templatetags.commande_filters import get_prix_upsell_avec_compteur
-                    prix_unitaire = get_prix_upsell_avec_compteur(nouvel_article, commande.compteur)
-                    sous_total = prix_unitaire * nouvelle_quantite
-                    nouveau_panier = Panier.objects.create(
-                        commande=commande,
-                        article=nouvel_article,
-                        quantite=nouvelle_quantite,
-                        sous_total=float(sous_total)
-                    )
-
-                    total_commande = commande.paniers.aggregate(
-
-                        total=Sum('sous_total')
-
-                    )['total'] or 0
-
-                    frais_livraison = commande.ville.frais_livraison if commande.ville else 0
-
-                    commande.total_cmd = float(total_commande) #+ float(frais_livraison)
-
-                    commande.save()
-
-                    
-
-                    # Calculer les statistiques upsell pour la réponse
-
-                    articles_upsell = commande.paniers.filter(article__isUpsell=True)
-
-                    total_quantite_upsell = articles_upsell.aggregate(
-
-                        total=Sum('quantite')
-
-                    )['total'] or 0
-
-                    
-
-                    return JsonResponse({
-
-                        'success': True,
-
-                        'message': 'Article remplacé avec succès',
-
-                        'nouvel_article_id': nouveau_panier.id,
-
-                        'total_commande': float(commande.total_cmd),
-
-                        'nb_articles': commande.paniers.count(),
-
-                        'compteur': commande.compteur,
-
-                        'articles_upsell': articles_upsell.count(),
-
-                        'quantite_totale_upsell': total_quantite_upsell,
-
-                        'sous_total_articles': float(commande.sous_total_articles)
-
-                    })
-
-                    
-
-                except Panier.DoesNotExist:
-
-                    return JsonResponse({
-
-                        'success': False,
-
-                        'error': 'Article original non trouvé'
-
-                    })
-
-                except Article.DoesNotExist:
-
-                    return JsonResponse({
-
-                        'success': False,
-
-                        'error': 'Nouvel article non trouvé'
-
-                    })
-
-                except Exception as e:
-
-                    return JsonResponse({
-
-                        'success': False,
-
-                        'error': str(e)
-
-                    })
-
-            
-
-            
-
-            elif action == 'update_operation':
-
-                # Mettre à jour une opération existante
-
-                try:
-
-                    from commande.models import Operation
-
-                    import logging
-
-                    logger = logging.getLogger(__name__)
-
-                    
-
-                    operation_id = request.POST.get('operation_id')
-
-                    nouveau_commentaire = request.POST.get('nouveau_commentaire', '').strip()
-
-                    
-
-                    if not operation_id or not nouveau_commentaire:
-
-                        return JsonResponse({'success': False, 'error': 'ID opération et commentaire requis'})
-
-                    
-
-                    # Récupérer et mettre à jour l'opération
-
-                    operation = Operation.objects.get(id=operation_id, commande=commande)
-
-                    operation.conclusion = nouveau_commentaire
-
-                    operation.operateur = operateur  # Mettre à jour l'opérateur qui modifie
-
-                    operation.save()
-
-                    
-
-                    return JsonResponse({
-
-                        'success': True,
-
-                        'message': 'Opération mise à jour avec succès',
-
-                        'operation_id': operation_id,
-
-                        'nouveau_commentaire': nouveau_commentaire
-
-                    })
-
-                    
-
-                except Operation.DoesNotExist:
-
-                    return JsonResponse({
-
-                        'success': False,
-
-                        'error': 'Opération non trouvée'
-
-                    })
-
-                except Exception as e:
-
-                    return JsonResponse({
-
-                        'success': False,
-
-                        'error': str(e)
-
-                    })
-
-            
-
-            elif action == 'add_operation':
-
-                # Ajouter une nouvelle opération
-
-                try:
-
-                    from commande.models import Operation
-
-                    
-
-                    type_operation = request.POST.get('type_operation', '').strip()
-
-                    commentaire = request.POST.get('commentaire', '').strip()
-
-                    
-                    if not type_operation or not commentaire:
-                        return JsonResponse({
-                            'success': False,
-                            'error': 'Type d\'opération et commentaire requis'
-                        })
-                    # Créer la nouvelle opération                    
-                    return JsonResponse({
-                        'success': True,
-                        'message': 'Opération ajoutée avec succès',
-                        'operation_id': operation.id,
-                        'type_operation': type_operation,
-                        'commentaire': commentaire
-                    })
-                except Exception as e:
-                    return JsonResponse({
-                        'success': False,
-                        'error': str(e)
-                    })
-            
-            elif action == 'modifier_quantites_multiple':
-                # Modifier plusieurs quantités d'articles en une fois
-                try:
-                    from commande.models import Panier
-                    import json
-                    
-                    modifications_json = request.POST.get('modifications', '[]')
-                    modifications = json.loads(modifications_json)
-                    
-                    if not modifications:
-                        return JsonResponse({
-                            'success': False,
-                            'error': 'Aucune modification fournie'
-                        })
-                    for mod in modifications:
-                        panier_id = mod.get('panier_id')
-                        nouvelle_quantite = mod.get('nouvelle_quantite', 0)
-                        try:
-                            panier = Panier.objects.get(id=panier_id, commande=commande)
-                            
-                            if nouvelle_quantite <= 0:
-                                # Supprimer l'article si quantité = 0
-                                panier.delete()
-                            else:
-                                # Mettre à jour la quantité et le sous-total
-                                panier.quantite = nouvelle_quantite
-                                panier.sous_total = float(panier.article.prix_unitaire * nouvelle_quantite)
-                                panier.save()
-                        except Panier.DoesNotExist:
-                            continue  # Ignorer les paniers non trouvés
-
-                    total_commande = commande.paniers.aggregate(
-                        total=Sum('sous_total')
-                    )['total'] or 0
-                    commande.total_cmd = float(total_commande)
-                    commande.save()
-                    # Créer une opération pour consigner la modification
-                    
-                    return JsonResponse({
-                        'success': True,
-                        'message': f'{len(modifications)} quantité(s) modifiée(s) avec succès',
-                        'total_commande': float(commande.total_cmd),
-                        'nb_articles': commande.paniers.count(),
-                    })
-                    
-                except json.JSONDecodeError:
-                    return JsonResponse({
-                        'success': False,
-                        'error': 'Format de données invalide'
-                    })
-                except Exception as e:
-                    return JsonResponse({
-                        'success': False,
-                        'error': str(e)
-                    })
-            
-            elif action == 'modifier_quantite_directe':
-                # Modifier directement la quantité d'un article
-                try:
-                    from commande.models import Panier
-                    
-                    panier_id = request.POST.get('panier_id')
-                    nouvelle_quantite = int(request.POST.get('nouvelle_quantite', 0))
-                    
-                    print(f"🔄 Modification quantité directe - Panier ID: {panier_id}, Nouvelle quantité: {nouvelle_quantite}")
-                    
-                    if nouvelle_quantite < 0:
-                        return JsonResponse({
-                            'success': False,
-                            'error': 'La quantité ne peut pas être négative'
-                        })
-                    try:
-                        panier = Panier.objects.get(id=panier_id, commande=commande)
-                        ancienne_quantite = panier.quantite
-                        nouveau_sous_total = 0
-                        print(f"📦 Article trouvé: {panier.article.nom}, Ancienne quantité: {ancienne_quantite}")
-                        if panier.commande.id != commande.id:
-                            print(f"❌ ERREUR: Le panier {panier_id} n'appartient pas à la commande {commande.id}")
-                            return JsonResponse({
-                                'success': False,
-                                'error': 'Article non trouvé dans cette commande'
-                            })
-                        
-                        if nouvelle_quantite == 0:
-                            # Supprimer l'article si quantité = 0
-                            panier.delete()
-                            message = 'Article supprimé avec succès'
-                        else:
-                            # Mettre à jour la quantité et le sous-total avec la logique complète de prix
-                            panier.quantite = nouvelle_quantite
-                            
-                            # Recalculer le compteur si c'est un article upsell
-                            if panier.article.isUpsell:
-                                # Sauvegarder d'abord la nouvelle quantité
-                                panier.save()
-                                
-                                # Compter la quantité totale d'articles upsell après modification
-                                total_quantite_upsell = commande.paniers.filter(article__isUpsell=True).aggregate(
-                                    total=Sum('quantite')
-                                )['total'] or 0
-                                print(f"🔄 Calcul du compteur upsell: total_quantite_upsell = {total_quantite_upsell}")
-                                if total_quantite_upsell >= 2:
-                                    commande.compteur = total_quantite_upsell - 1
-                                else:
-                                    commande.compteur = 0
-                            
-                                print(f"✅ Nouveau compteur calculé: {commande.compteur}")
-                                commande.save()
-                                
-                                # Recalculer TOUS les articles de la commande avec le nouveau compteur
-                                commande.recalculer_totaux_upsell()
-                            else:
-                                # Pour les articles normaux, mettre à jour la quantité et calculer le sous-total
-                                from commande.templatetags.commande_filters import get_prix_upsell_avec_compteur
-                                prix_unitaire = get_prix_upsell_avec_compteur(panier.article, commande.compteur)
-                                panier.quantite = nouvelle_quantite
-                                panier.sous_total = float(prix_unitaire * nouvelle_quantite)
-                                panier.save()
-                            
-                            nouveau_sous_total = panier.sous_total
-                            message = 'Quantité modifiée avec succès'
-                            
-                            print(f"✅ Quantité mise à jour: {ancienne_quantite} → {nouvelle_quantite}, Nouveau sous-total: {nouveau_sous_total}")
-                            
-                            # Vérifier que la mise à jour a bien été sauvegardée
-                            panier.refresh_from_db()
-                            if panier.quantite != nouvelle_quantite:
-                                print(f"❌ ERREUR: La quantité n'a pas été sauvegardée correctement. Attendu: {nouvelle_quantite}, Actuel: {panier.quantite}")
-                            else:
-                                print(f"✅ Vérification OK: Quantité sauvegardée: {panier.quantite}")
-                    except Panier.DoesNotExist:
-                        return JsonResponse({
-                            'success': False,
-                            'error': 'Article non trouvé'
-                        })
-                    # Recalculer le total de la commande avec frais de livraison
-                    total_articles = commande.paniers.aggregate(
-                        total=Sum('sous_total')
-                    )['total'] or 0
-                    frais_livraison = commande.ville.frais_livraison if commande.ville else 0
-                    commande.total_cmd = float(total_articles) #+ float(frais_livraison)
-                    commande.save()
-                    articles_upsell = commande.paniers.filter(article__isUpsell=True)
-                    total_quantite_upsell = articles_upsell.aggregate(
-                        total=Sum('quantite')
-                    )['total'] or 0
-
-                    # Créer une opération pour consigner la modification
-                    
-
-                    
-                    return JsonResponse({
-                        'success': True,
-                        'message': message,
-                        'sous_total': float(nouveau_sous_total),
-                        'sous_total_articles': float(total_articles),
-                        'total_commande': float(commande.total_cmd),
-                        'frais_livraison': float(frais_livraison),
-                        'nb_articles': commande.paniers.count(),
-                        'compteur': commande.compteur,
-                        'articles_upsell': articles_upsell.count(),
-                        'quantite_totale_upsell': total_quantite_upsell
-                    })
-                except ValueError:
-                    return JsonResponse({
-                        'success': False,
-                        'error': 'Quantité invalide'
-                    })
-                except Exception as e:
-                    return JsonResponse({
-                        'success': False,
-                        'error': str(e)
-                    })
-            elif action == 'update_commande_info':
-                # Mettre à jour les informations de base de la commande
-                try:
-                    nouvelle_adresse = request.POST.get('adresse', '').strip()
-                    nouvelle_ville_id = request.POST.get('ville_id')
-                    if nouvelle_adresse:
-                        commande.adresse = nouvelle_adresse
-                    if nouvelle_ville_id:
-                        try:
-                            nouvelle_ville = Ville.objects.get(id=nouvelle_ville_id)
-                            commande.ville = nouvelle_ville
-                        except Ville.DoesNotExist:
-                            return JsonResponse({
-                                'success': False,
-                                'error': 'Ville non trouvée'
-                            })
-                    commande.save()
-                    # Créer une opération pour consigner la modification
-                    
-                    messages.success(request, f"Commande {commande.id_yz} mise à jour avec succès.")
-                    return redirect('Superpreparation:detail_prepa', pk=commande.id)
-                except Exception as e:
-                    return JsonResponse({
-                        'success': False,
-                        'error': str(e)
-                    })
-            else:
-                # Traitement du formulaire principal (non-AJAX)
-                with transaction.atomic():
-                    # Mettre à jour les informations du client
-                    client = commande.client
-                    client.nom = request.POST.get('client_nom', client.nom).strip()
-                    client.prenom = request.POST.get('client_prenom', client.prenom).strip()
-                    client.numero_tel = request.POST.get('client_telephone', client.numero_tel).strip()
-                    client.save()
-                    # Mettre à jour les informations de base de la commande
-                    nouvelle_adresse = request.POST.get('adresse', '').strip()
-                    nouvelle_ville_id = request.POST.get('ville_id')
-                    if nouvelle_adresse:
-                        commande.adresse = nouvelle_adresse
-                    if nouvelle_ville_id:
-                        try:
-                            nouvelle_ville = Ville.objects.get(id=nouvelle_ville_id)
-                            commande.ville = nouvelle_ville
-                        except Ville.DoesNotExist:
-                            messages.error(request, "Ville sélectionnée non trouvée.")
-                            return redirect('Superpreparation:modifier_commande', commande_id=commande.id)
-
-                    commande.save()
-                    # Créer une opération pour consigner la modification
-                    
-                    messages.success(request, f"Les modifications de la commande {commande.id_yz} ont été enregistrées avec succès.")
-                    return redirect('Superpreparation:detail_prepa', pk=commande.id)
-        except Exception as e:
-            messages.error(request, f"Erreur lors de la modification: {str(e)}")
-            return redirect('Superpreparation:modifier_commande', commande_id=commande.id)
-    # Récupérer les données pour l'affichage
-    paniers = commande.paniers.all().select_related('article')
-    operations = commande.operations.all().select_related('operateur').order_by('-date_operation')
-    villes = Ville.objects.all().order_by('nom')
-    # Calculer le total des articles
-    total_articles = sum(panier.sous_total for panier in paniers)
-    # Vérifier si c'est une commande renvoyée par la logistique
-    operation_renvoi = operations.filter(type_operation='RENVOI_PREPARATION').first()
-    is_commande_renvoyee = operation_renvoi is not None
-    # Initialiser les variables pour les cas de livraison partielle/renvoi
-    articles_livres = []
-    articles_renvoyes = []
-    is_commande_livree_partiellement = False
-    commande_renvoi_obj = None # Variable pour la commande de renvoi trouvée
-    commande_originale_obj = None # Variable pour la commande originale trouvée
-    etat_articles_renvoyes = {} # Dictionnaire pour stocker l'état des articles renvoyés (article_id -> etat)
-    operation_livraison_partielle_source = None # Opération source pour les détails de livraison partielle
-    # Récupérer l'état actuel de la commande
-    etat_actuel = commande.etats.filter(date_fin__isnull=True).first()
-    etat_precedent = None
-    if etat_actuel:
-        # Trouver l'état précédent
-        etats_precedents = commande.etats.all().order_by('-date_debut')
-        for etat in etats_precedents:
-            if etat.date_fin and etat.date_fin < etat_actuel.date_debut:
-                if etat.enum_etat.libelle not in ['À imprimer', 'En préparation']:
-                    etat_precedent = etat
-                    break
-
-    if commande.num_cmd and commande.num_cmd.startswith('RENVOI-'):
-        # C'est une commande de renvoi. On cherche la commande originale.
-        num_cmd_original = commande.num_cmd.replace('RENVOI-', '')
-        commande_originale_obj = Commande.objects.filter(num_cmd=num_cmd_original, client=commande.client).first()
-        if commande_originale_obj:
-            # Vérifier si la commande originale a bien été livrée partiellement
-            if commande_originale_obj.etats.filter(enum_etat__libelle='Livrée Partiellement').exists():
-                is_commande_livree_partiellement = True
-                operation_livraison_partielle_source = commande_originale_obj.operations.filter(
-                    type_operation='LIVRAISON_PARTIELLE'
-                ).order_by('-date_operation').first()
-                commande_renvoi_obj = commande # Dans ce cas, la commande actuelle est la commande de renvoi
-    elif etat_actuel and etat_actuel.enum_etat.libelle == 'Livrée Partiellement':
-        # La commande actuelle est l'originale qui a été livrée partiellement
-        is_commande_livree_partiellement = True
-        operation_livraison_partielle_source = commande.operations.filter(
-            type_operation='LIVRAISON_PARTIELLE'
-        ).order_by('-date_operation').first()
-        # Chercher une commande de renvoi associée si elle existe
-        commande_renvoi_obj = Commande.objects.filter(
-            num_cmd__startswith=f"RENVOI-{commande.num_cmd}",
-            client=commande.client
-        ).first()
-    # Si une opération de livraison partielle est trouvée, extraire les états des articles renvoyés
-    if operation_livraison_partielle_source:
-        try:
-            details = json.loads(operation_livraison_partielle_source.conclusion)
-            if 'recap_articles_renvoyes' in details:
-                for item in details['recap_articles_renvoyes']:
-                    etat_articles_renvoyes[item['article_id']] = item['etat']
-            # Populer articles_livres à partir de la conclusion de l'opération de livraison partielle
-            if 'articles_livres' in details:
-                for article_livre in details['articles_livres']:
-                    article_id = article_livre.get('article_id')
-                    if article_id:
-                        article_obj = Article.objects.filter(id=article_id).first()
-                    if article_obj:
-                        articles_livres.append({
-                            'article': article_obj,
-                            'quantite_livree': article_livre.get('quantite', 0),
-                            'prix': article_obj.prix_unitaire,
-                            'sous_total': article_obj.prix_unitaire * article_livre.get('quantite', 0)
-                        })
-        except Exception as e:
-            print(f"DEBUG: Erreur lors du parsing des détails de l'opération de livraison partielle: {e}")
-            pass
-    # Populer articles_renvoyes si c'est une commande de renvoi ou si elle a une commande de renvoi associée
-    if is_commande_livree_partiellement:
-        # Si la commande actuelle est une commande de renvoi (celle que nous modifions)
-        if commande.num_cmd and commande.num_cmd.startswith('RENVOI-'):
-            # Les paniers de la commande actuelle sont les articles renvoyés
-            for panier_renvoi in paniers:
-                etat = etat_articles_renvoyes.get(panier_renvoi.article.id)
-                if etat is None:
-                    etat = 'inconnu'
-                    print(f"ALERTE: État inconnu pour l'article ID {panier_renvoi.article.id} dans la commande {commande.id_yz}")
-                articles_renvoyes.append({
-                    'article': panier_renvoi.article,
-                    'quantite': panier_renvoi.quantite,
-                    'prix': panier_renvoi.article.prix_unitaire,
-                    'sous_total': panier_renvoi.sous_total,
-                    'etat': etat
-                })
-        # Si la commande actuelle est la commande originale livrée partiellement (Cas 1 initial)
-        elif commande_renvoi_obj:
-            # Les paniers de la commande de renvoi associée sont les articles renvoyés
-            for panier_renvoi in commande_renvoi_obj.paniers.all():
-                etat = etat_articles_renvoyes.get(panier_renvoi.article.id)
-                if etat is None:
-                    etat = 'inconnu'
-                    print(f"ALERTE: État inconnu pour l'article ID {panier_renvoi.article.id} dans la commande {commande_renvoi_obj.id_yz}")
-                articles_renvoyes.append({
-                    'article': panier_renvoi.article,
-                    'quantite': panier_renvoi.quantite,
-                    'prix': panier_renvoi.article.prix_unitaire,
-                    'sous_total': panier_renvoi.sous_total,
-                    'etat': etat
-                })
-    print(f"DEBUG (modifier_commande_prepa): articles_renvoyes APRES POPULATION: {articles_renvoyes}")
-    context = {
-        'page_title': "Modifier Commande " + str(commande.id_yz),
-        'page_subtitle': "Modification des détails de la commande en préparation",
-        'commande': commande,
-        'paniers': paniers,
-        'villes': villes,
-        'total_articles': total_articles,
-        'is_commande_renvoyee': is_commande_renvoyee,
-        'operation_renvoi': operation_renvoi,
-        'is_commande_livree_partiellement': is_commande_livree_partiellement,
-        'articles_livres': articles_livres,
-        'articles_renvoyes': articles_renvoyes,
-        # Variables de debug/informations supplémentaires
-        'commande_originale': commande_originale_obj,
-        'commande_renvoi': commande_renvoi_obj,
-        'etat_articles_renvoyes': etat_articles_renvoyes,
-        # 'articles_renvoyes_map': articles_renvoyes_map, # Retiré car plus nécessaire
-    }
-    return render(request, 'Superpreparation/modifier_commande.html', context)
 
 @superviseur_preparation_required
 def modifier_commande_superviseur(request, commande_id):
@@ -2195,7 +1470,7 @@ def modifier_commande_superviseur(request, commande_id):
     try:
         # Accepter PREPARATION et SUPERVISEUR_PREPARATION
         operateur = Operateur.objects.get(user=request.user, actif=True)
-        if operateur.type_operateur not in ['PREPARATION', 'SUPERVISEUR_PREPARATION']:
+        if operateur.type_operateur not in ['SUPERVISEUR_PREPARATION']:
             messages.error(request, "Accès non autorisé. Réservé à l'équipe préparation.")
             return redirect('Superpreparation:home')
     except Operateur.DoesNotExist:
@@ -2272,15 +1547,20 @@ def modifier_commande_superviseur(request, commande_id):
                         total=Sum('sous_total')
                     )['total'] or 0
                     frais_livraison = commande.ville.frais_livraison if commande.ville else 0
-                    commande.total_cmd = float(total_articles) #+ float(frais_livraison)
+
+                    # Inclure les frais seulement si activés
+                    if commande.frais_livraison:
+                        commande.total_cmd = float(total_articles) + float(frais_livraison)
+                    else:
+                        commande.total_cmd = float(total_articles)
                     commande.save()
-                    
+
                     # Calculer les statistiques upsell pour la réponse
                     articles_upsell = commande.paniers.filter(article__isUpsell=True)
                     total_quantite_upsell = articles_upsell.aggregate(
                         total=Sum('quantite')
                     )['total'] or 0
-                    
+
                     return JsonResponse({
                         'success': True,
                         'message': f'Article {article.nom} ajouté avec succès',
@@ -2288,11 +1568,15 @@ def modifier_commande_superviseur(request, commande_id):
                         'article_nom': article.nom,
                         'quantite': panier.quantite,
                         'sous_total': float(panier.sous_total),
+                        'sous_total_articles': float(total_articles),
                         'compteur_upsell': commande.compteur,
                         'total_quantite_upsell': total_quantite_upsell,
                         'total_commande': float(commande.total_cmd),
                         'frais_livraison': float(frais_livraison),
-                        'total_final': float(commande.total_cmd) + float(frais_livraison)
+                        'frais_livraison_actif': commande.frais_livraison,
+                        'total_final': float(commande.total_cmd),
+                        'articles_count': commande.paniers.count(),
+                        'panier_id': panier.id
                     })
                     
                 except Article.DoesNotExist:
@@ -2301,10 +1585,37 @@ def modifier_commande_superviseur(request, commande_id):
                     print(f"❌ Erreur lors de l'ajout d'article: {e}")
                     return JsonResponse({'success': False, 'message': f'Erreur: {str(e)}'})
             
+            elif action == 'toggle_frais_livraison':
+                # Toggle des frais de livraison
+                frais_livraison_actif = request.POST.get('frais_livraison_actif', 'false').lower() == 'true'
+
+                # Mettre à jour le statut des frais de livraison
+                commande.frais_livraison = frais_livraison_actif
+
+                # Recalculer le total avec ou sans frais
+                total_articles = commande.paniers.aggregate(total=Sum('sous_total'))['total'] or 0
+                frais_livraison_montant = commande.ville.frais_livraison if commande.ville else 0
+
+                if frais_livraison_actif:
+                    commande.total_cmd = float(total_articles) + float(frais_livraison_montant)
+                else:
+                    commande.total_cmd = float(total_articles)
+
+                commande.save()
+
+                return JsonResponse({
+                    'success': True,
+                    'message': f"Frais de livraison {'activés' if frais_livraison_actif else 'désactivés'} avec succès",
+                    'nouveau_statut': frais_livraison_actif,
+                    'frais_livraison': float(frais_livraison_montant),
+                    'total_articles': float(total_articles),
+                    'total_commande': float(commande.total_cmd)
+                })
+
             elif action in ['modify_quantity', 'modifier_quantite_directe', 'update_article']:
                 # Modifier la quantité d'un article existant
                 from commande.models import Panier
-                
+
                 panier_id = request.POST.get('panier_id')
                 # Les différentes actions peuvent envoyer des noms différents
                 quantite_str = request.POST.get('nouvelle_quantite') or request.POST.get('quantite') or request.POST.get('new_quantity')
@@ -2312,11 +1623,11 @@ def modifier_commande_superviseur(request, commande_id):
                     nouvelle_quantite = int(quantite_str) if quantite_str is not None else 1
                 except ValueError:
                     nouvelle_quantite = 1
-                
+
                 try:
                     panier = Panier.objects.get(id=panier_id, commande=commande)
                     article = panier.article
-                    
+
                     if nouvelle_quantite <= 0:
                         # Supprimer l'article si quantité <= 0
                         panier.delete()
@@ -2324,110 +1635,76 @@ def modifier_commande_superviseur(request, commande_id):
                     else:
                         # Mettre à jour la quantité
                         panier.quantite = nouvelle_quantite
-                        
+
                         # Recalculer le sous-total
                         if article.isUpsell and hasattr(article, 'prix_upsell_1') and article.prix_upsell_1 is not None:
                             # Recalculer le compteur upsell
                             total_quantite_upsell = commande.paniers.filter(article__isUpsell=True).aggregate(
                                 total=Sum('quantite')
                             )['total'] or 0
-                            
+
                             if total_quantite_upsell >= 2:
-
                                 commande.compteur = total_quantite_upsell - 1
-
                             else:
-
                                 commande.compteur = 0
-                            
-                            
-                            
                             commande.save()
-
                             commande.recalculer_totaux_upsell()
-
                         else:
-
                             from commande.templatetags.commande_filters import get_prix_upsell_avec_compteur
-
                             prix_unitaire = get_prix_upsell_avec_compteur(article, commande.compteur)
-
                             sous_total = prix_unitaire * panier.quantite
-
                             panier.sous_total = float(sous_total)
-
                             panier.save()
-                        
-                        
-                        
+
                         message = f'Quantité de {article.nom} mise à jour: {nouvelle_quantite}'
-                    
-                    
-                    
-                    # Recalculer le total de la commande
 
+
+
+        # Recalculer le total de la commande
                     total_articles = commande.paniers.aggregate(
-
                         total=Sum('sous_total')
-
                     )['total'] or 0
-
                     frais_livraison = commande.ville.frais_livraison if commande.ville else 0
 
-                    commande.total_cmd = float(total_articles) #+ float(frais_livraison)
-
+                    # Inclure les frais seulement si activés
+                    if commande.frais_livraison:
+                        commande.total_cmd = float(total_articles) + float(frais_livraison)
+                    else:
+                        commande.total_cmd = float(total_articles)
                     commande.save()
 
-                    
-                    
+
                     return JsonResponse({
-
                         'success': True,
-
                         'message': message,
-
                         'sous_total': float(panier.sous_total) if nouvelle_quantite > 0 else 0,
-
+                        'sous_total_articles': float(total_articles),
                         'compteur_upsell': commande.compteur,
-
                         'total_commande': float(commande.total_cmd),
-
                         'frais_livraison': float(frais_livraison),
-
-                        'total_final': float(commande.total_cmd) + float(frais_livraison)
-
+                        'frais_livraison_actif': commande.frais_livraison,
+                        'total_final': float(commande.total_cmd),
+                        'articles_count': commande.paniers.count()
                     })
                     
                 except Panier.DoesNotExist:
-
                     return JsonResponse({'success': False, 'message': 'Article non trouvé dans la commande'})
-
                 except Exception as e:
-
                     print(f"❌ Erreur lors de la modification de quantité: {e}")
-
                     return JsonResponse({'success': False, 'message': f'Erreur: {str(e)}'})
             
             
-
             elif action == 'delete_article':
-
                 # Supprimer un article de la commande
-
                 from commande.models import Panier
-
                 
                 
                 panier_id = request.POST.get('panier_id')
-
                 
                 
                 try:
-
                     panier = Panier.objects.get(id=panier_id, commande=commande)
-
                     article_nom = panier.article.nom
-
                     etait_upsell = panier.article.isUpsell  # Sauvegarder avant suppression
                     panier.delete()
                     
@@ -2450,17 +1727,24 @@ def modifier_commande_superviseur(request, commande_id):
                         total=Sum('sous_total')
                     )['total'] or 0
                     frais_livraison = commande.ville.frais_livraison if commande.ville else 0
-                    commande.total_cmd = float(total_articles) #+ float(frais_livraison)
+
+                    # Inclure les frais seulement si activés
+                    if commande.frais_livraison:
+                        commande.total_cmd = float(total_articles) + float(frais_livraison)
+                    else:
+                        commande.total_cmd = float(total_articles)
                     commande.save()
-                    
+
                     return JsonResponse({
                         'success': True,
                         'message': f'Article {article_nom} supprimé avec succès',
                         'compteur_upsell': commande.compteur,
                         'articles_count': commande.paniers.count(),
+                        'sous_total_articles': float(total_articles),
                         'total_commande': float(commande.total_cmd),
                         'frais_livraison': float(frais_livraison),
-                        'total_final': float(commande.total_cmd) + float(frais_livraison)
+                        'frais_livraison_actif': commande.frais_livraison,
+                        'total_final': float(commande.total_cmd)
                     })
                     
                 except Panier.DoesNotExist:
@@ -2492,129 +1776,64 @@ def modifier_commande_superviseur(request, commande_id):
         except Exception as e:
             print(f"❌ Erreur générale dans modifier_commande_superviseur: {e}")
             return JsonResponse({'success': False, 'message': f'Erreur: {str(e)}'})
-
     
-
     # ================ AFFICHAGE DE LA PAGE (GET) ================
-
     
-
     # Récupérer les articles de la commande
-
     paniers = commande.paniers.select_related('article').all()
-
-    
-
     # Calculer le total des articles
-
     total_articles = sum(panier.sous_total for panier in paniers)
-
     
-
     # Récupérer les informations de livraison
-
     frais_livraison = commande.ville.frais_livraison if commande.ville else 0
-
     
-
     # Récupérer toutes les villes pour le formulaire
-
     villes = Ville.objects.all().order_by('nom')
-
     
-
     # Vérifier si c'est une commande renvoyée
-
     is_commande_renvoyee = False
-
     commande_originale_obj = None
-
     commande_renvoi_obj = None
-
     etat_articles_renvoyes = None
-
     articles_livres = []
-
     articles_renvoyes = []
-
     
-
     # Vérifier si cette commande est un renvoi
-
     if hasattr(commande, 'commande_renvoi') and commande.commande_renvoi:
-
         is_commande_renvoyee = True
-
         commande_originale_obj = commande.commande_renvoi
-
         commande_renvoi_obj = commande
-
         
-
         # Récupérer l'état des articles renvoyés
-
         try:
-
             etat_articles_renvoyes = Operation.objects.filter(
-
                 commande=commande_originale_obj,
-
                 enum_etat__libelle='Livrée partiellement'
-
             ).first()
-
             
-
             if etat_articles_renvoyes:
-
                 # Récupérer les articles livrés et renvoyés
-
                 articles_livres = etat_articles_renvoyes.articles_livres.all() if hasattr(etat_articles_renvoyes, 'articles_livres') else []
-
                 articles_renvoyes = etat_articles_renvoyes.articles_renvoyes.all() if hasattr(etat_articles_renvoyes, 'articles_renvoyes') else []
-
         except Exception as e:
-
             print(f"⚠️ Erreur lors de la récupération des articles renvoyés: {e}")
-
-    
-
     # Préparer le contexte
-
     context = {
-
         'commande': commande,
-
         'paniers': paniers,
-
         'total_articles': total_articles,
-
         'operateur': operateur,
-
         'is_commande_renvoyee': is_commande_renvoyee,
-
         'articles_livres': articles_livres,
-
         'articles_renvoyes': articles_renvoyes,
-
         # Variables de debug/informations supplémentaires
-
         'commande_originale': commande_originale_obj,
-
         'commande_renvoi': commande_renvoi_obj,
-
         'etat_articles_renvoyes': etat_articles_renvoyes,
-
         # Informations de livraison
-
         'frais_livraison': float(frais_livraison),
-
         'villes': villes,
-
-        # 'articles_renvoyes_map': articles_renvoyes_map, # Retiré car plus nécessaire
-
     }
-
     return render(request, 'Superpreparation/modifier_commande_superviseur.html', context)
 
 
@@ -3353,6 +2572,8 @@ def export_envois(request):
     }
     
     return render(request, 'Superpreparation/export_envois.html', context)
+
+
 def details_region_view(request):
     """Vue détaillée pour afficher les commandes par région - Service de préparation"""
     try:
@@ -3814,13 +3035,6 @@ def historique_envois_view(request):
 @login_required
 def creer_envoi_region(request):
 
-    """Créer un envoi basé sur une région (POST)."""
-    # Debug: Afficher les informations de l'utilisateur
-    print(f"🔍 DEBUG - Utilisateur: {request.user.username}")
-    print(f"🔍 DEBUG - Authentifié: {request.user.is_authenticated}")
-    print(f"🔍 DEBUG - Headers: {dict(request.headers)}")
-    print(f"🔍 DEBUG - Method: {request.method}")
-    
     try:
         from parametre.models import Operateur
         operateur = Operateur.objects.get(user=request.user, actif=True)
@@ -4118,6 +3332,8 @@ def cloturer_envoi(request):
         return JsonResponse({'success': False, 'message': 'Envoi non trouvé'}, status=404)
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
 def rafraichir_articles_commande_prepa(request, commande_id):
     """Rafraîchir la section des articles de la commande en préparation"""
     print(f"🔄 Rafraîchissement des articles pour la commande {commande_id}")
@@ -4316,27 +3532,7 @@ def ajouter_article_commande_prepa(request, commande_id):
             commande = Commande.objects.select_for_update().get(id=commande_id)
             print(f"✅ Commande trouvée: {commande.id} - ID YZ: {commande.id_yz}")
             
-            # Vérifier que la commande est en préparation
-            if operateur.type_operateur == 'SUPERVISEUR_PREPARATION':
-                # Le superviseur peut agir sur toute commande en cours (sans contrainte d'affectation)
-                etat_preparation = commande.etats.filter(
-                    enum_etat__libelle__in=['En préparation', 'À imprimer'],
-                    date_fin__isnull=True
-                ).first()
-            else:
-                # Opérateur préparation: seulement sur les commandes qui lui sont affectées
-                etat_preparation = commande.etats.filter(
-                    operateur=operateur,
-                    enum_etat__libelle__in=['En préparation', 'À imprimer'],
-                    date_fin__isnull=True
-                ).first()
-            
-            if not etat_preparation:
-                print("❌ Commande non en préparation pour cet opérateur")
-                return JsonResponse({'error': 'Cette commande n\'est pas en préparation pour vous.'}, status=403)
-            
-            print(f"✅ État de préparation trouvé: {etat_preparation.enum_etat.libelle}")
-            
+         
             article_id = request.POST.get('article_id')
             quantite = int(request.POST.get('quantite', 1))
             variante_id = request.POST.get('variante_id')

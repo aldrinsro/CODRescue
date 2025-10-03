@@ -15,10 +15,8 @@ urlpatterns = [
     path('modifier-profile/', views.modifier_profile_view, name='modifier_profile'),
     path('changer-mot-de-passe/', views.changer_mot_de_passe_view, name='changer_mot_de_passe'),
     path('detail-prepa/<int:pk>/', views.detail_prepa, name='detail_prepa'),
-    # path('modifier-commande/<int:commande_id>/', views.modifier_commande_prepa, name='modifier_commande'), # Fonctionnalité supprimée - Les opérateurs ne peuvent plus modifier les commandes
-
-    path('api/commande/<int:commande_id>/produits/', views.api_commande_produits, name='api_commande_produits'),
-    # path('api/commande/<int:commande_id>/changer-etat/', views.api_changer_etat_preparation, name='api_changer_etat_preparation'), # Supprimée - plus nécessaire
+  
+    path('api/commande/<int:commande_id>/produits/', views.api_commande_produits, name='api_commande_produits'), 
     path('api/articles-disponibles-prepa/', views.api_articles_disponibles_prepa, name='api_articles_disponibles_prepa'),
     path('api/commande/<int:commande_id>/panier/', views.api_panier_commande_prepa, name='api_panier_commande'),
     path('api/commande/<int:commande_id>/panier-livraison/', views.api_panier_commande_livraison, name='api_panier_commande_livraison'),
@@ -28,9 +26,7 @@ urlpatterns = [
    
     # URLs pour la gestion des articles pendant la préparation
     path('commande/<int:commande_id>/rafraichir-articles/', views.rafraichir_articles_commande_prepa, name='rafraichir_articles_commande_prepa'),
-    # path('commande/<int:commande_id>/ajouter-article/', views.ajouter_article_commande_prepa, name='ajouter_article_commande_prepa'), # Fonctionnalité supprimée - Les opérateurs ne peuvent plus modifier les commandes
-    # path('commande/<int:commande_id>/modifier-quantite/', views.modifier_quantite_article_prepa, name='modifier_quantite_article_prepa'), # Fonctionnalité supprimée - Les opérateurs ne peuvent plus modifier les commandes
-    # path('commande/<int:commande_id>/supprimer-article/', views.supprimer_article_commande_prepa, name='supprimer_article_commande_prepa'), # Fonctionnalité supprimée - Les opérateurs ne peuvent plus modifier les commandes
+
     path('commande/<int:commande_id>/prix-upsell/', views.api_prix_upsell_articles, name='api_prix_upsell_articles'),
 
     # URLs pour la recherche globale

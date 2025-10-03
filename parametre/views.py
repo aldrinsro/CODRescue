@@ -188,7 +188,6 @@ def liste_operateurs(request):
     }
     return render(request, 'parametre/liste_operateurs.html', context)
 
-
 @login_required
 def liste_operateurs_ajax(request):
     """Vue AJAX pour la pagination flexible des opérateurs"""
@@ -285,6 +284,7 @@ def liste_operateurs_ajax(request):
         'current_page': page_obj.number,
         'total_count': page_obj.paginator.count,
     })
+
 
 @staff_member_required
 @login_required

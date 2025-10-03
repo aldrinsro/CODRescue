@@ -2,6 +2,7 @@ from django.urls import path
 from django.shortcuts import redirect
 from . import views, views_retournee,views_articles
 from .barre_recherche_globale import views as search_views
+from operatConfirme import views as view_modif 
 
 app_name = 'Superpreparation'
 
@@ -35,10 +36,19 @@ urlpatterns = [
     path('api/commande-info/<int:commande_id>/', views.api_commande_info, name='api_commande_info'),
 
 
-    path('modifier-commande/<int:commande_id>/', views.modifier_commande_prepa, name='modifier_commande'),
+ 
     path('modifier-commande-superviseur/<int:commande_id>/', views.modifier_commande_superviseur, name='modifier_commande_superviseur'),
     path('api/commande/<int:commande_id>/produits/', views.api_commande_produits, name='api_commande_produits'),
+
+    path('api/commande/<int:commande_id>/panier/<int:panier_id>/prix-remise/', view_modif.get_prix_remise_article, name='get_prix_remise_article'),
+    path('api/panier/<int:panier_id>/activer-remise/', view_modif.activer_remise_panier, name='activer_remise_panier'),
+    path('api/panier/<int:panier_id>/desactiver-remise/', view_modif.desactiver_remise_panier, name='desactiver_remise_panier'),
     
+
+
+
+
+
 
 
     # path('api/commande/<int:commande_id>/changer-etat/', views.api_changer_etat_preparation, name='api_changer_etat_preparation') # Supprimée - plus nécessaire
