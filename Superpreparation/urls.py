@@ -40,12 +40,6 @@ urlpatterns = [
     path('modifier-commande-superviseur/<int:commande_id>/', views.modifier_commande_superviseur, name='modifier_commande_superviseur'),
     path('api/commande/<int:commande_id>/produits/', views.api_commande_produits, name='api_commande_produits'),
 
-    path('api/commande/<int:commande_id>/panier/<int:panier_id>/prix-remise/', view_modif.get_prix_remise_article, name='get_prix_remise_article'),
-    path('api/panier/<int:panier_id>/activer-remise/', view_modif.activer_remise_panier, name='activer_remise_panier'),
-    path('api/panier/<int:panier_id>/desactiver-remise/', view_modif.desactiver_remise_panier, name='desactiver_remise_panier'),
-    
-
-
 
 
 

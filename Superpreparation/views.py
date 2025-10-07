@@ -31,7 +31,6 @@ from article.forms import PromotionForm
 from decimal import Decimal
 
 
-
 @superviseur_preparation_required
 def home_view(request):
     """Tableau de bord de supervision avec métriques globales et suivi en temps réel"""
@@ -759,8 +758,6 @@ def commandes_emballees(request):
     return render(request, 'Superpreparation/commandes_emballees.html', context)
 
 
-
-
 @superviseur_preparation_required
 def traiter_commande_retournee_api(request, commande_id):
     """API pour traiter une commande retournée et gérer la réincrémentation du stock"""
@@ -876,8 +873,6 @@ def traiter_commande_retournee_api(request, commande_id):
         return JsonResponse({'success': False, 'message': f'Erreur: {str(e)}'})
     
 
-
-    
 
 @superviseur_preparation_required
 def profile_view(request):
@@ -3521,13 +3516,6 @@ def rafraichir_articles_commande_prepa(request, commande_id):
 @superviseur_preparation_required
 def ajouter_article_commande_prepa(request, commande_id):
     """Ajouter un article à la commande en préparation"""
-    print("🔄 ===== DÉBUT ajouter_article_commande_prepa =====")
-    print(f"📦 Méthode HTTP: {request.method}")
-    print(f"📦 Commande ID: {commande_id}")
-    print(f"📦 User: {request.user}")
-    print(f"📦 POST data: {dict(request.POST)}")
-    print(f"📦 Headers: {dict(request.headers)}")
-    
     if request.method != 'POST':
         print("❌ Méthode non autorisée")
         return JsonResponse({'error': 'Méthode non autorisée'}, status=405)
@@ -4082,6 +4070,7 @@ def api_articles_commande_livree_partiellement(request, commande_id):
             'success': False, 
             'message': f'Erreur lors de la génération de la réponse: {str(e)}'
         })
+    
 def api_prix_upsell_articles(request, commande_id):
     """API pour récupérer les prix upsell mis à jour des articles"""
     print(f"🔄 Récupération des prix upsell pour la commande {commande_id}")
@@ -4111,17 +4100,6 @@ def api_prix_upsell_articles(request, commande_id):
         for panier in paniers:
             # Utiliser le filtre Django pour calculer le prix selon la logique upsell
             from commande.templatetags.commande_filters import get_prix_upsell_avec_compteur
-            
-            # Debug: Afficher les informations de l'article
-            print(f"🔍 Article {panier.article.id} ({panier.article.nom}):")
-            print(f"   - isUpsell: {panier.article.isUpsell}")
-            print(f"   - prix_actuel: {panier.article.prix_actuel}")
-            print(f"   - prix_unitaire: {panier.article.prix_unitaire}")
-            print(f"   - prix_upsell_1: {panier.article.prix_upsell_1}")
-            print(f"   - prix_upsell_2: {panier.article.prix_upsell_2}")
-            print(f"   - prix_upsell_3: {panier.article.prix_upsell_3}")
-            print(f"   - prix_upsell_4: {panier.article.prix_upsell_4}")
-            print(f"   - compteur: {commande.compteur}")
             
             prix_calcule = get_prix_upsell_avec_compteur(panier.article, commande.compteur)
             print(f"   - prix_calcule: {prix_calcule}")
@@ -4668,8 +4646,6 @@ def api_qr_codes_articles(request):
             'success': False,
             'error': f'Erreur lors de la génération des QR codes: {str(e)}'
         }, status=500)
-
-
 
 
 @superviseur_preparation_required

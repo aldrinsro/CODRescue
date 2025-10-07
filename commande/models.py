@@ -447,7 +447,6 @@ class Panier(models.Model):
         ('remise_2', 'Prix remise 2'),
         ('remise_3', 'Prix remise 3'),
         ('remise_4', 'Prix remise 4'),
-
     ]
 
     CHOIX_TYPE_PRIX = [
