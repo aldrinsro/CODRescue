@@ -69,10 +69,6 @@
                                    class="w-full p-3 bg-gray-100 border rounded-lg text-gray-600">
                         </div>
                     </div>
-
-                    <!-- Bouton de validation pour cette section -->
-                    <!-- Bouton supprimé - Section informations-commande -->
-                    <i class="fas fa-check-circle check-icon text-2xl float-right"></i>
                 </div>
 
                 <!-- Informations client -->
@@ -115,7 +111,6 @@
                             <i class="fas fa-user-check mr-2"></i>Valider les infos client
                         </button>
                     </div>
-                    <i class="fas fa-check-circle check-icon text-2xl float-right"></i>
                 </div>
             </div>
 
@@ -209,7 +204,6 @@
                             <i class="fas fa-truck mr-2"></i>Valider la livraison
                         </button>
                     </div>
-                    <i class="fas fa-check-circle check-icon text-2xl float-right"></i>
                 </div>
 
             <!-- Section 3: Gestion des Opérations (largeur complète) -->
@@ -335,8 +329,6 @@
                     </div>
                     
                     <!-- Bouton de validation pour cette section -->
-                  
-                    <i class="fas fa-check-circle check-icon text-2xl float-right"></i>
                 </div>
 
                         <!-- Section 4: Articles de la commande (largeur complète) -->
@@ -706,12 +698,11 @@
 </div>
 
 
-
 <script src="{% static 'js/operatConfirme/Confirmation_commande/reporter_commande.js' %}"></script>
-<!-- JavaScript -->
+
+
 <script>
 
-// Fonction pour reporter la commande
 
 // Fonction pour charger automatiquement la région, les frais et les délais
 function chargerRegionEtFrais() {
@@ -1519,14 +1510,11 @@ function remplirListeCommentaires(typeOperation) {
 
 // Fonction pour créer les champs cachés du formulaire
 function creerChampsFormulaire() {
-    console.log('🔧 Création des champs cachés pour le formulaire...');
+ 
     
     // Supprimer les anciens champs
     const anciensChampsOperations = document.querySelectorAll('input[name="operations[]"]');
     const anciensChampsCommentaires = document.querySelectorAll('input[name^="comment_"]');
-    
-    console.log(`🗑️ Suppression de ${anciensChampsOperations.length} anciens champs d'opérations`);
-    console.log(`🗑️ Suppression de ${anciensChampsCommentaires.length} anciens champs de commentaires`);
     
     anciensChampsOperations.forEach(input => input.remove());
     anciensChampsCommentaires.forEach(input => input.remove());
@@ -1534,7 +1522,6 @@ function creerChampsFormulaire() {
     // Vérifier que le formulaire existe
     const form = document.getElementById('modification-form');
     if (!form) {
-        console.error('❌ Formulaire modification-form introuvable !');
         return;
     }
     
@@ -1552,11 +1539,10 @@ function creerChampsFormulaire() {
         if (operation.commentaire && operation.commentaire.trim()) {
             // Valider le type d'opération
             if (!validerTypeOperation(operation.type)) {
-                console.error(`❌ Opération ${index + 1} ignorée (type invalide): ${operation.type}`);
                 return;
             }
             
-            console.log(`➕ Ajout opération ${index + 1}: ${operation.type} = "${operation.commentaire}"`);
+          
             
             // Champ pour le type d'opération
             const inputType = document.createElement('input');
@@ -3022,6 +3008,8 @@ function fermerModalAjouterArticle() {
     }
 }
 
+
+
 // ===== Gestion du modal des variantes =====
 function ouvrirModalVariantes(article) {
     try {
@@ -3402,6 +3390,7 @@ function creerListeSimple(variants) {
     tableHtml += '</tbody></table></div>';
     return { tableHtml, variantMap };
 }
+
 
 function ajouterEventListenersCheckboxes() {
     const checkboxes = document.querySelectorAll('.variant-checkbox');
@@ -4466,8 +4455,6 @@ function getPrixUpsellAvecCompteur(article, compteur) {
     // Si pas de prix upsell défini pour ce niveau, utiliser le prix unitaire
     return article.prix_actuel || article.prix_unitaire || 0;
 }
-
-
 
 
 
