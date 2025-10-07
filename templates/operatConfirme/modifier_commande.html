@@ -1713,59 +1713,6 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('❌ Fonction mettreAJourTableauOperations introuvable');
         }
         
-        // Fonction de test pour vérifier que les modales fonctionnent
-        window.testModal = function() {
-            console.log('🧪 Test de la modale...');
-            if (typeof openCommentModal === 'function') {
-                openCommentModal('TEST', 'Test Opération');
-            } else {
-                console.error('❌ Fonction openCommentModal introuvable');
-            }
-        };
-        
-        // Fonction de test pour le nouveau système d'opérations
-        window.testNouveauSysteme = function() {
-            console.log('🧪 Test du nouveau système d\'opérations...');
-            console.log('Variables globales:');
-            console.log('- operationCounter:', typeof operationCounter !== 'undefined' ? operationCounter : 'Non défini');
-            console.log('- operationsTable:', typeof operationsTable !== 'undefined' ? operationsTable : 'Non défini');
-            console.log('- typePrincipalSelectionne:', typeof typePrincipalSelectionne !== 'undefined' ? typePrincipalSelectionne : 'Non défini');
-            
-            // Tester l'ajout d'une opération de test
-            if (typeof ajouterNouvelleOperation === 'function') {
-                ajouterNouvelleOperation();
-                console.log('✅ Sélecteur de type principal affiché');
-            } else {
-                console.error('❌ Fonction ajouterNouvelleOperation introuvable');
-            }
-        };
-        
-        // Fonction de debug global
-        window.debugSysteme = function() {
-            console.log('🔍 Debug du système:');
-            console.log('- DOMContentLoaded: ✅');
-            console.log('- Modal:', document.getElementById('commentModal') ? '✅' : '❌');
-            console.log('- Type principal selector:', document.getElementById('type-principal-selector') ? '✅' : '❌');
-            console.log('- Operation selector:', document.getElementById('operation-selector') ? '✅' : '❌');
-            console.log('- Operations list:', document.getElementById('operations-list') ? '✅' : '❌');
-            console.log('- Operations table body:', document.getElementById('operations-table-body') ? '✅' : '❌');
-            console.log('- operationCounter:', typeof operationCounter);
-            console.log('- operationsTable:', typeof operationsTable);
-            console.log('- typePrincipalSelectionne:', typeof typePrincipalSelectionne);
-        };
-        
-        // Fonction de debug pour les articles
-        window.debugArticles = function() {
-            console.log('🔍 Debug des articles:');
-            console.log('- articleSelect element:', document.getElementById('articleSelect') ? '✅' : '❌');
-            console.log('- CSRF token:', document.querySelector('[name=csrfmiddlewaretoken]') ? '✅' : '❌');
-            console.log('- API URL: {% url "operatConfirme:api_articles_disponibles" %}');
-            console.log('- articlesDisponibles length:', articlesDisponibles ? articlesDisponibles.length : 'Non défini');
-            
-            // Test direct de l'API
-            console.log('🧪 Test de l\'API en cours...');
-            chargerArticlesDisponibles();
-        };
         
         // Fonction pour vérifier les stocks des articles
         window.verifierStocks = function() {
@@ -1926,21 +1873,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         };
         
-            console.log('💡 Fonctions de test disponibles:');
-    console.log('   - testModal() : Tester la modale');
-    console.log('   - testNouveauSysteme() : Tester le système d\'opérations');
-    console.log('   - debugSysteme() : Debug complet du système');
-    console.log('   - debugArticles() : Debug et test des articles');
-    console.log('   - testApiArticles() : Test manuel de l\'API des articles');
-    console.log('   - testFiltrage() : Tester le système de filtrage');
-        
-        // Afficher les informations sur les opérations
-        console.log('🗃️ SYSTÈME D\'OPÉRATIONS:');
-        console.log('   - Types valides en base de données:', TYPES_OPERATIONS_VALIDES);
-        console.log('   - Sauvegarde: Table Operation (commande/models.py)');
-        console.log('   - Validation: Automatique côté JavaScript + Django');
-        console.log('   - Commentaires: Liste déroulante prédéfinie (plus rapide)');
-        
+
         // Afficher le nombre de commentaires par type
         console.log('📝 COMMENTAIRES PRÉDÉFINIS:');
         Object.keys(COMMENTAIRES_PREDEFINIES).forEach(type => {
@@ -1949,32 +1882,13 @@ document.addEventListener('DOMContentLoaded', function() {
         
         console.log('📋 Système complet initialisé avec succès');
         
-        // Initialiser les marqueurs de remise pour les paniers existants
-        initRemiseMarkers();
-        
+       
     } catch (error) {
         console.error('❌ Erreur lors de l\'initialisation:', error);
     }
 });
 
-// Fonction pour initialiser les marqueurs de remise au chargement de la page
-function initRemiseMarkers() {
-    try {
-        // Parcourir tous les paniers pour détecter ceux avec remise appliquée
-        {% for panier in commande.paniers.all %}
-            {% if panier.remise_appliquer %}
-                // Marquer le panier {{ panier.id }} comme ayant une remise appliquée
-                if (typeof marquerPanierAvecRemise === 'function') {
-                    marquerPanierAvecRemise({{ panier.id }});
-                }
-            {% endif %}
-        {% endfor %}
-        
-        console.log('✅ Marqueurs de remise initialisés');
-    } catch (error) {
-        console.error('❌ Erreur lors de l\'initialisation des marqueurs de remise:', error);
-    }
-}
+
 
 // Fonction pour changer l'opération (ancienne fonction - gardée pour compatibilité)
 function changerOperation() {
@@ -2807,8 +2721,6 @@ function chargerArticlesDisponibles() {
         <i class="fas fa-spinner fa-spin mr-2"></i>Chargement des articles...
     </td></tr>`;
     select.innerHTML = '<option value="">-- Chargement des articles... --</option>';
-    console.log('🔄 Début du chargement des articles...');
-    
     // Récupérer le token CSRF avec vérification
     const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
     if (!csrfToken) {
@@ -4393,32 +4305,17 @@ function mettreAJourCompteurUpsell(nouveauCompteur) {
     console.log(`✅ Compteur upsell mis à jour vers: ${nouveauCompteur}`);
 }
 
-// Fonction de test pour vérifier la mise à jour dynamique du compteur
-function testerMiseAJourCompteur() {
-    const compteurActuel = parseInt(document.getElementById('compteur-upsell-header').textContent.replace('Niveau ', '')) || 0;
-    const nouveauCompteur = (compteurActuel + 1) % 5; // Cycle entre 0 et 4
-    
-    console.log(`🧪 Test de mise à jour: ${compteurActuel} → ${nouveauCompteur}`);
-    mettreAJourCompteurUpsell(nouveauCompteur);
-    
-    showToast(`🧪 Test: Compteur mis à jour de ${compteurActuel} à ${nouveauCompteur}`, 'info', 2000);
-}
 
 // Fonction pour mettre à jour dynamiquement les prix unitaires
 function mettreAJourPrixUnitaires(nouveauCompteur) {
-    console.log(`🔄 Mise à jour des prix unitaires pour le compteur: ${nouveauCompteur}`);
-    
+
     // Récupérer tous les articles
     const articleCards = document.querySelectorAll('.article-card');
     
     articleCards.forEach(articleCard => {
         const panierId = articleCard.getAttribute('data-article-id');
         
-        // Vérifier si ce panier a une remise appliquée - NE PAS le recalculer
-        if (typeof panierARemiseAppliquee === 'function' && panierARemiseAppliquee(panierId)) {
-            console.log(`🛡️ Panier ${panierId} ignoré - remise appliquée`);
-            return; // Ignorer ce panier
-        }
+        
         
         const dataArticleAttr = articleCard.getAttribute('data-article');
         const articleData = parseArticleData(dataArticleAttr, panierId);
@@ -4459,11 +4356,7 @@ function mettreAJourPrixUnitaires(nouveauCompteur) {
 
 // Fonction utilitaire pour mettre à jour le sous-total d'un article
 function mettreAJourSousTotalArticle(panierId, prixUnitaire) {
-    // Vérifier si ce panier a une remise appliquée - NE PAS le recalculer
-    if (typeof panierARemiseAppliquee === 'function' && panierARemiseAppliquee(panierId)) {
-        console.log(`🛡️ Sous-total du panier ${panierId} ignoré - remise appliquée`);
-        return; // Ne pas recalculer le sous-total
-    }
+ 
     
     const sousTotalElement = document.getElementById(`sous-total-${panierId}`);
     if (sousTotalElement) {
@@ -4486,7 +4379,7 @@ function mettreAJourSousTotalArticle(panierId, prixUnitaire) {
 
 // Fonction pour recalculer tous les sous-totaux selon le compteur actuel
 function recalculerTousLesSousTotaux() {
-    console.log('🔄 Recalcul de tous les sous-totaux...');
+    
     
     const articleCards = document.querySelectorAll('.article-card');
     let totalSousTotaux = 0;
@@ -4494,21 +4387,7 @@ function recalculerTousLesSousTotaux() {
     articleCards.forEach(articleCard => {
         const panierId = articleCard.getAttribute('data-article-id');
         
-        // Vérifier si ce panier a une remise appliquée - utiliser le sous-total existant
-        if (typeof panierARemiseAppliquee === 'function' && panierARemiseAppliquee(panierId)) {
-            console.log(`🛡️ Recalcul ignoré pour panier ${panierId} - remise appliquée`);
-            
-            // Récupérer le sous-total existant affiché
-            const sousTotalElement = document.getElementById(`sous-total-${panierId}`);
-            if (sousTotalElement) {
-                const sousTotalText = sousTotalElement.textContent.replace(' DH', '');
-                const sousTotalExistant = parseFloat(sousTotalText) || 0;
-                totalSousTotaux += sousTotalExistant;
-                console.log(`💰 Sous-total préservé pour panier ${panierId}: ${sousTotalExistant.toFixed(2)} DH`);
-            }
-            return; // Ne pas recalculer ce panier
-        }
-        
+     
         const dataArticleAttr = articleCard.getAttribute('data-article');
         const articleData = parseArticleData(dataArticleAttr, panierId);
         
@@ -4588,64 +4467,9 @@ function getPrixUpsellAvecCompteur(article, compteur) {
     return article.prix_actuel || article.prix_unitaire || 0;
 }
 
-// Fonction de test pour vérifier la mise à jour des prix unitaires
-function testerMiseAJourPrix() {
-    const compteurActuel = parseInt(document.getElementById('compteur-upsell-header').textContent.replace('Niveau ', '')) || 0;
-    const nouveauCompteur = (compteurActuel + 1) % 5; // Cycle entre 0 et 4
-    
-    console.log(`🧪 Test de mise à jour des prix: ${compteurActuel} → ${nouveauCompteur}`);
-    mettreAJourPrixUnitaires(nouveauCompteur);
-    
-    showToast(`🧪 Test: Prix mis à jour pour le compteur ${nouveauCompteur}`, 'info', 2000);
-}
 
-// Fonction de test pour valider le JSON des articles
-function testerJSONArticles() {
-    console.log('🧪 Test de validation JSON des articles...');
-    
-    const articleCards = document.querySelectorAll('.article-card');
-    let validCount = 0;
-    let errorCount = 0;
-    
-    articleCards.forEach((articleCard, index) => {
-        const panierId = articleCard.getAttribute('data-article-id');
-        const dataArticleAttr = articleCard.getAttribute('data-article');
-        
-        console.log(`\n📦 Article ${index + 1} (ID: ${panierId}):`);
-        console.log('JSON brut:', dataArticleAttr);
-        
-        const articleData = parseArticleData(dataArticleAttr, panierId);
-        
-        if (articleData && !articleData.error) {
-            validCount++;
-            console.log('✅ JSON valide:', articleData);
-        } else {
-            errorCount++;
-            console.log('❌ JSON invalide');
-        }
-    });
-    
-    console.log(`\n📊 Résultats: ${validCount} valides, ${errorCount} erreurs`);
-    showToast(`🧪 Test JSON: ${validCount} valides, ${errorCount} erreurs`, errorCount > 0 ? 'error' : 'success', 3000);
-}
 
-// Fonction de test pour tester la mise à jour des sous-totaux
-function testerSousTotaux() {
-    console.log('🧪 Test de mise à jour des sous-totaux...');
-    
-    const compteurActuel = parseInt(document.getElementById('compteur-upsell-header').textContent.replace('Niveau ', '')) || 0;
-    const nouveauCompteur = (compteurActuel + 1) % 5; // Cycle entre 0 et 4
-    
-    console.log(`🧪 Test de mise à jour des sous-totaux: ${compteurActuel} → ${nouveauCompteur}`);
-    
-    // Mettre à jour le compteur
-    mettreAJourCompteurUpsell(nouveauCompteur);
-    
-    // Recalculer tous les sous-totaux
-    const totalSousTotaux = recalculerTousLesSousTotaux();
-    
-    showToast(`🧪 Test: Sous-totaux mis à jour pour le compteur ${nouveauCompteur} (Total: ${totalSousTotaux.toFixed(2)} DH)`, 'info', 3000);
-}
+
 
 // Fonction utilitaire pour valider et parser le JSON des articles
 function parseArticleData(dataArticleAttr, panierId) {
@@ -5933,12 +5757,6 @@ function modifierQuantiteDirecte(panierId, nouvelleQuantite) {
         return;
     }
 
-    // Vérifier si ce panier a une remise appliquée
-    if (typeof panierARemiseAppliquee === 'function' && panierARemiseAppliquee(panierId)) {
-        console.log(`🛡️ Panier ${panierId} a une remise appliquée - les prix seront préservés côté serveur`);
-        showToast('💰 Prix remisé préservé lors du changement de quantité', 'info');
-    }
-
     // Sauvegarder la valeur précédente
     const input = document.getElementById(`quantite-${panierId}`);
     if (input) {
@@ -6547,11 +6365,8 @@ function saveLivraisonFromModal() {
 }
 </script>
 
-<!-- Modal de Sélection du Type de Confirmation -->
-<!-- Suppression du modal de type de confirmation -->
-<div id="confirmationTypeModal" class="hidden"></div>
 
-<!-- Modal de Confirmation Décalée supprimé -->
+
 
 <!-- Modal de Confirmation Tailwind -->
 <div id="confirmationModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50 flex items-center justify-center">
@@ -6792,82 +6607,11 @@ function saveLivraisonFromModal() {
     </div>
 </div>
 
-<!-- Modal des prix de remise -->
-<div id="modalPrixRemise" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50 p-4" style="backdrop-filter: blur(8px); display: none;">
-    <div class="bg-white rounded-xl p-6 w-full max-w-4xl mx-auto shadow-2xl max-h-[90vh] overflow-y-auto">
-        <!-- En-tête du modal -->
-        <div class="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
-            <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                    <i class="fas fa-percent text-purple-600 text-lg"></i>
-                </div>
-                <div>
-                    <h3 class="text-xl font-bold text-gray-900">Prix de Remise Disponibles</h3>
-                    <p class="text-sm text-gray-600">Sélectionnez un prix de remise à appliquer</p>
-                </div>
-            </div>
-            <button type="button" onclick="fermerModalRemise()" class="text-gray-400 hover:text-gray-600 transition-colors">
-                <i class="fas fa-times text-xl"></i>
-            </button>
-        </div>
-        
-
-        
-        <!-- Liste des prix de remise -->
-        <div class="mb-6">
-            <h4 class="text-lg font-semibold text-gray-900 mb-4">
-                <i class="fas fa-tags mr-2 text-purple-600"></i>Prix de Remise Disponibles
-            </h4>
-            <div id="listePrixRemises" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <!-- Les prix de remise seront générés ici par JavaScript -->
-            </div>
-        </div>
-        
-        <!-- Actions -->
-        <div class="flex justify-end pt-4 border-t border-gray-200">
-            <button type="button" onclick="fermerModalRemise()" 
-                    class="px-6 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors">
-                <i class="fas fa-times mr-2"></i>Annuler
-            </button>
-        </div>
-    </div>
-</div>
 
 </script>
 
-<!-- Script JSON pour les articles disponibles -->
-{{ articles_json|json_script:"articles-data" }}
-
-
-<!-- Debug script temporaire pour vérifier les images -->
 <script>
-console.log('🔍 Debug: Vérification des données JSON des articles');
-const articlesScript = document.getElementById('articles-data');
-if (articlesScript) {
-    try {
-        const articlesData = JSON.parse(articlesScript.textContent);
-        console.log('📊 Articles JSON chargés:', articlesData.length);
-        console.log('📊 Premier article:', articlesData[0]);
-        if (articlesData[0] && articlesData[0].image_url) {
-            console.log('🖼️ URL de l\'image du premier article:', articlesData[0].image_url);
-            // Tester si l'image se charge
-            const img = new Image();
-            img.onload = function() {
-                console.log('✅ Image chargée avec succès:', articlesData[0].image_url);
-            };
-            img.onerror = function() {
-                console.log('❌ Erreur de chargement de l\'image:', articlesData[0].image_url);
-            };
-            img.src = articlesData[0].image_url;
-        } else {
-            console.log('❌ Pas d\'image_url pour le premier article');
-        }
-    } catch (error) {
-        console.error('❌ Erreur de parsing JSON:', error);
-    }
-} else {
-    console.error('❌ Script articles-data non trouvé');
-}
+
 // Fonction pour basculer le statut des frais de livraison
 function toggleFraisLivraison() {
     const button = document.getElementById('toggle-frais-livraison');
