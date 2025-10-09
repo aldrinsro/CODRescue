@@ -341,6 +341,14 @@
                             <i class="fas fa-arrow-up mr-1"></i>Upsell Niveau {{ commande.compteur }}
                         </span>
                         {% endif %}
+                      
+                          <button type="button"
+                            class="px-1.5 py-0.5 bg-purple-500 hover:bg-purple-300 text-white rounded text-sm font-medium transition-all">
+                                 Activer la remise</button>
+                          {% if commande.remise %}
+                                {% endif %}
+
+
                     {% if commande.produit_init %}
                 <div class="mt-4">
                             <p class="block text-sm font-medium text-gray-700 mb-2">Produit Initial (Sheets)</p>
@@ -2250,7 +2258,7 @@ function confirmerCommande() {
                         console.log('📊 DEBUG: Détails de la décrémentation du stock:');
                         data.details_stock.forEach((item, index) => {
                             console.log(`   Article ${index + 1}: ${item.article}`);
-                            console.log(`      - Stock: ${item.ancien_stock} → ${item.nouveau_stock} (-${item.quantite_decrémententée})`);
+                            console.log(` - Stock: ${item.ancien_stock} → ${item.nouveau_stock} (-${item.quantite_decrémententée})`);
                         });
                     }
                 }
@@ -5035,6 +5043,9 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('💡 Fonction de debug disponible: debugTotalCommande()');
 
 });
+
+
+
 
 // ================== SYSTÈME DE FILTRAGE DES ARTICLES ==================
 

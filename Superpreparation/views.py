@@ -2762,20 +2762,16 @@ def commandes_envoi(request, envoi_id):
             'paniers__variante__couleur', 
             'paniers__variante__pointure'
         ).distinct()
-        
-        print(f"DEBUG: Envoi {envoi.id} - Commandes préparées trouvées: {commandes.count()}")
-        
+
         # Préparer les données pour le JSON
         commandes_data = []
         for commande in commandes:
             try:
-                print(f"DEBUG: Traitement commande {commande.id} - ID YZ: {commande.id_yz}")
                 # Récupérer l'état actuel de manière sécurisée
                 etat_actuel = commande.etat_actuel
                 libelle_etat = None
                 if etat_actuel and etat_actuel.enum_etat:
                     libelle_etat = etat_actuel.enum_etat.libelle
-                    print(f"DEBUG: État actuel: {libelle_etat}")
                 else:
                     print(f"DEBUG: Aucun état actuel trouvé pour la commande {commande.id}")
                 
@@ -2803,7 +2799,6 @@ def commandes_envoi(request, envoi_id):
                             'pointure': panier.variante.pointure.pointure if panier.variante.pointure else None,
                             'qte_disponible': panier.variante.qte_disponible,
                         }
-                        print(f"DEBUG: Variante trouvée pour panier {panier.id}: {panier.variante.reference_variante}")
                     else:
                         print(f"DEBUG: Aucune variante pour panier {panier.id}")
                     
@@ -2835,8 +2830,7 @@ def commandes_envoi(request, envoi_id):
                 print(f"Erreur lors du traitement de la commande {commande.id}: {str(e)}")
                 continue
         
-        print(f"DEBUG: Total commandes ajoutées aux données: {len(commandes_data)}")
-        
+
         return JsonResponse({
             'success': True,
             'commandes': commandes_data,
@@ -2869,7 +2863,6 @@ def commandes_envoi_historique(request, envoi_id):
     try:
         envoi = Envoi.objects.get(id=envoi_id, status=False)  # Seulement les envois clôturés
         
-        print(f"DEBUG: Récupération commandes pour envoi clôturé {envoi.id} - Région: {envoi.region.nom_region}")
         commandes = Commande.objects.filter(
             envoi =envoi
         ).select_related('client', 'ville', 'ville__region').prefetch_related(
@@ -2879,18 +2872,15 @@ def commandes_envoi_historique(request, envoi_id):
             'paniers__variante__pointure'
         ).distinct()
         
-        print(f"DEBUG: Total commandes trouvées pour l'envoi clôturé: {commandes.count()}")
         commandes_data = []
         for commande in commandes:
             try:
-                print(f"DEBUG: Traitement commande {commande.id} - ID YZ: {commande.id_yz}")
                 
                 # Récupérer l'état actuel de manière sécurisée
                 etat_actuel = commande.etat_actuel
                 libelle_etat = None
                 if etat_actuel and etat_actuel.enum_etat:
                     libelle_etat = etat_actuel.enum_etat.libelle
-                    print(f"DEBUG: État actuel: {libelle_etat}")
                 else:
                     print(f"DEBUG: Aucun état actuel trouvé pour la commande {commande.id}")
                 
@@ -2918,7 +2908,6 @@ def commandes_envoi_historique(request, envoi_id):
                             'pointure': panier.variante.pointure.pointure if panier.variante.pointure else None,
                             'qte_disponible': panier.variante.qte_disponible,
                         }
-                        print(f"DEBUG: Variante trouvée pour panier {panier.id}: {panier.variante.reference_variante}")
                     else:
                         print(f"DEBUG: Aucune variante pour panier {panier.id}")
                     
@@ -2950,7 +2939,6 @@ def commandes_envoi_historique(request, envoi_id):
                 print(f"Erreur lors du traitement de la commande {commande.id}: {str(e)}")
                 continue
         
-        print(f"DEBUG: Total commandes ajoutées aux données: {len(commandes_data)}")
         
         return JsonResponse({
             'success': True,
@@ -3050,7 +3038,6 @@ def creer_envoi_region(request):
     try:
         from parametre.models import Operateur
         operateur = Operateur.objects.get(user=request.user, actif=True)
-        print(f"🔍 DEBUG - Profil opérateur: {operateur.type_operateur}")
     except Operateur.DoesNotExist:
         print(f"🔍 DEBUG - Aucun profil opérateur trouvé")
     
@@ -3264,8 +3251,6 @@ def cloturer_envois_multiples(request):
 @login_required
 def cloturer_envoi(request):
     """Clôturer un envoi (POST)."""
-    print(f"🔍 DEBUG CLOTURER - Utilisateur: {request.user.username}")
-    
     if request.method != 'POST':
         return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
 
@@ -4732,17 +4717,15 @@ def export_commandes_envoi_excel(request, envoi_id):
     from django.utils import timezone
 
     try:
-        print(f"🔍 DEBUG - Export Excel pour envoi ID: {envoi_id}")
-        
+
         # Récupérer l'envoi
         envoi = Envoi.objects.select_related('region').get(id=envoi_id)
-        print(f"🔍 DEBUG - Envoi trouvé: {envoi.numero_envoi}, Région: {envoi.region.nom_region}")
-        
+
         # Importer openpyxl après avoir vérifié l'envoi
         try:
             import openpyxl
             from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
-            print("🔍 DEBUG - Imports openpyxl réussis")
+        
         except ImportError as import_error:
             print(f"🚫 ERREUR - Import openpyxl échoué: {import_error}")
             return JsonResponse({
@@ -4779,16 +4762,11 @@ def export_commandes_envoi_excel(request, envoi_id):
                 )
                 .distinct()
             )
-        
-        print(f"🔍 DEBUG - Nombre de commandes trouvées: {commandes.count()}")
-        
         # Test: Créer un workbook simple d'abord
         try:
             wb = openpyxl.Workbook()
-            print("🔍 DEBUG - Workbook créé avec succès")
             ws = wb.active
             ws.title = f"Envoi_{envoi.numero_envoi}"[:31]  # Limiter à 31 caractères
-            print(f"🔍 DEBUG - Worksheet configuré: {ws.title}")
         except Exception as wb_error:
             print(f"🚫 ERREUR - Création workbook échouée: {wb_error}")
             raise wb_error
@@ -4816,7 +4794,6 @@ def export_commandes_envoi_excel(request, envoi_id):
                 cell.font = header_font
                 cell.alignment = center
             
-            print(f"🔍 DEBUG - En-têtes ajoutés")
 
             # Largeurs de colonnes lisibles
             col_widths = {
@@ -4901,8 +4878,6 @@ def export_commandes_envoi_excel(request, envoi_id):
                     print(f"🚫 ERREUR - Ligne commande {commande.id}: {row_error}")
                     continue
             
-            print(f"🔍 DEBUG - {row-6} lignes de données ajoutées")
-
             # Auto-filter et freeze header
             ws.auto_filter.ref = f"A5:H{max(5, row-1)}"
             ws.freeze_panes = 'A6'
@@ -4913,17 +4888,13 @@ def export_commandes_envoi_excel(request, envoi_id):
         
         # Préparer la réponse HTTP
         try:
-            print("🔍 DEBUG - Préparation de la réponse HTTP")
+           
             response = HttpResponse(
                 content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
             )
             response['Content-Disposition'] = f'attachment; filename="Envoi_{envoi.numero_envoi}_Commandes.xlsx"'
-            print(f"🔍 DEBUG - Headers HTTP configurés")
-            
             # Sauvegarder le workbook dans la réponse
-            print("🔍 DEBUG - Sauvegarde du workbook...")
             wb.save(response)
-            print("🔍 DEBUG - Workbook sauvegardé avec succès")
             
             return response
             

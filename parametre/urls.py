@@ -50,7 +50,6 @@ urlpatterns = [
     path('export-excel/', views_360.export_all_data_excel, name='export_all_data_excel'),
     
     # URLs Répartition
-    path('repartition/automatique/', views.repartition_automatique, name='repartition_automatique'),
     path('repartition/details-region/', views.details_region_view, name='details_region'),
     path('repartition/get-modal-data-ajax/', views.get_modal_data_ajax, name='get_modal_data_ajax'),
     
