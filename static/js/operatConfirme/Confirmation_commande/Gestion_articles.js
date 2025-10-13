@@ -64,7 +64,7 @@ function ajouterNouvelArticle() {
 
 // Fonction pour modifier un article existant
 function modifierArticle(panierId) {
-    console.log('🔧 Modification article demandée pour ID:', panierId);
+    
     
     isEditingArticle = true;
     currentArticleId = panierId;
@@ -81,7 +81,6 @@ function modifierArticle(panierId) {
     
     // Récupérer les données de l'article depuis la carte
     const articleCard = document.querySelector(`[data-article-id="${panierId}"]`);
-    console.log('🔍 Article card trouvé:', articleCard ? 'OUI' : 'NON', articleCard);
     
     if (articleCard) {
         // Récupérer la quantité avec vérification de sécurité
@@ -103,8 +102,7 @@ function modifierArticle(panierId) {
         // Récupérer les données complètes de l'article depuis le dataset
         try {
             const articleData = JSON.parse(articleCard.dataset.article || '{}');
-            console.log('📊 Données article récupérées:', articleData);
-            
+
             // Afficher les informations de l'article avec les données complètes
             if (articleData && articleData.id) {
                 afficherInfosArticle(articleData);
@@ -153,8 +151,7 @@ function preselectionnerArticle(reference) {
                 const article = JSON.parse(option.dataset.article);
                 if (article.reference === reference) {
                     select.selectedIndex = i;
-                    console.log('✅ Article pré-sélectionné:', reference);
-                    
+
                     // Déclencher l'événement de changement pour mettre à jour les informations
                     onArticleSelectionChange();
                     return;
@@ -194,12 +191,6 @@ function afficherInfosArticleExistant(articleCard) {
     // Récupérer les caractéristiques depuis les badges
     const caracteristiques = extraireCaracteristiquesDepuisBadges(articleCard);
     
-    // Mettre à jour les informations dans la modale
-    console.log('📝 Mise à jour des infos modale:', {
-        taille: caracteristiques.taille,
-        couleur: caracteristiques.couleur,
-        categorie: caracteristiques.categorie
-    });
     
     const infoPointure = document.getElementById('info-pointure');
     const infoCouleur = document.getElementById('info-couleur');
@@ -225,8 +216,7 @@ function afficherInfosArticleExistant(articleCard) {
     
     if (infoDescription) infoDescription.textContent = caracteristiques.description || '';
     
-    console.log('📋 Caractéristiques extraites:', caracteristiques);
-    
+  
     document.getElementById('article-info').classList.remove('hidden');
 }
 
@@ -244,8 +234,7 @@ function extraireCaracteristiquesDepuisBadges(articleCard) {
     try {
         const articleData = JSON.parse(articleCard.dataset.article || '{}');
         if (articleData && articleData.id) {
-            console.log('📊 Utilisation des données du dataset pour les caractéristiques');
-            
+
             // Récupérer les données directement depuis le dataset
             caracteristiques.taille = articleData.pointure || null;
             caracteristiques.couleur = articleData.couleur || null;
@@ -257,8 +246,7 @@ function extraireCaracteristiquesDepuisBadges(articleCard) {
                           (articleData.qte_disponible ? parseInt(articleData.qte_disponible) : 0);
             
             caracteristiques.stock = `Stock: ${stock}`;
-            console.log('📦 Stock récupéré depuis dataset:', stock);
-            
+
             return caracteristiques;
         }
     } catch (error) {
@@ -298,15 +286,11 @@ function extraireCaracteristiquesDepuisBadges(articleCard) {
                 } else if (iconClasses.includes('fa-boxes')) {
                     // Badge de stock - garde le format complet "Stock: X"
                     caracteristiques.stock = badgeText.trim();
-                    console.log('📦 Stock récupéré depuis badge:', badgeText.trim());
                 }
             }
         });
         
-        console.log('🏷️ Badges trouvés et analysés:', {
-            totalBadges: badges.length,
-            caracteristiques: caracteristiques
-        });
+  
         
         // Debug détaillé de chaque badge
         badges.forEach((badge, index) => {
@@ -342,7 +326,6 @@ function extraireCaracteristiquesDepuisBadges(articleCard) {
     // Si aucun stock n'a été trouvé, mettre une valeur par défaut
     if (!caracteristiques.stock) {
         caracteristiques.stock = 'Stock: 0';
-        console.log('⚠️ Aucun stock trouvé, valeur par défaut utilisée');
     }
     
     return caracteristiques;
@@ -421,8 +404,6 @@ function chargerInfosCompletesArticle(reference) {
             if (infoCategorie) infoCategorie.textContent = article.categorie || '-';
             if (infoStock) infoStock.textContent = `${stock} unité(s)`;
             
-            console.log('📋 Informations complètes trouvées pour:', reference, article);
-            console.log('📊 Stock affiché:', stock, 'Type:', typeof stock);
             return;
         }
     }
@@ -433,7 +414,6 @@ function chargerInfosCompletesArticle(reference) {
     document.getElementById('info-categorie').textContent = '-';
     document.getElementById('info-stock').textContent = '0 unité(s)';
     
-    console.log('⚠️ Informations complètes non trouvées pour:', reference);
 }
 // Fonction pour charger les articles disponibles via API
 function chargerArticlesDisponibles() {
@@ -459,7 +439,6 @@ function chargerArticlesDisponibles() {
     // URL de l'API (les fichiers JS statiques ne sont pas traités par Django templates)
     // Utiliser le chemin absolu correspondant à l'URL déclarée dans operatConfirme/urls.py
     const apiUrl = '/operateur-confirme/api/articles-disponibles/';
-    console.log('🌐 URL API:', apiUrl);
     
     // Appel AJAX pour récupérer les articles
     fetch(apiUrl, {
@@ -471,7 +450,7 @@ function chargerArticlesDisponibles() {
         credentials: 'same-origin',
     })
     .then(response => {
-        console.log('📡 Réponse reçue, status:', response.status);
+       
         
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -480,7 +459,7 @@ function chargerArticlesDisponibles() {
         return response.json();
     })
     .then(data => {
-        console.log('📊 Données reçues:', data);
+        
         
         // Correction: La vue renvoie directement un tableau d'articles, pas un objet avec une propriété 'success'
         // Vérifier si data est un tableau ou un objet avec une propriété 'articles'
@@ -646,21 +625,13 @@ function chargerArticlesDisponibles() {
                 `;
                 tableBody.appendChild(tr);
                 
-                console.log(`📦 Article ${index + 1} ajouté:`, {
-                    id: article.id,
-                    nom: article.nom,
-                    prix: article.prix_actuel,
-                    pointure: article.pointure,
-                    couleur: article.couleur
-                });
+               
                 
             } catch (error) {
                 console.error(`❌ Erreur lors de l'ajout de l'article ${index + 1}:`, error, article);
             }
         });
-        
-        console.log(`✅ ${articlesDisponibles.length} articles chargés avec succès`);
-        
+ 
         // Debug des premiers articles pour vérifier les données
         if (articlesDisponibles.length > 0) {
             console.log('🔍 DEBUG: Premier article chargé:', articlesDisponibles[0]);
@@ -700,12 +671,6 @@ function chargerArticlesDisponibles() {
         }
         
         showNotification(`❌ ${errorMessage}`, 'error');
-        
-        // Proposer une solution de fallback
-        console.log('💡 Solutions possibles:');
-        console.log('   1. Vérifiez que vous êtes connecté comme opérateur de confirmation');
-        console.log('   2. Vérifiez qu\'il y a des articles dans la base de données');
-        console.log('   3. Vérifiez les logs Django pour plus de détails');
     });
 }
 
@@ -722,8 +687,7 @@ function ajouterDepuisLigne(button) {
         // Ouvrir le modal de sélection des variantes
         ouvrirModalVariantes(article);
     } catch (e) {
-        console.error('❌ Erreur ajout depuis ligne:', e);
-        showToast('❌ Erreur lors de l\'ouverture du modal de variantes', 'error');
+        showToast('Erreur lors de l\'ouverture du modal de variantes', 'error');
     }
 }
 
@@ -751,16 +715,11 @@ function fermerModalAjouterArticle() {
     }
 }
 
-
-
 // ===== Gestion du modal des variantes =====
 function ouvrirModalVariantes(article) {
     try {
-        console.log('🎯 Ouverture modal variantes pour article:', article);
-        
         // Vérifier que l'article a un ID valide
         if (!article || !article.id) {
-            console.error('❌ Article invalide ou sans ID:', article);
             showToast('❌ Erreur: Article invalide', 'error');
             return;
         }
@@ -846,8 +805,7 @@ function chargerVariantesArticle(article) {
         const variantsTableContainer = document.getElementById('variantsTableContainer');
         if (!variantsTableContainer) return;
         
-        console.log('🔍 Chargement des variantes pour l\'article:', article);
-        console.log('🔍 ID de l\'article:', article.id, 'Type:', typeof article.id);
+        
         
         if (!article.id) {
             console.error('❌ ID d\'article manquant');
@@ -863,13 +821,12 @@ function chargerVariantesArticle(article) {
         // Faire une requête AJAX pour récupérer les variantes
         fetch(url)
             .then(response => {
-                console.log('📥 Réponse reçue:', response.status, response.statusText);
                 return response.json();
             })
             .then(data => {
-                console.log('📊 Données reçues:', data);
+               
                 if (data.success && data.variants) {
-                    console.log(`✅ ${data.variants.length} variantes trouvées`);
+                    
                     afficherVariantes(data.variants, article);
                 } else {
                     console.log('❌ Aucune variante ou erreur:', data.error);
@@ -1454,16 +1411,14 @@ function initCustomScrollbar() {
         return;
     }
     
-    console.log('✅ Initialisation de la scrollbar personnalisée');
-    
+ 
     function updateScrollbar() {
         const scrollTop = container.scrollTop;
         const scrollHeight = container.scrollHeight;
         const clientHeight = container.clientHeight;
         const maxScroll = scrollHeight - clientHeight;
         
-        console.log('📊 Scroll info:', { scrollTop, scrollHeight, clientHeight, maxScroll });
-        
+   
         if (maxScroll <= 0) {
             scrollbar.style.display = 'none';
             return;
@@ -1560,7 +1515,7 @@ function setupScrollbarObserver() {
             mutations.forEach((mutation) => {
                 if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
                     if (modal.style.display === 'flex') {
-                        console.log('🔄 Modal ouvert, initialisation de la scrollbar...');
+                        
                         setTimeout(initCustomScrollbar, 100);
                     }
                 }
@@ -1623,7 +1578,6 @@ function onArticleSelectionChange() {
         afficherInfosArticle(article);
                     } else {
                         // Si l'API n'a pas retourné de données, utiliser les données existantes
-                        console.log('⚠️ Utilisation des données existantes pour le stock');
                         afficherInfosArticle(article);
                     }
                 })
@@ -1747,14 +1701,7 @@ function afficherInfosArticle(article) {
         const articleInfoSection = document.getElementById('article-info');
         if (articleInfoSection) articleInfoSection.classList.remove('hidden');
     
-    console.log('📋 Informations article affichées:', {
-            nom: article.nom || 'Sans nom',
-            reference: article.reference || '-',
-            pointure: article.pointure || '-',
-            couleur: article.couleur || '-',
-            categorie: typeof article.categorie === 'string' ? article.categorie : '-',
-            stock: stock
-        });
+    
     } catch (error) {
         console.error('❌ Erreur lors de l\'affichage des informations de l\'article:', error);
         // Ne pas laisser l'erreur se propager pour éviter de bloquer l'interface
@@ -2016,12 +1963,6 @@ function mettreAJourTousLesTotaux(data) {
         }
     }
     
-    console.log('✅ Tous les totaux mis à jour:', {
-        sous_total_articles: data.sous_total_articles,
-        total_commande: data.total_commande,
-        articles_count: data.articles_count,
-        compteur: data.compteur
-    });
 }
 
 // Fonction utilitaire pour mettre à jour le compteur upsell dans tous les endroits
@@ -2040,7 +1981,6 @@ function mettreAJourCompteurUpsell(nouveauCompteur) {
     // Mettre à jour les prix unitaires
     mettreAJourPrixUnitaires(nouveauCompteur);
     
-    console.log(`✅ Compteur upsell mis à jour vers: ${nouveauCompteur}`);
 }
 
 
@@ -2076,15 +2016,13 @@ function mettreAJourPrixUnitaires(nouveauCompteur) {
                 // Mettre à jour le libellé
                 libelleElement.textContent = prixInfo.libelle;
                 libelleElement.className = `text-xs ${prixInfo.couleur_classe} mt-1`;
-                
-                console.log(`✅ Prix mis à jour pour article ${panierId}: ${prixInfo.prix.toFixed(2)} DH (${prixInfo.libelle})`);
+            
             }
             
             // Mettre à jour le sous-total
             mettreAJourSousTotalArticle(panierId, prixInfo.prix);
         } else {
             // En cas d'erreur de parsing, on peut essayer de rafraîchir la section des articles
-            console.log('🔄 Tentative de rafraîchissement de la section des articles...');
             setTimeout(() => {
                 rafraichirSectionArticles();
             }, 1000);
@@ -2108,8 +2046,7 @@ function mettreAJourSousTotalArticle(panierId, prixUnitaire) {
         // Mettre à jour l'affichage
         sousTotalElement.textContent = `${nouveauSousTotal.toFixed(2)} DH`;
         
-        console.log(`✅ Sous-total mis à jour pour article ${panierId}: ${quantite} × ${prixUnitaire.toFixed(2)} = ${nouveauSousTotal.toFixed(2)} DH`);
-        
+  
         return nouveauSousTotal;
     }
     return 0;
@@ -2139,8 +2076,7 @@ function recalculerTousLesSousTotaux() {
             totalSousTotaux += sousTotal;
         }
     });
-    
-    console.log(`💰 Total de tous les sous-totaux: ${totalSousTotaux.toFixed(2)} DH`);
+
     return totalSousTotaux;
 }
 
@@ -2214,8 +2150,6 @@ function parseArticleData(dataArticleAttr, panierId) {
         // Nettoyer les données JSON de manière plus robuste
         let cleanedData = dataArticleAttr.trim();
         
-        console.log(`🔍 Article ${panierId} - JSON brut (premiers 100 chars):`, cleanedData.substring(0, 100));
-        
         // Remplacer les caractères problématiques
         cleanedData = cleanedData.replace(/\n/g, '\\n')
                                 .replace(/\r/g, '\\r')
@@ -2237,8 +2171,6 @@ function parseArticleData(dataArticleAttr, panierId) {
         // 4. Nettoyer les espaces autour des séparateurs
         cleanedData = cleanedData.replace(/\s*:\s*/g, ': ');
         cleanedData = cleanedData.replace(/\s*,\s*/g, ', ');
-        
-        console.log(`🔧 Article ${panierId} - JSON nettoyé (premiers 150 chars):`, cleanedData.substring(0, 150));
         
         // Tentative de parsing
         const articleData = JSON.parse(cleanedData);
@@ -2430,8 +2362,7 @@ function mettreAJourTotalCommande() {
     const articles = articlesContainer.querySelectorAll('.article-card');
     let sousTotal = 0;
     
-    console.log(`🔄 Recalcul du total pour ${articles.length} article(s)`);
-    
+
     articles.forEach((article, index) => {
         const sousTotalElement = article.querySelector('.text-lg.font-bold');
         
@@ -2441,7 +2372,6 @@ function mettreAJourTotalCommande() {
             const sousTotal_article = parseFloat(sousTotalText.replace(' DH', '').replace(',', '.'));
             
             if (!isNaN(sousTotal_article)) {
-                console.log(`   Article ${index + 1}: Sous-total = ${sousTotal_article} DH`);
                 sousTotal += sousTotal_article;
             } else {
                 console.warn(`   ⚠️ Sous-total ${index + 1} non valide: "${sousTotalText}"`);
@@ -2461,10 +2391,7 @@ function mettreAJourTotalCommande() {
     
     const totalFinal = sousTotal + fraisLivraison;
     
-    console.log(`📊 Sous-total articles: ${sousTotal.toFixed(2)} DH`);
-    console.log(`🚚 Frais de livraison: ${fraisLivraison.toFixed(2)} DH (${sontFraisLivraisonActives() ? 'activés' : 'désactivés'})`);
-    console.log(`💰 Total final calculé: ${totalFinal.toFixed(2)} DH`);
-    
+
     // Mettre à jour l'affichage des frais dans le résumé
     mettreAJourAffichageFraisResume();
     
@@ -2472,13 +2399,13 @@ function mettreAJourTotalCommande() {
     if (totalElement) {
         const ancienTotal = totalElement.textContent;
         totalElement.textContent = `${totalFinal.toFixed(2)} DH`;
-        console.log(`📊 Total mis à jour: ${ancienTotal} → ${totalFinal.toFixed(2)} DH`);
+     
     }
     const totalElementHautPage = document.getElementById('total_commande_haut_page');
     if (totalElementHautPage) {
         const ancienTotal = totalElementHautPage.textContent;
         totalElementHautPage.textContent = `${totalFinal.toFixed(2)} DH`;
-        console.log(`📊 Total mis à jour: ${ancienTotal} → ${totalFinal.toFixed(2)} DH`);
+       
     }
     
     // Mettre à jour le sous-total des articles dans le détail si l'élément existe
@@ -2486,15 +2413,13 @@ function mettreAJourTotalCommande() {
     if (sousTotalElement) {
         const ancienSousTotal = sousTotalElement.textContent;
         sousTotalElement.textContent = `${sousTotal.toFixed(2)} DH`;
-        console.log(`📊 Sous-total mis à jour: ${ancienSousTotal} → ${sousTotal.toFixed(2)} DH`);
+       
     }
     
 }
 
 // Fonction alternative qui additionne directement les sous-totaux affichés
 function recalculerTotalDepuisSousTotaux() {
-    console.log('🧮 Recalcul du total en additionnant les sous-totaux affichés...');
-    
     const sousTotalElements = document.querySelectorAll('.text-lg.font-bold');
     let total = 0;
     
@@ -2503,20 +2428,16 @@ function recalculerTotalDepuisSousTotaux() {
         const valeur = parseFloat(texte.replace(' DH', '').replace(',', '.'));
         
         if (!isNaN(valeur)) {
-            console.log(`   Sous-total ${index + 1}: ${valeur} DH`);
+         
             total += valeur;
         } else {
             console.warn(`   ⚠️ Sous-total ${index + 1} non valide: "${texte}"`);
         }
     });
-    
-    console.log(`💰 Total calculé depuis sous-totaux: ${total.toFixed(2)} DH`);
-    
     const totalElement = document.getElementById('total-commande');
     if (totalElement) {
         const ancienTotal = totalElement.textContent;
         totalElement.textContent = `${total.toFixed(2)} DH`;
-        console.log(`📊 Total mis à jour: ${ancienTotal} → ${total.toFixed(2)} DH`);
     }
     
     return total;
@@ -2524,8 +2445,7 @@ function recalculerTotalDepuisSousTotaux() {
 
 // Fonction pour sauvegarder un nouvel article immédiatement
 function sauvegarderNouvelArticle(article, quantite) {
-    console.log('💾 Sauvegarde immédiate d\'un nouvel article...');
-    
+
     const formData = new FormData();
     
     // Ajouter le token CSRF
@@ -2553,8 +2473,7 @@ function sauvegarderNouvelArticle(article, quantite) {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-            console.log('✅ Nouvel article sauvegardé en base de données');
-            
+      
             // Mettre à jour l'ID de l'article dans le DOM avec l'ID réel de la base
             if (data.article_id) {
                 const articleCard = document.querySelector(`[data-article-id^="new-"]`);
@@ -2584,74 +2503,7 @@ function sauvegarderNouvelArticle(article, quantite) {
     });
 }
 
-// Fonction pour sauvegarder le remplacement d'un article immédiatement
-function sauvegarderRemplacementArticle(ancienArticleId, nouvelArticle, nouvelleQuantite) {
-    console.log('🔄 Sauvegarde immédiate du remplacement d\'article...');
-    
-    const formData = new FormData();
-    
-    // Ajouter le token CSRF
-    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
-    if (csrfToken) {
-        formData.append('csrfmiddlewaretoken', csrfToken.value);
-    }
-    
-    // Ajouter les données du remplacement
-    formData.append('action', 'replace_article');
-    formData.append('ancien_article_id', ancienArticleId);
-    formData.append('nouvel_article_id', nouvelArticle.id);
-    formData.append('nouvelle_quantite', nouvelleQuantite);
-    formData.append('commande_id', '{{ commande.id }}');
 
-        const modifierArticle = getUrlModifier();
-    
-    // Envoyer via AJAX
-    fetch(modifierArticle, {
-        method: 'POST',
-        body: formData,
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            console.log('✅ Remplacement d\'article sauvegardé en base de données');
-            
-            // Mettre à jour l'ID de l'article dans le DOM avec l'ID réel du nouveau panier
-            if (data.nouvel_article_id) {
-                const articleCard = document.querySelector(`[data-article-id="${ancienArticleId}"]`);
-                if (articleCard) {
-                    articleCard.setAttribute('data-article-id', data.nouvel_article_id);
-                    articleCard.removeAttribute('data-is-replaced');
-                }
-            }
-            
-            // Utiliser la fonction centralisée pour mettre à jour tous les totaux et compteurs
-            const updateData = {
-                total_commande: data.total_commande,
-                articles_count: data.nb_articles,
-                compteur: data.compteur,
-                sous_total_articles: data.sous_total_articles
-            };
-            mettreAJourTousLesTotaux(updateData);
-            
-            console.log('🔄 Remplacement terminé:', {
-                ancien: ancienArticleId,
-                nouveau: data.nouvel_article_id,
-                article: nouvelArticle.nom
-            });
-            
-            } else {
-            console.error('❌ Erreur lors du remplacement:', data.error);
-            showNotification('❌ Erreur lors du remplacement: ' + data.error, 'error');
-            }
-        })
-        .catch(error => {
-        console.error('❌ Erreur de connexion:', error);
-        showNotification('❌ Erreur de connexion lors du remplacement', 'error');
-        });
-}
 // Ajouter les événements pour la modale d'articles et les raccourcis clavier
 document.addEventListener('DOMContentLoaded', function() {
     // Événement pour la sélection d'article
@@ -2687,7 +2539,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // Ctrl+Enter pour confirmer la commande
         if (event.ctrlKey && event.key === 'Enter') {
             event.preventDefault();
-            console.log('⌨️ Raccourci Ctrl+Enter détecté - Confirmation...');
             confirmerCommande();
         }
         
@@ -2716,7 +2567,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Recalculer le total de la commande au chargement de la page
     // pour s'assurer que l'affichage correspond à la nouvelle logique de calcul
-    console.log('🚀 Initialisation: Recalcul du total de la commande...');
+
     mettreAJourTotalCommande();
     
     // Fonction alternative pour tester
@@ -2733,7 +2584,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         const articles = articlesContainer.querySelectorAll('.article-card');
-        console.log(`📦 ${articles.length} article(s) trouvé(s)`);
         
         let totalCalcule = 0;
         articles.forEach((article, index) => {
@@ -2746,24 +2596,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 const prix = getPrixUpsell(articleData, quantite);
                 const sousTotal = articleData.isUpsell ? prix : prix * quantite;
                 
-                console.log(`   Article ${index + 1}: ${articleData.nom}`);
-                console.log(`      - Quantité: ${quantite}`);
-                console.log(`      - Prix unitaire: ${articleData.prix_unitaire} DH`);
-                console.log(`      - Prix upsell 1: ${articleData.prix_upsell_1} DH`);
-                console.log(`      - Prix upsell 2: ${articleData.prix_upsell_2} DH`);
-                console.log(`      - Prix upsell 3: ${articleData.prix_upsell_3} DH`);
-                console.log(`      - Prix upsell 4: ${articleData.prix_upsell_4} DH`);
-                console.log(`      - isUpsell: ${articleData.isUpsell}`);
-                console.log(`      - Prix calculé: ${prix} DH`);
-                console.log(`      - Sous-total calculé: ${sousTotal} DH`);
-                console.log(`      - Sous-total affiché: ${sousTotalElement ? sousTotalElement.textContent : 'Non trouvé'}`);
-                
+  
                 totalCalcule += sousTotal;
             }
         });
         
-        console.log(`💰 Total calculé: ${totalCalcule.toFixed(2)} DH`);
-        
+  
         const totalElement = document.getElementById('total-commande');
         if (totalElement) {
             console.log(`📊 Total affiché avant recalcul: ${totalElement.textContent}`);
@@ -2777,10 +2615,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Essayer aussi la méthode alternative
-        console.log('\n🧮 Test de la méthode alternative...');
+       
         const totalAlternatif = recalculerTotalDepuisSousTotaux();
         
-        console.log('🔄 Recalcul forcé effectué avec les deux méthodes');
+      
     };
     
     console.log('💡 Fonction de debug disponible: debugTotalCommande()');
