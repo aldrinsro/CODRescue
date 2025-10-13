@@ -718,6 +718,8 @@
     window.urlModifier = urlModifier;
 </script>
 
+
+
 <script src="{% static 'js/operatConfirme/Confirmation_commande/Gestion_articles.js' %}">
 </script>
 
@@ -2982,97 +2984,6 @@ function getSectionName(sectionId) {
     return sectionNames[sectionId] || 'Section';
 }
 
-// Fonction pour modifier la quantité d'un article (avec boutons +/-)
-function modifierQuantite(panierId, delta) {
-    const input = document.getElementById(`quantite-${panierId}`);
-    if (input) {
-        const currentValue = parseInt(input.value) || 0;
-        const newValue = Math.max(1, currentValue + delta);
-        input.value = newValue;
-        modifierQuantiteDirecte(panierId, newValue);
-    }
-}
-
-// Fonction pour modifier directement la quantité d'un article
-function modifierQuantiteDirecte(panierId, nouvelleQuantite) {
-    const quantite = parseInt(nouvelleQuantite);
-    
-    // Validation
-    if (isNaN(quantite) || quantite < 1) {
-        // Restaurer la valeur précédente
-        const input = document.getElementById(`quantite-${panierId}`);
-        if (input) {
-            input.value = input.getAttribute('data-previous-value') || 1;
-        }
-        showToast('⚠️ La quantité doit être au moins de 1.', 'warning');
-        return;
-    }
-
-    // Sauvegarder la valeur précédente
-    const input = document.getElementById(`quantite-${panierId}`);
-    if (input) {
-        input.setAttribute('data-previous-value', input.value);
-    }
-
-    // Envoyer la modification au serveur
-    const formData = new FormData();
-    formData.append('action', 'update_quantity');
-    formData.append('panier_id', panierId);
-    formData.append('nouvelle_quantite', quantite);
-    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
-    if (csrfToken) formData.append('csrfmiddlewaretoken', csrfToken.value);
-    
-    fetch('{% url "operatConfirme:modifier_commande" commande.id %}', { 
-        method: 'POST', 
-        body: formData 
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
-            // Mettre à jour l'affichage du sous-total et du total
-            mettreAJourTotauxConfirmation(panierId, data);
-            showToast('✅ Quantité mise à jour', 'success');
-        } else {
-            // Restaurer la valeur précédente en cas d'erreur
-            if (input) {
-                input.value = input.getAttribute('data-previous-value') || 1;
-            }
-            showToast('❌ ' + (data.error || 'Impossible de modifier la quantité.'), 'error');
-        }
-    })
-    .catch(error => {
-        console.error('❌ Erreur:', error);
-        // Restaurer la valeur précédente en cas d'erreur
-        if (input) {
-            input.value = input.getAttribute('data-previous-value') || 1;
-        }
-        showToast('❌ Erreur de communication', 'error');
-    });
-}
-
-// Fonction pour mettre à jour les totaux en temps réel (utilisée lors des changements de quantité)
-function mettreAJourTotauxConfirmation(panierId, data) {
-    // Mettre à jour le sous-total de la ligne spécifique (seulement pour les changements de quantité)
-    if (data.sous_total !== undefined && panierId) {
-        const sousTotalElement = document.getElementById(`sous-total-${panierId}`);
-        if (sousTotalElement) {
-            sousTotalElement.textContent = `${parseFloat(data.sous_total).toFixed(2)} DH`;
-            console.log(`✅ Sous-total mis à jour pour article ${panierId}: ${parseFloat(data.sous_total).toFixed(2)} DH`);
-        }
-    }
-    
-    // Utiliser la fonction centralisée pour tous les autres totaux
-    mettreAJourTousLesTotaux(data);
-    
-    // Déclencher un événement personnalisé pour signaler la mise à jour
-    window.dispatchEvent(new CustomEvent('totauxMisAJour', { 
-        detail: { 
-            panierId: panierId,
-            data: data
-        }
-    }));
-}
-
 // Fonction pour vérifier si toutes les sections sont validées
 function checkAllSectionsValidated() {
     const allSections = document.querySelectorAll('.verification-item');
@@ -3420,86 +3331,6 @@ function rafraichirStockArticle(articleId) {
     });
 }
 
-function modifierArticle(panierId) {
-    console.log('🔧 Modification article demandée pour ID:', panierId);
-    
-    isEditingArticle = true;
-    currentArticleId = panierId;
-    
-    // Mettre à jour le titre
-    document.getElementById('articleModalTitle').textContent = 'Modifier l\'article';
-    
-    // Toujours afficher le champ de sélection pour permettre de changer l'article
-    document.getElementById('article-selection-field').classList.remove('hidden');
-    document.getElementById('article-display-field').classList.add('hidden');
-    
-    // Charger la liste des articles
-    chargerArticlesDisponibles();
-    
-    // Récupérer les données de l'article depuis la carte
-    const articleCard = document.querySelector(`[data-article-id="${panierId}"]`);
-    console.log('🔍 Article card trouvé:', articleCard ? 'OUI' : 'NON', articleCard);
-    
-    if (articleCard) {
-        // Récupérer la quantité avec vérification de sécurité
-        const quantiteElement = articleCard.querySelector('input[type="number"]');
-        if (quantiteElement && quantiteElement.value) {
-            document.getElementById('quantiteInput').value = quantiteElement.value;
-        } else {
-            document.getElementById('quantiteInput').value = '1'; // Valeur par défaut
-        }
-        
-        // Récupérer la référence de l'article pour le pré-sélectionner avec vérification de sécurité
-        const referenceElement = articleCard.querySelector('.text-sm.text-gray-500');
-        let reference = '';
-        if (referenceElement && referenceElement.textContent) {
-            const referenceText = referenceElement.textContent;
-            reference = referenceText.replace('Réf: ', '').replace('Référence: ', '').trim();
-        }
-        
-        // Récupérer les données complètes de l'article depuis le dataset
-        try {
-            const articleData = JSON.parse(articleCard.dataset.article || '{}');
-            console.log('📊 Données article récupérées:', articleData);
-            
-            // Afficher les informations de l'article avec les données complètes
-            if (articleData && articleData.id) {
-                afficherInfosArticle(articleData);
-                
-                // Rafraîchir les données de stock en temps réel
-                rafraichirStockArticle(articleData.id).then(articleMisAJour => {
-                    if (articleMisAJour) {
-                        // Mettre à jour les données de l'article dans le dataset
-                        articleData.qte_disponible = articleMisAJour.qte_disponible;
-                        articleCard.dataset.article = JSON.stringify(articleData);
-                    }
-                });
-            } else {
-                // Fallback à l'ancienne méthode si les données ne sont pas disponibles
-                afficherInfosArticleExistant(articleCard);
-            }
-        } catch (error) {
-            console.error('❌ Erreur lors de la récupération des données article:', error);
-            // Fallback à l'ancienne méthode
-            afficherInfosArticleExistant(articleCard);
-        }
-        
-        // Attendre que les articles soient chargés puis pré-sélectionner l'article actuel
-        setTimeout(() => {
-            preselectionnerArticle(reference);
-        }, 500);
-    }
-    
-    // Afficher la modale
-    const modal = document.getElementById('articleModal');
-    if (modal) {
-        modal.style.display = 'flex';
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
-    } else {
-        console.error('❌ Modale articleModal introuvable lors de la modification d\'article');
-    }
-}
 
 </script>
 

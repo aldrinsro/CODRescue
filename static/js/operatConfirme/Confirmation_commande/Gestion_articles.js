@@ -6,8 +6,11 @@
     let articlesDisponibles = [];
     let currentArticleId = null;
     let isEditingArticle = false;
+    
     let compteurCommande = commande.compteur ;
     let filtreActuel = 'all'; // Filtre actuellement actif
+
+   
 // Helpers globaux pour récupérer commandeId et urlModifier sans répétition
 function getCommandeId() {
     if (typeof window !== 'undefined' && window.commandeId) return window.commandeId;
@@ -2205,14 +2208,16 @@ function parseArticleData(dataArticleAttr, panierId) {
     }
 }
 
+// Variables globales pour la suppression
+window.currentPanierIdToDelete = null;
+
 // Fonction pour supprimer un article
 function supprimerArticle(panierId) {
     currentPanierIdToDelete = panierId; // Stocke l'ID du panier à supprimer
     showDeleteArticleModal();
 }
 
-// Variables globales pour la suppression
-let currentPanierIdToDelete = null;
+
 
 // Fonction pour afficher la modale de suppression d'article
 function showDeleteArticleModal() {
@@ -2595,13 +2600,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 const quantite = parseInt(quantiteElement.textContent);
                 const prix = getPrixUpsell(articleData, quantite);
                 const sousTotal = articleData.isUpsell ? prix : prix * quantite;
-                
-  
+    
                 totalCalcule += sousTotal;
             }
         });
         
-  
         const totalElement = document.getElementById('total-commande');
         if (totalElement) {
             console.log(`📊 Total affiché avant recalcul: ${totalElement.textContent}`);
@@ -2609,22 +2612,16 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Forcer le recalcul avec la méthode principale
         mettreAJourTotalCommande();
-        
         if (totalElement) {
             console.log(`📊 Total affiché après recalcul principal: ${totalElement.textContent}`);
         }
-        
         // Essayer aussi la méthode alternative
-       
-        const totalAlternatif = recalculerTotalDepuisSousTotaux();
-        
-      
+        const totalAlternatif = recalculerTotalDepuisSousTotaux();   
     };
     
     console.log('💡 Fonction de debug disponible: debugTotalCommande()');
 
 });
-
 
 
 // Fonction pour afficher les notifications toast
@@ -2661,4 +2658,97 @@ function showToast(message, type = 'info', duration = 3000) {
             }
         }, 300);
     }, duration);
+}
+
+// Fonction pour modifier la quantité d'un article (avec boutons +/-)
+function modifierQuantite(panierId, delta) {
+    const input = document.getElementById(`quantite-${panierId}`);
+    if (input) {
+        const currentValue = parseInt(input.value) || 0;
+        const newValue = Math.max(1, currentValue + delta);
+        input.value = newValue;
+        modifierQuantiteDirecte(panierId, newValue);
+    }
+}
+
+// Fonction pour modifier directement la quantité d'un article
+function modifierQuantiteDirecte(panierId, nouvelleQuantite) {
+    const quantite = parseInt(nouvelleQuantite);
+    
+    // Validation
+    if (isNaN(quantite) || quantite < 1) {
+        // Restaurer la valeur précédente
+        const input = document.getElementById(`quantite-${panierId}`);
+        if (input) {
+            input.value = input.getAttribute('data-previous-value') || 1;
+        }
+        showToast('⚠️ La quantité doit être au moins de 1.', 'warning');
+        return;
+    }
+
+    // Sauvegarder la valeur précédente
+    const input = document.getElementById(`quantite-${panierId}`);
+    if (input) {
+        input.setAttribute('data-previous-value', input.value);
+    }
+
+    // Envoyer la modification au serveur
+    const formData = new FormData();
+    formData.append('action', 'update_quantity');
+    formData.append('panier_id', panierId);
+    formData.append('nouvelle_quantite', quantite);
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (csrfToken) formData.append('csrfmiddlewaretoken', csrfToken.value);
+
+    const modifierArticle = getUrlModifier();
+    
+    fetch(modifierArticle, { 
+        method: 'POST', 
+        body: formData 
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            // Mettre à jour l'affichage du sous-total et du total
+            mettreAJourTotauxConfirmation(panierId, data);
+            showToast('✅ Quantité mise à jour', 'success');
+        } else {
+            // Restaurer la valeur précédente en cas d'erreur
+            if (input) {
+                input.value = input.getAttribute('data-previous-value') || 1;
+            }
+            showToast('❌ ' + (data.error || 'Impossible de modifier la quantité.'), 'error');
+        }
+    })
+    .catch(error => {
+        console.error('❌ Erreur:', error);
+        // Restaurer la valeur précédente en cas d'erreur
+        if (input) {
+            input.value = input.getAttribute('data-previous-value') || 1;
+        }
+        showToast('❌ Erreur de communication', 'error');
+    });
+}
+
+// Fonction pour mettre à jour les totaux en temps réel (utilisée lors des changements de quantité)
+function mettreAJourTotauxConfirmation(panierId, data) {
+    // Mettre à jour le sous-total de la ligne spécifique (seulement pour les changements de quantité)
+    if (data.sous_total !== undefined && panierId) {
+        const sousTotalElement = document.getElementById(`sous-total-${panierId}`);
+        if (sousTotalElement) {
+            sousTotalElement.textContent = `${parseFloat(data.sous_total).toFixed(2)} DH`;
+            console.log(`✅ Sous-total mis à jour pour article ${panierId}: ${parseFloat(data.sous_total).toFixed(2)} DH`);
+        }
+    }
+    
+    // Utiliser la fonction centralisée pour tous les autres totaux
+    mettreAJourTousLesTotaux(data);
+    
+    // Déclencher un événement personnalisé pour signaler la mise à jour
+    window.dispatchEvent(new CustomEvent('totauxMisAJour', { 
+        detail: { 
+            panierId: panierId,
+            data: data
+        }
+    }));
 }

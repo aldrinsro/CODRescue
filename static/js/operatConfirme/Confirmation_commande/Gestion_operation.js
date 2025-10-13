@@ -708,8 +708,6 @@ function rechargerOperationsDepuisBase() {
     });
 }
 
-
-
 // Fonction pour valider un type d'opération
 function validerTypeOperation(typeOperation) {
     const isValid = TYPES_OPERATIONS_VALIDES.includes(typeOperation);
