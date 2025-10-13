@@ -10,7 +10,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="main-content transition-all duration-300" id="mainContent">
+<div class="main-content transition-all duration-300" id="mainContent" data-commande-id="{{ commande.id }}">
     <!-- En-tête de la page -->
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 text-white p-6 rounded-xl shadow-lg" style="background: linear-gradient(to right, #4B352A, #6d4b3b);">
         <div>
@@ -710,7 +710,16 @@
 
 <script src="{% static 'js/operatConfirme/Confirmation_commande/Gestion_operation.js' %}"></script>
 
-<script src="{% static 'js/operatConfirme/Confirmation_commande/Gestion_articles.js' %}"></script>
+<script>
+    const commandeId = {{ commande.id }};
+    const urlModifier = `/operateur-confirme/commandes/${commandeId}/modifier/`;
+    // Exposer pour les scripts JS statiques
+    window.commandeId = commandeId;
+    window.urlModifier = urlModifier;
+</script>
+
+<script src="{% static 'js/operatConfirme/Confirmation_commande/Gestion_articles.js' %}">
+</script>
 
 <script>
 
@@ -2448,7 +2457,7 @@ function appliquerFiltreSelect(typeFiltre) {
                             <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${stock <= 0 ? 'bg-red-100 text-red-800' : (stock < 5 ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800')}">${stock <= 0 ? 'Épuisé' : stock + ' unités'}</span>
                         </td>
                         <td class="px-1 py-3 text-center">
-                            <button type="button" class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium transition-colors bg-purple-100 text-purple-700 hover:bg-purple-200" onclick="ajouterDepuisLigne(this)">🎨 Variantes</button>
+                            <button type="button" class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium transition-colors bg-purple-100 text-purple-700 hover:bg-purple-200" onclick="ajouterDepuisLigne(this)"> + Ajouter</button>
                         </td>`;
                     tableBody.appendChild(tr);
                 }
@@ -3611,8 +3620,6 @@ function saveLivraisonFromModal() {
     });
 }
 </script>
-
-
 
 
 <!-- Modal de Confirmation Tailwind -->

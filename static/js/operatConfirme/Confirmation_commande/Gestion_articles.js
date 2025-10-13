@@ -1,6 +1,5 @@
 
 
-
 // ================== GESTION DES ARTICLES ==================
 
  // Variables globales pour les articles
@@ -9,6 +8,26 @@
     let isEditingArticle = false;
     let compteurCommande = commande.compteur ;
     let filtreActuel = 'all'; // Filtre actuellement actif
+// Helpers globaux pour récupérer commandeId et urlModifier sans répétition
+function getCommandeId() {
+    if (typeof window !== 'undefined' && window.commandeId) return window.commandeId;
+    const root = document.getElementById('mainContent');
+    const id = root ? root.getAttribute('data-commande-id') : null;
+    if (id) {
+        window.commandeId = id;
+        return id;
+    }
+    return '';
+}
+
+function getUrlModifier() {
+    if (typeof window !== 'undefined' && window.urlModifier) return window.urlModifier;
+    const id = getCommandeId();
+    const url = `/operateur-confirme/commandes/${id}/modifier/`;
+    window.urlModifier = url;
+    return url;
+}
+    
 
 
 
@@ -621,7 +640,7 @@ function chargerArticlesDisponibles() {
                     </td>
                     <td class="px-1 py-3 text-center">
                         <button type="button" class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium transition-colors bg-purple-100 text-purple-700 hover:bg-purple-200" onclick="ajouterDepuisLigne(this)">
-                            🎨 Variantes
+                            🎨 Ajouter
                         </button>
                     </td>
                 `;
@@ -1806,8 +1825,11 @@ function saveArticle() {
     if(isEditingArticle) {
         body.append('panier_id', currentArticleId); // currentArticleId est l'ID du *panier*
     }
+    // Utiliser l'URL fournie par le template dans modifier_commande.html
+    // Utiliser l'URL globale (fallback via data-attribute)
+    const modifierArticle = getUrlModifier();
 
-    fetch('{% url "operatConfirme:modifier_commande" commande.id %}', {
+    fetch(modifierArticle, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
@@ -1856,7 +1878,8 @@ function rafraichirSectionArticles() {
     
     container.innerHTML = '<div class="text-center p-8"><i class="fas fa-spinner fa-spin text-2xl text-gray-500"></i><p class="mt-2">Rafraîchissement en cours...</p></div>';
 
-    fetch(`{% url 'operatConfirme:api_rafraichir_articles' commande.id %}`)
+    // Construire l'URL avec l'ID de commande exposé par le template dans window.commandeId
+    fetch(`/operateur-confirme/api/commande/${(typeof window !== 'undefined' && window.commandeId) ? window.commandeId : ''}/rafraichir-articles/`)
         .then(response => {
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -2287,8 +2310,9 @@ function hideDeleteArticleModal() {
 function proceedWithArticleDeletion() {
     if (currentPanierIdToDelete) {
         const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-
-        fetch('{% url "operatConfirme:modifier_commande" commande.id %}', {
+        const modifierArticle = getUrlModifier();
+       
+        fetch(modifierArticle, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
@@ -2515,9 +2539,11 @@ function sauvegarderNouvelArticle(article, quantite) {
     formData.append('article_id', article.id);
     formData.append('quantite', quantite);
     formData.append('commande_id', '{{ commande.id }}');
+
+    const modifierArticle = getUrlModifier();
         
     // Envoyer via AJAX
-    fetch('{% url "operatConfirme:modifier_commande" commande.id %}', {
+    fetch(modifierArticle, {
             method: 'POST',
             body: formData,
             headers: {
@@ -2576,9 +2602,11 @@ function sauvegarderRemplacementArticle(ancienArticleId, nouvelArticle, nouvelle
     formData.append('nouvel_article_id', nouvelArticle.id);
     formData.append('nouvelle_quantite', nouvelleQuantite);
     formData.append('commande_id', '{{ commande.id }}');
+
+        const modifierArticle = getUrlModifier();
     
     // Envoyer via AJAX
-    fetch('{% url "operatConfirme:modifier_commande" commande.id %}', {
+    fetch(modifierArticle, {
         method: 'POST',
         body: formData,
         headers: {
@@ -2759,3 +2787,40 @@ document.addEventListener('DOMContentLoaded', function() {
 
 });
 
+
+
+// Fonction pour afficher les notifications toast
+function showToast(message, type = 'info', duration = 3000) {
+    // Créer l'élément toast
+    const toast = document.createElement('div');
+    toast.className = `fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-lg text-white font-medium transition-all duration-300 transform translate-x-full`;
+    
+    // Définir les couleurs selon le type
+    const colors = {
+        'success': 'bg-green-600',
+        'error': 'bg-red-600',
+        'warning': 'bg-yellow-600',
+        'info': 'bg-blue-600'
+    };
+    
+    toast.classList.add(colors[type] || colors['info']);
+    toast.innerHTML = message;
+    
+    // Ajouter au DOM
+    document.body.appendChild(toast);
+    
+    // Animation d'entrée
+    setTimeout(() => {
+        toast.classList.remove('translate-x-full');
+    }, 100);
+    
+    // Animation de sortie et suppression
+    setTimeout(() => {
+        toast.classList.add('translate-x-full');
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 300);
+    }, duration);
+}
