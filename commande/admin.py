@@ -70,7 +70,7 @@ class CommandeAdmin(admin.ModelAdmin):
 
 @admin.register(Panier)
 class PanierAdmin(admin.ModelAdmin):
-    list_display = ('commande', 'article', 'quantite', 'sous_total')
+    list_display = ('commande', 'article','prix_panier' ,'quantite', 'sous_total')
     list_filter = ('commande__date_cmd',)
     search_fields = ('commande__num_cmd', 'article__nom')
     ordering = ('-commande__date_cmd',)

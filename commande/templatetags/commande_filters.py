@@ -171,8 +171,49 @@ def calculer_sous_total_avec_compteur(panier, compteur):
     Seuls les articles avec isUpsell=True utilisent les prix upsell selon le niveau.
     Les autres articles gardent leur prix normal.
     """
-    prix = get_prix_upsell_avec_compteur(panier.article, compteur)
-    return prix * panier.quantite if prix is not None else 0
+    # Si le panier possède un prix unitaire explicite, l'utiliser en priorité
+    try:
+        prix_panier = getattr(panier, 'prix_panier', None)
+    except Exception:
+        prix_panier = None
+
+    if prix_panier is not None and prix_panier != 0:
+        return float(prix_panier) * float(panier.quantite)
+
+    # Sinon, fallback vers la logique upsell basée sur l'article/compteur
+    prix_calcule = get_prix_upsell_avec_compteur(panier.article, compteur)
+    return float(prix_calcule) * float(panier.quantite) if prix_calcule is not None else 0
+
+@register.filter
+def get_prix_unitaire_effectif_panier(panier, compteur=None):
+    """
+    Retourne le prix unitaire effectif d'un panier.
+    Priorité à panier.prix_panier s'il est renseigné, sinon applique la logique upsell.
+    Le paramètre compteur est optionnel (utile pour les articles upsell).
+    """
+    try:
+        prix_panier = getattr(panier, 'prix_panier', None)
+    except Exception:
+        prix_panier = None
+
+    if prix_panier is not None and prix_panier != 0:
+        return float(prix_panier)
+
+    # Fallback: utiliser la logique upsell/standard
+    if compteur is not None:
+        return get_prix_upsell_avec_compteur(panier.article, compteur)
+    else:
+        # Sans compteur, retourner le prix courant de l'article
+        article = panier.article
+        return article.prix_actuel if article.prix_actuel is not None else article.prix_unitaire
+
+@register.filter
+def calculer_prix_panier_avec_upsell(article, compteur):
+    """
+    Calcule le prix_panier en appliquant la logique upsell complète.
+    Utilise le compteur pour déterminer le bon prix upsell.
+    """
+    return get_prix_upsell_avec_compteur(article, compteur)
 
 @register.filter
 def calculer_sous_total_upsell(article, quantite):

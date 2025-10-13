@@ -1602,10 +1602,7 @@ def modifier_commande(request, commande_id):
     
     # Récupérer la commande
     commande = get_object_or_404(Commande, id=commande_id)
-    
-    # Corriger automatiquement les paniers d'articles en liquidation et en promotion
-    commande.corriger_paniers_liquidation_et_promotion()
-    
+        
     # Vérifier que la commande est affectée à cet opérateur
     etat_actuel = commande.etats.filter(
         operateur=operateur,
@@ -1710,11 +1707,17 @@ def modifier_commande(request, commande_id):
                         else:
                             variante_obj = None
 
+                        # Calculer le prix_panier initial avec la logique upsell
+                        from commande.templatetags.commande_filters import get_prix_upsell_avec_compteur
+                        prix_panier_initial = get_prix_upsell_avec_compteur(article, commande.compteur)
+                        sous_total_initial = float(prix_panier_initial * quantite)
+                        
                         panier = Panier.objects.create(
                             commande=commande,
                             article=article,
                             quantite=quantite,
-                            sous_total=0,  # Sera recalculé après
+                            prix_panier=float(prix_panier_initial),
+                            sous_total=sous_total_initial,
                             variante=variante_obj
                         )
                         print(f"➕ Nouvel article ajouté: ID={article.id}, quantité={quantite}")
@@ -1740,10 +1743,12 @@ def modifier_commande(request, commande_id):
                         # Recalculer TOUS les articles de la commande avec le nouveau compteur
                         commande.recalculer_totaux_upsell()
                     else:
-                        # Pour les articles normaux, juste calculer le sous-total
+                        # Pour les articles normaux, calculer le prix avec la logique upsell
                         from commande.templatetags.commande_filters import get_prix_upsell_avec_compteur
                         prix_unitaire = get_prix_upsell_avec_compteur(article, commande.compteur)
-                        sous_total = prix_unitaire * panier.quantite
+                        prix_panier = prix_unitaire
+                        sous_total = prix_panier * panier.quantite
+                        panier.prix_panier = float(prix_panier)
                         panier.sous_total = float(sous_total)
                         panier.save()
                     
@@ -1775,89 +1780,6 @@ def modifier_commande(request, commande_id):
                         'error': str(e)
                     })
             
-            elif action == 'replace_article':
-                # Remplacer un article existant
-                from article.models import Article
-                from commande.models import Panier
-                
-                ancien_article_id = request.POST.get('ancien_article_id')
-                nouvel_article_id = request.POST.get('nouvel_article_id')
-                nouvelle_quantite = int(request.POST.get('nouvelle_quantite', 1))
-                
-                try:
-                    # Supprimer l'ancien panier et décrémenter le compteur
-                    ancien_panier = Panier.objects.get(id=ancien_article_id, commande=commande)
-                    ancien_article = ancien_panier.article
-                    
-                    # Sauvegarder les infos avant suppression
-                    ancien_etait_upsell = ancien_article.isUpsell
-                    
-                    # Supprimer l'ancien panier
-                    ancien_panier.delete()
-                    
-                    # Créer le nouveau panier
-                    nouvel_article = Article.objects.get(id=nouvel_article_id)
-                    
-                    # Recalculer le compteur après remplacement
-                    from django.db.models import Sum
-                    total_quantite_upsell = commande.paniers.filter(article__isUpsell=True).aggregate(
-                        total=Sum('quantite')
-                    )['total'] or 0
-                    
-                    # Ajouter la quantité si le nouvel article est upsell
-                    if nouvel_article.isUpsell:
-                        total_quantite_upsell += nouvelle_quantite
-                    
-                    # Appliquer la logique : compteur = max(0, total_quantite_upsell - 1)
-                    if total_quantite_upsell >= 2:
-                        commande.compteur = total_quantite_upsell - 1
-                    else:
-                        commande.compteur = 0
-                    
-                    commande.save()
-                    
-                    # Recalculer TOUS les articles de la commande avec le nouveau compteur
-                    commande.recalculer_totaux_upsell()
-                    
-                    # Calculer le sous-total selon le compteur de la commande
-                    from commande.templatetags.commande_filters import get_prix_upsell_avec_compteur
-                    prix_unitaire = get_prix_upsell_avec_compteur(nouvel_article, commande.compteur)
-                    sous_total = prix_unitaire * nouvelle_quantite
-                    
-                    nouveau_panier = Panier.objects.create(
-                        commande=commande,
-                        article=nouvel_article,
-                        quantite=nouvelle_quantite,
-                        sous_total=float(sous_total)
-                    )
-                    
-                    # Recalculer le total de la commande avec les frais de livraison
-                    commande.recalculer_total_avec_frais()
-                    
-                    return JsonResponse({
-                        'success': True,
-                        'message': 'Article remplacé avec succès',
-                        'nouvel_article_id': nouveau_panier.id,
-                        'total_commande': float(commande.total_cmd),
-                        'nb_articles': commande.paniers.count(),
-                        'compteur': commande.compteur
-                    })
-                    
-                except Panier.DoesNotExist:
-                    return JsonResponse({
-                        'success': False,
-                        'error': 'Article original non trouvé'
-                    })
-                except Article.DoesNotExist:
-                    return JsonResponse({
-                        'success': False,
-                        'error': 'Nouvel article non trouvé'
-                    })
-                except Exception as e:
-                    return JsonResponse({
-                        'success': False,
-                        'error': str(e)
-                    })
             
             elif action == 'delete_panier':
                 # Supprimer un article
@@ -1945,43 +1867,36 @@ def modifier_commande(request, commande_id):
                     ancienne_quantite = panier.quantite
                     etait_upsell = panier.article.isUpsell
                     
-                    # Vérifier si une remise a été appliquée sur ce panier
-                    if hasattr(panier, 'remise_appliquer') and panier.remise_appliquer:
-                        # Une remise a été appliquée - préserver le prix unitaire remisé
-                        prix_unitaire_remise = float(panier.sous_total) / ancienne_quantite if ancienne_quantite > 0 else 0
-                        panier.quantite = nouvelle_quantite
-                        panier.sous_total = float(prix_unitaire_remise * nouvelle_quantite)
-                        panier.save()
-                        print(f"💰 DEBUG: Remise préservée lors du changement de quantité - Prix unitaire remisé: {prix_unitaire_remise}, Nouveau sous-total: {panier.sous_total}")
-                    else:
-                        # Aucune remise appliquée - utiliser la logique normale
-                        panier.quantite = nouvelle_quantite
-                        panier.save()
+                   
+                     # Aucune remise appliquée - utiliser la logique normale
+                    panier.quantite = nouvelle_quantite
+                    panier.save()
                         
                         # Recalculer le compteur si c'était un article upsell
-                        if etait_upsell:
+                    if etait_upsell:
                             # Compter la quantité totale d'articles upsell (après modification)
-                            from django.db.models import Sum
-                            total_quantite_upsell = commande.paniers.filter(article__isUpsell=True).aggregate(
-                                total=Sum('quantite')
-                            )['total'] or 0
+                        from django.db.models import Sum
+                        total_quantite_upsell = commande.paniers.filter(article__isUpsell=True).aggregate(
+                            total=Sum('quantite')
+                        )['total'] or 0
                             
                             # Le compteur ne s'incrémente qu'à partir de 2 unités d'articles upsell
-                            if total_quantite_upsell >= 2:
-                                commande.compteur = total_quantite_upsell - 1
-                            else:
-                                commande.compteur = 0
+                        if total_quantite_upsell >= 2:
+                            commande.compteur = total_quantite_upsell - 1
+                        else:
+                            commande.compteur = 0
                             
-                            commande.save()
+                        commande.save()
                             
                             # Recalculer TOUS les articles de la commande avec le nouveau compteur
-                            commande.recalculer_totaux_upsell()
-                        else:
-                            # Pour les articles normaux, juste recalculer le sous-total
-                            from commande.templatetags.commande_filters import get_prix_upsell_avec_compteur
-                            prix_unitaire = get_prix_upsell_avec_compteur(panier.article, commande.compteur)
-                            panier.sous_total = float(prix_unitaire * nouvelle_quantite)
-                            panier.save()
+                        commande.recalculer_totaux_upsell()
+                    else:
+                            # Pour les articles normaux, recalculer avec la logique upsell
+                        from commande.templatetags.commande_filters import get_prix_upsell_avec_compteur
+                        prix_unitaire = get_prix_upsell_avec_compteur(panier.article, commande.compteur)
+                        panier.prix_panier = float(prix_unitaire)
+                        panier.sous_total = float(panier.prix_panier * nouvelle_quantite)
+                        panier.save()
                     
                     # Recalculer le total de la commande avec les frais de livraison
                     commande.recalculer_total_avec_frais()
@@ -2258,89 +2173,7 @@ def modifier_commande(request, commande_id):
                     print(traceback.format_exc())
                     return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
-            elif action == 'replace_article':
-                # Remplacer un article existant
-                from article.models import Article
-                from commande.models import Panier
-                
-                ancien_article_id = request.POST.get('ancien_article_id')
-                nouvel_article_id = request.POST.get('nouvel_article_id')
-                nouvelle_quantite = int(request.POST.get('nouvelle_quantite', 1))
-                
-                try:
-                    # Supprimer l'ancien panier et décrémenter le compteur
-                    ancien_panier = Panier.objects.get(id=ancien_article_id, commande=commande)
-                    ancien_article = ancien_panier.article
-                    
-                    # Sauvegarder les infos avant suppression
-                    ancien_etait_upsell = ancien_article.isUpsell
-                    
-                    # Supprimer l'ancien panier
-                    ancien_panier.delete()
-                    
-                    # Créer le nouveau panier
-                    nouvel_article = Article.objects.get(id=nouvel_article_id)
-                    
-                    # Recalculer le compteur après remplacement
-                    from django.db.models import Sum
-                    total_quantite_upsell = commande.paniers.filter(article__isUpsell=True).aggregate(
-                        total=Sum('quantite')
-                    )['total'] or 0
-                    
-                    # Ajouter la quantité si le nouvel article est upsell
-                    if nouvel_article.isUpsell:
-                        total_quantite_upsell += nouvelle_quantite
-                    
-                    # Appliquer la logique : compteur = max(0, total_quantite_upsell - 1)
-                    if total_quantite_upsell >= 2:
-                        commande.compteur = total_quantite_upsell - 1
-                    else:
-                        commande.compteur = 0
-                    
-                    commande.save()
-                    
-                    # Recalculer TOUS les articles de la commande avec le nouveau compteur
-                    commande.recalculer_totaux_upsell()
-                    
-                    # Calculer le sous-total selon le compteur de la commande
-                    from commande.templatetags.commande_filters import get_prix_upsell_avec_compteur
-                    prix_unitaire = get_prix_upsell_avec_compteur(nouvel_article, commande.compteur)
-                    sous_total = prix_unitaire * nouvelle_quantite
-                    
-                    nouveau_panier = Panier.objects.create(
-                        commande=commande,
-                        article=nouvel_article,
-                        quantite=nouvelle_quantite,
-                        sous_total=float(sous_total)
-                    )
-                    
-                    # Recalculer le total de la commande avec les frais de livraison
-                    commande.recalculer_total_avec_frais()
-                    
-                    return JsonResponse({
-                        'success': True,
-                        'message': 'Article remplacé avec succès',
-                        'nouvel_article_id': nouveau_panier.id,
-                        'total_commande': float(commande.total_cmd),
-                        'nb_articles': commande.paniers.count(),
-                        'compteur': commande.compteur
-                    })
-                    
-                except Panier.DoesNotExist:
-                    return JsonResponse({
-                        'success': False,
-                        'error': 'Article original non trouvé'
-                    })
-                except Article.DoesNotExist:
-                    return JsonResponse({
-                        'success': False,
-                        'error': 'Nouvel article non trouvé'
-                    })
-                except Exception as e:
-                    return JsonResponse({
-                        'success': False,
-                        'error': str(e)
-                    })
+
             
             # ================ TRAITEMENT NORMAL DU FORMULAIRE ================
             
@@ -2402,9 +2235,12 @@ def modifier_commande(request, commande_id):
                                     panier.quantite = nouvelle_quantite
                                     panier.sous_total = float(prix_unitaire_remise * nouvelle_quantite)
                                 else:
-                                    # Logique normale sans remise
+                                    # Logique normale avec upsell
+                                    from commande.templatetags.commande_filters import get_prix_upsell_avec_compteur
+                                    prix_unitaire = get_prix_upsell_avec_compteur(panier.article, commande.compteur)
                                     panier.quantite = nouvelle_quantite
-                                    panier.sous_total = float(panier.article.prix_unitaire * nouvelle_quantite)
+                                    panier.prix_panier = float(prix_unitaire)
+                                    panier.sous_total = float(prix_unitaire * nouvelle_quantite)
                                 panier.save()
                         except (Panier.DoesNotExist, ValueError):
                             continue
@@ -2423,11 +2259,15 @@ def modifier_commande(request, commande_id):
                             article = Article.objects.get(id=article_id)
                             quantite = int(quantites_nouveaux[i])
                             if quantite > 0:
-                                sous_total = float(article.prix_unitaire * quantite)
+                                # Utiliser la logique upsell pour calculer le prix_panier
+                                from commande.templatetags.commande_filters import get_prix_upsell_avec_compteur
+                                prix_panier = get_prix_upsell_avec_compteur(article, commande.compteur)
+                                sous_total = float(prix_panier * quantite)
                                 Panier.objects.create(
                                     commande=commande,
                                     article=article,
                                     quantite=quantite,
+                                    prix_panier=float(prix_panier),
                                     sous_total=sous_total
                                 )
                         except (Article.DoesNotExist, ValueError):
@@ -2853,6 +2693,7 @@ def creer_commande(request):
                                     article=article,
                                     variante=variante,
                                     quantite=quantite,
+                                    prix_panier=float(prix_a_utiliser),
                                     sous_total=float(sous_total)
                                 )
                                 
@@ -3333,66 +3174,5 @@ def get_article_variants(request, article_id):
         }, status=500)
 
 
-
-
-
-@login_required
-def corriger_remises_liquidation_et_promotion(request):
-    """
-    Fonction utilitaire pour corriger les paniers d'articles en liquidation et en promotion
-    qui auraient remise_appliquer = True (ce qui ne devrait pas arriver)
-    """
-    if request.method == 'POST' and request.user.is_staff:
-        from commande.models import Panier
-        from django.db.models import Q
-        
-        # Corriger les paniers d'articles en liquidation
-        paniers_liquidation = Panier.objects.filter(
-            article__phase='LIQUIDATION',
-            remise_appliquer=True
-        )
-        
-        # Corriger les paniers d'articles en promotion
-        # Utiliser une requête Django pour identifier les articles avec promotions actives
-        from django.utils import timezone
-        now = timezone.now()
-        
-        paniers_promotion = Panier.objects.filter(
-            article__promotions__active=True,
-            article__promotions__date_debut__lte=now,
-            article__promotions__date_fin__gte=now,
-            remise_appliquer=True
-        ).distinct()
-        
-        count_liquidation = paniers_liquidation.count()
-        count_promotion = paniers_promotion.count()
-        total_count = count_liquidation + count_promotion
-        
-        if total_count > 0:
-            # Corriger les paniers de liquidation (requête bulk)
-            paniers_liquidation.update(
-                remise_appliquer=False,
-                type_remise_appliquee=''
-            )
-            
-            # Corriger les paniers de promotion (requête bulk)
-            paniers_promotion.update(
-                remise_appliquer=False,
-                type_remise_appliquee=''
-            )
-            
-            print(f"✅ Correction effectuée: {count_liquidation} paniers liquidation + {count_promotion} paniers promotion remis à remise_appliquer=False")
-            
-            return JsonResponse({
-                'success': True,
-                'message': f'{count_liquidation} paniers d\'articles en liquidation et {count_promotion} paniers d\'articles en promotion corrigés'
-            })
-        else:
-            return JsonResponse({
-                'success': True,
-                'message': 'Aucun panier d\'article en liquidation ou promotion avec remise_appliquer=True trouvé'
-            })
-    
-    return JsonResponse({'success': False, 'message': 'Non autorisé'})
 
 

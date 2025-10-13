@@ -47,15 +47,11 @@ urlpatterns = [
     path('rechercher-client-telephone/', views.rechercher_client_telephone, name='rechercher_client_telephone'),
     path('api/recherche-article-ref/', views.api_recherche_article_ref, name='api_recherche_article_ref'),
     path('get-article-variants/<int:article_id>/', views.get_article_variants, name='get_article_variants'),
- 
-    path('api/corriger-remises-liquidation-promotion/', views.corriger_remises_liquidation_et_promotion, name='corriger_remises_liquidation_et_promotion'),
-    
+  
     # URLs pour la recherche globale
     path('recherche-globale/', search_views.global_search_view, name='global_search'),
     path('recherche-globale/api/', search_views.global_search_api, name='global_search_api'),
     path('recherche-globale/suggestions/', search_views.search_suggestions_api, name='search_suggestions_api'),
-    
-
     
     # Notifications supprimées
 ] 
