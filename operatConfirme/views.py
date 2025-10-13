@@ -2542,6 +2542,9 @@ def api_commentaires_disponibles(request):
         # Récupérer les choix de commentaires depuis le modèle
         commentaires_choices = Operation.Type_Commentaire_CHOICES
         
+        print(f"🔍 DEBUG: Type_Commentaire_CHOICES récupéré: {commentaires_choices}")
+        print(f"📊 DEBUG: Nombre de choix: {len(commentaires_choices)}")
+        
         # Convertir en format utilisable par le frontend
         commentaires_data = {
             'APPEL': [],
@@ -2562,12 +2565,20 @@ def api_commentaires_disponibles(request):
             for type_operation in commentaires_data.keys():
                 commentaires_data[type_operation].append(commentaire_item)
         
+        print(f"✅ DEBUG: Commentaires formatés: {commentaires_data}")
+        print(f"📝 DEBUG: Nombre de commentaires par type:")
+        for type_op, comments in commentaires_data.items():
+            print(f"   - {type_op}: {len(comments)} commentaires")
+        
         return JsonResponse({
             'success': True,
             'commentaires': commentaires_data
         })
     
     return JsonResponse({'error': 'Méthode non autorisée'}, status=405)
+
+
+
 
 @login_required
 def creer_commande(request):

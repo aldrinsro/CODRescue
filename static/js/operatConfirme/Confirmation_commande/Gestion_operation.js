@@ -1,52 +1,30 @@
-// Fonction pour charger automatiquement la région, les frais et les délais
-function chargerRegionEtFrais() {
-    const villeSelect = document.getElementById('ville-select');
-    const selectedOption = villeSelect.options[villeSelect.selectedIndex];
-    
-    if (selectedOption.value) {
-        const region = selectedOption.getAttribute('data-region');
-        const frais = selectedOption.getAttribute('data-frais');
-        const delaiMin = selectedOption.getAttribute('data-delai-min');
-        const delaiMax = selectedOption.getAttribute('data-delai-max');
-        
-        document.getElementById('region-display').value = region;
-        document.getElementById('frais-display').value = frais + ' DH';
-        document.getElementById('delai-display').value = delaiMin + ' - ' + delaiMax + ' jours';
-        
-        // Mettre à jour l'affichage des frais et recalculer le total
-        mettreAJourAffichageFraisResume();
-        mettreAJourTotalCommande();
-        
-        console.log(`🏙️ Ville changée: ${selectedOption.text}, Frais: ${frais} DH, Région: ${region}, Délai: ${delaiMin}-${delaiMax} jours`);
-    } else {
-        // Réinitialiser les champs si aucune ville n'est sélectionnée
-        document.getElementById('region-display').value = '';
-        document.getElementById('frais-display').value = '';
-        document.getElementById('delai-display').value = '';
-        
-        // Mettre à jour l'affichage des frais et recalculer le total
-        mettreAJourAffichageFraisResume();
-        mettreAJourTotalCommande();
-    }
-}
-
-// Fonction pour vérifier une section
-function verifierSection(section) {
-    const sectionElement = document.querySelector(`[onclick="verifierSection('${section}')"]`).closest('.verification-item');
-    sectionElement.classList.add('verified');
-}
-
-// Fonction pour vérifier toutes les sections
-function verifierTout() {
-    const sections = document.querySelectorAll('.verification-item');
-    sections.forEach(section => {
-        section.classList.add('verified');
-    });
-}
 
 // Variables globales pour la modale
 let currentOperationType = '';
 let currentOperationName = '';
+
+// Helpers globaux pour récupérer commandeId et urlModifier sans répétition
+function getCommandeId() {
+    if (typeof window !== 'undefined' && window.commandeId) return window.commandeId;
+    const root = document.getElementById('mainContent');
+    const id = root ? root.getAttribute('data-commande-id') : null;
+    if (id) {
+        window.commandeId = id;
+        return id;
+    }
+    return '';
+}
+
+function geturlcommentaire() {
+    if (typeof window !== 'undefined' && window.urlModifier) return window.urlModifier;
+    const id = getCommandeId();
+    const url = `/operateur-confirme/api/commandes/${id}/operations/`;  
+    window.urlModifier = url;
+    return url;
+}
+    
+
+
 
 // Fonction pour ouvrir la modale de commentaire
 function openCommentModal(operationType, operationName) {
@@ -581,29 +559,78 @@ let COMMENTAIRES_PREDEFINIES = {};
 // Charger les commentaires depuis l'API Django au démarrage
 function chargerCommentairesDisponibles() {
     console.log('🔄 Chargement des commentaires depuis l\'API Django...');
+
+    // Utiliser l'URL absolue pour éviter les problèmes de template
+    const api_commentaire = '/operateur-confirme/api/commentaires-disponibles/';
+    console.log('📡 URL de l\'API:', api_commentaire);
     
-    fetch('{% url "operatConfirme:api_commentaires_disponibles" %}')
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                COMMENTAIRES_PREDEFINIES = data.commentaires;
-                console.log('✅ Commentaires chargés depuis la base de données:', COMMENTAIRES_PREDEFINIES);
-                
-                // Afficher le nombre de commentaires par type d'opération
-                Object.keys(COMMENTAIRES_PREDEFINIES).forEach(type => {
-                    console.log(`📝 ${type}: ${COMMENTAIRES_PREDEFINIES[type].length} commentaires disponibles`);
-                });
+    // Ajouter le token CSRF si disponible
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+    const headers = {
+        'X-Requested-With': 'XMLHttpRequest',
+    };
+    
+    if (csrfToken) {
+        headers['X-CSRFToken'] = csrfToken.value;
+        console.log('🔐 Token CSRF ajouté');
+    } else {
+        console.warn('⚠️ Token CSRF non trouvé');
+    }
+    
+    fetch(api_commentaire, {
+        method: 'GET',
+        headers: headers,
+        credentials: 'same-origin'
+    })
+    .then(response => {
+        console.log('📡 Statut de la réponse:', response.status, response.statusText);
+        console.log('📋 Headers de réponse:', Object.fromEntries(response.headers.entries()));
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        return response.json();
+    })
+    .then(data => {
+        console.log('📬 Données reçues de l\'API:', data);
+        
+        if (data.success) {
+            COMMENTAIRES_PREDEFINIES = data.commentaires;
+            console.log('✅ Commentaires chargés depuis la base de données:', COMMENTAIRES_PREDEFINIES);
+            
+            // Afficher le nombre de commentaires par type d'opération
+            Object.keys(COMMENTAIRES_PREDEFINIES).forEach(type => {
+                console.log(`📝 ${type}: ${COMMENTAIRES_PREDEFINIES[type].length} commentaires disponibles`);
+            });
+            
+            // Vérifier que les commentaires sont bien chargés
+            const totalCommentaires = Object.values(COMMENTAIRES_PREDEFINIES).reduce((total, arr) => total + arr.length, 0);
+            if (totalCommentaires === 0) {
+                console.warn('⚠️ Aucun commentaire chargé - problème possible avec l\'API');
             } else {
-                console.error('❌ Erreur lors du chargement des commentaires:', data.error);
-                // Utiliser un fallback en cas d'erreur
-                utiliserCommentairesFallback();
+                console.log(`✅ Total: ${totalCommentaires} commentaires chargés avec succès`);
             }
-        })
-        .catch(error => {
-            console.error('❌ Erreur de connexion à l\'API commentaires:', error);
-            // Utiliser un fallback en cas d'erreur
-            utiliserCommentairesFallback();
-        });
+        } else {
+            console.error('❌ Erreur lors du chargement des commentaires:', data.error);
+            console.error('❌ Détails de l\'erreur API:', data);
+            // Ne pas utiliser les fallbacks - forcer le rechargement
+            console.log('🔄 Tentative de rechargement des commentaires...');
+            setTimeout(() => {
+                chargerCommentairesDisponibles();
+            }, 2000);
+        }
+    })
+    .catch(error => {
+        console.error('❌ Erreur de connexion à l\'API commentaires:', error);
+        console.error('❌ Détails de l\'erreur:', error);
+        console.error('❌ Stack trace:', error.stack);
+        // Ne pas utiliser les fallbacks - forcer le rechargement
+        console.log('🔄 Tentative de rechargement des commentaires...');
+        setTimeout(() => {
+            chargerCommentairesDisponibles();
+        }, 2000);
+    });
 }
 
 // Fonction de fallback en cas d'erreur de chargement des commentaires
@@ -632,9 +659,14 @@ function utiliserCommentairesFallback() {
 function rechargerOperationsDepuisBase() {
     console.log('🔄 DEBUG: Rechargement des opérations depuis la base de données...');
     console.log(`📊 DEBUG: État actuel du tableau: ${operationsTable.length} opération(s)`);
-    
+
+    // Utiliser l'API des opérations, pas celle des commentaires
+    const commandeId = getCommandeId();
+    const api = `/operateur-confirme/api/commandes/${commandeId}/operations/`;
+
+   
     // Faire une requête AJAX pour récupérer les opérations mises à jour
-    fetch(`{% url 'operatConfirme:api_operations_commande' commande.id %}`, {
+    fetch(api, {
         method: 'GET',
         headers: {
             'X-Requested-With': 'XMLHttpRequest',
@@ -718,9 +750,30 @@ function validerTypeOperation(typeOperation) {
     return isValid;
 }
 
+// Fonction pour vérifier que les commentaires sont chargés
+function verifierCommentairesCharges() {
+    const commentairesVides = Object.keys(COMMENTAIRES_PREDEFINIES).length === 0 || 
+                             Object.values(COMMENTAIRES_PREDEFINIES).every(arr => arr.length === 0);
+    
+    if (commentairesVides) {
+        console.warn('⚠️ Aucun commentaire chargé depuis l\'API - tentative de rechargement...');
+        chargerCommentairesDisponibles();
+        return false;
+    }
+    return true;
+}
+
 // Fonction pour remplir la liste déroulante de commentaires selon le type d'opération
 function remplirListeCommentaires(typeOperation) {
     const select = document.getElementById('commentSelect');
+    
+    // Vérifier que les commentaires sont chargés
+    if (!verifierCommentairesCharges()) {
+        console.log('🔄 Commentaires en cours de chargement...');
+        // Réessayer après un délai
+        setTimeout(() => remplirListeCommentaires(typeOperation), 1000);
+        return;
+    }
     
     // Réinitialiser la liste
     select.innerHTML = '<option value="">-- Sélectionnez une conclusion --</option>';
@@ -737,6 +790,7 @@ function remplirListeCommentaires(typeOperation) {
     }
     
     console.log(`📝 Remplissage commentaires pour: ${typeOperationKey}`);
+    console.log(`📊 Commentaires disponibles:`, COMMENTAIRES_PREDEFINIES);
     
     // Remplir avec les commentaires prédéfinis depuis l'API
     const commentaires = COMMENTAIRES_PREDEFINIES[typeOperationKey];
@@ -752,12 +806,11 @@ function remplirListeCommentaires(typeOperation) {
         console.log(`✅ ${commentaires.length} commentaires ajoutés pour ${typeOperationKey}`);
     } else {
         console.warn(`⚠️ Aucun commentaire prédéfini trouvé pour: ${typeOperationKey}`);
+        console.warn(`⚠️ Commentaires disponibles:`, Object.keys(COMMENTAIRES_PREDEFINIES));
         
-        // Ajouter une option générique si aucun commentaire prédéfini
-        const option = document.createElement('option');
-        option.value = 'Opération effectuée avec succès';
-        option.textContent = 'Opération effectuée avec succès';
-        select.appendChild(option);
+        // Essayer de recharger les commentaires
+        console.log('🔄 Tentative de rechargement des commentaires...');
+        chargerCommentairesDisponibles();
     }
 }
 
@@ -944,6 +997,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         console.log('✅ Système de modales initialisé avec succès');
         
+        // Charger les commentaires depuis l'API
+        chargerCommentairesDisponibles();
+        
         // Initialiser le tableau des opérations avec vérification
         if (typeof mettreAJourTableauOperations === 'function') {
             mettreAJourTableauOperations();
@@ -1037,6 +1093,101 @@ document.addEventListener('DOMContentLoaded', function() {
             // Tester un filtrage
             console.log('\n🔍 Test de filtrage par PROMO...');
             filtrerArticles('promo');
+        };
+        
+        // Fonction pour forcer le rechargement des commentaires
+        window.forcerRechargementCommentaires = function() {
+            console.log('🔄 Forçage du rechargement des commentaires...');
+            COMMENTAIRES_PREDEFINIES = {}; // Vider le cache
+            chargerCommentairesDisponibles();
+        };
+        
+        // Fonction pour vérifier l'état des commentaires
+        window.verifierEtatCommentaires = function() {
+            console.log('📊 État actuel des commentaires:');
+            console.log('- Objet COMMENTAIRES_PREDEFINIES:', COMMENTAIRES_PREDEFINIES);
+            console.log('- Clés disponibles:', Object.keys(COMMENTAIRES_PREDEFINIES));
+            
+            Object.keys(COMMENTAIRES_PREDEFINIES).forEach(type => {
+                const commentaires = COMMENTAIRES_PREDEFINIES[type];
+                console.log(`  - ${type}: ${commentaires ? commentaires.length : 0} commentaires`);
+                if (commentaires && commentaires.length > 0) {
+                    commentaires.forEach((comment, index) => {
+                        console.log(`    ${index + 1}. ${comment.label} (${comment.value})`);
+                    });
+                }
+            });
+            
+            return COMMENTAIRES_PREDEFINIES;
+        };
+        
+        // Fonction pour tester l'API des commentaires
+        window.testApiCommentaires = function() {
+            console.log('🧪 Test manuel de l\'API des commentaires...');
+            
+            const apiUrl = '/operateur-confirme/api/commentaires-disponibles/';
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+            
+            console.log('📋 Informations de test:');
+            console.log('- URL:', apiUrl);
+            console.log('- CSRF Token présent:', csrfToken ? 'OUI' : 'NON');
+            console.log('- Utilisateur connecté:', '{{ user.username }}');
+            
+            if (!csrfToken) {
+                console.error('❌ Token CSRF manquant');
+                return;
+            }
+            
+            fetch(apiUrl, {
+                method: 'GET',
+                headers: {
+                    'X-CSRFToken': csrfToken.value,
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                credentials: 'same-origin',
+            })
+            .then(response => {
+                console.log('📡 Statut de la réponse:', response.status, response.statusText);
+                console.log('📋 Headers de réponse:', Object.fromEntries(response.headers.entries()));
+                
+                if (!response.ok) {
+                    return response.text().then(text => {
+                        console.error('❌ Réponse d\'erreur:', text);
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    });
+                }
+                
+                return response.json();
+            })
+            .then(data => {
+                console.log('✅ Données reçues:', data);
+                
+                if (data.success) {
+                    console.log('📝 Commentaires disponibles par type:');
+                    Object.keys(data.commentaires).forEach(type => {
+                        console.log(`   - ${type}: ${data.commentaires[type].length} options`);
+                        data.commentaires[type].forEach((comment, index) => {
+                            console.log(`     ${index + 1}. ${comment.label} (${comment.value})`);
+                        });
+                    });
+                    
+                    // Vérifier que les commentaires sont bien ceux attendus
+                    const totalCommentaires = Object.values(data.commentaires).reduce((total, arr) => total + arr.length, 0);
+                    console.log(`📊 Total de commentaires récupérés: ${totalCommentaires}`);
+                    
+                    if (totalCommentaires === 0) {
+                        console.error('❌ PROBLÈME: Aucun commentaire récupéré de l\'API !');
+                    } else {
+                        console.log('✅ Commentaires récupérés avec succès depuis l\'API Django');
+                    }
+                } else {
+                    console.error('❌ Erreur dans la réponse:', data.error);
+                }
+            })
+            .catch(error => {
+                console.error('❌ Erreur lors du test:', error);
+                console.error('❌ Stack trace:', error.stack);
+            });
         };
         
         // Fonction pour tester manuellement l'API des articles
