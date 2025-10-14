@@ -390,3 +390,10 @@ function annulerCommande() {
         }
     });
 }
+
+// Exposer au scope global pour les onclick HTML
+if (typeof window !== 'undefined') {
+  window.confirmerCommande = confirmerCommande;
+  window.annulerCommande = annulerCommande;
+  window.lancerConfirmation = lancerConfirmation;
+}

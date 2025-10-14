@@ -79,20 +79,20 @@
                     
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Nom</label>
-                            <input type="text" name="client_nom" value="{{ commande.client.nom }}"
+                            <label for="client_nom" class="block text-sm font-medium text-gray-700 mb-2">Nom</label>
+                            <input id="client_nom" type="text" name="client_nom" value="{{ commande.client.nom }}"
                                    class="w-full p-3 border rounded-lg focus:ring-2 transition-all" 
                                    style="border-color: #f7d9c4; focus:ring-color: #6d4b3b;">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Prénom</label>
-                            <input type="text" name="client_prenom" value="{{ commande.client.prenom | default:' ' }}"
+                            <label for="client_prenom" class="block text-sm font-medium text-gray-700 mb-2">Prénom</label>
+                            <input id="client_prenom" type="text" name="client_prenom" value="{{ commande.client.prenom | default:' ' }}"
                                    class="w-full p-3 border rounded-lg focus:ring-2 transition-all" 
                                    style="border-color: #f7d9c4; focus:ring-color: #6d4b3b;">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Numéro de téléphone</label>
-                            <input type="tel" name="client_telephone" value="{{ commande.client.numero_tel }}"
+                            <label for="client_telephone" class="block text-sm font-medium text-gray-700 mb-2">Numéro de téléphone</label>
+                            <input id="client_telephone" type="tel" name="client_telephone" value="{{ commande.client.numero_tel }}"
                                    class="w-full p-3 border rounded-lg focus:ring-2 transition-all" 
                                    style="border-color: #f7d9c4; focus:ring-color: #6d4b3b;">
                         </div>
@@ -122,7 +122,7 @@
                     
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Ville de livraison</label>
+                            <label for="ville-select" class="block text-sm font-medium text-gray-700 mb-2">Ville de livraison</label>
                             <select name="ville_livraison" id="ville-select" onchange="chargerRegionEtFrais()"
                                     class="w-full p-3 border rounded-lg focus:ring-2 transition-all" 
                                     style="border-color: #f7d9c4; focus:ring-color: #6d4b3b;">
@@ -140,12 +140,12 @@
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Livreur (Automatique)</label>
+                            <label for="region-display" class="block text-sm font-medium text-gray-700 mb-2">Livreur (Automatique)</label>
                             <input type="text" id="region-display" value="{{ commande.ville.region.nom_region }}" readonly
                                    class="w-full p-3 bg-gray-100 border rounded-lg text-gray-600">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Frais de livraison</label>
+                            <label for="frais-display" class="block text-sm font-medium text-gray-700 mb-2">Frais de livraison</label>
                             <div class="flex items-center gap-2">
                                 <input type="text" id="frais-display" value="{{ commande.montant_frais_livraison|default:0 }} DH" readonly
                                        class="flex-1 p-3 bg-gray-100 border rounded-lg text-gray-600">
@@ -183,14 +183,14 @@
                             </p>
                         </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">delai de livraison (Automatique)</label>
+                        <label for="delai-display" class="block text-sm font-medium text-gray-700 mb-2">delai de livraison (Automatique)</label>
                         <input type="text" id="delai-display" value="{{ commande.ville.Delai_livraison_min|default:0 }} - {{ commande.ville.Delai_livraison_max|default:0 }} jours" readonly
                                class="w-full p-3 bg-gray-100 border rounded-lg text-gray-600">
                 </div>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Adresse de livraison</label>
-                            <textarea name="adresse_livraison" rows="3"
+                            <label for="adresse_livraison" class="block text-sm font-medium text-gray-700 mb-2">Adresse de livraison</label>
+                            <textarea id="adresse_livraison" name="adresse_livraison" rows="3"
                                       class="w-full p-3 border rounded-lg focus:ring-2 transition-all" 
                                       style="border-color: #f7d9c4; focus:ring-color: #6d4b3b;"
                                       placeholder="Adresse complète de livraison">{{ commande.adresse }}</textarea>
@@ -720,6 +720,11 @@
     window.urlModifier = urlModifier;
 </script>
 
+<script src="{%static 'js/operatConfirme/Confirmation_commande/Validation_section.js' %}"></script>
+
+
+
+
 
 
 <script src="{% static 'js/operatConfirme/Confirmation_commande/Gestion_articles.js' %}">
@@ -776,15 +781,6 @@ function verifierTout() {
     });
 }
 </script>
-
-<script src="{%static 'js/operatConfirme/Confirmation_commande/Validation_section.js' %}"></script>
-
-<script src ="{% static 'js/opratConfirme/Confirmation_commande/Gestion_confirmation.js' %}"></script>
-
-
-
-
-
 
 <script>
 
@@ -1086,23 +1082,6 @@ document.addEventListener('keydown', function(event) {
     }
 });
 
-
-
-// ================== CONFIRMATION IMMÉDIATE UNIQUEMENT ==================
-
-
-// Fermer la modal avec Escape (uniquement si elle est ouverte)
-document.addEventListener('keydown', function(event) {
-    if (event.key === 'Escape') {
-        const modal = document.getElementById('modalExplicationTotal');
-        if (modal && modal.style.display === 'flex') {
-            fermerModalExplicationTotal();
-        }
-    }
-});
-
-
-
 // Autres modifications similaires dans le script
 function mettreAJourSousTotal() {
     const articleSelectionne = document.getElementById('articleSelect');
@@ -1316,7 +1295,7 @@ function rafraichirStockArticle(articleId) {
                             stockProgressBar.className = 'h-2.5 rounded-full bg-red-500';
                             stockPercentage.textContent = '0%';
                             stockPercentage.className = 'ml-2 text-xs font-medium text-red-700';
-                        } else if (stock <sc 5) {
+                        } else if (stock < 5) {
                             infoStock.textContent = `${stock} unité(s) - Faible`;
                             infoStock.className = 'px-3 py-1 bg-orange-100 text-orange-700 rounded-full font-medium';
                             stockProgressBar.style.width = `${pourcentage}%`;
@@ -1371,12 +1350,7 @@ function rafraichirStockArticle(articleId) {
     });
 }
 
-
 </script>
-
-
-
-
 
 <!-- Modal Livraison -->
 <div id="livraisonModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50 flex items-center justify-center">
@@ -1544,7 +1518,7 @@ function saveLivraisonFromModal() {
                 <i class="fas fa-times mr-2"></i>
                 Annuler
             </button>
-            <button onclick="proceedWithConfirmation()" 
+            <button onclick="confirmerCommande()" 
                     class="px-6 py-3 text-white rounded-lg font-medium transition-all duration-200 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transform hover:-translate-y-0.5" 
                     style="background: linear-gradient(135deg, #4B352A, #6d4b3b); focus:ring-color: #4B352A;">
                 <i class="fas fa-check mr-2"></i>
@@ -1628,6 +1602,16 @@ function saveLivraisonFromModal() {
         </div>
     </div>
 </div>
+
+
+<script src ="{% static 'js/operatConfirme/Confirmation_commande/confirmaton.js' %}"></script>
+<script>
+    window.commandeId = {{ commande.id }};
+  </script>
+
+
+
+
 
 <!-- Modal de Suppression d'Article Tailwind -->
 <div id="deleteArticleModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50 flex items-center justify-center">
