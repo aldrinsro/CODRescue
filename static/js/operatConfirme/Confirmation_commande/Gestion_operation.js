@@ -128,6 +128,7 @@ function saveComment() {
 let operationCounter = 1;
 let operationsTable = [];
 
+
 // Variables globales pour le système en deux étapes
 let typePrincipalSelectionne = '';
 
@@ -434,7 +435,7 @@ function sauvegarderOperationExistante(operation, nouveauCommentaire) {
     formData.append('action', 'update_operation');
     formData.append('operation_id', operationDbId);
     formData.append('nouveau_commentaire', nouveauCommentaire);
-    formData.append('commande_id', '{{ commande.id }}');
+    formData.append('commande_id', getCommandeId());
     
     // Debug des données envoyées
     console.log('📦 DEBUG: Données envoyées au serveur:');
@@ -443,7 +444,8 @@ function sauvegarderOperationExistante(operation, nouveauCommentaire) {
     }
     
     // Envoyer via AJAX
-    fetch('{% url "operatConfirme:modifier_commande" commande.id %}', {
+    const commandeId = getCommandeId();
+    fetch(`/operateur-confirme/commandes/${commandeId}/modifier/`, {
         method: 'POST',
         body: formData,
         headers: {
@@ -502,7 +504,7 @@ function sauvegarderNouvelleOperation(operation, commentaire) {
     formData.append('action', 'create_operation');
     formData.append('type_operation', operation.type);
     formData.append('commentaire', commentaire);
-    formData.append('commande_id', '{{ commande.id }}');
+    formData.append('commande_id', getCommandeId());
     
     // Debug des données envoyées
     console.log('📦 DEBUG: Données envoyées pour création opération:');
@@ -511,7 +513,8 @@ function sauvegarderNouvelleOperation(operation, commentaire) {
     }
     
     // Envoyer via AJAX
-    fetch('{% url "operatConfirme:modifier_commande" commande.id %}', {
+    const commandeId = getCommandeId();
+    fetch(`/operateur-confirme/commandes/${commandeId}/modifier/`, {
         method: 'POST',
         body: formData,
         headers: {
@@ -653,6 +656,88 @@ function utiliserCommentairesFallback() {
             { value: 'Message vocal envoyé', label: 'Message vocal envoyé' }
         ]
     };
+}
+
+// Fonction pour charger les opérations depuis la base de données au démarrage
+function chargerOperationsDepuisBase() {
+    console.log('🔄 Chargement initial des opérations depuis la base de données...');
+    console.log(`📊 DEBUG: État actuel du tableau: ${operationsTable.length} opération(s)`);
+
+    // Utiliser l'API des opérations
+    const commandeId = getCommandeId();
+    console.log('🔍 DEBUG: Commande ID récupéré:', commandeId);
+    
+    if (!commandeId) {
+        console.error('❌ DEBUG: Impossible de récupérer l\'ID de la commande');
+        console.log('⚠️ Continuez avec un tableau vide');
+        operationsTable = [];
+        mettreAJourTableauOperations();
+        return;
+    }
+    
+    const api = `/operateur-confirme/api/commandes/${commandeId}/operations/`;
+    console.log('📡 URL API opérations:', api);
+
+    // Faire une requête AJAX pour récupérer les opérations existantes
+    fetch(api, {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+        },
+        credentials: 'same-origin'
+    })
+    .then(response => {
+        console.log(`🌐 DEBUG: Réponse API reçue, status: ${response.status}`);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('📬 DEBUG: Données API reçues:', data);
+        
+        if (data.success) {
+            console.log(`🔄 DEBUG: ${data.operations.length} opération(s) chargée(s) depuis la base`);
+            
+            // Charger les opérations existantes dans le tableau
+            const operationsFromDatabase = data.operations.map(op => {
+                console.log(`🔍 DEBUG: Opération de la base DB-${op.id}: "${op.conclusion}"`);
+                return {
+                    id: `DB-${op.id}`,
+                    type: op.type_operation,
+                    nom: op.nom_display,
+                    classe: op.classe_css,
+                    date: op.date_operation,
+                    commentaire: op.conclusion,
+                    typePrincipal: op.type_principal,
+                    fromDatabase: true
+                };
+            });
+            
+            // Remplacer le tableau avec les opérations de la base
+            operationsTable = operationsFromDatabase;
+            
+            console.log(`📊 DEBUG: Tableau initial: ${operationsTable.length} opération(s) total`);
+            console.log('📋 DEBUG: Opérations chargées:', operationsTable);
+            
+            // Mettre à jour l'affichage
+            mettreAJourTableauOperations();
+            
+            console.log('✅ DEBUG: Opérations chargées depuis la base de données');
+        } else {
+            console.error('❌ DEBUG: Erreur lors du chargement:', data.error);
+            console.log('⚠️ Continuez avec un tableau vide');
+            operationsTable = [];
+            mettreAJourTableauOperations();
+        }
+    })
+    .catch(error => {
+        console.error('❌ DEBUG: Erreur de connexion:', error);
+        console.log('⚠️ Continuez avec un tableau vide en raison de l\'erreur réseau');
+        operationsTable = [];
+        mettreAJourTableauOperations();
+    });
 }
 
 // Fonction pour recharger les opérations depuis la base de données via AJAX
@@ -1000,6 +1085,10 @@ document.addEventListener('DOMContentLoaded', function() {
         // Charger les commentaires depuis l'API
         chargerCommentairesDisponibles();
         
+        // Charger les opérations existantes depuis la base de données
+        console.log('🔄 Démarrage du chargement des opérations...');
+        chargerOperationsDepuisBase();
+        
         // Initialiser le tableau des opérations avec vérification
         if (typeof mettreAJourTableauOperations === 'function') {
             mettreAJourTableauOperations();
@@ -1007,6 +1096,17 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             console.error('❌ Fonction mettreAJourTableauOperations introuvable');
         }
+        
+        // Vérifier le chargement des opérations après un délai
+        setTimeout(() => {
+            console.log('🔍 Vérification du chargement des opérations après 2 secondes...');
+            if (operationsTable.length === 0) {
+                console.warn('⚠️ Aucune opération chargée - vérification du système...');
+                verifierChargementOperations();
+            } else {
+                console.log(`✅ ${operationsTable.length} opération(s) chargée(s) avec succès`);
+            }
+        }, 2000);
         
         
         // Fonction pour vérifier les stocks des articles
@@ -1102,6 +1202,13 @@ document.addEventListener('DOMContentLoaded', function() {
             chargerCommentairesDisponibles();
         };
         
+        // Fonction pour forcer le rechargement des opérations
+        window.forcerRechargementOperations = function() {
+            console.log('🔄 Forçage du rechargement des opérations...');
+            operationsTable = []; // Vider le tableau
+            chargerOperationsDepuisBase();
+        };
+        
         // Fonction pour vérifier l'état des commentaires
         window.verifierEtatCommentaires = function() {
             console.log('📊 État actuel des commentaires:');
@@ -1121,6 +1228,106 @@ document.addEventListener('DOMContentLoaded', function() {
             return COMMENTAIRES_PREDEFINIES;
         };
         
+        // Fonction pour vérifier l'état des opérations
+        window.verifierEtatOperations = function() {
+            console.log('📊 État actuel des opérations:');
+            console.log('- Tableau operationsTable:', operationsTable);
+            console.log('- Nombre d\'opérations:', operationsTable.length);
+            
+            operationsTable.forEach((operation, index) => {
+                console.log(`  ${index + 1}. ${operation.nom} (${operation.id})`);
+                console.log(`     - Type: ${operation.type}`);
+                console.log(`     - Commentaire: "${operation.commentaire}"`);
+                console.log(`     - Depuis la base: ${operation.fromDatabase ? 'OUI' : 'NON'}`);
+            });
+            
+            return operationsTable;
+        };
+        
+        // Fonction pour vérifier le chargement des opérations au démarrage
+        window.verifierChargementOperations = function() {
+            console.log('🔍 Vérification du chargement des opérations au démarrage...');
+            
+            const commandeId = getCommandeId();
+            console.log('- Commande ID:', commandeId);
+            
+            if (!commandeId) {
+                console.error('❌ Problème: Commande ID non récupéré');
+                return false;
+            }
+            
+            console.log('- Fonction chargerOperationsDepuisBase disponible:', typeof chargerOperationsDepuisBase === 'function');
+            console.log('- Fonction mettreAJourTableauOperations disponible:', typeof mettreAJourTableauOperations === 'function');
+            console.log('- État actuel du tableau:', operationsTable.length, 'opération(s)');
+            
+            // Tester l'API manuellement
+            console.log('🧪 Test de l\'API des opérations...');
+            testApiOperations();
+            
+            return true;
+        };
+        
+        // Fonction pour tester l'API des opérations
+        window.testApiOperations = function() {
+            console.log('🧪 Test manuel de l\'API des opérations...');
+            
+            const commandeId = getCommandeId();
+            const apiUrl = `/operateur-confirme/api/commandes/${commandeId}/operations/`;
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+            
+            console.log('📋 Informations de test:');
+            console.log('- URL:', apiUrl);
+            console.log('- Commande ID:', commandeId);
+            console.log('- CSRF Token présent:', csrfToken ? 'OUI' : 'NON');
+            
+            if (!csrfToken) {
+                console.error('❌ Token CSRF manquant');
+                return;
+            }
+            
+            fetch(apiUrl, {
+                method: 'GET',
+                headers: {
+                    'X-CSRFToken': csrfToken.value,
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                credentials: 'same-origin',
+            })
+            .then(response => {
+                console.log('📡 Statut de la réponse:', response.status, response.statusText);
+                console.log('📋 Headers de réponse:', Object.fromEntries(response.headers.entries()));
+                
+                if (!response.ok) {
+                    return response.text().then(text => {
+                        console.error('❌ Réponse d\'erreur:', text);
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    });
+                }
+                
+                return response.json();
+            })
+            .then(data => {
+                console.log('✅ Données reçues:', data);
+                
+                if (data.success) {
+                    console.log('📝 Opérations disponibles:');
+                    console.log(`   - Nombre d'opérations: ${data.operations.length}`);
+                    data.operations.forEach((operation, index) => {
+                        console.log(`   ${index + 1}. ${operation.nom_display} (${operation.type_operation})`);
+                        console.log(`      - ID: ${operation.id}`);
+                        console.log(`      - Conclusion: "${operation.conclusion}"`);
+                        console.log(`      - Date: ${operation.date_operation}`);
+                    });
+                } else {
+                    console.error('❌ Erreur dans la réponse:', data.error);
+                }
+            })
+            .catch(error => {
+                console.error('❌ Erreur lors du test:', error);
+                console.error('❌ Stack trace:', error.stack);
+            });
+        };
+        
         // Fonction pour tester l'API des commentaires
         window.testApiCommentaires = function() {
             console.log('🧪 Test manuel de l\'API des commentaires...');
@@ -1131,7 +1338,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('📋 Informations de test:');
             console.log('- URL:', apiUrl);
             console.log('- CSRF Token présent:', csrfToken ? 'OUI' : 'NON');
-            console.log('- Utilisateur connecté:', '{{ user.username }}');
+            console.log('- Utilisateur connecté:', document.querySelector('[data-user]')?.dataset.user || 'Non défini');
             
             if (!csrfToken) {
                 console.error('❌ Token CSRF manquant');
@@ -1194,14 +1401,14 @@ document.addEventListener('DOMContentLoaded', function() {
         window.testApiArticles = function() {
             console.log('🧪 Test manuel de l\'API des articles...');
             
-            const apiUrl = '{% url "operatConfirme:api_articles_disponibles" %}';
+            const apiUrl = '/operateur-confirme/api/articles-disponibles/';
             const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
             
             console.log('📋 Informations de test:');
             console.log('- URL:', apiUrl);
             console.log('- CSRF Token présent:', csrfToken ? 'OUI' : 'NON');
-            console.log('- Utilisateur connecté:', '{{ user.username }}');
-            console.log('- Type d\'utilisateur:', '{{ user.profil_operateur.type_operateur|default:"Non défini" }}');
+            console.log('- Utilisateur connecté:', document.querySelector('[data-user]')?.dataset.user || 'Non défini');
+            console.log('- Type d\'utilisateur:', document.querySelector('[data-user-type]')?.dataset.userType || 'Non défini');
             
             if (!csrfToken) {
                 console.error('❌ Token CSRF manquant');
@@ -1277,6 +1484,7 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('❌ Erreur lors de l\'initialisation:', error);
     }
 });
+
 
 
 

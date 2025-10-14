@@ -1,5 +1,3 @@
-
-
 // ================== GESTION DES ARTICLES ==================
 
  // Variables globales pour les articles
