@@ -29,7 +29,7 @@ urlpatterns = [
 
 
 
-
+    # Gestion des commandes 
     
     path('commandes/<int:commande_id>/reporter-ajax/', views.reporter_commande_confirmation, name='reporter_commande_confirmation'),
     path('lancer-confirmations-masse/', views.lancer_confirmations_masse, name='lancer_confirmations_masse'),

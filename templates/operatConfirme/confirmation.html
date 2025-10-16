@@ -211,7 +211,6 @@
                         <tr class="text-white text-left">
                             
                             <th class="px-4 py-3 font-semibold">N° Commande</th>
-                            <th class="px-4 py-3 font-semibold">N° Externe</th>
                             <th class="px-4 py-3 font-semibold">Client</th>
                             <th class="px-4 py-3 font-semibold">Téléphone</th>
                             <th class="px-4 py-3 font-semibold">Ville Client</th>
@@ -227,9 +226,6 @@
                         <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                             <td class="px-4 py-3">
                                 <div class="font-bold" style="color: #4B352A;">{{ commande.id_yz }}</div>
-                            </td>
-                            <td class="px-4 py-3">
-                                <div class="text-sm text-gray-500">{{ commande.num_cmd }}</div>
                             </td>
                             <td class="px-4 py-3">
                                 <div class="font-medium text-gray-900">{{ commande.client.get_full_name }}</div>
