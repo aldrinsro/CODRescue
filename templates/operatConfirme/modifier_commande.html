@@ -10,6 +10,7 @@
 {% endblock %}
 
 {% block content %}
+
 <div class="main-content transition-all duration-300" id="mainContent" data-commande-id="{{ commande.id }}">
     <!-- En-tête de la page -->
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 text-white p-6 rounded-xl shadow-lg" style="background: linear-gradient(to right, #4B352A, #6d4b3b);">
@@ -121,8 +122,14 @@
                     </h3>
                     
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                            
                         <div>
                             <label for="ville-select" class="block text-sm font-medium text-gray-700 mb-2">Ville de livraison</label>
+                            <div class="mb-2">
+                                <input type="text" id="ville-search" placeholder="Tapez pour filtrer les villes..."
+                                       class="w-full p-3 border rounded-lg focus:ring-2 transition-all"
+                                       style="border-color: #f7d9c4; focus:ring-color: #6d4b3b;">
+                            </div>
                             <select name="ville_livraison" id="ville-select" onchange="chargerRegionEtFrais()"
                                     class="w-full p-3 border rounded-lg focus:ring-2 transition-all" 
                                     style="border-color: #f7d9c4; focus:ring-color: #6d4b3b;">
@@ -138,6 +145,37 @@
                                     </option>
                                 {% endfor %}
                             </select>
+
+                            <script>
+                                document.addEventListener('DOMContentLoaded', function () {
+                                    const searchInput = document.getElementById('ville-search');
+                                    const select = document.getElementById('ville-select');
+                                    if (!searchInput || !select) return;
+                                
+                                    function filterOptions(query) {
+                                        const q = (query || '').trim().toLowerCase();
+                                        const options = Array.from(select.options);
+                                        options.forEach(function (option) {
+                                            if (option.value === '') { // conserver l'option vide
+                                                option.style.display = '';
+                                                return;
+                                            }
+                                            const match = option.textContent.toLowerCase().includes(q);
+                                            option.style.display = match ? '' : 'none';
+                                        });
+                                    }
+                                
+                                    let debounceTimer;
+                                    searchInput.addEventListener('input', function () {
+                                        clearTimeout(debounceTimer);
+                                        const value = this.value;
+                                        debounceTimer = setTimeout(function () {
+                                            filterOptions(value);
+                                        }, 120);
+                                    });
+                                });
+                            </script>
+
                         </div>
                         <div>
                             <label for="region-display" class="block text-sm font-medium text-gray-700 mb-2">Livreur (Automatique)</label>
@@ -708,9 +746,12 @@
 
 
 
+
 <script src="{% static 'js/operatConfirme/Confirmation_commande/reporter_commande.js' %}"></script>
 
 <script src="{% static 'js/operatConfirme/Confirmation_commande/Gestion_operation.js' %}"></script>
+
+
 
 <script>
     const commandeId = {{ commande.id }};
@@ -1184,7 +1225,7 @@ function ajouterArticleAuPanier() {
         modal.classList.add('hidden');
     }
     
-    showNotification('✅ Article ajouté au panier', 'success');
+    showNotification('Article ajouté au panier', 'success');
 }
 
 // La fonction mettreAJourTotalCommande est déjà définie plus haut dans le fichier
@@ -1608,8 +1649,6 @@ function saveLivraisonFromModal() {
 <script>
     window.commandeId = {{ commande.id }};
   </script>
-
-
 
 
 

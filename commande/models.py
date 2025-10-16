@@ -196,14 +196,19 @@ class Commande(models.Model):
     def recalculer_totaux_upsell(self):
         """
         Recalcule automatiquement les totaux de la commande selon le compteur upsell.
-        Tous les articles de la commande prennent le prix upsell correspondant au compteur.
+
+        IMPORTANT: Cette méthode recalcule UNIQUEMENT les sous-totaux.
+        Le prix_panier (prix unitaire historique) reste INCHANGÉ pour préserver l'intégrité.
+
+        Exception: Les articles upsell voient leur prix_panier mis à jour selon le compteur
+        car c'est la logique métier attendue pour les upsells.
         """
         from commande.templatetags.commande_filters import get_prix_upsell_avec_compteur
-        
+
         print(f"🔄 recalculer_totaux_upsell - Compteur actuel: {self.compteur}")
-        
+
         nouveau_total = 0
-        
+
         # Recalculer chaque panier selon le compteur upsell
         for panier in self.paniers.all():
             # Vérifier si une remise a été appliquée sur ce panier
@@ -212,27 +217,32 @@ class Commande(models.Model):
                 print(f"   📦 {panier.article.nom} (REMISE APPLIQUÉE): qté={panier.quantite}, sous_total préservé={panier.sous_total}")
                 nouveau_total += float(panier.sous_total)
             else:
-                # Aucune remise - calculer selon le compteur de la commande
+                # Calculer le prix selon le compteur de la commande
                 prix_unitaire = get_prix_upsell_avec_compteur(panier.article, self.compteur)
                 nouveau_sous_total = prix_unitaire * panier.quantite
-                
+
                 print(f"   📦 {panier.article.nom} (upsell: {panier.article.isUpsell}): qté={panier.quantite}, prix={prix_unitaire}, sous_total={nouveau_sous_total}")
-                
-                # Mettre à jour le prix_panier et le sous-total du panier si nécessaire
+
+                # SEULEMENT pour les articles upsell: mettre à jour prix_panier selon le compteur
+                # Pour les articles normaux: le prix_panier reste gelé
                 if panier.sous_total != nouveau_sous_total:
-                    panier.prix_panier = float(prix_unitaire)
+                    if panier.article.isUpsell:
+                        # Article upsell: mettre à jour prix_panier selon le nouveau compteur
+                        panier.prix_panier = float(prix_unitaire)
+                        print(f"      ⚡ Upsell: prix_panier mis à jour: {panier.prix_panier} DH")
+                    # Dans tous les cas, mettre à jour le sous-total
                     panier.sous_total = float(nouveau_sous_total)
                     panier.save()
-                
+
                 nouveau_total += float(nouveau_sous_total)
-        
+
         # Ajouter les frais de livraison au total SEULEMENT si frais_livraison = True
         if self.frais_livraison:
             frais_livraison = self.ville.frais_livraison if self.ville else 0
             nouveau_total_avec_frais = float(nouveau_total) + float(frais_livraison)
         else:
             nouveau_total_avec_frais = float(nouveau_total)
-        
+
         # Mettre à jour le total de la commande
         if self.total_cmd != nouveau_total_avec_frais:
             self.total_cmd = nouveau_total_avec_frais
@@ -498,12 +508,21 @@ class Panier(models.Model):
                 print(f"⚠️ PROTECTION: Article {self.article.nom} en {motif} - remise_appliquer forcé à False")
                 self.remise_appliquer = False
                 self.type_remise_appliquee = ''
-        
-        #SYNCHRONISATION : calculer automatique du prix_panier si neccessaire 
 
-        if self.article and (self.prix_panier==0 or not self.prix_panier or kwargs.get('force_recalcul_prix',False)):
+        # INTÉGRITÉ : Le prix_panier est un prix HISTORIQUE GELÉ
+        # Il ne doit être calculé QU'UNE SEULE FOIS lors de la création (pk is None)
+        # Pour préserver l'intégrité, le prix_panier ne change JAMAIS après création
+        # SAUF si force_recalcul_prix=True est explicitement demandé
+
+        is_creation = self.pk is None
+        force_recalcul = kwargs.pop('force_recalcul_prix', False)
+
+        if self.article and (is_creation or force_recalcul) and (self.prix_panier == 0 or not self.prix_panier):
             prix_calcule = self._calculer_prix_unitaire_base()
-            self.prix_panier=float(prix_calcule)
+            self.prix_panier = float(prix_calcule)
+            print(f"💾 Prix historique gelé pour {self.article.nom}: {self.prix_panier} DH")
+
+        # Calculer le sous-total si nécessaire
         if self.prix_panier and self.quantite and (not self.sous_total or self.sous_total == 0):
             self.sous_total = self.prix_panier * self.quantite
 

@@ -1,14 +1,181 @@
 // ================== GESTION DES ARTICLES ==================
+console.log('✅ Gestion_articles.js chargé - Version 2.0 - Sans compteurCommande');
 
  // Variables globales pour les articles
     let articlesDisponibles = [];
     let currentArticleId = null;
     let isEditingArticle = false;
-    
-    let compteurCommande = commande.compteur ;
     let filtreActuel = 'all'; // Filtre actuellement actif
 
-   
+// ================== PROTECTION DE L'ISOLATION DES LIBELLÉS ==================
+/**
+ * 🔒 ISOLATION DES LIBELLÉS DE PRIX
+ *
+ * Les libellés de prix (ex: "Prix promotion", "Prix liquidation") sont gelés au moment
+ * de l'ajout de l'article dans le panier, via le champ type_prix_gele en base de données.
+ *
+ * Ces libellés NE DOIVENT JAMAIS être modifiés côté frontend, même si le compteur upsell change,
+ * pour garantir que l'affichage reflète toujours le type de prix appliqué historiquement.
+ *
+ * Exception : Les articles upsell (type_prix_gele vide) affichent dynamiquement le niveau
+ * selon le compteur actuel, car leur prix dépend du contexte de la commande.
+ */
+function protegerLibellesPrixGeles() {
+    // Cette fonction empêche toute modification des libellés de prix gelés
+    // UNIQUEMENT pour les articles en promotion, liquidation ou test
+    // Les articles upsell normaux ne sont PAS protégés car leur affichage est dynamique
+
+    const articleCards = document.querySelectorAll('.article-card');
+
+    articleCards.forEach(card => {
+        const panierId = card.getAttribute('data-article-id');
+        const articleData = JSON.parse(card.getAttribute('data-article'));
+
+        // IGNORER les articles upsell en phase normale (affichage dynamique)
+        if (articleData.isUpsell &&
+            !articleData.has_promo_active &&
+            articleData.phase !== 'LIQUIDATION' &&
+            articleData.phase !== 'EN_TEST') {
+            return; // Skip - ces articles ont un affichage dynamique
+        }
+
+        // Protéger le libellé de prix pour les phases spéciales uniquement
+        const libelleElement = document.getElementById(`prix-libelle-${panierId}`);
+        if (libelleElement && libelleElement.hasAttribute('data-libelle-gele')) {
+            const libelleGele = libelleElement.getAttribute('data-libelle-gele');
+            const couleurGelee = libelleElement.getAttribute('data-couleur-gelee');
+
+            // Si le libellé affiché diffère du libellé gelé, le restaurer
+            if (libelleElement.textContent.trim() !== libelleGele) {
+                console.warn(`⚠️ Libellé du panier ${panierId} restauré: "${libelleElement.textContent.trim()}" → "${libelleGele}"`);
+                libelleElement.textContent = libelleGele;
+                libelleElement.className = `text-xs ${couleurGelee} mt-1`;
+            }
+        }
+
+        // Protéger la couleur du prix unitaire
+        const prixElement = document.getElementById(`prix-unitaire-${panierId}`);
+        if (prixElement && prixElement.hasAttribute('data-couleur-gelee')) {
+            const couleurGelee = prixElement.getAttribute('data-couleur-gelee');
+
+            // Vérifier si la couleur a été modifiée
+            if (!prixElement.classList.contains(couleurGelee.split(' ').pop())) {
+                console.warn(`⚠️ Couleur du prix ${panierId} restaurée`);
+                prixElement.className = `font-medium ${couleurGelee}`;
+            }
+        }
+    });
+}
+
+// ================== AFFICHAGE DYNAMIQUE DES PRIX UPSELL ==================
+/**
+ * 💰 AFFICHAGE DYNAMIQUE DES PRIX UPSELL
+ *
+ * Cette fonction recalcule côté frontend l'affichage des prix et libellés pour les articles upsell,
+ * en fonction du compteur actuel de la commande.
+ *
+ * IMPORTANT:
+ * - Les prix en BASE DE DONNÉES (prix_panier, sous_total) NE SONT PAS modifiés → ISOLATION PRÉSERVÉE
+ * - Seul l'AFFICHAGE est mis à jour dynamiquement pour refléter le niveau upsell actuel
+ * - Les articles en promotion/liquidation/test conservent leur affichage gelé
+ *
+ * @param {number} compteurActuel - Le compteur actuel de la commande
+ */
+function afficherPrixUpsellDynamiques(compteurActuel) {
+    console.log(`🔄 Mise à jour dynamique de l'affichage des prix upsell (compteur=${compteurActuel})`);
+
+    const articleCards = document.querySelectorAll('.article-card');
+
+    articleCards.forEach(card => {
+        const panierId = card.getAttribute('data-article-id');
+        const articleData = JSON.parse(card.getAttribute('data-article'));
+
+        // Ne traiter que les articles upsell en phase normale
+        if (!articleData.isUpsell) return;
+        if (articleData.has_promo_active) return;
+        if (articleData.phase === 'LIQUIDATION' || articleData.phase === 'EN_TEST') return;
+
+        // Récupérer la quantité actuelle du panier
+        const quantiteInput = document.getElementById(`quantite-${panierId}`);
+        const quantite = quantiteInput ? parseInt(quantiteInput.value) || 1 : 1;
+
+        // Calculer le prix upsell selon le compteur actuel
+        const prixUpsell = getPrixUpsellSelonCompteur(articleData, compteurActuel);
+
+        // Calculer le sous-total
+        const sousTotal = prixUpsell * quantite;
+
+        // Déterminer le libellé selon le compteur
+        let libelle, couleurClasse;
+        if (compteurActuel > 0) {
+            libelle = `Prix upsell niveau ${compteurActuel}`;
+            couleurClasse = 'text-green-600';
+        } else {
+            libelle = 'Prix normal';
+            couleurClasse = 'text-gray-600';
+        }
+
+        // Mettre à jour l'affichage du prix unitaire
+        const prixElement = document.getElementById(`prix-unitaire-${panierId}`);
+        if (prixElement) {
+            prixElement.textContent = `${prixUpsell.toFixed(2)} DH`;
+            prixElement.className = `font-medium ${couleurClasse}`;
+            // Mettre à jour aussi les data attributes pour que protegerLibellesPrixGeles ne restaure pas l'ancien
+            prixElement.setAttribute('data-prix-gele', prixUpsell.toFixed(2));
+            prixElement.setAttribute('data-couleur-gelee', couleurClasse);
+        }
+
+        // Mettre à jour l'affichage du libellé
+        const libelleElement = document.getElementById(`prix-libelle-${panierId}`);
+        if (libelleElement) {
+            libelleElement.textContent = libelle;
+            libelleElement.className = `text-xs ${couleurClasse} mt-1`;
+            // Mettre à jour aussi les data attributes pour que protegerLibellesPrixGeles ne restaure pas l'ancien
+            libelleElement.setAttribute('data-libelle-gele', libelle);
+            libelleElement.setAttribute('data-couleur-gelee', couleurClasse);
+        }
+
+        // Mettre à jour l'affichage du sous-total
+        const sousTotalElement = document.getElementById(`sous-total-${panierId}`);
+        if (sousTotalElement) {
+            sousTotalElement.textContent = `${sousTotal.toFixed(2)} DH`;
+        }
+    });
+}
+
+/**
+ * Calcule le prix upsell d'un article selon le compteur de la commande
+ * Réplique la logique de get_prix_upsell_avec_compteur côté Python
+ */
+function getPrixUpsellSelonCompteur(article, compteur) {
+    // Si l'article n'est pas upsell, retourner le prix normal
+    if (!article.isUpsell) {
+        return article.prix_actuel || article.prix_unitaire || 0;
+    }
+
+    // Pour les articles upsell, appliquer le prix selon le compteur
+    if (compteur === 0) {
+        // 0-1 articles upsell → prix normal
+        return article.prix_actuel || article.prix_unitaire || 0;
+    } else if (compteur === 1 && article.prix_upsell_1) {
+        // 2 articles upsell → prix upsell 1
+        return article.prix_upsell_1;
+    } else if (compteur === 2 && article.prix_upsell_2) {
+        // 3 articles upsell → prix upsell 2
+        return article.prix_upsell_2;
+    } else if (compteur === 3 && article.prix_upsell_3) {
+        // 4 articles upsell → prix upsell 3
+        return article.prix_upsell_3;
+    } else if (compteur >= 4 && article.prix_upsell_4) {
+        // 5+ articles upsell → prix upsell 4
+        return article.prix_upsell_4;
+    } else {
+        // Si pas de prix upsell défini pour ce niveau, utiliser le prix actuel
+        return article.prix_actuel || article.prix_unitaire || 0;
+    }
+}
+
+
 // Helpers globaux pour récupérer commandeId et urlModifier sans répétition
 function getCommandeId() {
     if (typeof window !== 'undefined' && window.commandeId) return window.commandeId;
@@ -1839,6 +2006,11 @@ function rafraichirSectionArticles() {
                 // Mettre à jour la liste des articles
                 container.innerHTML = data.html;
 
+                // Mettre à jour dynamiquement l'affichage des prix upsell selon le compteur
+                if (data.compteur !== undefined) {
+                    afficherPrixUpsellDynamiques(data.compteur);
+                }
+
                 // Utiliser la fonction centralisée pour mettre à jour tous les totaux
                 mettreAJourTousLesTotaux(data);
 
@@ -1950,8 +2122,8 @@ function mettreAJourTousLesTotaux(data) {
             compteurHeader.textContent = `Niveau ${data.compteur}`;
         }
         
-        // Mettre à jour les prix unitaires si le compteur a changé
-        mettreAJourPrixUnitaires(data.compteur);
+        // Mettre à jour dynamiquement l'affichage des prix upsell selon le nouveau compteur
+        afficherPrixUpsellDynamiques(data.compteur);
         
         // Mettre à jour le badge upsell s'il existe
         const upsellBadge = document.getElementById('upsell-badge-container');
@@ -1963,182 +2135,74 @@ function mettreAJourTousLesTotaux(data) {
             upsellBadge.innerHTML = '';
         }
     }
-    
+
+    // 🔒 PROTECTION: Restaurer les libellés de prix gelés après toute mise à jour
+    // Cela garantit que même si du code malveillant tente de modifier les libellés,
+    // ils sont automatiquement restaurés à leurs valeurs gelées historiques
+    protegerLibellesPrixGeles();
+
 }
 
 // Fonction utilitaire pour mettre à jour le compteur upsell dans tous les endroits
 function mettreAJourCompteurUpsell(nouveauCompteur) {
     console.log(`🔄 Mise à jour du compteur upsell: ${nouveauCompteur}`);
-    
-    // Mettre à jour la variable globale
-    if (typeof compteurCommande !== 'undefined') {
-        compteurCommande = nouveauCompteur;
-    }
-    
+
     // Mettre à jour tous les éléments d'affichage
     const data = { compteur: nouveauCompteur };
     mettreAJourTousLesTotaux(data);
-    
-    // Mettre à jour les prix unitaires
+
+    // Mettre à jour les prix unitaires (fonction désactivée, ne fait rien)
     mettreAJourPrixUnitaires(nouveauCompteur);
-    
+
 }
 
 
 // Fonction pour mettre à jour dynamiquement les prix unitaires
 function mettreAJourPrixUnitaires(nouveauCompteur) {
+    // ⚠️ INTÉGRITÉ DES PRIX : DÉSACTIVÉE
+    // Cette fonction était utilisée pour recalculer visuellement les prix selon le compteur
+    // PROBLÈME : Les prix affichés ne correspondaient PAS aux prix réels en base de données
+    // SOLUTION : Le backend gère les prix via recalculer_totaux_upsell() qui préserve l'isolation
+    //            Les prix affichés proviennent du backend (prix_panier gelé historiquement)
+    //            On ne doit JAMAIS recalculer les prix côté frontend
 
-    // Récupérer tous les articles
-    const articleCards = document.querySelectorAll('.article-card');
-    
-    articleCards.forEach(articleCard => {
-        const panierId = articleCard.getAttribute('data-article-id');
-        
-        
-        
-        const dataArticleAttr = articleCard.getAttribute('data-article');
-        const articleData = parseArticleData(dataArticleAttr, panierId);
-        
-        if (articleData && !articleData.error) {
-            // Calculer le nouveau prix selon le compteur
-            const prixInfo = calculerPrixAvecPhaseInfo(articleData, nouveauCompteur);
-            
-            // Mettre à jour l'affichage du prix
-            const prixElement = document.getElementById(`prix-unitaire-${panierId}`);
-            const libelleElement = document.getElementById(`prix-libelle-${panierId}`);
-            
-            if (prixElement && libelleElement) {
-                // Mettre à jour le prix
-                prixElement.textContent = `${prixInfo.prix.toFixed(2)} DH`;
-                
-                // Mettre à jour la classe de couleur
-                prixElement.className = `font-medium ${prixInfo.couleur_classe}`;
-                
-                // Mettre à jour le libellé
-                libelleElement.textContent = prixInfo.libelle;
-                libelleElement.className = `text-xs ${prixInfo.couleur_classe} mt-1`;
-            
-            }
-            
-            // Mettre à jour le sous-total
-            mettreAJourSousTotalArticle(panierId, prixInfo.prix);
-        } else {
-            // En cas d'erreur de parsing, on peut essayer de rafraîchir la section des articles
-            setTimeout(() => {
-                rafraichirSectionArticles();
-            }, 1000);
-        }
-    });
+    // On ne fait rien ici pour préserver l'intégrité des prix affichés
+    // Les prix sont mis à jour uniquement lors du rechargement de la page après action backend
+    console.log('ℹ️ mettreAJourPrixUnitaires() désactivée - Les prix sont gérés côté backend pour garantir l\'isolation');
+
+    // OPTIONNEL : Si nécessaire, rafraîchir la section articles depuis le backend
+    // pour afficher les vrais prix après recalcul
+    // rafraichirSectionArticles();
 }
 
-// Fonction utilitaire pour mettre à jour le sous-total d'un article
-function mettreAJourSousTotalArticle(panierId, prixUnitaire) {
- 
-    
-    const sousTotalElement = document.getElementById(`sous-total-${panierId}`);
-    if (sousTotalElement) {
-        // Récupérer la quantité depuis l'input
-        const quantiteInput = document.getElementById(`quantite-${panierId}`);
-        const quantite = quantiteInput ? parseInt(quantiteInput.value) || 1 : 1;
-        
-        // Calculer le nouveau sous-total
-        const nouveauSousTotal = prixUnitaire * quantite;
-        
-        // Mettre à jour l'affichage
-        sousTotalElement.textContent = `${nouveauSousTotal.toFixed(2)} DH`;
-        
-  
-        return nouveauSousTotal;
-    }
-    return 0;
-}
+// ⚠️ FONCTION SUPPRIMÉE: mettreAJourSousTotalArticle()
+// Cette fonction recalculait le sous-total côté frontend (prixUnitaire × quantité).
+// PROBLÈME : Recalculait au lieu d'utiliser les valeurs gelées du backend
+// SOLUTION : Les sous-totaux sont mis à jour via mettreAJourTotauxConfirmation()
+//            qui utilise data.sous_total provenant directement du backend
 
-// Fonction pour recalculer tous les sous-totaux selon le compteur actuel
-function recalculerTousLesSousTotaux() {
-    const articleCards = document.querySelectorAll('.article-card');
-    let totalSousTotaux = 0;
-    
-    articleCards.forEach(articleCard => {
-        const panierId = articleCard.getAttribute('data-article-id');
-        
-     
-        const dataArticleAttr = articleCard.getAttribute('data-article');
-        const articleData = parseArticleData(dataArticleAttr, panierId);
-        
-        if (articleData && !articleData.error) {
-            // Récupérer le compteur actuel
-            const compteurActuel = parseInt(document.getElementById('compteur-upsell-header').textContent.replace('Niveau ', '')) || 0;
-            
-            // Calculer le prix selon le compteur
-            const prixInfo = calculerPrixAvecPhaseInfo(articleData, compteurActuel);
-            
-            // Mettre à jour le sous-total
-            const sousTotal = mettreAJourSousTotalArticle(panierId, prixInfo.prix);
-            totalSousTotaux += sousTotal;
-        }
-    });
+// ⚠️ FONCTION SUPPRIMÉE: recalculerTousLesSousTotaux()
+// Cette fonction recalculait les prix des articles existants côté frontend, ce qui brisait l'isolation des prix.
+// L'isolation garantit que chaque panier conserve son prix historique gelé (prix_panier) au moment de sa création.
+// Le backend gère tous les recalculs via recalculer_totaux_upsell() qui préserve cette isolation.
+// Ne JAMAIS recréer cette fonction sans préserver l'isolation des prix !
 
-    return totalSousTotaux;
-}
+// ⚠️ FONCTION SUPPRIMÉE: calculerPrixAvecPhaseInfo()
+// Cette fonction calculait les prix et libellés des articles côté frontend.
+// PROBLÈME : Elle pouvait être utilisée pour recalculer les prix des articles existants,
+//            ce qui briserait l'isolation des prix gelés en base de données.
+// SOLUTION : Le backend gère tous les calculs de prix et libellés via :
+//            - determiner_type_prix_gele() pour la sauvegarde
+//            - get_prix_effectif_panier() pour l'affichage
+// Les libellés sont protégés côté frontend par protegerLibellesPrixGeles()
 
-// Fonction pour calculer le prix avec les informations de phase (version JavaScript)
-function calculerPrixAvecPhaseInfo(article, compteur) {
-    // Déterminer le prix de base
-    let prix;
-    if (compteur !== null && compteur !== undefined && article.isUpsell) {
-        prix = getPrixUpsellAvecCompteur(article, compteur);
-    } else {
-        prix = article.prix_actuel || article.prix_unitaire || 0;
-    }
-    
-    // Déterminer le libellé selon la phase et les promotions
-    let libelle, couleur_classe;
-    
-    if (article.has_promo_active) {
-        libelle = "Prix promotion";
-        couleur_classe = "text-red-600";
-    } else if (article.phase === 'LIQUIDATION') {
-        libelle = "Prix liquidation";
-        couleur_classe = "text-orange-600";
-    } else if (article.phase === 'EN_TEST') {
-        libelle = "Prix test";
-        couleur_classe = "text-blue-600";
-    } else if (compteur !== null && compteur !== undefined && compteur > 0 && article.isUpsell) {
-        libelle = `Prix upsell niveau ${compteur}`;
-        couleur_classe = "text-green-600";
-    } else {
-        libelle = "Prix normal";
-        couleur_classe = "text-gray-600";
-    }
-    
-    return {
-        prix: prix,
-        libelle: libelle,
-        couleur_classe: couleur_classe
-    };
-}
-// Fonction pour calculer le prix upsell avec compteur (version JavaScript)
-function getPrixUpsellAvecCompteur(article, compteur) {
-    if (!article.isUpsell) {
-        return article.prix_actuel || article.prix_unitaire || 0;
-    }
-    
-    // Utiliser le compteur pour déterminer le prix upsell
-    if (compteur === 0) {
-        return article.prix_actuel || article.prix_unitaire || 0;
-    } else if (compteur === 1 && article.prix_upsell_1) {
-        return parseFloat(article.prix_upsell_1);
-    } else if (compteur === 2 && article.prix_upsell_2) {
-        return parseFloat(article.prix_upsell_2);
-    } else if (compteur === 3 && article.prix_upsell_3) {
-        return parseFloat(article.prix_upsell_3);
-    } else if (compteur >= 4 && article.prix_upsell_4) {
-        return parseFloat(article.prix_upsell_4);
-    }
-    
-    // Si pas de prix upsell défini pour ce niveau, utiliser le prix unitaire
-    return article.prix_actuel || article.prix_unitaire || 0;
-}
+// ⚠️ FONCTION SUPPRIMÉE: getPrixUpsellAvecCompteur()
+// Cette fonction calculait les prix upsell côté frontend selon le compteur.
+// PROBLÈME : Pouvait être utilisée pour recalculer les prix des articles existants
+// SOLUTION : Le backend utilise get_prix_upsell_avec_compteur() (Python) pour :
+//            - Calculer le prix lors de l'ajout d'un article
+//            - Le prix est ensuite gelé dans prix_panier et ne change plus
+// Ne JAMAIS recréer cette fonction pour calculer les prix des paniers existants !
 
 
 // Fonction utilitaire pour valider et parser le JSON des articles
@@ -2298,30 +2362,12 @@ function mettreAJourCompteurArticles() {
     document.getElementById('articles-plural').textContent = count > 1 ? 's' : '';
 }
 
-function getPrixUpsell(article, compteur) {
-    // Utiliser le compteur de la commande pour déterminer le prix
-    const prixUnitaire = article.prix_actuel || article.prix_unitaire;
-    
-    if (compteur === 0) {
-        // Pas d'upsell actif
-        return prixUnitaire;
-    } else if (compteur === 1 && article.prix_upsell_1) {
-        // Niveau 1 d'upsell
-        return parseFloat(article.prix_upsell_1);
-    } else if (compteur === 2 && article.prix_upsell_2) {
-        // Niveau 2 d'upsell
-        return parseFloat(article.prix_upsell_2);
-    } else if (compteur === 3 && article.prix_upsell_3) {
-        // Niveau 3 d'upsell
-        return parseFloat(article.prix_upsell_3);
-    } else if (compteur >= 4 && article.prix_upsell_4) {
-        // Niveau 4 d'upsell (pour compteur >= 4)
-        return parseFloat(article.prix_upsell_4);
-    }
-    
-    // Si pas de prix upsell défini pour ce niveau, utiliser le prix unitaire
-    return prixUnitaire;
-}
+// ⚠️ FONCTION SUPPRIMÉE: getPrixUpsell()
+// Cette fonction calculait les prix upsell côté frontend.
+// Elle était utilisée par la fonction de debug debugTotalCommande() (également supprimée).
+// PROBLÈME : Recalculait les prix côté frontend au lieu d'utiliser les prix gelés
+// SOLUTION : Tous les prix proviennent du backend via les données de panier.sous_total
+
 
 // Fonction utilitaire pour vérifier si les frais de livraison sont activés
 function sontFraisLivraisonActives() {
@@ -2509,12 +2555,20 @@ function sauvegarderNouvelArticle(article, quantite) {
 
 // Ajouter les événements pour la modale d'articles et les raccourcis clavier
 document.addEventListener('DOMContentLoaded', function() {
+    // 💰 AFFICHAGE INITIAL: Ne PAS recalculer les prix au chargement
+    // Les prix affichés viennent du backend et sont gelés historiquement
+    // Le recalcul dynamique se fera UNIQUEMENT après les opérations AJAX (ajout/suppression)
+    console.log('📦 Chargement initial: Prix gelés protégés, pas de recalcul');
+
+    // 🔒 PROTECTION: Appliquer la protection des libellés de prix gelés au chargement initial
+    protegerLibellesPrixGeles();
+
     // Événement pour la sélection d'article
     const articleSelect = document.getElementById('articleSelect');
     if (articleSelect) {
         articleSelect.addEventListener('change', onArticleSelectionChange);
     }
-    
+
     // Événement pour le changement de quantité
     const quantiteInput = document.getElementById('quantiteInput');
     if (quantiteInput) {
@@ -2576,48 +2630,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Fonction alternative pour tester
     window.recalculerTotal = recalculerTotalDepuisSousTotaux;
     
-    // Fonction de debug pour tester le calcul des totaux
-    window.debugTotalCommande = function() {
-        console.log('🔍 Debug du calcul du total de la commande:');
-        
-        const articlesContainer = document.getElementById('articles-container');
-        if (!articlesContainer) {
-            console.error('❌ Conteneur des articles introuvable');
-            return;
-        }
-        
-        const articles = articlesContainer.querySelectorAll('.article-card');
-        
-        let totalCalcule = 0;
-        articles.forEach((article, index) => {
-            const quantiteElement = article.querySelector('.text-blue-600');
-            const sousTotalElement = article.querySelector('.text-lg.font-bold');
-            const articleData = JSON.parse(article.dataset.article || '{}');
-            
-            if (quantiteElement && articleData) {
-                const quantite = parseInt(quantiteElement.textContent);
-                const prix = getPrixUpsell(articleData, quantite);
-                const sousTotal = articleData.isUpsell ? prix : prix * quantite;
-    
-                totalCalcule += sousTotal;
-            }
-        });
-        
-        const totalElement = document.getElementById('total-commande');
-        if (totalElement) {
-            console.log(`📊 Total affiché avant recalcul: ${totalElement.textContent}`);
-        }
-        
-        // Forcer le recalcul avec la méthode principale
-        mettreAJourTotalCommande();
-        if (totalElement) {
-            console.log(`📊 Total affiché après recalcul principal: ${totalElement.textContent}`);
-        }
-        // Essayer aussi la méthode alternative
-        const totalAlternatif = recalculerTotalDepuisSousTotaux();   
-    };
-    
-    console.log('💡 Fonction de debug disponible: debugTotalCommande()');
+    // ⚠️ FONCTION DE DEBUG DÉSACTIVÉE: window.debugTotalCommande
+    // Cette fonction recalculait les totaux en utilisant getPrixUpsell(), ce qui brise l'isolation.
+    // Pour déboguer les totaux, utiliser les valeurs affichées directement depuis le backend.
+    console.log('ℹ️ Isolation des prix active - Les totaux sont gérés par le backend');
 
 });
 

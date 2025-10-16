@@ -115,13 +115,19 @@
                 <!-- Prix unitaire -->
                 <div class="text-center min-w-0">
                     <div class="text-sm text-gray-500">Prix actuel</div>
-                    
-                    <!-- Utiliser le filtre get_prix_effectif_panier pour la logique des remises -->
+
+                    <!-- Utiliser le filtre get_prix_effectif_panier pour garantir la cohérence avec le sous-total -->
                     {% with panier|get_prix_effectif_panier as prix_effectif %}
-                    <div class="font-medium {{ prix_effectif.couleur_classe }}" id="prix-unitaire-{{ panier.id }}">
-                        {{ panier.prix_panier|floatformat:2 }} DH
+                    <div class="font-medium {{ prix_effectif.couleur_classe }}"
+                         id="prix-unitaire-{{ panier.id }}"
+                         data-prix-gele="{{ prix_effectif.prix_unitaire|floatformat:2 }}"
+                         data-couleur-gelee="{{ prix_effectif.couleur_classe }}">
+                        {{ prix_effectif.prix_unitaire|floatformat:2 }} DH
                     </div>
-                    <div class="text-xs {{ prix_effectif.couleur_classe }} mt-1" id="prix-libelle-{{ panier.id }}">
+                    <div class="text-xs {{ prix_effectif.couleur_classe }} mt-1"
+                         id="prix-libelle-{{ panier.id }}"
+                         data-libelle-gele="{{ prix_effectif.libelle }}"
+                         data-couleur-gelee="{{ prix_effectif.couleur_classe }}">
                         {{ prix_effectif.libelle }}
                     </div>
                     {% endwith %}
