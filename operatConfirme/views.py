@@ -9,6 +9,7 @@ from parametre.models import Operateur, Ville # Assurez-vous que ce chemin est c
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.forms import PasswordChangeForm # Importez PasswordChangeForm
 from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
 import json
 from django.utils import timezone
 from commande.models import Commande, EtatCommande, EnumEtatCmd, Panier
@@ -20,6 +21,7 @@ from article.models import Article, VarianteArticle
 import logging
 from django.urls import reverse
 from django.template.loader import render_to_string
+from decimal import Decimal
 # Suppression de l'app notifications: retirer les imports
 
 # Create your views here.
@@ -3213,6 +3215,327 @@ def get_article_variants(request, article_id):
             'error': 'Erreur lors de la récupération des variantes'
         }, status=500)
 
+
+@login_required
+@require_http_methods(["POST"])
+def appliquer_remise_panier(request, panier_id):
+    """
+    Applique une remise personnalisée sur un panier spécifique.
+    La remise est calculée sur le sous_total du panier (pas sur prix_panier).
+
+    Paramètres attendus (POST JSON):
+    - type_remise: 'POURCENTAGE' ou 'MONTANT_FIXE'
+    - valeur_remise: La valeur de la remise (pourcentage ou montant en DH)
+    - raison_remise: (optionnel) Motif de la remise
+
+    Returns:
+        JsonResponse avec:
+        - success: bool
+        - message: str
+        - data: {
+            sous_total_original: Decimal,
+            montant_remise: Decimal,
+            nouveau_sous_total: Decimal,
+            nouveau_total_commande: Decimal
+        }
+    """
+    from commande.models import RemisePanier
+    from django.views.decorators.http import require_http_methods
+    from decimal import Decimal
+
+    try:
+        # Récupérer l'opérateur
+        try:
+            operateur = Operateur.objects.get(user=request.user, type_operateur='CONFIRMATION')
+        except Operateur.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Profil opérateur non trouvé'
+            }, status=403)
+
+        # Récupérer le panier
+        panier = get_object_or_404(Panier, id=panier_id)
+        commande = panier.commande
+
+        # Vérifier que la commande appartient aux commandes accessibles par l'opérateur
+        if not commande.etats.filter(
+            Q(operateur=operateur) | Q(enum_etat__libelle__in=['Affectée', 'En cours de confirmation', 'Retour Confirmation'])
+        ).exists():
+            return JsonResponse({
+                'success': False,
+                'error': 'Vous n\'avez pas accès à cette commande'
+            }, status=403)
+
+        # Parser les données JSON
+        data = json.loads(request.body)
+        type_remise = data.get('type_remise', 'POURCENTAGE')
+        valeur_remise = data.get('valeur_remise')
+        raison_remise = data.get('raison_remise', '')
+
+        # Validation des données
+        if not valeur_remise:
+            return JsonResponse({
+                'success': False,
+                'error': 'La valeur de la remise est requise'
+            }, status=400)
+
+        try:
+            valeur_remise = Decimal(str(valeur_remise))
+        except (ValueError, TypeError):
+            return JsonResponse({
+                'success': False,
+                'error': 'Valeur de remise invalide'
+            }, status=400)
+
+        if valeur_remise <= 0:
+            return JsonResponse({
+                'success': False,
+                'error': 'La valeur de la remise doit être supérieure à 0'
+            }, status=400)
+
+        # Vérifier si une remise existe déjà
+        if hasattr(panier, 'remise_personnalisee'):
+            return JsonResponse({
+                'success': False,
+                'error': 'Une remise est déjà appliquée sur ce panier. Veuillez d\'abord la retirer.'
+            }, status=400)
+
+        # Sauvegarder le sous-total original
+        sous_total_original = Decimal(str(panier.sous_total))
+
+        # Créer la remise avec transaction
+        with transaction.atomic():
+            remise = RemisePanier.objects.create(
+                panier=panier,
+                type_remise=type_remise,
+                valeur_remise=valeur_remise,
+                raison_remise=raison_remise,
+                operateur=operateur
+            )
+
+            # Appliquer la remise (calcule et modifie le sous_total du panier)
+            nouveau_sous_total = remise.appliquer_remise()
+
+            # Recalculer le total de la commande
+            commande.calculer_total()
+            commande.save(update_fields=['total_cmd'])
+
+        # Retourner les informations
+        return JsonResponse({
+            'success': True,
+            'message': f'Remise de {remise.montant_applique:.2f} DH appliquée avec succès',
+            'data': {
+                'panier_id': panier.id,
+                'sous_total_original': float(sous_total_original),
+                'montant_remise': float(remise.montant_applique),
+                'nouveau_sous_total': float(nouveau_sous_total),
+                'nouveau_total_commande': float(commande.total_cmd),
+                'type_remise': remise.type_remise,
+                'valeur_remise': float(remise.valeur_remise),
+                'raison_remise': remise.raison_remise
+            }
+        })
+
+    except Panier.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Panier non trouvé'
+        }, status=404)
+    except Exception as e:
+        import traceback
+        print(f"❌ Erreur dans appliquer_remise_panier: {str(e)}")
+        print(traceback.format_exc())
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur lors de l\'application de la remise: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def retirer_remise_panier(request, panier_id):
+    """
+    Retire une remise appliquée sur un panier.
+    Restaure le sous_total original du panier.
+
+    Returns:
+        JsonResponse avec:
+        - success: bool
+        - message: str
+        - data: {
+            sous_total_restaure: Decimal,
+            montant_remise_retiree: Decimal,
+            nouveau_total_commande: Decimal
+        }
+    """
+    from commande.models import RemisePanier
+    from django.views.decorators.http import require_http_methods
+    from decimal import Decimal
+
+    try:
+        # Récupérer l'opérateur
+        try:
+            operateur = Operateur.objects.get(user=request.user, type_operateur='CONFIRMATION')
+        except Operateur.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Profil opérateur non trouvé'
+            }, status=403)
+
+        # Récupérer le panier
+        panier = get_object_or_404(Panier, id=panier_id)
+        commande = panier.commande
+
+        # Vérifier l'accès
+        if not commande.etats.filter(
+            Q(operateur=operateur) | Q(enum_etat__libelle__in=['Affectée', 'En cours de confirmation', 'Retour Confirmation'])
+        ).exists():
+            return JsonResponse({
+                'success': False,
+                'error': 'Vous n\'avez pas accès à cette commande'
+            }, status=403)
+
+        # Vérifier si une remise existe
+        if not hasattr(panier, 'remise_personnalisee'):
+            return JsonResponse({
+                'success': False,
+                'error': 'Aucune remise n\'est appliquée sur ce panier'
+            }, status=400)
+
+        remise = panier.remise_personnalisee
+        montant_remise_retiree = Decimal(str(remise.montant_applique))
+
+        # Retirer la remise avec transaction
+        with transaction.atomic():
+            sous_total_restaure = remise.retirer_remise()
+
+            # Recalculer le total de la commande
+            commande.calculer_total()
+            commande.save(update_fields=['total_cmd'])
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Remise de {montant_remise_retiree:.2f} DH retirée avec succès',
+            'data': {
+                'panier_id': panier.id,
+                'sous_total_restaure': float(sous_total_restaure),
+                'montant_remise_retiree': float(montant_remise_retiree),
+                'nouveau_total_commande': float(commande.total_cmd)
+            }
+        })
+
+    except Panier.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Panier non trouvé'
+        }, status=404)
+    except Exception as e:
+        import traceback
+        print(f"❌ Erreur dans retirer_remise_panier: {str(e)}")
+        print(traceback.format_exc())
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur lors du retrait de la remise: {str(e)}'
+        }, status=500)
+
+
+@login_required
+def calculer_remise_panier_preview(request, panier_id):
+    """
+    Calcule et retourne un aperçu de la remise sans l'appliquer.
+    Utile pour afficher le montant avant confirmation.
+
+    Paramètres GET:
+    - type_remise: 'POURCENTAGE' ou 'MONTANT_FIXE'
+    - valeur_remise: La valeur de la remise
+
+    Returns:
+        JsonResponse avec:
+        - success: bool
+        - data: {
+            sous_total_actuel: Decimal,
+            montant_remise_calcule: Decimal,
+            sous_total_apres_remise: Decimal,
+            pourcentage_reduction: Decimal (si applicable)
+        }
+    """
+    from decimal import Decimal
+
+    try:
+        # Récupérer le panier
+        panier = get_object_or_404(Panier, id=panier_id)
+
+        # Récupérer les paramètres
+        type_remise = request.GET.get('type_remise', 'POURCENTAGE')
+        valeur_remise = request.GET.get('valeur_remise')
+
+        if not valeur_remise:
+            return JsonResponse({
+                'success': False,
+                'error': 'La valeur de la remise est requise'
+            }, status=400)
+
+        try:
+            valeur_remise = Decimal(str(valeur_remise))
+        except (ValueError, TypeError):
+            return JsonResponse({
+                'success': False,
+                'error': 'Valeur de remise invalide'
+            }, status=400)
+
+        if valeur_remise <= 0:
+            return JsonResponse({
+                'success': False,
+                'error': 'La valeur de la remise doit être supérieure à 0'
+            }, status=400)
+
+        # Calculer la remise
+        sous_total_actuel = Decimal(str(panier.sous_total))
+
+        if type_remise == 'POURCENTAGE':
+            montant_remise = sous_total_actuel * (valeur_remise / Decimal('100'))
+            pourcentage_reduction = valeur_remise
+        else:  # MONTANT_FIXE
+            montant_remise = valeur_remise
+            if sous_total_actuel > 0:
+                pourcentage_reduction = (montant_remise / sous_total_actuel) * Decimal('100')
+            else:
+                pourcentage_reduction = Decimal('0')
+
+        # Limiter la remise au sous-total
+        if montant_remise > sous_total_actuel:
+            montant_remise = sous_total_actuel
+
+        sous_total_apres_remise = sous_total_actuel - montant_remise
+
+        return JsonResponse({
+            'success': True,
+            'data': {
+                'panier_id': panier.id,
+                'article_nom': panier.article.nom,
+                'quantite': panier.quantite,
+                'sous_total_actuel': float(sous_total_actuel),
+                'montant_remise_calcule': float(montant_remise),
+                'sous_total_apres_remise': float(sous_total_apres_remise),
+                'pourcentage_reduction': float(pourcentage_reduction),
+                'type_remise': type_remise,
+                'valeur_remise': float(valeur_remise)
+            }
+        })
+
+    except Panier.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Panier non trouvé'
+        }, status=404)
+    except Exception as e:
+        import traceback
+        print(f"❌ Erreur dans calculer_remise_panier_preview: {str(e)}")
+        print(traceback.format_exc())
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur lors du calcul de la remise: {str(e)}'
+        }, status=500)
 
 
 
