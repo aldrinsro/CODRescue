@@ -2709,12 +2709,14 @@ def envois_view(request):
 
     # Données placeholder: commandes prêtes (même logique que export_envois)
     from parametre.models import Region
+    from django.db.models import Count, Q
+
     regions = Region.objects.all()
     commandes_pretes = Commande.objects.filter(
         etats__enum_etat__libelle='Préparée',
         etats__date_fin__isnull=True
     ).select_related('ville__region')
-    
+
     # Récupérer les envois actifs (non clôturés)
     envois_actifs = Envoi.objects.exclude(
         status=False
@@ -2727,7 +2729,7 @@ def envois_view(request):
             etats__enum_etat__libelle='Préparée',
             etats__date_fin__isnull=True
         ).count()
-        
+
         # Mettre à jour seulement si le nombre a changé
         if envoi.nb_commandes != nb_commandes:
             envoi.nb_commandes = nb_commandes
@@ -2735,6 +2737,14 @@ def envois_view(request):
 
     # Récupérer les IDs des régions qui ont déjà un envoi actif
     regions_avec_envoi_actif = set(envois_actifs.values_list('region_id', flat=True))
+
+    # Annoter chaque région avec le nombre de commandes prêtes
+    for region in regions:
+        region.nb_commandes_pretes = Commande.objects.filter(
+            ville__region=region,
+            etats__enum_etat__libelle='Préparée',
+            etats__date_fin__isnull=True
+        ).count()
 
     context = {
         'regions': regions,

@@ -28,6 +28,14 @@ def div(value, arg):
         return 0
 
 @register.filter
+def subtract(value, arg):
+    """Soustraction de deux nombres"""
+    try:
+        return float(value) - float(arg)
+    except (ValueError, TypeError):
+        return 0
+
+@register.filter
 def confirmation_operation(commande):
     """Récupère la dernière opération de confirmation pour une commande"""
     operations_confirmation = commande.operations.filter(
