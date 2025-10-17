@@ -671,6 +671,169 @@ class Panier(models.Model):
         return f"{self.commande.num_cmd} - {self.article.nom} (x{self.quantite})"
 
 
+
+class RemisePanier(models.Model):
+    """
+    Modèle pour gérer les remises personnalisées appliquées sur un panier.
+    La remise s'applique sur le sous-total du panier (prix_panier * quantite).
+    Une seule remise peut être appliquée par panier (OneToOneField).
+    """
+    TYPE_REMISE_CHOICES = [
+        ('POURCENTAGE', 'Pourcentage'),
+        ('MONTANT_FIXE', 'Montant fixe'),
+    ]
+
+    panier = models.OneToOneField(
+        Panier,
+        on_delete=models.CASCADE,
+        related_name='remise_personnalisee',
+        verbose_name="Panier",
+        help_text="Panier auquel cette remise est appliquée"
+    )
+    type_remise = models.CharField(
+        max_length=20,
+        choices=TYPE_REMISE_CHOICES,
+        default='POURCENTAGE',
+        verbose_name="Type de remise"
+    )
+    valeur_remise = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name="Valeur de la remise",
+        help_text="Pourcentage (ex: 10.5 pour 10.5%) ou montant fixe (ex: 50.00 DH)"
+    )
+    montant_applique = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name="Montant déduit",
+        help_text="Montant en DH réellement déduit du sous-total du panier"
+    )
+    raison_remise = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name="Raison de la remise",
+        help_text="Motif ou justification de l'application de cette remise"
+    )
+    date_application = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Date d'application"
+    )
+    operateur = models.ForeignKey(
+        Operateur,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='remises_paniers_appliquees',
+        verbose_name="Opérateur",
+        help_text="Opérateur qui a appliqué cette remise"
+    )
+
+    class Meta:
+        verbose_name = "Remise personnalisée de panier"
+        verbose_name_plural = "Remises personnalisées de paniers"
+        ordering = ['-date_application']
+
+    def __str__(self):
+        if self.type_remise == 'POURCENTAGE':
+            type_str = f"{self.valeur_remise}%"
+        else:
+            type_str = f"{self.valeur_remise} DH"
+        return f"Remise {type_str} sur {self.panier}"
+
+    def calculer_montant_remise(self):
+        """
+        Calcule le montant de la remise à appliquer sur le sous-total du panier.
+
+        Returns:
+            Decimal: Montant de la remise en DH
+        """
+        from decimal import Decimal
+
+        # Base de calcul = sous-total du panier (prix_panier * quantite)
+        sous_total_panier = Decimal(str(self.panier.sous_total))
+
+        if self.type_remise == 'POURCENTAGE':
+            # Remise en pourcentage du sous-total
+            montant = sous_total_panier * (Decimal(str(self.valeur_remise)) / Decimal('100'))
+        else:
+            # Montant fixe
+            montant = Decimal(str(self.valeur_remise))
+
+        # S'assurer que la remise ne dépasse pas le sous-total
+        if montant > sous_total_panier:
+            montant = sous_total_panier
+
+        return montant
+
+    def appliquer_remise(self):
+        """
+        Applique la remise sur le panier en recalculant son sous-total.
+        Le nouveau sous-total = sous-total actuel - montant de la remise.
+
+        Returns:
+            Decimal: Nouveau sous-total après application de la remise
+        """
+        from decimal import Decimal
+
+        # Sauvegarder le sous-total original avant remise (si pas déjà fait)
+        sous_total_original = Decimal(str(self.panier.sous_total))
+
+        # Calculer le montant de la remise
+        montant_remise = self.calculer_montant_remise()
+        self.montant_applique = float(montant_remise)
+
+        # Calculer le nouveau sous-total
+        nouveau_sous_total = sous_total_original - montant_remise
+
+        # S'assurer que le sous-total ne soit pas négatif
+        if nouveau_sous_total < 0:
+            nouveau_sous_total = Decimal('0')
+
+        # Mettre à jour le panier
+        self.panier.sous_total = float(nouveau_sous_total)
+        self.panier.remise_appliquer = True
+        self.panier.save(update_fields=['sous_total', 'remise_appliquer'])
+
+        # Sauvegarder cette remise
+        self.save()
+
+        print(f"✅ Remise appliquée sur {self.panier}: -{montant_remise} DH (nouveau sous-total: {nouveau_sous_total} DH)")
+
+        return nouveau_sous_total
+
+    def retirer_remise(self):
+        """
+        Retire la remise du panier en restaurant le sous-total original.
+
+        Returns:
+            Decimal: Sous-total restauré (avant remise)
+        """
+        from decimal import Decimal
+
+        if self.montant_applique > 0:
+            # Restaurer le sous-total original
+            sous_total_original = Decimal(str(self.panier.sous_total)) + Decimal(str(self.montant_applique))
+
+            self.panier.sous_total = float(sous_total_original)
+            self.panier.remise_appliquer = False
+            self.panier.save(update_fields=['sous_total', 'remise_appliquer'])
+
+            print(f"🔄 Remise retirée de {self.panier}: +{self.montant_applique} DH (sous-total restauré: {sous_total_original} DH)")
+
+            # Supprimer l'objet RemisePanier
+            self.delete()
+
+            return sous_total_original
+
+        return Decimal(str(self.panier.sous_total))
+
+
+
+
+
 class EtatCommande(models.Model):
     commande = models.ForeignKey(Commande, on_delete=models.CASCADE, related_name='etats')
     enum_etat = models.ForeignKey(EnumEtatCmd, on_delete=models.CASCADE)
