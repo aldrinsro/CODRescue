@@ -78,7 +78,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <!-- ID YZ -->
             <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                <label class="block text-sm font-semibold mb-2 text-gray-600">ID YZ :</label>
+                <label class="block text-sm font-semibold mb-2 text-gray-600">N° Commande :</label>
                 <p class="text-lg font-medium text-gray-800">
                     <i class="fas fa-barcode mr-2" style="color: var(--admin-color);"></i>
                     {{ commande.id_yz }}
@@ -103,7 +103,7 @@
                             {% endif %}
                         </h3>
                         <p class="mt-1 max-w-2xl text-sm text-gray-500">
-                            ID YZ: {{ commande.id_yz }}
+                            N° Commande: {{ commande.id_yz }}
                 </p>
                     </div>
                 </div>
@@ -331,8 +331,14 @@
                                         </div>
                                     {% endif %}
                                     <div>
-                                        <div class="font-medium text-gray-900">{{ panier.article.nom }}</div>
-                                        <div class="text-xs text-gray-500">{{ panier.article.reference }}</div>
+                                        <div class="font-medium text-gray-900">{{ panier.article.reference}}</div>
+                                        <div class="text-xs text-gray-500">
+                                            <span class="inline-flex items-center px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+                                                <i class="fas fa-ruler-vertical mr-1"></i>{{ panier.variante.pointure }} </span>
+                                               <span class="inline-flex items-center px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">
+                                                <i class="fas fa-palette mr-1"></i>{{ panier.variante.couleur }}
+                                                </span>
+                                        </div>
                                     </div>
                                 </div>
                             </td>
@@ -421,7 +427,7 @@
                                 {% if etat.operateur %}
                                     <div class="flex items-center">
                                         <i class="fas fa-user mr-2 text-gray-400"></i>
-                                        {{ etat.operateur.mail }}
+                                        {{ etat.operateur.get_full_name }}
                                     </div>
                                 {% else %}
                                     <span class="text-gray-400">-</span>
@@ -451,21 +457,19 @@
     </div>
 
     <!-- Actions -->
+     
     <div class="bg-white rounded-xl shadow-lg border p-6 md:p-8" style="border-color: var(--admin-accent-color);">
         <h2 class="text-2xl font-bold flex items-center mb-6" style="color: var(--admin-color);">
             <i class="fas fa-tools mr-2"></i>Actions
         </h2>
         
+        
+        {%if commande.etat_actuel.enum_etat.libelle not in etats_non_modifiables   %}
         <div class="flex flex-wrap gap-4">
             <a href="{% url 'commande:modifier' commande.pk %}" class="inline-flex items-center px-6 py-3 text-white rounded-lg font-medium shadow-md transition-colors duration-300" style="background-color: var(--admin-color); hover:background-color: var(--admin-gradient-end);">
                 <i class="fas fa-edit mr-2"></i> Modifier la commande
             </a>
-            
-            <!-- Bouton Étiquettes Professionnelles -->
-            <a href="{% url 'commande:etiquettes_generator' %}?commande_id={{ commande.id }}" 
-               class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-blue-700 transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105">
-                <i class="fas fa-tags mr-2"></i> Étiquettes Professionnelles
-            </a>
+        {% endif %}
             
             <a href="{% url 'commande:confirmees' %}" class="inline-flex items-center px-6 py-3 bg-gray-500 text-white rounded-lg font-medium hover:bg-gray-600 transition-colors shadow-md">
                 <i class="fas fa-list mr-2"></i> Retour aux commandes confirmées

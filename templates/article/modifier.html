@@ -501,7 +501,7 @@
             </div>
             
             <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
-                <h3 class="text-lg font-semibold mb-3" style="color: var(--admin-color);">Prix de substitution (Upsell)</h3>
+                <h3 class="text-lg font-semibold mb-3" style="color: var(--admin-color);"> Les prix upsells </h3>
                 <p class="text-sm text-gray-600 mb-4">Vous pouvez définir jusqu'à 4 prix alternatifs pour cet article</p>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -541,43 +541,7 @@
                 
                 <!-- Section des prix de remise -->
                 <div class="mt-6 pt-4 border-t border-gray-300">
-                    <h4 class="text-lg font-semibold mb-4" style="color: var(--admin-color);">Prix de Remise</h4>
-                    <p class="text-sm text-gray-600 mb-4">Définissez jusqu'à 4 prix de remise pour cet article</p>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label for="id_prix_remise_1" class="block text-sm font-semibold mb-2" style="color: var(--admin-color);">Prix remise 1 (DH):</label>
-                            <input type="number" name="prix_remise_1" id="id_prix_remise_1" 
-                                   value="{{ article.prix_remise_1|floatformat:"-2"|default:'' }}" 
-                                   step="0.01" min="0" 
-                                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#034a4a] focus:border-transparent transition duration-200" 
-                                   placeholder="Ex: 249.99">
-                        </div>
-                        <div>
-                            <label for="id_prix_remise_2" class="block text-sm font-semibold mb-2" style="color: var(--admin-color);">Prix remise 2 (DH):</label>
-                            <input type="number" name="prix_remise_2" id="id_prix_remise_2" 
-                                   value="{{ article.prix_remise_2|floatformat:"-2"|default:'' }}" 
-                                   step="0.01" min="0" 
-                                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#034a4a] focus:border-transparent transition duration-200" 
-                                   placeholder="Ex: 229.99">
-                        </div>
-                        <div>
-                            <label for="id_prix_remise_3" class="block text-sm font-semibold mb-2" style="color: var(--admin-color);">Prix remise 3 (DH):</label>
-                            <input type="number" name="prix_remise_3" id="id_prix_remise_3" 
-                                   value="{{ article.prix_remise_3|floatformat:"-2"|default:'' }}" 
-                                   step="0.01" min="0" 
-                                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#034a4a] focus:border-transparent transition duration-200" 
-                                   placeholder="Ex: 199.99">
-                        </div>
-                        <div>
-                            <label for="id_prix_remise_4" class="block text-sm font-semibold mb-2" style="color: var(--admin-color);">Prix remise 4 (DH):</label>
-                            <input type="number" name="prix_remise_4" id="id_prix_remise_4" 
-                                   value="{{ article.prix_remise_4|floatformat:"-2"|default:'' }}" 
-                                   step="0.01" min="0" 
-                                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#034a4a] focus:border-transparent transition duration-200" 
-                                   placeholder="Ex: 179.99">
-                        </div>
-                    </div>
+                 
                 </div>
                 
                 <!-- Nouveaux champs pour prix_uspell_final et Prix_liquidation -->
@@ -617,16 +581,15 @@
                         <i class="fas fa-tag mr-2"></i>Mettre en liquidation
                     </button>
                     <button type="button" disabled class="inline-flex items-center bg-gray-300 text-gray-500 px-4 py-2 rounded-lg text-md font-medium cursor-not-allowed opacity-60">
+                        <i class="fas fa-database mr-2"></i>Liquidation DB
+                    </button>
+                    <button type="button" disabled class="inline-flex items-center bg-gray-300 text-gray-500 px-4 py-2 rounded-lg text-md font-medium cursor-not-allowed opacity-60">
                         <i class="fas fa-flask mr-2"></i>Mettre en test
                     </button>
                     {% else %}
                     <a href="#" onclick="document.getElementById('id_phase').value='EN_COURS'; this.closest('form').submit(); return false;" 
                        class="inline-flex items-center bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-md font-medium transition-all shadow-md hover:shadow-lg">
                         <i class="fas fa-check-circle mr-2"></i>Mettre par défaut
-                    </a>
-                    <a href="#" onclick="document.getElementById('id_phase').value='LIQUIDATION'; this.closest('form').submit(); return false;" 
-                       class="inline-flex items-center bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-md font-medium transition-all shadow-md hover:shadow-lg">
-                        <i class="fas fa-tag mr-2"></i>Mettre en liquidation
                     </a>
                     <a href="#" onclick="document.getElementById('id_phase').value='EN_TEST'; this.closest('form').submit(); return false;" 
                        class="inline-flex items-center bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-md font-medium transition-all shadow-md hover:shadow-lg">

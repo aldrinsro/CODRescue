@@ -28,6 +28,14 @@ def div(value, arg):
         return 0
 
 @register.filter
+def subtract(value, arg):
+    """Soustraction de deux nombres"""
+    try:
+        return float(value) - float(arg)
+    except (ValueError, TypeError):
+        return 0
+
+@register.filter
 def confirmation_operation(commande):
     """Récupère la dernière opération de confirmation pour une commande"""
     operations_confirmation = commande.operations.filter(
@@ -77,6 +85,8 @@ def get_prix_upsell(article, quantite):
     Retourne le prix approprié en fonction de la quantité.
     Pour les articles upsell : le prix upsell REMPLACE le prix actuel.
     """
+   
+
     if not article.isUpsell:
         return article.prix_actuel if article.prix_actuel is not None else article.prix_unitaire
     
@@ -109,15 +119,16 @@ def get_prix_upsell_avec_compteur(article, compteur):
     - 3 unités upsell → compteur = 2 → prix upsell 2
     - 4 unités upsell → compteur = 3 → prix upsell 3
     - 5+ unités upsell → compteur = 4+ → prix upsell 4
-    
+
     Note: Les unités incluent les quantités (ex: 1 article qté 2 = 2 unités)
     Seuls les articles avec isUpsell=True utilisent les prix upsell.
     Les autres articles gardent leur prix normal.
     """
+
     # Si l'article n'est pas upsell, toujours retourner le prix normal
     if not article.isUpsell:
         return article.prix_actuel if article.prix_actuel is not None else article.prix_unitaire
-    
+
     # Pour les articles upsell, appliquer le prix selon le compteur
     if compteur == 0:
         # 0-1 articles upsell → prix normal
@@ -137,7 +148,8 @@ def get_prix_upsell_avec_compteur(article, compteur):
     else:
         # Si pas de prix upsell défini pour ce niveau, utiliser le prix actuel
         return article.prix_actuel if article.prix_actuel is not None else article.prix_unitaire
-
+        
+        
 @register.filter
 def get_prix_upsell_supplement(article, quantite):
     """
@@ -167,8 +179,49 @@ def calculer_sous_total_avec_compteur(panier, compteur):
     Seuls les articles avec isUpsell=True utilisent les prix upsell selon le niveau.
     Les autres articles gardent leur prix normal.
     """
-    prix = get_prix_upsell_avec_compteur(panier.article, compteur)
-    return prix * panier.quantite if prix is not None else 0
+    # Si le panier possède un prix unitaire explicite, l'utiliser en priorité
+    try:
+        prix_panier = getattr(panier, 'prix_panier', None)
+    except Exception:
+        prix_panier = None
+
+    if prix_panier is not None and prix_panier != 0:
+        return float(prix_panier) * float(panier.quantite)
+
+    # Sinon, fallback vers la logique upsell basée sur l'article/compteur
+    prix_calcule = get_prix_upsell_avec_compteur(panier.article, compteur)
+    return float(prix_calcule) * float(panier.quantite) if prix_calcule is not None else 0
+
+@register.filter
+def get_prix_unitaire_effectif_panier(panier, compteur=None):
+    """
+    Retourne le prix unitaire effectif d'un panier.
+    Priorité à panier.prix_panier s'il est renseigné, sinon applique la logique upsell.
+    Le paramètre compteur est optionnel (utile pour les articles upsell).
+    """
+    try:
+        prix_panier = getattr(panier, 'prix_panier', None)
+    except Exception:
+        prix_panier = None
+
+    if prix_panier is not None and prix_panier != 0:
+        return float(prix_panier)
+
+    # Fallback: utiliser la logique upsell/standard
+    if compteur is not None:
+        return get_prix_upsell_avec_compteur(panier.article, compteur)
+    else:
+        # Sans compteur, retourner le prix courant de l'article
+        article = panier.article
+        return article.prix_actuel if article.prix_actuel is not None else article.prix_unitaire
+
+@register.filter
+def calculer_prix_panier_avec_upsell(article, compteur):
+    """
+    Calcule le prix_panier en appliquant la logique upsell complète.
+    Utilise le compteur pour déterminer le bon prix upsell.
+    """
+    return get_prix_upsell_avec_compteur(article, compteur)
 
 @register.filter
 def calculer_sous_total_upsell(article, quantite):

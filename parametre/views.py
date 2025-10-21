@@ -188,7 +188,6 @@ def liste_operateurs(request):
     }
     return render(request, 'parametre/liste_operateurs.html', context)
 
-
 @login_required
 def liste_operateurs_ajax(request):
     """Vue AJAX pour la pagination flexible des opérateurs"""
@@ -285,6 +284,7 @@ def liste_operateurs_ajax(request):
         'current_page': page_obj.number,
         'total_count': page_obj.paginator.count,
     })
+
 
 @staff_member_required
 @login_required
@@ -1701,191 +1701,6 @@ def sav_renvoyer_preparation(request, commande_id):
         return redirect('app_admin:sav_commandes_retournees')
 
 
-@staff_member_required
-@login_required
-def repartition_automatique(request):
-    """Page de répartition automatique des commandes"""
-    from django.db.models import Count, Sum
-    
-    # Gérer les exports
-    export_type = request.GET.get('export')
-    operateur_id = request.GET.get('operateur_id')
-    
-    if export_type == 'csv_operateur' and operateur_id:
-        return export_operateur_csv(request, operateur_id)
-    elif export_type == 'excel_operateur' and operateur_id:
-        return export_operateur_excel(request, operateur_id)
-    
-    # Statistiques pour les KPI
-    total_commandes = Commande.objects.filter(
-        etats__enum_etat__libelle__in=['Confirmée', 'À imprimer', 'Préparée']
-    ).distinct().count()
-    
-    total_commandes_en_livraison = Commande.objects.filter(
-        etats__enum_etat__libelle='En livraison'
-    ).distinct().count()
-    
-    total_montant_confirmees = Commande.objects.filter(
-        etats__enum_etat__libelle__in=['Confirmée', 'À imprimer', 'Préparée']
-    ).distinct().aggregate(total=Sum('total_cmd'))['total'] or 0
-    
-    operateurs_disponibles = Operateur.objects.filter(actif=True).exclude(type_operateur='ADMIN').count()
-    
-    # Statistiques par région
-    stats_par_region = Commande.objects.filter(
-        etats__enum_etat__libelle__in=['Confirmée', 'À imprimer', 'Préparée']
-    ).values('ville__region__nom_region').annotate(
-        nb_commandes=Count('id'),
-        total_montant=Sum('total_cmd')
-    ).order_by('-nb_commandes')
-    
-    # Données de prévisualisation dynamique et intelligente
-    preview_data = {}
-    operateurs_actifs = Operateur.objects.filter(actif=True).exclude(type_operateur='ADMIN')[:5]
-    
-    # Récupérer toutes les commandes préparées avec leurs états
-    commandes_preparees = Commande.objects.filter(
-        etats__enum_etat__libelle='Préparée'
-    ).select_related(
-        'client', 'ville', 'ville__region'
-    ).prefetch_related(
-        'etats__operateur', 'etats__enum_etat'
-    ).distinct()
-    
-    for operateur in operateurs_actifs:
-        # Compter les commandes assignées à cet opérateur
-        commandes_operateur = commandes_preparees.filter(
-            etats__operateur=operateur,
-            etats__enum_etat__libelle='Préparée'
-        ).distinct()
-        
-        nb_commandes = commandes_operateur.count()
-        
-        # Récupérer les régions uniques pour cet opérateur
-        regions_operateur = commandes_operateur.values_list(
-            'ville__region__nom_region', flat=True
-        ).distinct()
-        
-        # Récupérer les détails des commandes (limité à 5 pour l'affichage)
-        commandes_details = commandes_operateur.select_related(
-            'client', 'ville', 'ville__region'
-        )[:5]
-        
-        preview_data[operateur.id] = {
-            'nom_operateur': f"{operateur.prenom} {operateur.nom}",
-            'nb_commandes': nb_commandes,
-            'regions': list(regions_operateur),
-            'commandes': list(commandes_details)
-        }
-    
-    # Historique des répartitions (simulation)
-    historique_repartitions = []
-    
-    # Vérifier si des commandes préparées existent pour les exportations
-    commandes_preparees_exist = Commande.objects.filter(
-        etats__enum_etat__libelle='Préparée'
-    ).exists()
-    
-    # Vérifier si openpyxl est disponible
-    try:
-        import openpyxl
-        openpyxl_available = True
-    except ImportError:
-        openpyxl_available = False
-    
-    context = {
-        'total_commandes': total_commandes,
-        'total_commandes_en_livraison': total_commandes_en_livraison,
-        'total_montant_confirmees': total_montant_confirmees,
-        'operateurs_disponibles': operateurs_disponibles,
-        'stats_par_region': stats_par_region,
-        'preview_data': preview_data,
-        'historique_repartitions': historique_repartitions,
-        'commandes_preparees_exist': commandes_preparees_exist,
-        'openpyxl_available': openpyxl_available,
-    }
-    
-    return render(request, 'parametre/repartition_automatique.html', context)
-
-
-@staff_member_required
-@login_required
-def details_region_view(request):
-    """Page de détails par région"""
-    from django.db.models import Count, Sum
-    
-    # Gérer les exports
-    export_type = request.GET.get('export')
-    region_name = request.GET.get('region')
-    
-    if export_type == 'csv_region_detail' and region_name:
-        return export_region_detail_csv(request, region_name)
-    elif export_type == 'excel_region_detail' and region_name:
-        return export_region_detail_excel(request, region_name)
-    elif export_type == 'csv_region':
-        return export_regions_csv(request)
-    elif export_type == 'excel_region':
-        return export_regions_excel(request)
-    elif export_type == 'csv_ville':
-        return export_villes_csv(request)
-    elif export_type == 'excel_ville':
-        return export_villes_excel(request)
-    elif export_type == 'csv_combine':
-        return export_combine_csv(request)
-    elif export_type == 'excel_combine':
-        return export_combine_excel(request)
-    
-    # Statistiques globales
-    total_commandes = Commande.objects.filter(
-        etats__enum_etat__libelle__in=['Confirmée', 'À imprimer', 'Préparée']
-    ).distinct().count()
-    
-    total_montant = Commande.objects.filter(
-        etats__enum_etat__libelle__in=['Confirmée', 'À imprimer', 'Préparée']
-    ).distinct().aggregate(total=Sum('total_cmd'))['total'] or 0
-    
-    regions = Region.objects.count()
-    
-    # Statistiques par région
-    stats_par_region = Commande.objects.filter(
-        etats__enum_etat__libelle__in=['Confirmée', 'À imprimer', 'Préparée']
-    ).values('ville__region__nom_region').annotate(
-        nb_commandes=Count('id'),
-        total_montant=Sum('total_cmd')
-    ).order_by('-nb_commandes')
-    
-    # Statistiques par ville
-    stats_par_ville = Commande.objects.filter(
-        etats__enum_etat__libelle__in=['Confirmée', 'À imprimer', 'Préparée']
-    ).values('ville__nom', 'ville__region__nom_region').annotate(
-        nb_commandes=Count('id'),
-        total_montant=Sum('total_cmd')
-    ).order_by('-nb_commandes')
-    
-    # Vérifier si des commandes préparées existent pour les exportations
-    commandes_preparees_exist = Commande.objects.filter(
-        etats__enum_etat__libelle='Préparée'
-    ).exists()
-    
-    # Vérifier si openpyxl est disponible
-    try:
-        import openpyxl
-        openpyxl_available = True
-    except ImportError:
-        openpyxl_available = False
-    
-    context = {
-        'total_commandes': total_commandes,
-        'total_montant': total_montant,
-        'regions': Region.objects.all(),
-        'stats_par_region': stats_par_region,
-        'stats_par_ville': stats_par_ville,
-        'commandes_preparees_exist': commandes_preparees_exist,
-        'openpyxl_available': openpyxl_available,
-    }
-    
-    return render(request, 'parametre/details_region.html', context)
-
 
 @staff_member_required
 @login_required
@@ -2272,80 +2087,6 @@ def export_villes_excel(request):
     wb.save(response)
     return response
 
-@staff_member_required
-@login_required
-def get_modal_data_ajax(request):
-    """Vue AJAX pour récupérer les données des modales en temps réel"""
-    from django.utils import timezone
-    from datetime import datetime
-    
-    try:
-        # Statistiques globales
-        total_commandes = Commande.objects.filter(
-            etats__enum_etat__libelle__in=['Confirmée', 'À imprimer', 'Préparée']
-        ).distinct().count()
-        
-        total_montant = Commande.objects.filter(
-            etats__enum_etat__libelle__in=['Confirmée', 'À imprimer', 'Préparée']
-        ).distinct().aggregate(total=Sum('total_cmd'))['total'] or 0
-        
-        # Statistiques par région avec pourcentages
-        stats_region_avec_pourcentage = []
-        stats_par_region = Commande.objects.filter(
-            etats__enum_etat__libelle__in=['Confirmée', 'À imprimer', 'Préparée']
-        ).values('ville__region__nom_region').annotate(
-            nb_commandes=Count('id'),
-            total_montant=Sum('total_cmd')
-        ).order_by('-nb_commandes')
-        
-        for stat in stats_par_region:
-            pourcentage = (stat['nb_commandes'] / total_commandes * 100) if total_commandes > 0 else 0
-            stats_region_avec_pourcentage.append({
-                'region': stat['ville__region__nom_region'],
-                'nb_commandes': stat['nb_commandes'],
-                'total_montant': stat['total_montant'] or 0,
-                'pourcentage': round(pourcentage, 1)
-            })
-        
-        # Top 10 des villes
-        top_10_villes = Commande.objects.filter(
-            etats__enum_etat__libelle__in=['Confirmée', 'À imprimer', 'Préparée']
-        ).values('ville__nom', 'ville__region__nom_region').annotate(
-            nb_commandes=Count('id'),
-            total_montant=Sum('total_cmd')
-        ).order_by('-nb_commandes')[:10]
-        
-        # Statistiques globales détaillées
-        nb_regions_actives = len(stats_region_avec_pourcentage)
-        nb_villes_actives = Commande.objects.filter(
-            etats__enum_etat__libelle__in=['Confirmée', 'À imprimer', 'Préparée']
-        ).values('ville').distinct().count()
-        
-        moyenne_commandes_par_region = round(total_commandes / nb_regions_actives, 1) if nb_regions_actives > 0 else 0
-        moyenne_commandes_par_ville = round(total_commandes / nb_villes_actives, 1) if nb_villes_actives > 0 else 0
-        
-        stats_globales = {
-            'total_commandes': total_commandes,
-            'total_montant': total_montant,
-            'nb_regions_actives': nb_regions_actives,
-            'nb_villes_actives': nb_villes_actives,
-            'moyenne_commandes_par_region': moyenne_commandes_par_region,
-            'moyenne_commandes_par_ville': moyenne_commandes_par_ville,
-            'derniere_mise_a_jour': timezone.now().strftime('%d/%m/%Y à %H:%M:%S')
-        }
-        
-        return JsonResponse({
-            'success': True,
-            'stats_region_avec_pourcentage': stats_region_avec_pourcentage,
-            'top_10_villes': list(top_10_villes),
-            'stats_globales': stats_globales
-        })
-        
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': str(e)
-        })
 
 
 @staff_member_required

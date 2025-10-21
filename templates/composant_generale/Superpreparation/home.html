@@ -6,28 +6,7 @@
 {% block page_subtitle %}{{ page_subtitle }}{% endblock %}
 
 {% block content %}
-<!-- Alertes de supervision en haut -->
-{% if stats.alertes %}
-<div class="mb-6">
-    {% for alerte in stats.alertes %}
-    <div class="{% if alerte.type == 'urgent' %}bg-red-100 border-red-500 text-red-800{% elif alerte.type == 'warning' %}bg-yellow-100 border-yellow-500 text-yellow-800{% else %}bg-blue-100 border-blue-500 text-blue-800{% endif %} border-l-4 p-4 mb-3 rounded-r-lg shadow-sm flex items-center justify-between">
-        <div class="flex items-center">
-            <i class="{{ alerte.icon }} text-xl mr-3 {% if alerte.type == 'urgent' %}text-red-600{% elif alerte.type == 'warning' %}text-yellow-600{% else %}text-blue-600{% endif %}"></i>
-            <span class="font-medium">{{ alerte.message }}</span>
-        </div>
-        {% if alerte.url %}
-        <a href="{% url alerte.url %}" class="{% if alerte.type == 'urgent' %}bg-red-600 hover:bg-red-700{% elif alerte.type == 'warning' %}bg-yellow-600 hover:bg-yellow-700{% else %}bg-blue-600 hover:bg-blue-700{% endif %} text-white px-3 py-1 rounded text-sm font-medium transition-colors">
-            Voir
-        </a>
-        {% else %}
-        <span class="{% if alerte.type == 'urgent' %}bg-red-600{% elif alerte.type == 'warning' %}bg-yellow-600{% else %}bg-blue-600{% endif %} text-white px-3 py-1 rounded text-sm font-medium opacity-50 cursor-not-allowed">
-            Voir
-        </span>
-        {% endif %}
-    </div>
-    {% endfor %}
-</div>
-{% endif %}
+
 
 <!-- Métriques principales de supervision -->
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -47,34 +26,9 @@
         </div>
     </div>
 
-    <!-- Commandes livrées partiellement -->
-    <div class="group bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:shadow-2xl hover:scale-105 border-l-4 border-yellow-500">
-        <div class="flex items-center justify-between">
-            <div>
-                <p class="text-sm font-medium text-gray-600 mb-1">Livrées Part.</p>
-                <p class="text-3xl font-bold text-yellow-600">{{ stats.commandes_livrees_partiellement }}</p>
-                <a href="{% url 'Superpreparation:commandes_livrees_partiellement' %}" class="text-xs text-yellow-600 hover:text-yellow-700 font-medium">Voir toutes →</a>
-            </div>
-            <div class="p-3 rounded-full bg-yellow-100 group-hover:bg-yellow-500 transition-all duration-300">
-                <i class="fas fa-truck text-yellow-600 group-hover:text-white text-xl"></i>
-            </div>
-        </div>
-    </div>
+  
 
-    <!-- Commandes retournées -->
-    <div class="group bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:shadow-2xl hover:scale-105 border-l-4 border-red-500">
-        <div class="flex items-center justify-between">
-            <div>
-                <p class="text-sm font-medium text-gray-600 mb-1">Retournées</p>
-                <p class="text-3xl font-bold text-red-600">{{ stats.commandes_retournees }}</p>
-                <a href="{% url 'Superpreparation:commandes_retournees' %}" class="text-xs text-red-500 hover:text-red-700 font-medium">Voir toutes →</a>
-            </div>
-            <div class="p-3 rounded-full bg-red-100 group-hover:bg-red-500 transition-all duration-300">
-                <i class="fas fa-undo text-red-600 group-hover:text-white text-xl"></i>
-            </div>
-        </div>
-    </div>
-
+  
     <!-- Total actif -->
     <div class="group bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:shadow-2xl hover:scale-105 border-l-4 border-green-500">
         <div class="flex items-center justify-between">
@@ -225,23 +179,16 @@
             <p class="text-sm text-orange-600">En cours de traitement</p>
         </a>
         
-        <a href="{% url 'Superpreparation:commandes_livrees_partiellement' %}" class="group p-4 bg-yellow-50 hover:bg-yellow-100 rounded-lg transition-all duration-300 transform hover:scale-105">
+        <a href="#" class="group p-4 bg-yellow-50 hover:bg-yellow-100 rounded-lg transition-all duration-300 transform hover:scale-105">
             <div class="flex items-center justify-between mb-2">
                 <i class="fas fa-truck text-yellow-600 text-2xl group-hover:translate-x-2 transition-transform"></i>
-                <span class="bg-yellow-600 text-white text-xs px-2 py-1 rounded-full">{{ stats.commandes_livrees_partiellement }}</span>
+                <span class="bg-yellow-600 text-white text-xs px-2 py-1 rounded-full"></span>
             </div>
-            <h4 class="font-semibold text-yellow-800">Livraisons Partielles</h4>
+            <h4 class="font-semibold text-yellow-800">Les articles retournés </h4>
             <p class="text-sm text-yellow-600">Nécessitent attention</p>
         </a>
         
-        <a href="{% url 'Superpreparation:commandes_retournees' %}" class="group p-4 bg-red-50 hover:bg-red-100 rounded-lg transition-all duration-300 transform hover:scale-105">
-            <div class="flex items-center justify-between mb-2">
-                <i class="fas fa-undo text-red-600 text-2xl group-hover:rotate-180 transition-transform duration-500"></i>
-                <span class="bg-red-600 text-white text-xs px-2 py-1 rounded-full">{{ stats.commandes_retournees }}</span>
-            </div>
-            <h4 class="font-semibold text-red-800">Commandes Retournées</h4>
-            <p class="text-sm text-red-600">Traitement urgent</p>
-        </a>
+   
     </div>
 </div>
 

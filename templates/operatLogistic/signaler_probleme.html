@@ -156,20 +156,32 @@ document.getElementById('problemeForm').addEventListener('submit', function(e) {
     e.preventDefault();
     
     if (!etatSelectionne) {
-        alert('Veuillez sélectionner un type de problème.');
+        Swal.fire({
+            icon: 'warning',
+            title: 'Attention',
+            text: 'Veuillez sélectionner un type de problème.'
+        });
         return;
     }
     
     const commentaire = document.getElementById('commentaire').value.trim();
     if (!commentaire) {
-        alert('Veuillez saisir un commentaire.');
+        Swal.fire({
+            icon: 'warning',
+            title: 'Attention',
+            text: 'Veuillez saisir un commentaire.'
+        });
         return;
     }
     
     if (etatSelectionne === 'Reportée') {
         const dateReport = document.getElementById('date_report').value;
         if (!dateReport) {
-            alert('Veuillez sélectionner une nouvelle date de livraison.');
+            Swal.fire({
+                icon: 'warning',
+                title: 'Attention',
+                text: 'Veuillez sélectionner une nouvelle date de livraison.'
+            });
             return;
         }
     }
@@ -191,10 +203,18 @@ document.getElementById('problemeForm').addEventListener('submit', function(e) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert('Problème signalé avec succès !');
+            Swal.fire({
+                icon: 'success',
+                title: 'Succès',
+                text: 'Problème signalé avec succès !'
+            });
             window.location.href = "{% url 'operatLogistic:detail_commande' commande.id %}";
         } else {
-            alert('Erreur: ' + data.error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Erreur',
+                text: data.error
+            });
             // Réactiver le bouton
             submitBtn.disabled = false;
             submitBtn.innerHTML = 'Confirmer';
@@ -202,7 +222,11 @@ document.getElementById('problemeForm').addEventListener('submit', function(e) {
     })
     .catch(error => {
         console.error('Erreur:', error);
-        alert('Erreur de réseau: ' + error.message);
+        Swal.fire({
+            icon: 'error',
+            title: 'Erreur',
+            text: 'Erreur de réseau: ' + error.message
+        });
         // Réactiver le bouton
         submitBtn.disabled = false;
         submitBtn.innerHTML = 'Confirmer';

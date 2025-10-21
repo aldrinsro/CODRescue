@@ -17,7 +17,7 @@
                 <i class="fas fa-check-circle mr-3"></i>
                 Commandes Livrées - SAV
             </h1>
-            <p class="opacity-80">Liste des commandes livrées avec succès par l'opérateur logistique</p>
+            <p class="opacity-80">Liste des commandes livrées avec succès par l'opérateur SAV</p>
         </div>
         <div class="text-right mt-4 md:mt-0">
             <div class="text-3xl font-bold">{{ commandes|length }}</div>
@@ -164,7 +164,6 @@
                     data-operateur="{% if commande.operateur_livraison %}{{ commande.operateur_livraison.prenom }} {{ commande.operateur_livraison.nom }}{% endif %}">
                     <td class="px-4 py-4 whitespace-nowrap">
                         <div class="text-sm font-medium text-gray-900">{{ commande.id_yz }}</div>
-                        <div class="text-xs text-gray-500">{{ commande.num_cmd }}</div>
                     </td>
                     <td class="px-4 py-4 whitespace-nowrap">
                         <div class="text-sm font-medium text-gray-900">{{ commande.client.prenom }} {{ commande.client.nom }}</div>
@@ -228,8 +227,8 @@
                             </span>
                         </div>
                             <div>
-                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                <i class="fas fa-clock mr-1"></i>{{ commande.Date_paiement|date:"d/m/Y " }}
+                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-900">
+                                <i class="fas fa-calendar mr-1"></i>{{ commande.Date_paiement|date:"d/m/Y " }}
                             </span>
                             </div>
                         {% else %}
@@ -386,7 +385,7 @@
         <div class="text-center">
             <!-- Grille des actions SAV -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                <button onclick="openSavModal('Retournée')" class="sav-action-card bg-red-50 hover:bg-red-100 border-2 border-red-200 hover:border-red-300 rounded-lg p-4 transition-all duration-200">
+                <button onclick="ouvrirModalRetourComplet()" class="sav-action-card bg-red-50 hover:bg-red-100 border-2 border-red-200 hover:border-red-300 rounded-lg p-4 transition-all duration-200">
                     <div class="flex flex-col items-center">
                         <i class="fas fa-times-circle text-3xl text-red-500 mb-2"></i>
                         <span class="font-semibold text-red-800">Retournée (SAV)</span>
@@ -527,6 +526,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'js/OperteurSAV/retournee.js' %}"></script>
 <script>
 let currentCommandeId = null;
 let currentCommandeIdYz = null;
@@ -543,7 +543,11 @@ function openSavModal(etat, commandeId = null) {
     
     // Vérifier qu'on a un ID de commande
     if (!currentCommandeId) {
-        alert('❌ Erreur: Impossible de déterminer l\'ID de la commande');
+        Swal.fire({
+            icon: 'error',
+            title: 'Erreur',
+            text: 'Impossible de déterminer l\'ID de la commande'
+        });
         return;
     }
     
@@ -826,7 +830,7 @@ function afficherContenuPanierComplet(data) {
                 </h4>
                 <div class="space-y-2 text-sm">
                     <div class="flex justify-between">
-                        <span class="text-gray-600">ID YZ :</span>
+                        <span class="text-gray-600">N° Commande :</span>
                         <span class="font-medium">${commande.id_yz}</span>
                     </div>
                     <div class="flex justify-between">
@@ -889,7 +893,7 @@ function afficherContenuPanierComplet(data) {
                             <div class="flex items-center">
                                 <span class="text-lg font-bold text-gray-600">${panier.quantite}x</span>
                             </div>
-                            <div class="text-sm text-gray-600 mt-1">${panier.prix_unitaire} DH</div>
+                            <div class="text-sm text-gray-600 mt-1">${panier.prix_actuel} DH</div>
                             <div class="text-sm font-semibold text-blue-600 mt-1">${panier.sous_total} DH</div>
                         </div>
                     </div>
@@ -929,7 +933,11 @@ function openSavActionsModal(commandeId, commandeIdYz) {
         const row = document.querySelector(`tr[data-commande-id="${commandeId}"]`);
         if (!row) {
             console.error('Commande non trouvée:', commandeId);
-            alert('Erreur: Commande non trouvée');
+            Swal.fire({
+                icon: 'error',
+                title: 'Erreur',
+                text: 'Commande non trouvée'
+            });
             return;
         }
         
@@ -977,7 +985,11 @@ function openSavActionsModal(commandeId, commandeIdYz) {
         
     } catch (error) {
         console.error('Erreur lors de l\'ouverture de la modale SAV:', error);
-        alert('Erreur lors de l\'ouverture de la modale');
+        Swal.fire({
+            icon: 'error',
+            title: 'Erreur',
+            text: 'Erreur lors de l\'ouverture de la modale'
+        });
     }
 }
 
@@ -993,7 +1005,11 @@ function selectSavAction(etat) {
     // Vérifier que nous avons un ID valide
     if (!commandeId) {
         console.error('❌ Debug - ID de commande manquant:', { currentCommandeId, commandeId });
-        alert('Erreur: Impossible de déterminer l\'ID de la commande');
+        Swal.fire({
+            icon: 'error',
+            title: 'Erreur',
+            text: 'Impossible de déterminer l\'ID de la commande'
+        });
             return;
         }
         
@@ -1046,7 +1062,11 @@ function confirmerPaiement() {
     // Récupérer la date de paiement
     const datePaiement = document.getElementById('datePaiement').value;
     if (!datePaiement) {
-        alert('⚠️ Veuillez sélectionner une date de paiement');
+        Swal.fire({
+            icon: 'warning',
+            title: 'Attention',
+            text: 'Veuillez sélectionner une date de paiement'
+        });
         return;
     }
 
@@ -1092,14 +1112,22 @@ function confirmerPaiement() {
             } else {
             // Fermer la modale de confirmation
             document.getElementById('confirmPayeModal').classList.add('hidden');
-            alert(`Erreur: ${data.error}`);
+            Swal.fire({
+                icon: 'error',
+                title: 'Erreur',
+                text: data.error
+            });
             }
         })
         .catch(error => {
         console.error('Erreur:', error);
         // Fermer la modale de confirmation
         document.getElementById('confirmPayeModal').classList.add('hidden');
-        alert('Erreur de réseau lors de la mise à jour du paiement.');
+        Swal.fire({
+            icon: 'error',
+            title: 'Erreur',
+            text: 'Erreur de réseau lors de la mise à jour du paiement.'
+        });
     });
 }
 
@@ -1146,7 +1174,11 @@ document.addEventListener('DOMContentLoaded', function() {
             // Validation du formulaire SAV
             const commentaire = document.getElementById('commentaire').value.trim();
             if (commentaire === '') {
-                alert('⚠️ Le commentaire est obligatoire');
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Attention',
+                    text: 'Le commentaire est obligatoire'
+                });
                 return;
             }
             
@@ -1154,7 +1186,11 @@ document.addEventListener('DOMContentLoaded', function() {
             if (commentaire === 'Autre motif - voir détails') {
                 const commentaireCustom = document.getElementById('commentaireCustom');
                 if (!commentaireCustom || !commentaireCustom.value.trim()) {
-                    alert('⚠️ Le commentaire personnalisé est obligatoire pour "Autre motif"');
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Attention',
+                        text: 'Le commentaire personnalisé est obligatoire pour "Autre motif"'
+                    });
                     return;
                 }
             }
@@ -1170,7 +1206,11 @@ document.addEventListener('DOMContentLoaded', function() {
             // Définir l'URL de soumission avec l'ID de la commande
             const commandeId = currentCommandeId;
             if (!commandeId) {
-                alert('❌ Erreur: Impossible de déterminer l\'ID de la commande');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erreur',
+                    text: 'Impossible de déterminer l\'ID de la commande'
+                });
                 return;
             }
             
@@ -1187,7 +1227,11 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    alert(`✅ ${data.message}`);
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Succès',
+                        text: data.message
+                    });
                     // Fermer la modale SAV
                     document.getElementById('savModal').classList.add('hidden');
                     // Fermer aussi la modale des actions SAV
@@ -1201,12 +1245,20 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     // Pas de redirection - rester sur la même page
                 } else {
-                    alert(`❌ Erreur: ${data.error}`);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Erreur',
+                        text: data.error
+                    });
                 }
             })
             .catch(error => {
                 console.error('Erreur:', error);
-                alert('❌ Une erreur est survenue lors de la soumission');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erreur',
+                    text: 'Une erreur est survenue lors de la soumission'
+                });
             });
         });
     }
@@ -1270,7 +1322,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 const endDate = new Date(endDateInput.value);
                 
                 if (startDate > endDate) {
-                    alert('La date de début ne peut pas être postérieure à la date de fin.');
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Attention',
+                        text: 'La date de début ne peut pas être postérieure à la date de fin.'
+                    });
                     return false;
                 }
             }
@@ -1414,4 +1470,8 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('✅ Interface de filtre initialisée avec succès');
 });
 </script>
+
+<!-- Inclusion de la modale de retour complet -->
+{% include 'operatLogistic/partials/_modal_retour_complet.html' %}
+
 {% endblock %}

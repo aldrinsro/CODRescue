@@ -29,12 +29,15 @@ urlpatterns = [
 
 
 
-
+    # Gestion des commandes 
     
     path('commandes/<int:commande_id>/reporter-ajax/', views.reporter_commande_confirmation, name='reporter_commande_confirmation'),
     path('lancer-confirmations-masse/', views.lancer_confirmations_masse, name='lancer_confirmations_masse'),
     path('selectionner-operation/', views.selectionner_operation, name='selectionner_operation'),
     path('commandes/<int:commande_id>/modifier/', views.modifier_commande, name='modifier_commande'),
+
+
+    
     path('api/articles-disponibles/', views.api_articles_disponibles, name='api_articles_disponibles'),
     path('api/commentaires-disponibles/', views.api_commentaires_disponibles, name='api_commentaires_disponibles'),
     path('api/commandes/<int:commande_id>/operations/', views.api_operations_commande, name='api_operations_commande'),
@@ -44,17 +47,11 @@ urlpatterns = [
     path('rechercher-client-telephone/', views.rechercher_client_telephone, name='rechercher_client_telephone'),
     path('api/recherche-article-ref/', views.api_recherche_article_ref, name='api_recherche_article_ref'),
     path('get-article-variants/<int:article_id>/', views.get_article_variants, name='get_article_variants'),
-    path('api/commande/<int:commande_id>/panier/<int:panier_id>/prix-remise/', views.get_prix_remise_article, name='get_prix_remise_article'),
-    path('api/panier/<int:panier_id>/activer-remise/', views.activer_remise_panier, name='activer_remise_panier'),
-    path('api/panier/<int:panier_id>/desactiver-remise/', views.desactiver_remise_panier, name='desactiver_remise_panier'),
-    path('api/corriger-remises-liquidation-promotion/', views.corriger_remises_liquidation_et_promotion, name='corriger_remises_liquidation_et_promotion'),
-    
+  
     # URLs pour la recherche globale
     path('recherche-globale/', search_views.global_search_view, name='global_search'),
     path('recherche-globale/api/', search_views.global_search_api, name='global_search_api'),
     path('recherche-globale/suggestions/', search_views.search_suggestions_api, name='search_suggestions_api'),
-    
-
     
     # Notifications supprimées
 ] 

@@ -128,13 +128,13 @@
                                 <i class="fas fa-toggle-off" id="frais_icon"></i>
                             </button>
                         </div>
-                        <input type="hidden" name="frais_livraison_actif" id="frais_livraison_actif" value="false">
+                        <input type="hidden" name="frais_livraison_actif" id="frais_livraison_actif" value="true">
                     </div>
                     
                     <div>
                         <label for="region_livraison" class="block text-sm font-medium mb-2" style="color: var(--admin-color);">Région de livraison</label>
                         <input type="text" id="region_livraison" name="region_livraison" class="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed" readonly>
-                    </div>
+                    </div> 
                     
                     <div>
                         <label for="delai_livraison" class="block text-sm font-medium mb-2" style="color: var(--admin-color);">Délai de livraison</label>
@@ -176,10 +176,16 @@
                     <!-- Statut de paiement -->
                     <div>
                         <label for="payement" class="block text-sm font-medium mb-2" style="color: var(--admin-color);">Statut de paiement :</label>
-                        <select name="payement" id="payement" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--admin-accent-color)] focus:border-transparent transition duration-200">
+                        <select name="payement" id="payement" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--admin-accent-color)] focus:border-transparent transition duration-200" onchange="gererAffichageDatePaiement()">
                             <option value="Non payé" selected>Non payé</option>
                             <option value="Payé">Payé</option>
                         </select>
+                    </div>
+
+                    <!-- Date de paiement (masqué par défaut) -->
+                    <div id="date-paiement-container" class="hidden">
+                        <label for="date_paiement" class="block text-sm font-medium mb-2" style="color: var(--admin-color);">Date de paiement :</label>
+                        <input type="date" name="date_paiement" id="date_paiement" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--admin-accent-color)] focus:border-transparent transition duration-200">
                     </div>
                 </div>
             </div>
@@ -495,10 +501,7 @@ function remplirTableauArticles() {
                         <div class="font-medium text-gray-900 text-xs sm:text-sm truncate">${article.nom}</div>
                         <div class="text-gray-500 text-xs truncate">${article.reference}</div>
                 <div class="mt-1">${badges}</div>
-                        <div class="text-xs text-gray-500 mt-1 truncate">
-                    ${article.couleur ? `Couleur: ${article.couleur}` : ''} 
-                    ${article.pointure ? ` | Taille: ${article.pointure}` : ''}
-                        </div>
+                    
                     </div>
                 </div>
             </td>
@@ -565,18 +568,55 @@ function supprimerArticleDuPanier(button) {
 
 // Fonction pour calculer le total
 function calculerTotal() {
+    console.log('🧮 Calcul du total de la commande');
+
     const articles = document.querySelectorAll('#articles-container .bg-white');
-    let total = 0;
-    
-    articles.forEach(articleCard => {
+    let totalArticles = 0;
+
+    articles.forEach((articleCard, index) => {
         const sousTotalElement = articleCard.querySelector('.text-lg.font-bold');
         if (sousTotalElement) {
-            const sousTotalText = sousTotalElement.textContent.replace(' DH', '');
-            total += parseFloat(sousTotalText) || 0;
+            const sousTotalText = sousTotalElement.textContent.replace(' DH', '').trim();
+            const prix = parseFloat(sousTotalText);
+            if (!isNaN(prix)) {
+                totalArticles += prix;
+                console.log(`📊 Article ${index + 1}: ${prix} DH`);
+            }
         }
     });
-    
-    document.getElementById('total_cmd').value = total.toFixed(2);
+
+    // Ajouter les frais de livraison si activés
+    const fraisLivraisonField = document.getElementById('frais_livraison');
+    const fraisLivraisonActif = document.getElementById('frais_livraison_actif');
+    let fraisLivraison = 0;
+
+    // Vérifier si les frais de livraison sont activés
+    const fraisActifs = fraisLivraisonActif && fraisLivraisonActif.value === 'true';
+
+    if (fraisActifs && fraisLivraisonField && fraisLivraisonField.value) {
+        // Nettoyer et parser les frais (format français avec virgules)
+        const fraisText = fraisLivraisonField.value.replace(/[^\d,.-]/g, '').replace(',', '.');
+        fraisLivraison = parseFloat(fraisText) || 0;
+        console.log('🚚 Frais de livraison activés:', fraisLivraison, 'DH');
+    } else if (!fraisActifs) {
+        console.log('🚫 Frais de livraison désactivés');
+    }
+
+    // Calculer le total final
+    const totalFinal = totalArticles + fraisLivraison;
+
+    // Mettre à jour le champ total
+    const totalField = document.getElementById('total_cmd');
+    if (totalField) {
+        totalField.value = totalFinal.toFixed(2);
+        console.log('✅ Total mis à jour:', totalFinal.toFixed(2), 'DH');
+    }
+
+    console.log('💰 Détail du calcul:', {
+        totalArticles: totalArticles.toFixed(2) + ' DH',
+        fraisLivraison: fraisLivraison.toFixed(2) + ' DH',
+        totalFinal: totalFinal.toFixed(2) + ' DH'
+    });
 }
 
 // Fonction pour rechercher des articles
@@ -625,7 +665,7 @@ function mettreAJourCompteurs() {
     Object.keys(counts).forEach(type => {
         const countElement = document.getElementById(`count-${type}`);
         if (countElement) {
-            countElement.textContent = counts[type];
+            countElement.textContent = `(${counts[type]})`;
         }
     });
     
@@ -1012,7 +1052,7 @@ function ajouterVarianteAuPanierAdmin(articleData, variante, quantiteInitiale = 
                             <div class="font-medium">${quantiteInitiale}</div>
                         </div>
                         <div class="text-center min-w-0">
-                            <div class="text-sm text-gray-500">Prix unitaire</div>
+                            <div class="text-sm text-gray-500">Prix actuel</div>
                             <div class="font-medium text-green-600">${variante.prix_actuel?.toFixed(2) || '0.00'} DH</div>
                         </div>
                         <div class="text-center min-w-0">
@@ -1138,7 +1178,10 @@ function chargerRegionEtFrais() {
         
         // Mettre à jour l'état du toggle des frais de livraison
         updateFraisLivraisonToggle();
-        
+
+        // Recalculer le total avec les nouveaux frais de livraison
+        calculerTotal();
+
         console.log(`🏙️ Ville changée: ${selectedOption.text}, Frais: ${fraisFormates} DH, Livreur: ${region}, Délai: ${delaiMin}-${delaiMax} jours`);
     } else {
         // Réinitialiser les champs si aucune ville n'est sélectionnée
@@ -1146,6 +1189,9 @@ function chargerRegionEtFrais() {
         document.getElementById('region_livraison').value = '';
         document.getElementById('delai_livraison').value = '';
         updateFraisLivraisonToggle();
+
+        // Recalculer le total sans frais de livraison
+        calculerTotal();
     }
 }
 
@@ -1174,9 +1220,12 @@ function toggleFraisLivraison() {
         fraisIcon.className = 'fas fa-toggle-on';
         fraisInput.style.backgroundColor = '#dcfce7';
         fraisInput.style.color = '#166534';
-        
+
         console.log('✅ Frais de livraison activés');
     }
+
+    // Recalculer le total avec les nouveaux frais de livraison
+    calculerTotal();
 }
 
 // Fonction pour mettre à jour l'apparence du toggle selon l'état
@@ -1291,6 +1340,8 @@ document.getElementById('recherche_telephone').addEventListener('input', functio
         resultatDiv.classList.add('hidden');
     }
 });
+
+// Fonction pour gérer l'affichage du champ date de paiement
 
 
 // Initialisation

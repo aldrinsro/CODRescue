@@ -130,7 +130,7 @@
                                 <i class="fas fa-toggle-off" id="frais_icon"></i>
                             </button>
                         </div>
-                        <input type="hidden" name="frais_livraison_actif" id="frais_livraison_actif" value="false">
+                        <input type="hidden" name="frais_livraison_actif" id="frais_livraison_actif" value="true">
                     </div>
                     
                     <div>
@@ -245,7 +245,7 @@
 {{ articles_json|json_script:"articles-data" }}
 
 <!-- Inclusion du JavaScript du modal réutilisable -->
-<script src="{% static 'js/modal_ajout_articles.js' %}"></script>
+<script src="{% static 'js/modal_ajout_articles.js' %}?v={{ request.META.SERVER_NAME|default:'local' }}{{ request.META.SERVER_PORT|default:'8000' }}"></script>
 
 <!-- Script de diagnostic -->
 <script>

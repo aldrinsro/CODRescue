@@ -10,9 +10,8 @@ from django.db                      import transaction
 import json
 
 from parametre.models import Operateur
-from commande.models  import Commande, Envoi, EnumEtatCmd, EtatCommande, Operation
+from commande.models  import Commande, Envoi, EnumEtatCmd, EtatCommande
 from article.models   import Article
-
 
 
 
@@ -25,17 +24,74 @@ def dashboard(request):
         messages.error(request, "Profil d'opérateur logistique non trouvé.")
         return redirect('login')
     
-    # Statistiques simples pour le dashboard
-    en_preparation    = Commande.objects.filter(etats__enum_etat__libelle='En préparation', etats__date_fin__isnull=True).distinct().count()
-    prets_expedition  = Commande.objects.filter(etats__enum_etat__libelle='Préparée',        etats__date_fin__isnull=True).distinct().count()
-    expedies          = Commande.objects.filter(etats__enum_etat__libelle='En cours de livraison', etats__date_fin__isnull=True).distinct().count()
+
+    commandes_retournees = Commande.objects.filter(etats__enum_etat__libelle="Retournée").distinct().count()
+    # Toutes les commandes qui sont PASSÉES par l'état "Mise en distribution" (peu importe date_fin)
+    commandes_distribution = Commande.objects.filter(etats__enum_etat__libelle="Mise en distribution").distinct().count()
+
+    #Nombre totale de commandes 
+    total_commandes = Commande.objects.count()
+
+    # Commandes livrées (totales ou partielles)
+    livrees = Commande.objects.filter(
+    Q(etats__enum_etat__libelle="Livrée") |
+    Q(etats__enum_etat__libelle="Livrée partiellement")).distinct().count()
+
+
+    #Taux de livraison sur le nombre total de commande de manière générale
+    if total_commandes > 0 :
+        Taux_livraison_generale = round(((livrees / total_commandes)*100),2)  
+    else:
+        return 0
     
+    if commandes_distribution > 0 :
+        Taux_livraison_sur_distribution = round(((livrees/commandes_distribution)*100),2)  
+    else:
+        return 0
+
+
+    #Taux de livraison sur les commandes mise en distributions
+
+    # Top 10 villes avec le plus de livraisons
+    from parametre.models import Ville
+
+    top_villes = Commande.objects.filter(
+        Q(etats__enum_etat__libelle="Livrée") |
+        Q(etats__enum_etat__libelle="Livrée partiellement")
+    ).values('ville').annotate(
+        nombre_livraisons=Count('id', distinct=True)
+    ).order_by('-nombre_livraisons')[:10]
+
+    # Préparer les données pour le graphique en récupérant les noms des villes
+    villes_labels = []
+    villes_data = []
+
+    for ville_stat in top_villes:
+        if ville_stat['ville']:
+            try:
+                ville_obj = Ville.objects.get(id=ville_stat['ville'])
+                villes_labels.append(ville_obj.nom)
+            except Ville.DoesNotExist:
+                villes_labels.append('Ville inconnue')
+        else:
+            villes_labels.append('Non définie')
+
+        villes_data.append(ville_stat['nombre_livraisons'])
+
+    # Convertir les données en JSON pour JavaScript
+    import json
+    villes_labels_json = json.dumps(villes_labels)
+    villes_data_json = json.dumps(villes_data)
+
     context = {
         'operateur'        : operateur,
-        'en_preparation'   : en_preparation,
-        'prets_expedition' : prets_expedition,
-        'expedies'         : expedies,
-        'page_title'       : 'Tableau de Bord Logistique',
+        'commandes_distribution': commandes_distribution,
+        'Taux_de_livraison_generale': Taux_livraison_generale,
+        'commandes_retournees':commandes_retournees,
+        'Taux_livraison_sur_distribution':Taux_livraison_sur_distribution ,
+        'villes_labels_json': villes_labels_json,
+        'villes_data_json': villes_data_json,
+        'page_title': 'Tableau de Bord Logistique',
     }
     return render(request, 'composant_generale/operatLogistic/home.html', context)
 
@@ -243,22 +299,26 @@ def liste_commandes(request):
 def detail_commande(request, commande_id):
     """Détails d'une commande pour l'opérateur logistique."""
     commande = get_object_or_404(Commande, id=commande_id)
-    
-    # S'assurer que les totaux et les prix des articles sont à jour pour l'affichage
-    # Calculer le prix de chaque article en fonction du compteur de la commande
+
+    # INITIALISATION: Si des paniers n'ont pas de type_prix_gele, les initialiser
+    # Cela permet de gérer les commandes créées avant l'ajout de ce champ
     for panier in commande.paniers.all():
-        prix_actuel = panier.article.prix_unitaire # Prix de base par défaut
-        if commande.compteur > 0:
-            if commande.compteur == 1 and panier.article.prix_upsell_1:
-                prix_actuel = panier.article.prix_upsell_1
-            elif commande.compteur == 2 and panier.article.prix_upsell_2:
-                prix_actuel = panier.article.prix_upsell_2
-            elif commande.compteur == 3 and panier.article.prix_upsell_3:
-                prix_actuel = panier.article.prix_upsell_3
-            elif commande.compteur >= 4 and panier.article.prix_upsell_4:
-                prix_actuel = panier.article.prix_upsell_4
-        panier.prix_actuel_pour_affichage = prix_actuel # Ajouter un attribut pour le template
-        print(f"DEBUG: Article {panier.article.nom}, Prix affiché: {panier.prix_actuel_pour_affichage}")
+        if not panier.type_prix_gele:
+            # Déterminer le type de prix en fonction de l'état actuel
+            if panier.remise_appliquer and panier.type_remise_appliquee:
+                panier.type_prix_gele = panier.type_remise_appliquee
+            elif panier.article.phase == 'LIQUIDATION':
+                panier.type_prix_gele = 'liquidation'
+            elif hasattr(panier.article, 'has_promo_active') and panier.article.has_promo_active:
+                panier.type_prix_gele = 'promotion'
+            elif panier.article.phase == 'EN_TEST':
+                panier.type_prix_gele = 'test'
+            elif panier.article.isUpsell and commande.compteur > 0:
+                panier.type_prix_gele = f'upsell_niveau_{commande.compteur}'
+            else:
+                panier.type_prix_gele = 'normal'
+
+            panier.save(update_fields=['type_prix_gele'])
 
     context = {
         'commande'   : commande,
@@ -778,7 +838,7 @@ def livraison_partielle(request, commande_id):
             )
             
             # 3. Créer le nouvel état avec le commentaire
-            commentaire_etat = f"Livraison partielle effectuée. {commentaire}"
+            commentaire_etat = f"{commentaire}"
                 
             EtatCommande.objects.create(
                 commande=commande,
@@ -857,6 +917,7 @@ def livraison_partielle(request, commande_id):
                             from commande.templatetags.remise_filters import get_prix_effectif_panier
                             prix_info_retour = get_prix_effectif_panier(panier)
                             prix_unitaire_retour = prix_info_retour['prix_unitaire']
+
                             
                             # Créer l'enregistrement de retour complet
                             article_retourne = ArticleRetourne.objects.create(
@@ -906,6 +967,7 @@ def livraison_partielle(request, commande_id):
                     'statut_retour': article_retourne.statut_retour,
                     'date_retour': article_retourne.date_retour.isoformat()
                 })
+        
             
             # 6. Recalculer le compteur upsell après livraison partielle
             from django.db.models import Sum
@@ -1032,12 +1094,7 @@ def livraison_partielle(request, commande_id):
                     'frais_livraison_inclus': bool(commande.frais_livraison and commande.ville)
                 }
             }
-            Operation.objects.create(
-                commande=commande,
-                type_operation='LIVRAISON_PARTIELLE',
-                conclusion=json.dumps(operation_conclusion_data, ensure_ascii=False),
-                operateur=operateur
-            )
+           
             
             if recap_articles_retournes:
                 messages.success(request, 
@@ -1067,6 +1124,130 @@ def livraison_partielle(request, commande_id):
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
 
+
+@login_required
+@require_POST
+def marque_retournee(request, commande_id):
+    """Gérer une livraison partielle avec sélection d'articles."""
+
+    try : 
+        operateur = Operateur.objects.get(user=request.user,type_operateur='LOGISTIQUE')
+    except Operateur.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Profil d\'opérateur logistique non trouvé.'})
+    
+    try : 
+        commande= get_object_or_404(Commande,id=commande_id)
+
+         # Vérifier que la commande est bien en cours de livraison
+        if not commande.etat_actuel or commande.etat_actuel.enum_etat.libelle != 'Mise en distribution':
+            return JsonResponse({
+                'success': False, 
+                'error': 'Cette commande n\'est pas en Mise en distribution. Seules les commandes en Mise en distribution peuvent être livrées partiellement.'
+            })
+        
+        articles_retournees = request.POST.get('articles_retournes','[]')
+        
+        commentaire = request.POST.get('commentaire', '').strip()
+        
+        if not commentaire :
+            return JsonResponse({'success': False, 'error': 'Un commentaire est obligatoire pour expliquer la livraison partielle.'})
+        
+        # 1. Terminer l'état "En cours de livraison" actuel
+        etat_actuel= commande.etat_actuel
+        etat_actuel.terminer_etat(operateur)
+
+
+        etat_retournee, _ = EnumEtatCmd.objects.get_or_create(
+            libelle='Retournée',
+            defaults={'ordre': 32, 'couleur': '#f73b3b'}
+        )
+            
+        #3. Créer le nouvel état avec le commentaire
+        commentaire_etat = f"{commentaire}"
+
+        EtatCommande.objects.create(
+                commande=commande,
+                enum_etat=etat_retournee,
+                operateur=operateur,
+                date_debut=timezone.now(),
+                commentaire=commentaire_etat
+        )
+        # NOUVELLE LOGIQUE: Stocker les articles retournés en base de données
+        from commande.models import ArticleRetourne
+        articles_retournes_crees = []
+
+        with transaction.atomic():
+            # Récupérer tous les paniers de la commande
+            paniers = commande.paniers.all()
+            print(f"🔧 DEBUG RETOUR TOTAL: {paniers.count()} paniers à traiter")
+
+            for panier in paniers:
+                try:
+                    print(f"🔧 DEBUG: Traitement du panier {panier.id} - Article: {panier.article.nom}")
+
+                    # Calculer le prix unitaire effectif au moment du retour
+                    from commande.templatetags.remise_filters import get_prix_effectif_panier
+                    prix_info = get_prix_effectif_panier(panier)
+                    prix_unitaire_actuel = prix_info['prix_unitaire']
+
+                    print(f"🔧 DEBUG: Prix unitaire calculé: {prix_unitaire_actuel}")
+
+                    # Créer l'enregistrement de retour pour chaque article/variante
+                    article_retourne = ArticleRetourne.objects.create(
+                        commande=commande,
+                        article=panier.article,
+                        variante=panier.variante,
+                        quantite_retournee=panier.quantite,
+                        prix_unitaire_origine=prix_unitaire_actuel,
+                        raison_retour=f"Commande entièrement retournée - {commentaire}",
+                        operateur_retour=operateur,
+                        statut_retour='en_attente'
+                    )
+                    articles_retournes_crees.append(article_retourne)
+                    print(f"✅ Article retourné créé avec ID {article_retourne.id}: {panier.article.nom} - Quantité: {panier.quantite}")
+
+                except Exception as e:
+                    print(f"❌ ERREUR DÉTAILLÉE lors de la création du retour pour panier {panier.id}: {type(e).__name__}: {e}")
+                    import traceback
+                    print(f"❌ TRACEBACK: {traceback.format_exc()}")
+
+            # NE PAS supprimer les paniers - garder les articles dans la commande
+            # paniers.delete()  # SUPPRIMÉ - Les articles restent dans la commande
+            print(f"📦 Articles conservés dans la commande - Commande marquée comme retournée")
+
+            # NE PAS mettre le total à 0 - garder le total original
+            # commande.total_cmd = 0  # SUPPRIMÉ - Le total reste inchangé
+            # commande.save()  # SUPPRIMÉ
+
+            print(f"🔧 DEBUG: Nombre d'articles retournés créés: {len(articles_retournes_crees)}")
+
+            # Vérifier que les articles retournés ont bien été créés en base
+            articles_retournes_db = ArticleRetourne.objects.filter(commande=commande).count()
+            print(f"🔧 DEBUG: Nombre d'articles retournés en base pour cette commande: {articles_retournes_db}")
+
+            # Enregistrer l'opération
+            operation_data = {
+                'commentaire': commentaire,
+                'articles_retournes_count': len(articles_retournes_crees),
+                'type_retour': 'commande_complete',
+                'total_articles_retournes': sum(ar.quantite_retournee for ar in articles_retournes_crees)
+            }
+
+          
+
+            return JsonResponse({
+                'success': True,
+                'message': f'Commande marquée comme retournée avec succès. {len(articles_retournes_crees)} article(s) retourné(s).',
+                'articles_retournes_count': len(articles_retournes_crees),
+                'total_quantite_retournee': sum(ar.quantite_retournee for ar in articles_retournes_crees)
+            })
+
+    except Exception as e:
+        print(f"❌ Erreur dans marque_retournee: {e}")
+        import traceback
+        print(f"❌ TRACEBACK: {traceback.format_exc()}")
+        return JsonResponse({'success': False, 'error': str(e)})
+    
 
 @login_required
 def api_panier_commande(request, commande_id):

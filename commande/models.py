@@ -4,7 +4,7 @@ from django.utils import timezone
 from client.models import Client
 from article.models import Article, VarianteArticle
 from parametre.models import Ville, Operateur
-
+from decimal import Decimal
 # Create your models here.
 
 class EnumEtatCmd(models.Model):
@@ -196,14 +196,19 @@ class Commande(models.Model):
     def recalculer_totaux_upsell(self):
         """
         Recalcule automatiquement les totaux de la commande selon le compteur upsell.
-        Tous les articles de la commande prennent le prix upsell correspondant au compteur.
+
+        IMPORTANT: Cette méthode recalcule UNIQUEMENT les sous-totaux.
+        Le prix_panier (prix unitaire historique) reste INCHANGÉ pour préserver l'intégrité.
+
+        Exception: Les articles upsell voient leur prix_panier mis à jour selon le compteur
+        car c'est la logique métier attendue pour les upsells.
         """
         from commande.templatetags.commande_filters import get_prix_upsell_avec_compteur
-        
+
         print(f"🔄 recalculer_totaux_upsell - Compteur actuel: {self.compteur}")
-        
+
         nouveau_total = 0
-        
+
         # Recalculer chaque panier selon le compteur upsell
         for panier in self.paniers.all():
             # Vérifier si une remise a été appliquée sur ce panier
@@ -212,26 +217,32 @@ class Commande(models.Model):
                 print(f"   📦 {panier.article.nom} (REMISE APPLIQUÉE): qté={panier.quantite}, sous_total préservé={panier.sous_total}")
                 nouveau_total += float(panier.sous_total)
             else:
-                # Aucune remise - calculer selon le compteur de la commande
+                # Calculer le prix selon le compteur de la commande
                 prix_unitaire = get_prix_upsell_avec_compteur(panier.article, self.compteur)
                 nouveau_sous_total = prix_unitaire * panier.quantite
-                
+
                 print(f"   📦 {panier.article.nom} (upsell: {panier.article.isUpsell}): qté={panier.quantite}, prix={prix_unitaire}, sous_total={nouveau_sous_total}")
-                
-                # Mettre à jour le sous-total du panier si nécessaire
+
+                # SEULEMENT pour les articles upsell: mettre à jour prix_panier selon le compteur
+                # Pour les articles normaux: le prix_panier reste gelé
                 if panier.sous_total != nouveau_sous_total:
+                    if panier.article.isUpsell:
+                        # Article upsell: mettre à jour prix_panier selon le nouveau compteur
+                        panier.prix_panier = float(prix_unitaire)
+                        print(f"      ⚡ Upsell: prix_panier mis à jour: {panier.prix_panier} DH")
+                    # Dans tous les cas, mettre à jour le sous-total
                     panier.sous_total = float(nouveau_sous_total)
                     panier.save()
-                
+
                 nouveau_total += float(nouveau_sous_total)
-        
+
         # Ajouter les frais de livraison au total SEULEMENT si frais_livraison = True
         if self.frais_livraison:
             frais_livraison = self.ville.frais_livraison if self.ville else 0
             nouveau_total_avec_frais = float(nouveau_total) + float(frais_livraison)
         else:
             nouveau_total_avec_frais = float(nouveau_total)
-        
+
         # Mettre à jour le total de la commande
         if self.total_cmd != nouveau_total_avec_frais:
             self.total_cmd = nouveau_total_avec_frais
@@ -382,6 +393,8 @@ class Commande(models.Model):
                 Commande.objects.filter(id=self.id).update(total_cmd=nouveau_total)
                 print(f"ℹ️  Frais de livraison désactivés - Total recalculé: {nouveau_total}")
 
+
+
     # === Méthodes pour la gestion des articles retournés ===
     
     def get_articles_retournes(self):
@@ -447,16 +460,33 @@ class Panier(models.Model):
         ('remise_2', 'Prix remise 2'),
         ('remise_3', 'Prix remise 3'),
         ('remise_4', 'Prix remise 4'),
-      
     ]
-    
+
+    CHOIX_TYPE_PRIX = [
+        ('', 'Non défini'),
+        ('normal', 'Prix normal'),
+        ('promotion', 'Prix promotion'),
+        ('liquidation', 'Prix liquidation'),
+        ('test', 'Prix test'),
+        ('upsell_niveau_1', 'Upsell niveau 1'),
+        ('upsell_niveau_2', 'Upsell niveau 2'),
+        ('upsell_niveau_3', 'Upsell niveau 3'),
+        ('upsell_niveau_4', 'Upsell niveau 4'),
+        ('remise_1', 'Prix remise 1'),
+        ('remise_2', 'Prix remise 2'),
+        ('remise_3', 'Prix remise 3'),
+        ('remise_4', 'Prix remise 4'),
+    ]
+
     commande = models.ForeignKey(Commande, on_delete=models.CASCADE, related_name='paniers')
     article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name='paniers')
     variante = models.ForeignKey(VarianteArticle, on_delete=models.SET_NULL, null=True, blank=True, related_name='paniers')
     quantite = models.IntegerField()
+    prix_panier = models.FloatField(default=0)
     sous_total = models.FloatField()
     remise_appliquer = models.BooleanField(default=False)
     type_remise_appliquee = models.CharField(max_length=20, choices=CHOIX_TYPE_REMISE, blank=True, default='')
+    type_prix_gele = models.CharField(max_length=30, choices=CHOIX_TYPE_PRIX, blank=True, default='', verbose_name="Type de prix gelé")
     
     class Meta:
         verbose_name = "Panier"
@@ -479,8 +509,164 @@ class Panier(models.Model):
                 self.remise_appliquer = False
                 self.type_remise_appliquee = ''
 
+        # INTÉGRITÉ : Le prix_panier est un prix HISTORIQUE GELÉ
+        # Il ne doit être calculé QU'UNE SEULE FOIS lors de la création (pk is None)
+        # Pour préserver l'intégrité, le prix_panier ne change JAMAIS après création
+        # SAUF si force_recalcul_prix=True est explicitement demandé
+
+        is_creation = self.pk is None
+        force_recalcul = kwargs.pop('force_recalcul_prix', False)
+
+        if self.article and (is_creation or force_recalcul) and (self.prix_panier == 0 or not self.prix_panier):
+            prix_calcule = self._calculer_prix_unitaire_base()
+            self.prix_panier = float(prix_calcule)
+            print(f"💾 Prix historique gelé pour {self.article.nom}: {self.prix_panier} DH")
+
+        # Calculer le sous-total si nécessaire
+        if self.prix_panier and self.quantite and (not self.sous_total or self.sous_total == 0):
+            self.sous_total = self.prix_panier * self.quantite
+
         super().save(*args, **kwargs)
-    
+
+    def _calculer_prix_unitaire_base(self):
+        if not self.article:
+            return Decimal('0')
+        
+        if hasattr(self.article, 'has_promo_active') and self.article.has_promo_active:
+            return Decimal(str(self.article.prix_actuel or self.article.prix_unitaire))
+        
+        elif self.article.phase == 'LIQUIDATION':
+            if hasattr(self.article, 'Prix_liquidation') and self.article.Prix_liquidation:
+                return Decimal(str(self.article.Prix_liquidation))
+            else:
+                return Decimal(str(self.article.prix_actuel or self.article.prix_unitaire))
+
+        elif self.article.phase == 'EN_TEST':
+            return Decimal(str(self.article.prix_actuel or self.article.prix_unitaire))
+        
+            # Article upsell avec compteur
+        elif hasattr(self.article, 'isUpsell') and self.article.isUpsell and self.commande.compteur > 0:
+            if self.commande.compteur == 1 and self.article.prix_upsell_1:
+                return Decimal(str(self.article.prix_upsell_1))
+            elif self.commande.compteur == 2 and self.article.prix_upsell_2:
+                return Decimal(str(self.article.prix_upsell_2))
+            elif self.commande.compteur == 3 and self.article.prix_upsell_3:
+                return Decimal(str(self.article.prix_upsell_3))
+            elif self.commande.compteur >= 4 and self.article.prix_upsell_4:
+                return Decimal(str(self.article.prix_upsell_4))
+        
+        
+        # Prix normal par défaut
+        return Decimal(str(self.article.prix_actuel or self.article.prix_unitaire))
+
+
+
+    def calculer_et_sauvegarder_prix(self, force_recalcul=False):
+        """
+        Calcule et sauvegarde le prix unitaire et le sous-total de ce panier en tenant compte :
+        - Des remises appliquées (remise_appliquer=True)
+        - Des prix upsell selon le compteur de la commande
+        - Des promotions actives
+        - De la phase de l'article (liquidation, test, etc.)
+
+        Note: La logique de "prix gelé" par état a été retirée, le recalcul est toujours autorisé.
+
+        Args:
+            force_recalcul: Si True, force le recalcul même pour commandes confirmées (défaut: False)
+
+        Returns:
+            dict: {
+                'prix_unitaire': Prix unitaire calculé,
+                'sous_total': Sous-total calculé,
+                'type_prix': Type de prix appliqué,
+                'recalcule': True si le prix a été recalculé, False sinon
+            }
+        """
+        from decimal import Decimal
+
+        # Validation
+        if not self.article or self.quantite <= 0:
+            return {
+                'prix_unitaire': 0,
+                'sous_total': 0,
+                'type_prix': 'error',
+                'recalcule': False
+            }
+
+        # Logique de prix gelé supprimée: on recalcule même si la commande est dans un état avancé
+
+        # 1. Si une remise a été appliquée - NE PAS RECALCULER
+        if self.remise_appliquer:
+            # Protéger contre les articles en liquidation/promotion
+            if self.article.phase == 'LIQUIDATION' or (hasattr(self.article, 'has_promo_active') and self.article.has_promo_active):
+                # Forcer la suppression de la remise
+                self.remise_appliquer = False
+                self.type_remise_appliquee = ''
+                # Continuer vers le calcul normal
+            else:
+                # Conserver le prix avec remise - le sous_total est déjà correct
+                prix_unitaire = Decimal(str(self.sous_total)) / Decimal(str(self.quantite))
+                return {
+                    'prix_unitaire': float(prix_unitaire),
+                    'sous_total': float(self.sous_total),
+                    'type_prix': f'remise_{self.type_remise_appliquee}',
+                    'recalcule': False
+                }
+
+        # 2. Déterminer le prix unitaire selon les règles métier
+        prix_unitaire = None
+        type_prix = 'normal'
+
+        # Promotion active - priorité sur tout sauf remise appliquée
+        if hasattr(self.article, 'has_promo_active') and self.article.has_promo_active:
+            prix_unitaire = self.article.prix_actuel or self.article.prix_unitaire
+            type_prix = 'promotion'
+
+        # Phase liquidation
+        elif self.article.phase == 'LIQUIDATION':
+            prix_unitaire = self.article.Prix_liquidation if hasattr(self.article, 'Prix_liquidation') and self.article.Prix_liquidation else self.article.prix_actuel or self.article.prix_unitaire
+            type_prix = 'liquidation'
+
+        # Phase test
+        elif self.article.phase == 'EN_TEST':
+            prix_unitaire = self.article.prix_actuel or self.article.prix_unitaire
+            type_prix = 'test'
+
+        # Article upsell avec compteur
+        elif hasattr(self.article, 'isUpsell') and self.article.isUpsell and self.commande.compteur > 0:
+            # Calculer le prix selon le compteur
+            if self.commande.compteur == 1 and self.article.prix_upsell_1:
+                prix_unitaire = self.article.prix_upsell_1
+            elif self.commande.compteur == 2 and self.article.prix_upsell_2:
+                prix_unitaire = self.article.prix_upsell_2
+            elif self.commande.compteur == 3 and self.article.prix_upsell_3:
+                prix_unitaire = self.article.prix_upsell_3
+            elif self.commande.compteur >= 4 and self.article.prix_upsell_4:
+                prix_unitaire = self.article.prix_upsell_4
+            else:
+                prix_unitaire = self.article.prix_actuel or self.article.prix_unitaire
+            type_prix = f'upsell_niveau_{self.commande.compteur}'
+
+        # Prix normal
+        else:
+            prix_unitaire = self.article.prix_actuel or self.article.prix_unitaire
+            type_prix = 'normal'
+
+        # 3. Calculer le sous-total
+        prix_unitaire = Decimal(str(prix_unitaire))
+        sous_total = prix_unitaire * Decimal(str(self.quantite))
+
+        # 4. Sauvegarder dans le panier (sans type de prix gelé)
+        self.sous_total = float(sous_total)
+        self.save(update_fields=['sous_total', 'remise_appliquer', 'type_remise_appliquee'])
+
+        return {
+            'prix_unitaire': float(prix_unitaire),
+            'sous_total': float(sous_total),
+            'type_prix': type_prix,
+            'recalcule': True
+        }
+
     def __str__(self):
         return f"{self.commande.num_cmd} - {self.article.nom} (x{self.quantite})"
 
@@ -517,10 +703,25 @@ class EtatCommande(models.Model):
     
     @property
     def duree(self):
-        """Retourne la durée de cet état"""
+        """Retourne la durée de cet état au format Xj HH:MM:SS"""
         if self.date_fin:
-            return self.date_fin - self.date_debut
-        return timezone.now() - self.date_debut
+            delta = self.date_fin - self.date_debut
+        else:
+            delta = timezone.now() - self.date_debut
+
+        # Conversion en secondes
+        total_seconds = int(delta.total_seconds())
+
+        jours, reste = divmod(total_seconds, 86400)  # 86400 sec = 1 jour
+        heures, reste = divmod(reste, 3600)
+        minutes, secondes = divmod(reste, 60)
+
+        if jours > 0:
+            return f"{jours}j {heures:02d}h : {minutes:02d}m : {secondes:02d}s"
+        elif heures > 0:
+            return f"{heures:02d}h : {minutes:02d}m : {secondes:02d}s"
+        else:
+            return f"{minutes:02d}m : {secondes:02d}s"
 
 
 class Operation(models.Model):

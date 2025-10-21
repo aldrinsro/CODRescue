@@ -14,7 +14,7 @@ from commande.models import Commande
 @login_required
 def liste_clients(request):
     from synchronisation.models import SyncLog
-    
+
     # Sous-requête pour trouver la 'ville_init' de la dernière commande de chaque client
     latest_commande_ville_init = Commande.objects.filter(
         client=OuterRef('pk')
@@ -27,18 +27,24 @@ def liste_clients(request):
     ).all()
     search_query = request.GET.get('search', '')
 
+    # Récupérer les filtres avancés
+    status_filter = request.GET.get('status_filter', '')
+    city_filter = request.GET.get('city_filter', '')
+    orders_count_filter = request.GET.get('orders_count_filter', '')
+    date_filter = request.GET.get('date_filter', '')
+
     if search_query:
         # Recherche flexible et variée
         search_terms = search_query.strip().split()
-        
+
         # Construction de la requête de recherche
         search_conditions = Q()
-        
+
         # Vérifier si la recherche correspond exactement à une ville_init
         exact_ville_init_match = Commande.objects.filter(
             ville_init__iexact=search_query
         ).exists()
-        
+
         if exact_ville_init_match:
             # Si la recherche correspond exactement à une ville_init, on filtre directement
             search_conditions = Q(derniere_ville_init__iexact=search_query)
@@ -55,25 +61,25 @@ def liste_clients(request):
                     Q(adresse__icontains=term) |
                     Q(id__icontains=term) |  # Recherche par ID client
                     Q(derniere_ville_init__icontains=term) |
-                    
+
                     # Recherche dans les commandes associées
                     Q(commandes__id_yz__icontains=term) |
                     Q(commandes__num_cmd__icontains=term) |
                     Q(commandes__total_cmd__icontains=term) |
-                    
+
                     # Recherche dans les villes des commandes
                     Q(commandes__ville__nom__icontains=term) |
                     Q(commandes__ville_init__icontains=term) |
                     Q(commandes__ville__region__nom_region__icontains=term) |
-                    
+
                     # Recherche dans les états des commandes
                     Q(commandes__etats__enum_etat__libelle__icontains=term) |
-                    
+
                     # Recherche dans les produits des commandes
                     Q(commandes__produit_init__icontains=term)
                 )
             search_conditions &= term_conditions
-        
+
         # Recherche globale si un seul terme (pour retrouver "Dupont Jean" avec "Jean Dupont")
         if not exact_ville_init_match and len(search_terms) == 1:
             global_term = search_query.strip()
@@ -89,8 +95,60 @@ def liste_clients(request):
                 Q(commandes__ville_init__icontains=global_term) |
                 Q(commandes__etats__enum_etat__libelle__icontains=global_term)
             )
-        
+
         clients = clients.filter(search_conditions).distinct()
+
+    # Appliquer les filtres avancés
+    if status_filter:
+        if status_filter == 'with_orders':
+            clients = clients.filter(nombre_commandes__gt=0)
+        elif status_filter == 'without_orders':
+            clients = clients.filter(nombre_commandes=0)
+        elif status_filter == 'with_errors':
+            clients = clients.filter(
+                commandes__etats__enum_etat__libelle__iexact='Erronée',
+                commandes__etats__date_fin__isnull=True
+            ).distinct()
+        elif status_filter == 'with_duplicates':
+            clients = clients.filter(
+                commandes__etats__enum_etat__libelle__iexact='Doublon',
+                commandes__etats__date_fin__isnull=True
+            ).distinct()
+
+    if city_filter:
+        clients = clients.filter(derniere_ville_init__icontains=city_filter)
+
+    if orders_count_filter:
+        if orders_count_filter == '0':
+            clients = clients.filter(nombre_commandes=0)
+        elif orders_count_filter == '1':
+            clients = clients.filter(nombre_commandes=1)
+        elif orders_count_filter == '2-5':
+            clients = clients.filter(nombre_commandes__gte=2, nombre_commandes__lte=5)
+        elif orders_count_filter == '6-10':
+            clients = clients.filter(nombre_commandes__gte=6, nombre_commandes__lte=10)
+        elif orders_count_filter == '10+':
+            clients = clients.filter(nombre_commandes__gt=10)
+
+    if date_filter:
+        from datetime import datetime, timedelta
+        from django.utils import timezone
+        today = timezone.now()
+
+        if date_filter == 'today':
+            clients = clients.filter(date_creation__date=today.date())
+        elif date_filter == 'week':
+            week_ago = today - timedelta(days=7)
+            clients = clients.filter(date_creation__gte=week_ago)
+        elif date_filter == 'month':
+            month_ago = today - timedelta(days=30)
+            clients = clients.filter(date_creation__gte=month_ago)
+        elif date_filter == 'quarter':
+            quarter_ago = today - timedelta(days=90)
+            clients = clients.filter(date_creation__gte=quarter_ago)
+        elif date_filter == 'year':
+            year_ago = today - timedelta(days=365)
+            clients = clients.filter(date_creation__gte=year_ago)
 
     # Triez par date de création par défaut
     clients = clients.order_by('-date_creation')
@@ -342,7 +400,6 @@ def detail_client(request, pk):
     }
     return render(request, 'client/detail_client.html', context)
 
-
 @login_required
 def detail_client_ajax(request, pk):
     """Vue AJAX pour la pagination flexible des commandes du client"""
@@ -522,7 +579,13 @@ def recherche_clients_ajax(request):
     """Vue AJAX pour la recherche dynamique des clients"""
     search_query = request.GET.get('search', '')
     page = request.GET.get('page', 1)
-    
+
+    # Récupérer les filtres avancés
+    status_filter = request.GET.get('status_filter', '')
+    city_filter = request.GET.get('city_filter', '')
+    orders_count_filter = request.GET.get('orders_count_filter', '')
+    date_filter = request.GET.get('date_filter', '')
+
     # Sous-requête pour trouver la 'ville_init' de la dernière commande de chaque client
     latest_commande_ville_init = Commande.objects.filter(
         client=OuterRef('pk')
@@ -598,6 +661,58 @@ def recherche_clients_ajax(request):
             )
         
         clients = clients.filter(search_conditions).distinct()
+
+    # Appliquer les filtres avancés
+    if status_filter:
+        if status_filter == 'with_orders':
+            clients = clients.filter(nombre_commandes__gt=0)
+        elif status_filter == 'without_orders':
+            clients = clients.filter(nombre_commandes=0)
+        elif status_filter == 'with_errors':
+            clients = clients.filter(
+                commandes__etats__enum_etat__libelle__iexact='Erronée',
+                commandes__etats__date_fin__isnull=True
+            ).distinct()
+        elif status_filter == 'with_duplicates':
+            clients = clients.filter(
+                commandes__etats__enum_etat__libelle__iexact='Doublon',
+                commandes__etats__date_fin__isnull=True
+            ).distinct()
+
+    if city_filter:
+        clients = clients.filter(derniere_ville_init__icontains=city_filter)
+
+    if orders_count_filter:
+        if orders_count_filter == '0':
+            clients = clients.filter(nombre_commandes=0)
+        elif orders_count_filter == '1':
+            clients = clients.filter(nombre_commandes=1)
+        elif orders_count_filter == '2-5':
+            clients = clients.filter(nombre_commandes__gte=2, nombre_commandes__lte=5)
+        elif orders_count_filter == '6-10':
+            clients = clients.filter(nombre_commandes__gte=6, nombre_commandes__lte=10)
+        elif orders_count_filter == '10+':
+            clients = clients.filter(nombre_commandes__gt=10)
+
+    if date_filter:
+        from datetime import datetime, timedelta
+        from django.utils import timezone
+        today = timezone.now()
+
+        if date_filter == 'today':
+            clients = clients.filter(date_creation__date=today.date())
+        elif date_filter == 'week':
+            week_ago = today - timedelta(days=7)
+            clients = clients.filter(date_creation__gte=week_ago)
+        elif date_filter == 'month':
+            month_ago = today - timedelta(days=30)
+            clients = clients.filter(date_creation__gte=month_ago)
+        elif date_filter == 'quarter':
+            quarter_ago = today - timedelta(days=90)
+            clients = clients.filter(date_creation__gte=quarter_ago)
+        elif date_filter == 'year':
+            year_ago = today - timedelta(days=365)
+            clients = clients.filter(date_creation__gte=year_ago)
 
     # Triez par date de création par défaut
     clients = clients.order_by('-date_creation')

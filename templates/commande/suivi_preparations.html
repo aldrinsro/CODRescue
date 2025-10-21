@@ -94,20 +94,6 @@
 
     <!-- Statistiques de suivi -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <!-- À imprimer -->
-        <div class="group bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:shadow-2xl hover:scale-105 border border-gray-100 animate-slideInUp" style="animation-delay: 0.1s;">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center">
-                    <div class="p-4 rounded-full bg-gradient-to-r from-amber-100 to-amber-200 text-amber-600 transition-all duration-300 group-hover:from-amber-500 group-hover:to-amber-600 group-hover:text-white group-hover:scale-110">
-                        <i class="fas fa-print text-2xl"></i>
-                    </div>
-                    <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-600 group-hover:text-gray-700 transition-colors duration-300">À Imprimer</p>
-                        <p class="text-3xl font-bold text-gray-900 transition-all duration-300 group-hover:text-amber-600">{{ a_imprimer_count|default:0 }}</p>
-                    </div>
-                </div>
-            </div>
-        </div>
 
         <!-- En préparation -->
         <div class="group bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:shadow-2xl hover:scale-105 border border-gray-100 animate-slideInUp" style="animation-delay: 0.2s;">
@@ -231,7 +217,7 @@
         <table class="min-w-full divide-y divide-gray-200 border border-gray-200" style="border-collapse: collapse;">
             <thead class="bg-gray-50" style="background-color: var(--admin-color);">
                 <tr>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider border-r border-b border-gray-200">ID YZ</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider border-r border-b border-gray-200">N° Commande</th>
                     <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider border-r border-b border-gray-200">Client</th>
                     <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider border-r border-b border-gray-200">Contact</th>
                     <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider border-r border-b border-gray-200">Livraison</th>
@@ -349,13 +335,6 @@
             Guide du Suivi de Préparation
         </h3>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div class="p-4 bg-amber-50 rounded-lg border border-amber-200">
-                <h4 class="font-semibold text-amber-800 mb-2">
-                    <i class="fas fa-print mr-2"></i>
-                    Phase d'Impression
-                </h4>
-                <p class="text-sm text-amber-700">Commandes affectées aux opérateurs, en attente d'impression d'étiquettes</p>
-            </div>
             <div class="p-4 bg-orange-50 rounded-lg border border-orange-200">
                 <h4 class="font-semibold text-orange-800 mb-2">
                     <i class="fas fa-box-open mr-2"></i>

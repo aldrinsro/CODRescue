@@ -1,0 +1,72 @@
+{% extends 'Superpreparation/articles_retournes/_base_articles_retournes.html' %}
+
+{% block page_icon %}<i class="fas fa-box mr-3 text-blue-300"></i>{% endblock %}
+
+{% block extra_page_css %}
+<style>
+    .stats-card.highlight {
+        border-color: #3b82f6;
+        box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+    }
+</style>
+{% endblock %}
+
+{% block stats_section %}
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <!-- Total réintégrés -->
+    <div class="stats-card highlight animate-slideInUp" style="animation-delay: 0.1s;">
+        <div class="flex items-center">
+            <div class="stats-icon bg-blue-500">
+                <i class="fas fa-box text-2xl"></i>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-600">Réintégrés</p>
+                <p class="text-3xl font-bold text-blue-600">{{ stats.count|default:0 }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Valeur récupérée -->
+    <div class="stats-card animate-slideInUp" style="animation-delay: 0.2s;">
+        <div class="flex items-center">
+            <div class="stats-icon bg-green-500">
+                <i class="fas fa-dollar-sign text-2xl"></i>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-600">Valeur Récupérée</p>
+                <p class="text-3xl font-bold text-green-600">{{ stats.valeur_totale|floatformat:0|default:0 }} DH</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Taux de réintégration -->
+    <div class="stats-card animate-slideInUp" style="animation-delay: 0.3s;">
+        <div class="flex items-center">
+            <div class="stats-icon bg-purple-500">
+                <i class="fas fa-percentage text-2xl"></i>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-600">Taux Réintégration</p>
+                <p class="text-3xl font-bold text-purple-600">{{ stats.taux_reintegration|default:0 }}%</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Message informatif -->
+{% if stats.count > 0 %}
+<div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6 rounded-r-lg">
+    <div class="flex">
+        <div class="flex-shrink-0">
+            <i class="fas fa-info-circle text-blue-400 text-xl"></i>
+        </div>
+        <div class="ml-3">
+            <p class="text-sm text-blue-700">
+                <span class="font-medium">{{ stats.count }} article{{ stats.count|pluralize }}</span> réintégré{{ stats.count|pluralize }} en stock.
+                Ces articles ont été vérifiés et sont à nouveau disponibles à la vente.
+            </p>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

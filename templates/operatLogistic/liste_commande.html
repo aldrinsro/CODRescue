@@ -244,7 +244,7 @@
         <table class="min-w-full divide-y divide-gray-200">
             <thead style="background-color: var(--logistic-primary);">
                 <tr>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">ID YZ</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">N° Commande</th>
                     <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Client</th>
                     <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Téléphone</th>
                     <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Ville </th>
@@ -350,7 +350,7 @@
                 </button>
                 
                 
-                <button onclick="openSavModal('Retournée', {{ commande.id }})" class="sav-action-card bg-red-50 hover:bg-red-100 border-2 border-red-200 hover:border-red-300 rounded-lg p-4 transition-all duration-200">
+                <button onclick="ouvrirModalRetourComplet({{ commande.id }})" class="sav-action-card bg-red-50 hover:bg-red-100 border-2 border-red-200 hover:border-red-300 rounded-lg p-4 transition-all duration-200">
                     <div class="flex flex-col items-center">
                         <i class="fas fa-times-circle text-3xl text-red-500 mb-2"></i>
                         <span class="font-semibold text-red-800">Retournée (SAV)</span>
@@ -480,171 +480,14 @@
     </div>
 </div>
 
-<!-- Modale de Livraison Partielle -->
-<div id="livraisonPartielleModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
-    <div class="relative top-10 mx-auto p-5 border w-full max-w-4xl shadow-lg rounded-md bg-white">
-        <div class="mt-3">
-            <div class="flex items-center justify-between mb-6">
-                <h3 class="text-xl font-bold text-gray-900 flex items-center">
-                    <i class="fas fa-box-open mr-3 text-blue-600"></i>
-                    Livraison Partielle
-                </h3>
-                <button onclick="fermerModalLivraisonPartielle()" class="text-gray-400 hover:text-gray-600">
-                    <i class="fas fa-times text-xl"></i>
-                </button>
-            </div>
-            
-            <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6 rounded-lg">
-                <div class="flex">
-                    <div class="flex-shrink-0">
-                        <i class="fas fa-info-circle text-blue-400"></i>
-                    </div>
-                    <div class="ml-3">
-                        <p class="text-sm text-blue-700">
-                            <strong>Instructions :</strong> Sélectionnez les articles que vous allez livrer au client. 
-                            Les articles non sélectionnés seront automatiquement renvoyés aux opérateurs de préparation 
-                            pour traitement (remplacement, correction, etc.).
-                        </p>
-                    </div>
-                </div>
-            </div>
 
-            <form id="livraisonPartielleForm" method="POST">
-                {% csrf_token %}
-                
-                <!-- Ces champs seront remplis dynamiquement par JavaScript juste avant la soumission -->
-                <input type="hidden" name="articles_livres" id="articlesLivresJsonInput">
-                <input type="hidden" name="articles_renvoyes" id="articlesRenvoyesJsonInput">
-                
-                <!-- Section Articles à Livrer -->
-                <div class="mb-8">
-                    <h4 class="text-lg font-semibold text-green-700 mb-4 flex items-center">
-                        <i class="fas fa-check-circle mr-2"></i>
-                        Articles à Livrer au Client
-                    </h4>
-                    <div class="bg-green-50 border border-green-200 rounded-lg p-4">
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="articlesALivrerContainer">
-                            <!-- Les articles seront ajoutés dynamiquement par JavaScript -->
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Section Articles à Renvoyer -->
-                <div class="mb-8">
-                    <h4 class="text-lg font-semibold text-orange-700 mb-4 flex items-center">
-                        <i class="fas fa-undo mr-2"></i>
-                        Articles à Renvoyer
-                    </h4>
-                    <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="articlesARenvoyerContainer">
-                            <!-- Les articles non sélectionnés apparaîtront ici dynamiquement -->
-                        </div>
-                        <div id="aucunArticleRenvoyer" class="text-center py-8 text-gray-500">
-                            <i class="fas fa-info-circle text-2xl mb-2"></i>
-                            <p>Aucun article à renvoyer. Tous les articles seront livrés.</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Résumé -->
-                <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
-                    <h4 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                        <i class="fas fa-calculator mr-2"></i>
-                        Résumé de la Livraison Partielle
-                    </h4>
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div class="text-center">
-                            <div class="text-2xl font-bold text-green-600" id="totalArticlesLivres">0</div>
-                            <div class="text-sm text-gray-600">Articles à livrer</div>
-                        </div>
-                        <div class="text-center">
-                            <div class="text-2xl font-bold text-orange-600" id="totalArticlesRenvoyes">0</div>
-                            <div class="text-sm text-gray-600">Articles à renvoyer</div>
-                        </div>
-                        <div class="text-center">
-                            <div class="text-2xl font-bold text-blue-600" id="totalValeurLivree">0.00 DH</div>
-                            <div class="text-sm text-gray-600">Valeur livrée</div>
-                        </div>
-                        <div class="text-center">
-                            <div class="text-2xl font-bold text-purple-600" id="totalCommandeLivraison">0.00 DH</div>
-                            <div class="text-sm text-gray-600">Total commande original</div>
-                        </div>
-                    </div>
-                    
-                    <!-- Pourcentage de livraison -->
-                    <div class="mt-4 text-center">
-                        <div class="text-lg font-medium text-gray-700">
-                            Pourcentage de livraison: <span id="pourcentageLivraison" class="text-blue-600 font-bold">100%</span>
-                        </div>
-                        <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
-                            <div id="barreProgresLivraison" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 100%"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Commentaire -->
-                <div class="mb-6">
-                    <label for="commentaireLivraisonPartielle" class="block text-sm font-medium text-gray-700 mb-2">
-                        Commentaire sur la livraison partielle (obligatoire)
-                    </label>
-                    <select name="commentaire" 
-                              id="commentaireLivraisonPartielle" 
-                              class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            required>
-                        <option value="">Sélectionner un commentaire...</option>
-                        <optgroup label="Problèmes de qualité">
-                            <option value="Article défectueux détecté">Article défectueux détecté</option>
-                            <option value="Problème de qualité signalé par le client">Problème de qualité signalé par le client</option>
-                            <option value="Article endommagé lors du transport">Article endommagé lors du transport</option>
-                            <option value="Défaut de fabrication constaté">Défaut de fabrication constaté</option>
-                        </optgroup>
-                        <optgroup label="Modifications demandées">
-                            <option value="Échange de taille demandé">Échange de taille demandé</option>
-                            <option value="Échange de couleur demandé">Échange de couleur demandé</option>
-                            <option value="Article non conforme à la commande">Article non conforme à la commande</option>
-                            <option value="Modification de commande demandée">Modification de commande demandée</option>
-                        </optgroup>
-                        <optgroup label="Autres">
-                            <option value="Demande spéciale du client">Demande spéciale du client</option>
-                            <option value="Urgence signalée par le client">Urgence signalée par le client</option>
-                            <option value="Autre motif - voir détails">Autre motif - voir détails</option>
-                        </optgroup>
-                    </select>
-                    <!-- Champ de commentaire personnalisé (masqué par défaut) -->
-                    <div id="commentairePersonnaliseLivraisonPartielle" class="mt-2 hidden">
-                        <label for="commentaireCustomLivraisonPartielle" class="text-sm font-medium text-gray-700">Commentaire personnalisé</label>
-                        <textarea name="commentaireCustom" 
-                                  id="commentaireCustomLivraisonPartielle" 
-                                  rows="3" 
-                                  class="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" 
-                                  placeholder="Décrivez le problème ou la situation..."></textarea>
-                    </div>
-                </div>
-
-                <!-- Boutons d'action -->
-                <div class="flex justify-end space-x-4">
-                    <button type="button" 
-                            onclick="fermerModalLivraisonPartielle()" 
-                            class="px-6 py-2 bg-gray-500 text-white font-medium rounded-lg hover:bg-gray-600 transition-colors">
-                        Annuler
-                    </button>
-                    <button type="submit" 
-                            id="confirmerLivraisonPartielleBtn"
-                            class="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                        <i class="fas fa-check mr-2"></i>
-                        Confirmer la Livraison Partielle
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 
 {% endblock %}
 
 {% block extra_js %}
 <!-- Inclusion du fichier JavaScript pour les modals -->
 <script src="{% static 'js/OperteurSAV/modals.js' %}"></script>
+<script src="{% static 'js/OperteurSAV/retournee.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Améliorer l'expérience utilisateur avec des animations
@@ -686,7 +529,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 const endDate = new Date(endDateInput.value);
                 
                 if (startDate > endDate) {
-                    alert('La date de début ne peut pas être postérieure à la date de fin.');
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Attention',
+                        text: 'La date de début ne peut pas être postérieure à la date de fin.'
+                    });
                     return false;
                 }
             }
@@ -761,7 +608,11 @@ function openSavModal(etat, commandeId = null) {
     
     // Vérifier qu'on a un ID de commande
     if (!currentCommandeId) {
-        alert('❌ Erreur: Impossible de déterminer l\'ID de la commande');
+        Swal.fire({
+            icon: 'error',
+            title: 'Erreur',
+            text: 'Impossible de déterminer l\'ID de la commande'
+        });
         return;
     }
     
@@ -892,4 +743,8 @@ document.addEventListener('keydown', function(e) {
 
 // ================== FIN GESTION MODALE SAV ==================
 </script>
+
+<!-- Inclusion de la modale de retour complet -->
+{% include 'operatLogistic/partials/_modal_retour_complet.html' %}
+
 {% endblock %} 

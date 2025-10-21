@@ -167,11 +167,9 @@ def calcul_economie_remise(article, prix_remise):
 def format_prix_avec_devise(prix, devise='DH'):
     """
     Formate un prix avec la devise.
-    
     Args:
         prix: Le prix à formater
-        devise: La devise (défaut 'DH')
-        
+        devise: La devise (défaut 'DH')  
     Returns:
         str: Prix formaté avec devise
     """
@@ -220,7 +218,62 @@ def get_prix_effectif_panier(panier):
     quantite = panier.quantite
     sous_total_actuel = Decimal(str(panier.sous_total))
     prix_unitaire_effectif = sous_total_actuel / Decimal(str(quantite))
-    
+
+    # PRIORITÉ 1: Utiliser le type de prix gelé si disponible
+    # EXCEPTION: Les types upsell_niveau_X ne sont PAS utilisés pour l'affichage
+    # car le libellé upsell doit être dynamique selon le compteur actuel
+    if hasattr(panier, 'type_prix_gele') and panier.type_prix_gele:
+        type_prix_gele = panier.type_prix_gele
+
+        # IGNORER les types upsell_niveau_X → ils seront recalculés dynamiquement
+        if not type_prix_gele.startswith('upsell_niveau_'):
+            # Mapper le type de prix gelé vers un libellé et style
+            if type_prix_gele == 'liquidation':
+                return {
+                    'prix_unitaire': float(prix_unitaire_effectif),
+                    'sous_total': float(sous_total_actuel),
+                    'libelle': 'Prix liquidation',
+                    'couleur_classe': 'text-orange-600',
+                    'icone': 'fas fa-tags',
+                    'est_remise': False
+                }
+            elif type_prix_gele == 'promotion':
+                return {
+                    'prix_unitaire': float(prix_unitaire_effectif),
+                    'sous_total': float(sous_total_actuel),
+                    'libelle': 'Prix promotion',
+                    'couleur_classe': 'text-red-600',
+                    'icone': 'fas fa-fire',
+                    'est_remise': False
+                }
+            elif type_prix_gele == 'test':
+                return {
+                    'prix_unitaire': float(prix_unitaire_effectif),
+                    'sous_total': float(sous_total_actuel),
+                    'libelle': 'Prix test',
+                    'couleur_classe': 'text-blue-600',
+                    'icone': 'fas fa-flask',
+                    'est_remise': False
+                }
+            elif type_prix_gele.startswith('remise_'):
+                return {
+                    'prix_unitaire': float(prix_unitaire_effectif),
+                    'sous_total': float(sous_total_actuel),
+                    'libelle': f'Prix {type_prix_gele.replace("_", " ")} appliquée',
+                    'couleur_classe': 'text-purple-600',
+                    'icone': 'fas fa-percent',
+                    'est_remise': True
+                }
+            elif type_prix_gele == 'normal':
+                return {
+                    'prix_unitaire': float(prix_unitaire_effectif),
+                    'sous_total': float(sous_total_actuel),
+                    'libelle': 'Prix normal',
+                    'couleur_classe': 'text-gray-600',
+                    'icone': 'fas fa-tag',
+                    'est_remise': False
+                }
+
     # Vérifier si une remise a été explicitement appliquée
     # PROTECTION: Les articles en liquidation et en promotion ne doivent jamais être traités comme ayant une remise
     article_en_promotion = hasattr(article, 'has_promo_active') and article.has_promo_active
@@ -269,7 +322,7 @@ def get_prix_effectif_panier(panier):
             return {
                 'prix_unitaire': float(prix_unitaire_effectif),
                 'sous_total': float(sous_total_actuel),
-                'libelle': 'Prix remisé (personnalisé)',
+                'libelle': 'Prix remisé',
                 'couleur_classe': 'text-purple-600',
                 'icone': 'fas fa-percent',
                 'est_remise': True
@@ -286,7 +339,8 @@ def get_prix_effectif_panier(panier):
         getattr(article, 'prix_remise_4', None)
     ])
 
-    # Pour tous les articles sans remise appliquée, utiliser les prix upsell selon le compteur de la commande
+    # Pour tous les articles sans remise appliquée et sans type_prix_gele,
+    # calculer dynamiquement le libellé selon le compteur actuel
     from commande.templatetags.commande_filters import get_prix_upsell_avec_compteur
 
     # Obtenir le prix selon le compteur actuel de la commande
@@ -294,31 +348,42 @@ def get_prix_effectif_panier(panier):
     compteur_actuel = commande.compteur
     prix_avec_compteur = get_prix_upsell_avec_compteur(article, compteur_actuel)
 
-    # Déterminer le libellé selon le compteur
-    if compteur_actuel > 0 and hasattr(article, 'isUpsell') and article.isUpsell:
-        libelle = f'Prix upsell niveau {compteur_actuel}'
-        couleur_classe = 'text-green-600'
-        icone = 'fas fa-arrow-up'
-    elif hasattr(article, 'has_promo_active') and article.has_promo_active:
+    # Déterminer le libellé selon la PRIORITÉ :
+    # 1. Phases spéciales (promotion, liquidation, test) ont TOUJOURS la priorité
+    # 2. Upsell uniquement si pas de phase spéciale
+    # 3. Normal par défaut
+
+    if hasattr(article, 'has_promo_active') and article.has_promo_active:
+        # PRIORITÉ 1: Promotion active
         libelle = 'Prix promotion'
         couleur_classe = 'text-red-600'
         icone = 'fas fa-fire'
     elif article.phase == 'LIQUIDATION':
+        # PRIORITÉ 1: Phase liquidation
         libelle = 'Prix liquidation'
         couleur_classe = 'text-orange-600'
         icone = 'fas fa-tags'
     elif article.phase == 'EN_TEST':
+        # PRIORITÉ 1: Phase test
         libelle = 'Prix test'
         couleur_classe = 'text-blue-600'
         icone = 'fas fa-flask'
+    elif compteur_actuel > 0 and hasattr(article, 'isUpsell') and article.isUpsell:
+        # PRIORITÉ 2: Upsell dynamique (seulement si pas de phase spéciale)
+        libelle = f'Prix upsell niveau {compteur_actuel}'
+        couleur_classe = 'text-green-600'
+        icone = 'fas fa-arrow-up'
     else:
+        # PRIORITÉ 3: Prix normal par défaut
         libelle = 'Prix normal'
         couleur_classe = 'text-gray-600'
         icone = 'fas fa-tag'
 
+    # Utiliser le sous-total réel du panier au lieu de recalculer
+    # Cela garantit l'intégrité avec les données en base
     return {
-        'prix_unitaire': float(prix_avec_compteur),
-        'sous_total': float(prix_avec_compteur * quantite),
+        'prix_unitaire': float(sous_total_actuel / Decimal(str(quantite))),
+        'sous_total': float(sous_total_actuel),
         'libelle': libelle,
         'couleur_classe': couleur_classe,
         'icone': icone,

@@ -210,7 +210,7 @@
             <table id="cmdTable" class="min-w-full divide-y divide-gray-200 min-w-[800px] lg:min-w-[1000px] xl:min-w-[1200px] text-xs sm:text-sm">
                 <thead class="sticky top-0 z-10" style="background-color: var(--preparation-primary);">
                     <tr>
-                        <th scope="col" class="px-2 py-2 text-left text-[11px] font-semibold text-white uppercase tracking-wider">Numéro</th>
+                        <th scope="col" class="px-2 py-2 text-left text-[11px] font-semibold text-white uppercase tracking-wider">N° Commande</th>
                         <th scope="col" class="px-2 py-2 text-left text-[11px] font-semibold text-white uppercase tracking-wider">N° Ext.</th>
                         <th scope="col" class="px-2 py-2 text-left text-[11px] font-semibold text-white uppercase tracking-wider">Client</th>
                         <th scope="col" class="px-2 py-2 text-left text-[11px] font-semibold text-white uppercase tracking-wider">Tél.</th>
@@ -1038,7 +1038,7 @@ function finaliserCommande(commandeId) {
             });
             
             // Envoyer la requête AJAX
-            fetch(`/Superpreparation/api/commande/${commandeId}/finaliser/`, {
+            fetch(`/Superpreparation/api/finaliser-preparation/${commandeId}/`, {
                 method: 'POST',
                 headers: {
                     'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
@@ -1473,55 +1473,74 @@ function toggleEtatDetails(commandeId) {
 
 // Fonction pour finaliser une commande depuis la liste
 function finaliserCommande(commandeId) {
-    if (!confirm('Êtes-vous sûr de vouloir finaliser cette commande emballée ?')) {
-        return;
-    }
-    
-    // Afficher un indicateur de chargement
-    const button = event.target.closest('button');
-    const originalContent = button.innerHTML;
-    button.innerHTML = '<i class="fas fa-spinner fa-spin text-sm"></i>';
-    button.disabled = true;
-    
-    // Récupérer le token CSRF
-    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-    
-    fetch(`/operateur-supervision/api/finaliser-preparation/${commandeId}/`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': csrfToken,
-        },
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error(`Erreur HTTP: ${response.status}`);
-        }
-        return response.json();
-    })
-    .then(data => {
-        if (data.success) {
-            // Mettre à jour l'interface en temps réel
-            updateCommandeEtat(commandeId, 'Préparée');
+    Swal.fire({
+        title: 'Finaliser la préparation',
+        text: "Voulez-vous vraiment marquer cette commande comme préparée ?",
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#10b981',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: 'Oui, finaliser !',
+        cancelButtonText: 'Annuler'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Afficher un indicateur de chargement
+            Swal.fire({
+                title: 'Finalisation en cours...',
+                text: 'Veuillez patienter',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
             
-            // Afficher une notification de succès
-            showSuccessMessage(`La préparation de la commande a été finalisée avec succès.`);
+            // Afficher un indicateur de chargement sur le bouton
+            const button = event.target.closest('button');
+            const originalContent = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin text-sm"></i>';
+            button.disabled = true;
+    
+            // Récupérer le token CSRF
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
             
-            // Recharger la page après un délai pour mettre à jour les statistiques
-            setTimeout(() => {
-                window.location.reload();
-            }, 2000);
-        } else {
-            throw new Error(data.error || 'Erreur lors de la finalisation');
+            fetch(`/Superpreparation/api/finaliser-preparation/${commandeId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken,
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        title: 'Succès !',
+                        text: data.message || 'La commande a été finalisée avec succès.',
+                        icon: 'success',
+                        confirmButtonColor: '#10b981'
+                    }).then(() => {
+                        // Recharger la page pour mettre à jour la liste
+                        window.location.reload();
+                    });
+                } else {
+                    Swal.fire({
+                        title: 'Erreur',
+                        text: data.error || data.message || 'Une erreur est survenue',
+                        icon: 'error',
+                        confirmButtonColor: '#ef4444'
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Erreur lors de la finalisation:', error);
+                Swal.fire({
+                    title: 'Erreur',
+                    text: 'Erreur de connexion',
+                    icon: 'error',
+                    confirmButtonColor: '#ef4444'
+                });
+            });
         }
-    })
-    .catch(error => {
-        console.error('Erreur lors de la finalisation:', error);
-        showErrorMessage(`Erreur lors de la finalisation: ${error.message}`);
-        
-        // Restaurer le bouton
-        button.innerHTML = originalContent;
-        button.disabled = false;
     });
 }
 

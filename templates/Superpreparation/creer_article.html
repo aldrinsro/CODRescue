@@ -148,17 +148,11 @@
                 
                 <!-- Nouveaux champs pour prix_uspell_final et Prix_liquidation -->
                 <div class="mt-3 pt-2">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          
+                </div>
                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label for="id_prix_uspell_final" class="block text-sm font-semibold mb-2" style="color: var(--preparation-primary);">Prix gros (DH):</label>
-                            <input type="number" name="prix_uspell_final" id="id_prix_uspell_final" 
-                                   value="{{ form_data.prix_uspell_final|default:'' }}" 
-                                   step="0.01" min="0" 
-                                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#66cccc] focus:border-transparent transition duration-200" 
-                                   placeholder="Ex: 599.99">
-                            <small class="text-gray-600">Prix final pour les ventes upsell</small>
-                        </div>
+                    <div class="grid grid-cols-1 md:grid-cols-1 gap-4">
                         <div>
                             <label for="id_Prix_liquidation" class="block text-sm font-semibold mb-2" style="color: var(--preparation-primary);">Prix de liquidation (DH):</label>
                             <input type="number" name="Prix_liquidation" id="id_Prix_liquidation" 

@@ -2,9 +2,6 @@
 <tr class="panier-card hover:bg-gray-50 transition-colors">
     <td class="px-4 py-3 text-sm text-gray-900 border-r border-b border-gray-200">
         <div class="font-medium">{{ panier.commande.id_yz }}</div>
-        {% if panier.commande.num_cmd %}
-        <div class="text-xs text-gray-500">({{ panier.commande.num_cmd }})</div>
-        {% endif %}
     </td>
     <td class="px-4 py-3 text-sm text-gray-900 border-r border-b border-gray-200">
         <div class="font-medium">{{ panier.commande.client.nom }} {{ panier.commande.client.prenom }}</div>

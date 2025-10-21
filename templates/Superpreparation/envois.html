@@ -1251,7 +1251,7 @@
                     <i class="fas fa-box text-2xl"></i>
                 </div>
                 <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-600">Commandes prêtes</p>
+                    <p class="text-sm font-medium text-gray-600">Commandes prêtes </p>
                     <p class="text-3xl font-bold text-gray-900">{{ commandes_pretes|length|default:0 }}</p>
                 </div>
             </div>
@@ -1501,13 +1501,7 @@
                     <div class="flex justify-between items-center mb-2">
                         <span class="text-gray-600 text-sm">Commandes prêtes:</span>
                         <span class="font-medium text-sm">
-                            {% for commande in commandes_pretes %}
-                                {% if commande.ville.region.id == region.id %}
-                                    {{ forloop.counter }}
-                                {% endif %}
-                            {% empty %}
-                                0
-                            {% endfor %}
+                            {{ region.nb_commandes_pretes|default:0 }}
                         </span>
                     </div>
                     <div class="flex justify-between items-center">

@@ -10,7 +10,7 @@ from django.contrib import messages
 from django.core import serializers
 from django.http import JsonResponse, HttpResponse # Import HttpResponse for partial rendering
 import json
-from .models import Commande, Panier, EnumEtatCmd, Operation
+from .models import Commande, Panier, EnumEtatCmd, EtatCommande, Operation
 from client.models import Client
 from parametre.models import Ville, Operateur, Region # Import Region
 from article.models import Article
@@ -236,11 +236,13 @@ def detail_commande(request, pk):
     commande = get_object_or_404(Commande, pk=pk)
     paniers = Panier.objects.filter(commande=commande)
     historique_etats = commande.historique_etats.all()
+    etats_non_modifiables = ["Livrée", "Livrée Partiellement", "Retournée"]
 
     context = {
         'commande': commande,
         'paniers': paniers,
         'historique_etats': historique_etats,
+        'etats_non_modifiables': etats_non_modifiables 
     }
     return render(request, 'commande/detail.html', context)
 
@@ -272,9 +274,8 @@ def creer_commande(request):
                 # Récupérer les autres données de la commande
                 ville_id = request.POST.get('ville_livraison')
                 adresse = request.POST.get('adresse')
-                is_upsell = request.POST.get('is_upsell') == 'on'
                 source = request.POST.get('source')
-                payement = request.POST.get('payement', 'Non payé')
+                payement = request.POST.get('payement')
                 frais_livraison_actif = request.POST.get('frais_livraison_actif') == 'true'
                 
                 # Créer la commande
@@ -288,6 +289,25 @@ def creer_commande(request):
                     payement=payement,
                     frais_livraison=frais_livraison_actif
                 )
+
+                # Créer automatiquement l'état "Non affectée" pour la nouvelle commande
+                try:
+                    etat_non_affectee = EnumEtatCmd.objects.get(libelle='Non affectée')
+                    EtatCommande.objects.create(
+                        commande=commande,
+                        enum_etat=etat_non_affectee
+                    )
+                except EnumEtatCmd.DoesNotExist:
+                    # Si l'état "Non affectée" n'existe pas, on le crée
+                    etat_non_affectee = EnumEtatCmd.objects.create(
+                        libelle='Non affectée',
+                        ordre=0,
+                        couleur='#6B7280'
+                    )
+                    EtatCommande.objects.create(
+                        commande=commande,
+                        enum_etat=etat_non_affectee
+                    )
                 
                 # Traiter les articles du panier
                 total_commande = 0
@@ -497,9 +517,7 @@ def modifier_commande(request, pk):
                     # Mise à jour de l'adresse de livraison (saisie manuelle)
                     if 'adresse' in request.POST:
                         commande.adresse = request.POST.get('adresse')
-                    
-                    # Option upsell
-                    commande.is_upsell = request.POST.get('is_upsell') == 'on'
+               
                     
                     # Note: La ville et l'adresse de livraison sont issues de la commande originale
                     # Les autres champs (ID YZ, date, client, valeur) sont en lecture seule
@@ -1522,8 +1540,9 @@ def affecter_commandes(request):
                 continue
         
         return JsonResponse({
-            'success': True, 
-            'message': f'{commandes_affectees} commande(s) affectée(s) à {operateur.get_full_name()}'
+            'success': True,
+            'message': f'{commandes_affectees} commande(s) affectée(s) à {operateur.get_full_name()}',
+            'commandes_affectees': commandes_affectees
         })
         
     except Exception as e:
