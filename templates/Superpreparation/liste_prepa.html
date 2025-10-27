@@ -918,11 +918,28 @@ function openPanierModal(commandeId) {
             document.getElementById('panierEmpty').classList.add('hidden');
             articles.forEach(a => {
                 const row = document.createElement('div');
-                row.className = 'flex items-center justify-between py-2 border-b last:border-b-0';
+                row.className = 'flex items-center gap-4 py-3 border-b last:border-b-0';
+                
+                // Construction du HTML avec image
+                let imageHtml = '';
+                if (a.image) {
+                    imageHtml = `<img src="${a.image}" alt="${a.nom || ''}" class="w-16 h-16 object-cover rounded-lg border">`;
+                } else {
+                    imageHtml = `<div class="w-16 h-16 bg-gray-200 rounded-lg border flex items-center justify-center">
+                        <i class="fas fa-image text-gray-400 text-xl"></i>
+                    </div>`;
+                }
+                
                 row.innerHTML = `
-                    <div>
+                    ${imageHtml}
+                    <div class="flex-1">
                         <div class="text-sm font-medium text-gray-800">${a.nom || ''}</div>
-                        <div class="text-xs text-gray-500">Ref: ${a.reference || 'N/A'} · PU: ${formatMoney(a.prix_unitaire || 0)}</div>
+                        <div class="text-xs text-gray-500">
+                            Ref: ${a.reference || 'N/A'}
+                            ${a.couleur ? ' · Couleur: ' + a.couleur : ''}
+                            ${a.pointure ? ' · Pointure: ' + a.pointure : ''}
+                        </div>
+                        <div class="text-xs text-gray-500">PU: ${formatMoney(a.prix_unitaire || 0)}</div>
                     </div>
                     <div class="text-right">
                         <div class="text-sm text-gray-700">${a.quantite || 0} × ${parseFloat(a.prix_unitaire||0).toFixed(2)}</div>

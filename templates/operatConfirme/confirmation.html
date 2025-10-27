@@ -153,7 +153,16 @@
                 </h2>
                 <p class="text-gray-600 text-sm mt-1">Gérer toutes les commandes affectées</p>
             </div>
-                        <div class="flex gap-3">
+            <div class="flex gap-3">
+                <!-- Bouton de confirmation multiple -->
+                <button id="btnLancerMultiple" onclick="lancerConfirmationsMultiples()" 
+                        class="px-6 py-3 rounded-lg font-medium transition-all hidden hover:shadow-lg transform hover:scale-105" 
+                        style="background: linear-gradient(to right, #f97316, #ea580c); color: white;">
+                    <i class="fas fa-play-circle mr-2"></i>
+                    <span id="texteLancerMultiple">Lancer les confirmations</span>
+                    <span id="compteurSelection" class="ml-2 px-2 py-1 bg-white bg-opacity-20 rounded-full text-sm font-bold">0</span>
+                </button>
+                
                 <a href="{% url 'operatConfirme:liste_commandes' %}" class="px-6 py-3 rounded-lg font-medium transition-all" style="background-color: #f7d9c4; color: #4B352A;">
                     <i class="fas fa-list mr-2"></i>
                     Voir Liste Complète
@@ -209,7 +218,10 @@
                 <table class="w-full">
                     <thead style="background: linear-gradient(to right, #4B352A, #6d4b3b);">
                         <tr class="text-white text-left">
-                            
+                            <th class="px-4 py-3 font-semibold w-12">
+                                <input type="checkbox" id="selectAll" onchange="toggleSelectAll()" 
+                                       class="w-5 h-5 rounded border-white focus:ring-2 focus:ring-white cursor-pointer">
+                            </th>
                             <th class="px-4 py-3 font-semibold">N° Commande</th>
                             <th class="px-4 py-3 font-semibold">Client</th>
                             <th class="px-4 py-3 font-semibold">Téléphone</th>
@@ -223,7 +235,17 @@
                     </thead>
                     <tbody>
                         {% for commande in commandes_a_confirmer %}
-                        <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                        <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors commande-row" data-commande-id="{{ commande.id }}">
+                            <td class="px-4 py-3">
+                                {% if commande.etat_actuel and commande.etat_actuel.enum_etat.libelle == 'Affectée' %}
+                                <input type="checkbox" class="commande-checkbox w-5 h-5 rounded border-gray-300 focus:ring-2 cursor-pointer" 
+                                       data-commande-id="{{ commande.id }}"
+                                       onchange="updateSelectionCount()"
+                                       style="accent-color: #4B352A;">
+                                {% else %}
+                                <span class="text-gray-300">—</span>
+                                {% endif %}
+                            </td>
                             <td class="px-4 py-3">
                                 <div class="font-bold" style="color: #4B352A;">{{ commande.id_yz }}</div>
                             </td>
@@ -1256,6 +1278,150 @@ function hideErrorModal() {
         modal.classList.add('hidden');
         modal.classList.remove('flex');
     }
+}
+
+// ================== GESTION DE LA SÉLECTION MULTIPLE ==================
+
+// Fonction pour sélectionner/désélectionner toutes les commandes
+function toggleSelectAll() {
+    const selectAll = document.getElementById('selectAll');
+    const checkboxes = document.querySelectorAll('.commande-checkbox');
+    
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = selectAll.checked;
+    });
+    
+    updateSelectionCount();
+}
+
+// Fonction pour mettre à jour le compteur de sélection
+function updateSelectionCount() {
+    const checkboxes = document.querySelectorAll('.commande-checkbox:checked');
+    const count = checkboxes.length;
+    const btnLancerMultiple = document.getElementById('btnLancerMultiple');
+    const compteurSelection = document.getElementById('compteurSelection');
+    const texteLancerMultiple = document.getElementById('texteLancerMultiple');
+    const selectedCommandesCount = document.getElementById('selectedCommandesCount');
+    
+    // Mettre à jour le compteur
+    if (compteurSelection) {
+        compteurSelection.textContent = count;
+    }
+    
+    if (selectedCommandesCount) {
+        selectedCommandesCount.textContent = count;
+    }
+    
+    // Afficher/masquer le bouton
+    if (btnLancerMultiple) {
+        if (count > 0) {
+            btnLancerMultiple.classList.remove('hidden');
+            texteLancerMultiple.textContent = count === 1 ? 'Lancer la confirmation' : 'Lancer les confirmations';
+        } else {
+            btnLancerMultiple.classList.add('hidden');
+        }
+    }
+    
+    // Mettre à jour la checkbox "Tout sélectionner"
+    const selectAll = document.getElementById('selectAll');
+    const allCheckboxes = document.querySelectorAll('.commande-checkbox');
+    
+    if (selectAll && allCheckboxes.length > 0) {
+        const allChecked = Array.from(allCheckboxes).every(cb => cb.checked);
+        const noneChecked = Array.from(allCheckboxes).every(cb => !cb.checked);
+        
+        selectAll.checked = allChecked;
+        selectAll.indeterminate = !allChecked && !noneChecked;
+    }
+}
+
+// Fonction pour lancer les confirmations multiples
+function lancerConfirmationsMultiples() {
+    const checkboxes = document.querySelectorAll('.commande-checkbox:checked');
+    const commandeIds = Array.from(checkboxes).map(cb => cb.getAttribute('data-commande-id'));
+    
+    if (commandeIds.length === 0) {
+        showSelectionErrorModal();
+        return;
+    }
+    
+    // Stocker les IDs pour utilisation ultérieure
+    window.selectedCommandes = commandeIds;
+    
+    // Afficher le modal de confirmation
+    showMassConfirmationModal();
+}
+
+// Fonction pour lancer réellement les commandes
+function lancerCommandes(commandeIds) {
+    // Afficher un loader
+    const loader = document.createElement('div');
+    loader.id = 'massLaunchLoader';
+    loader.className = 'fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50';
+    loader.innerHTML = `
+        <div class="bg-white rounded-xl p-8 max-w-md w-full mx-4 shadow-2xl text-center">
+            <div class="mb-4">
+                <i class="fas fa-spinner fa-spin text-6xl" style="color: #4B352A;"></i>
+            </div>
+            <h3 class="text-xl font-bold mb-2" style="color: #4B352A;">Lancement en cours...</h3>
+            <p class="text-gray-600">Veuillez patienter pendant le lancement des confirmations.</p>
+            <div class="mt-4">
+                <div class="text-sm text-gray-500">
+                    <span id="progressCount">0</span> / <span id="totalCount">${commandeIds.length}</span> commandes lancées
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(loader);
+    
+    // Lancer les commandes via AJAX
+    fetch('/operateur-confirme/lancer-confirmations-masse/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+            'commande_ids': commandeIds
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Retirer le loader
+        loader.remove();
+        
+        if (data.success) {
+            // Afficher un message de succès
+            const successModal = document.createElement('div');
+            successModal.className = 'fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50';
+            const message = data.message || 'Commandes lancées avec succès';
+            successModal.innerHTML = `
+                <div class="bg-white rounded-xl p-8 max-w-md w-full mx-4 shadow-2xl text-center">
+                    <div class="mb-4">
+                        <i class="fas fa-check-circle text-6xl text-green-500"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-2" style="color: #4B352A;">Succès !</h3>
+                    <p class="text-gray-700 mb-4">
+                        ${message}
+                    </p>
+                    <button onclick="location.reload()" 
+                            class="px-6 py-3 text-white rounded-lg font-medium transition-all duration-200 hover:shadow-lg" 
+                            style="background: linear-gradient(135deg, #4B352A, #6d4b3b);">
+                        <i class="fas fa-sync-alt mr-2"></i>Actualiser
+                    </button>
+                </div>
+            `;
+            document.body.appendChild(successModal);
+        } else {
+            // Afficher un message d'erreur
+            showErrorModal(data.message || 'Une erreur est survenue lors du lancement des confirmations.');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        loader.remove();
+        showErrorModal('Une erreur réseau est survenue.');
+    });
 }
 
 // Recherche intelligente chargée depuis smart-search.js

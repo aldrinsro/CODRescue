@@ -1583,25 +1583,42 @@
                 `;
             } else {
                 articles.forEach(a => {
+                    // Gestion de l'image
+                    let imageHtml = '';
+                    if (a.image) {
+                        imageHtml = `<img src="${a.image}" alt="${a.nom || ''}" class="w-20 h-20 object-cover rounded-lg border border-gray-300">`;
+                    } else {
+                        imageHtml = `<div class="w-20 h-20 bg-gray-200 rounded-lg border border-gray-300 flex items-center justify-center">
+                            <i class="fas fa-image text-gray-400 text-2xl"></i>
+                        </div>`;
+                    }
+                    
                     htmlContent += `
                         <div class="border border-gray-200 rounded-lg p-4">
-                            <div class="flex justify-between items-start mb-2">
+                            <div class="flex gap-4">
+                                ${imageHtml}
                                 <div class="flex-1">
-                                    <h5 class="font-medium text-gray-900">${a.nom || ''}</h5>
-                                    <p class="text-sm text-gray-600">Réf: ${a.reference || 'N/A'}</p>
-                                </div>
-                                <div class="text-right">
-                                    <span class="text-lg font-bold text-green-600">${parseFloat(a.prix_unitaire || 0).toFixed(2)} DH</span>
-                                </div>
-                            </div>
-                            <div class="grid grid-cols-2 gap-4 text-sm">
-                                <div>
-                                    <span class="text-gray-500">Quantité:</span>
-                                    <span class="font-medium text-gray-900 ml-1">${a.quantite || 0}</span>
-                                </div>
-                                <div>
-                                    <span class="text-gray-500">Sous-total:</span>
-                                    <span class="font-medium text-green-600 ml-1">${parseFloat(a.sous_total || 0).toFixed(2)} DH</span>
+                                    <div class="flex justify-between items-start mb-2">
+                                        <div class="flex-1">
+                                            <h5 class="font-medium text-gray-900">${a.nom || ''}</h5>
+                                            <p class="text-sm text-gray-600">Réf: ${a.reference || 'N/A'}</p>
+                                            ${a.couleur ? `<p class="text-xs text-gray-500">Couleur: ${a.couleur}</p>` : ''}
+                                            ${a.pointure ? `<p class="text-xs text-gray-500">Pointure: ${a.pointure}</p>` : ''}
+                                        </div>
+                                        <div class="text-right">
+                                            <span class="text-lg font-bold text-green-600">${parseFloat(a.prix_unitaire || 0).toFixed(2)} DH</span>
+                                        </div>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-4 text-sm">
+                                        <div>
+                                            <span class="text-gray-500">Quantité:</span>
+                                            <span class="font-medium text-gray-900 ml-1">${a.quantite || 0}</span>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-500">Sous-total:</span>
+                                            <span class="font-medium text-green-600 ml-1">${parseFloat(a.sous_total || 0).toFixed(2)} DH</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>

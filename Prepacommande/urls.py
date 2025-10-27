@@ -18,6 +18,7 @@ urlpatterns = [
   
     path('api/commande/<int:commande_id>/produits/', views.api_commande_produits, name='api_commande_produits'), 
     path('api/articles-disponibles-prepa/', views.api_articles_disponibles_prepa, name='api_articles_disponibles_prepa'),
+    path('api/panier/<int:commande_id>/', views.api_panier_modal, name='api_panier_modal'),
     path('api/commande/<int:commande_id>/panier/', views.api_panier_commande_prepa, name='api_panier_commande'),
     path('api/commande/<int:commande_id>/panier-livraison/', views.api_panier_commande_livraison, name='api_panier_commande_livraison'),
     path('api/commande/<int:commande_id>/articles-livree-partiellement/', views.api_articles_commande_livree_partiellement, name='api_articles_commande_livree_partiellement'),

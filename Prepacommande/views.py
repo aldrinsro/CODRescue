@@ -371,7 +371,11 @@ def liste_prepa(request):
                 if not has_return_from_delivery:
                     # Vérifier si la commande a été affectée par un superviseur
                     # Chercher les opérations d'affectation par supervision
-                    
+                    from commande.models import Operation
+                    operation_affectation_supervision = Operation.objects.filter(
+                        commande=commande,
+                        type_operation__icontains='affectation'
+                    ).first()
 
                     if operation_affectation_supervision:
                         commandes_affectees.append(commande)
@@ -3299,6 +3303,75 @@ def api_panier_commande_prepa(request, commande_id):
             "nb_articles": len(paniers_data),
         }
     )
+
+@login_required
+def api_panier_modal(request, commande_id):
+    """API pour afficher le panier dans une modale"""
+    try:
+        # Vérifier que l'utilisateur est un opérateur de préparation
+        operateur = Operateur.objects.get(
+            user=request.user, type_operateur="PREPARATION"
+        )
+    except Operateur.DoesNotExist:
+        return JsonResponse({"success": False, "message": "Accès non autorisé"})
+    
+    # Récupérer la commande
+    try:
+        commande = Commande.objects.select_related('client', 'ville').get(id=commande_id)
+    except Commande.DoesNotExist:
+        return JsonResponse({"success": False, "message": "Commande non trouvée"})
+    
+    # Récupérer l'état actuel
+    etat_actuel = commande.etats.filter(date_fin__isnull=True).select_related('enum_etat').first()
+    
+    # Récupérer les paniers
+    paniers = commande.paniers.all().select_related("article", "variante", "variante__couleur", "variante__pointure")
+    
+    paniers_data = []
+    for panier in paniers:
+        # Gérer l'image de l'article
+        image_url = None
+        if panier.article and panier.article.image:
+            image_url = panier.article.image.url
+        
+        # Récupérer couleur et pointure
+        couleur = None
+        pointure = None
+        
+        if panier.variante:
+            if panier.variante.couleur:
+                couleur = panier.variante.couleur.nom
+            if panier.variante.pointure:
+                pointure = panier.variante.pointure.pointure
+        else:
+            # Fallback sur les champs directs du panier
+            couleur = panier.couleur if hasattr(panier, 'couleur') else None
+            pointure = panier.pointure if hasattr(panier, 'pointure') else None
+        
+        paniers_data.append({
+            "article": panier.article.nom if panier.article else "Article inconnu",
+            "couleur": couleur,
+            "pointure": pointure,
+            "quantite": panier.quantite,
+            "prix_unitaire": f"{float(panier.prix_panier):.2f}",
+            "sous_total": f"{float(panier.sous_total):.2f}",
+            "image": image_url,
+        })
+    
+    # Données de la commande
+    commande_data = {
+        "id_yz": commande.id_yz,
+        "client": commande.client.get_full_name if commande.client else "Client inconnu",
+        "ville": commande.ville.nom if commande.ville else "Ville non spécifiée",
+        "total": f"{float(commande.total_cmd):.2f}",
+        "etat": etat_actuel.enum_etat.libelle if etat_actuel and etat_actuel.enum_etat else "État inconnu",
+    }
+
+    return JsonResponse({
+        "success": True,
+        "paniers": paniers_data,
+        "commande": commande_data,
+    })
 
 
     article = get_object_or_404(Article, pk=article_id)

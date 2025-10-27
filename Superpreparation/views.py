@@ -2256,7 +2256,7 @@ def api_panier_commande_prepa(request, commande_id):
     if not etat_preparation:
         return JsonResponse({'success': False, 'message': 'Commande non affectée'})
     # Récupérer les paniers
-    paniers = commande.paniers.all().select_related('article')
+    paniers = commande.paniers.all().select_related('article', 'variante', 'variante__couleur', 'variante__pointure')
     # Construire le format "articles" attendu par le front (compatibilité)
     articles = []
     total_articles_montant = 0.0
@@ -2264,16 +2264,33 @@ def api_panier_commande_prepa(request, commande_id):
         prix_unitaire = float(panier.article.prix_unitaire) if panier.article and panier.article.prix_unitaire is not None else 0.0
         sous_total = float(panier.sous_total) if panier.sous_total is not None else round(prix_unitaire * (panier.quantite or 0), 2)
         total_articles_montant += sous_total
+        
+        # Gérer l'image de l'article
+        image_url = None
+        if panier.article and panier.article.image:
+            image_url = panier.article.image.url
+        
+        # Récupérer couleur et pointure depuis variante si disponible
+        couleur = getattr(panier.article, 'couleur', '')
+        pointure = getattr(panier.article, 'pointure', '')
+        
+        if panier.variante:
+            if panier.variante.couleur:
+                couleur = panier.variante.couleur.nom
+            if panier.variante.pointure:
+                pointure = panier.variante.pointure.pointure
+        
         articles.append({
             'id': panier.id,
             'article_id': getattr(panier.article, 'id', None),
             'nom': getattr(panier.article, 'nom', ''),
             'reference': getattr(panier.article, 'reference', '') or '',
-            'couleur': getattr(panier.article, 'couleur', ''),
-            'pointure': getattr(panier.article, 'pointure', ''),
+            'couleur': couleur,
+            'pointure': pointure,
             'quantite': panier.quantite or 0,
             'prix_unitaire': prix_unitaire,
             'sous_total': sous_total,
+            'image': image_url,
         })
     # Objet commande attendu par le front
     client_nom = ''

@@ -255,7 +255,14 @@ def detail_article(request, id):
     
     # Préparer les données pour le tableau croisé
     # Récupérer toutes les pointures et couleurs uniques
-    pointures_uniques = sorted(set(v.pointure.pointure for v in variantes), key=int)
+    def safe_int_sort(pointure):
+        """Trier les pointures en traitant les valeurs non-numériques"""
+        try:
+            return (0, int(pointure))  # Trier numériquement si possible
+        except ValueError:
+            return (1, pointure)  # Les valeurs non-numériques (ex: "Standard") viennent après
+    
+    pointures_uniques = sorted(set(v.pointure.pointure for v in variantes), key=safe_int_sort)
     couleurs_uniques = sorted(set(v.couleur.nom for v in variantes))
     
     # Créer la matrice du tableau croisé

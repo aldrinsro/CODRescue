@@ -7,276 +7,485 @@
 
 {% block content %}
 
-
-<!-- Métriques principales de supervision -->
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-
-
+<!-- Section 1: Métriques principales - Grid à 2 colonnes -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
     <!-- Commandes en préparation -->
     <div class="group bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:shadow-2xl hover:scale-105 border-l-4 border-orange-500">
         <div class="flex items-center justify-between">
-            <div>
+            <div class="flex-1">
                 <p class="text-sm font-medium text-gray-600 mb-1">En Préparation</p>
-                <p class="text-3xl font-bold text-orange-600">{{ stats.commandes_en_cours }}</p>
-                <a href="{% url 'Superpreparation:commandes_en_preparation' %}" class="text-xs text-orange-500 hover:text-orange-700 font-medium">Voir toutes →</a>
+                <p class="text-4xl font-bold text-orange-600 mb-2">{{ stats.commandes_en_cours }}</p>
+                <a href="{% url 'Superpreparation:commandes_en_preparation' %}" class="text-xs text-orange-500 hover:text-orange-700 font-medium inline-flex items-center">
+                    Voir toutes 
+                    <i class="fas fa-arrow-right ml-1"></i>
+                </a>
             </div>
-            <div class="p-3 rounded-full bg-orange-100 group-hover:bg-orange-500 transition-all duration-300">
-                <i class="fas fa-cog fa-spin text-orange-600 group-hover:text-white text-xl"></i>
+            <div class="p-4 rounded-full bg-orange-100 group-hover:bg-orange-500 transition-all duration-300">
+                <i class="fas fa-cog fa-spin text-orange-600 group-hover:text-white text-3xl"></i>
             </div>
         </div>
     </div>
 
-  
-
-  
     <!-- Total actif -->
     <div class="group bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:shadow-2xl hover:scale-105 border-l-4 border-green-500">
         <div class="flex items-center justify-between">
-            <div>
+            <div class="flex-1">
                 <p class="text-sm font-medium text-gray-600 mb-1">Total Actives</p>
-                <p class="text-3xl font-bold text-green-600">{{ stats.total_commandes_actives }}</p>
-                <p class="text-xs text-green-500 font-medium">Supervision</p>
+                <p class="text-4xl font-bold text-green-600 mb-2">{{ stats.total_commandes_actives }}</p>
+                <p class="text-xs text-green-500 font-medium">
+                    <i class="fas fa-eye mr-1"></i>
+                    Supervision Globale
+                </p>
             </div>
-            <div class="p-3 rounded-full bg-green-100 group-hover:bg-green-500 transition-all duration-300">
-                <i class="fas fa-eye text-green-600 group-hover:text-white text-xl"></i>
+            <div class="p-4 rounded-full bg-green-100 group-hover:bg-green-500 transition-all duration-300">
+                <i class="fas fa-chart-pie text-green-600 group-hover:text-white text-3xl"></i>
             </div>
         </div>
     </div>
 </div>
 
-<!-- KPIs et Performance -->
-<div class="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
+<!-- Section 2: KPIs Performance - Grid à 4 colonnes -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <!-- Performance Globale -->
     <div class="group bg-gradient-to-br from-purple-500 to-purple-700 rounded-xl shadow-lg p-6 text-white transition-all duration-300 hover:shadow-2xl hover:scale-105 transform">
-        <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-semibold group-hover:text-purple-100 transition-colors duration-300">Performance Globale</h3>
+        <div class="flex items-center justify-between mb-3">
+            <h3 class="text-base font-semibold group-hover:text-purple-100 transition-colors duration-300">Performance Globale</h3>
             <i class="fas fa-chart-line text-2xl opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300"></i>
         </div>
-        <p class="text-3xl font-bold group-hover:scale-110 transition-transform duration-300">{{ stats.performance_globale_today }}</p>
+        <p class="text-4xl font-bold mb-2 group-hover:scale-110 transition-transform duration-300">{{ stats.performance_globale_today }}</p>
         <p class="text-sm opacity-90 group-hover:opacity-100 transition-opacity duration-300">Préparations terminées aujourd'hui</p>
     </div>
 
+    <!-- Valeur Traitée -->
     <div class="group bg-gradient-to-br from-green-500 to-green-700 rounded-xl shadow-lg p-6 text-white transition-all duration-300 hover:shadow-2xl hover:scale-105 transform">
-        <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-semibold group-hover:text-green-100 transition-colors duration-300">Valeur Traitée</h3>
+        <div class="flex items-center justify-between mb-3">
+            <h3 class="text-base font-semibold group-hover:text-green-100 transition-colors duration-300">Valeur Traitée</h3>
             <i class="fas fa-coins text-2xl opacity-80 group-hover:opacity-100 group-hover:scale-110 group-hover:rotate-12 transition-all duration-300"></i>
         </div>
-        <p class="text-3xl font-bold group-hover:scale-110 transition-transform duration-300">{{ stats.valeur_totale_today|floatformat:0 }}</p>
+        <p class="text-4xl font-bold mb-2 group-hover:scale-110 transition-transform duration-300">{{ stats.valeur_totale_today|floatformat:0 }}</p>
         <p class="text-sm opacity-90 group-hover:opacity-100 transition-opacity duration-300">DH traités aujourd'hui</p>
     </div>
 
+    <!-- Taux de Réussite -->
     <div class="group bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl shadow-lg p-6 text-white transition-all duration-300 hover:shadow-2xl hover:scale-105 transform">
-        <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-semibold group-hover:text-blue-100 transition-colors duration-300">Taux de Réussite</h3>
-            <i class="fas fa-bullseye text-2xl opacity-80 group-hover:opacity-100 group-hover:scale-110 group-hover:pulse transition-all duration-300"></i>
+        <div class="flex items-center justify-between mb-3">
+            <h3 class="text-base font-semibold group-hover:text-blue-100 transition-colors duration-300">Taux de Réussite</h3>
+            <i class="fas fa-bullseye text-2xl opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300"></i>
         </div>
-        <p class="text-3xl font-bold group-hover:scale-110 transition-transform duration-300">{{ stats.taux_reussite }}%</p>
+        <p class="text-4xl font-bold mb-2 group-hover:scale-110 transition-transform duration-300">{{ stats.taux_reussite }}%</p>
         <p class="text-sm opacity-90 group-hover:opacity-100 transition-opacity duration-300">Efficacité aujourd'hui</p>
     </div>
 
+    <!-- Confirmées -->
     <div class="group bg-gradient-to-br from-teal-500 to-teal-700 rounded-xl shadow-lg p-6 text-white transition-all duration-300 hover:shadow-2xl hover:scale-105 transform">
-        <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-semibold group-hover:text-teal-100 transition-colors duration-300">Confirmées</h3>
-            <i class="fas fa-check-circle text-2xl opacity-80 group-hover:opacity-100 group-hover:scale-110 group-hover:animate-bounce transition-all duration-300"></i>
+        <div class="flex items-center justify-between mb-3">
+            <h3 class="text-base font-semibold group-hover:text-teal-100 transition-colors duration-300">Confirmées</h3>
+            <i class="fas fa-check-circle text-2xl opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300"></i>
         </div>
-        <p class="text-3xl font-bold group-hover:scale-110 transition-transform duration-300">{{ stats.commandes_confirmees_today }}</p>
+        <p class="text-4xl font-bold mb-2 group-hover:scale-110 transition-transform duration-300">{{ stats.commandes_confirmees_today }}</p>
         <p class="text-sm opacity-90 group-hover:opacity-100 transition-opacity duration-300">Reçues aujourd'hui</p>
     </div>
 </div>
 
-<!-- Graphiques et données détaillées -->
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-    <!-- Graphique de performance -->
-    <div class="group bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:shadow-2xl hover:scale-105 transform border border-gray-100 hover:border-purple-200">
+
+<!-- Section 3: Graphiques et données détaillées - Grid à 2 colonnes équilibrées -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <!-- Performance de la Journée -->
+    <div class="group bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:shadow-2xl border border-gray-100 hover:border-purple-200">
         <div class="flex items-center justify-between mb-6">
-            <h3 class="text-xl font-bold text-gray-800 group-hover:text-purple-600 transition-colors duration-300">Performance de la Journée</h3>
-            <div class="text-sm text-gray-500 group-hover:text-purple-500 transition-colors duration-300">{{ "now"|date:"d/m/Y" }}</div>
+            <h3 class="text-xl font-bold text-gray-800 group-hover:text-purple-600 transition-colors duration-300 flex items-center">
+                <i class="fas fa-chart-bar text-purple-500 mr-3"></i>
+                Performance de la Journée
+            </h3>
+            <div class="text-sm text-gray-500 group-hover:text-purple-500 transition-colors duration-300 bg-gray-100 px-3 py-1 rounded-full">
+                <i class="fas fa-calendar-day mr-1"></i>
+                {{ "now"|date:"d/m/Y" }}
+            </div>
         </div>
         
         <div class="space-y-4">
-            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-green-50 transition-all duration-300 transform hover:scale-102 hover:shadow-md">
+            <div class="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-lg hover:from-green-100 hover:to-green-200 transition-all duration-300 transform hover:scale-102 hover:shadow-md border border-green-200">
                 <div class="flex items-center">
-                    <div class="w-4 h-4 bg-green-500 rounded-full mr-3 hover:animate-pulse"></div>
-                    <span class="font-medium hover:text-green-700 transition-colors">Terminées</span>
+                    <div class="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center mr-3 group-hover:animate-pulse">
+                        <i class="fas fa-check text-white"></i>
+                    </div>
+                    <span class="font-semibold text-gray-800 hover:text-green-700 transition-colors">Terminées</span>
                 </div>
-                <span class="font-bold text-green-600 hover:scale-110 transition-transform duration-200">{{ stats.performance_globale_today }}</span>
+                <span class="text-2xl font-bold text-green-600 hover:scale-110 transition-transform duration-200">{{ stats.performance_globale_today }}</span>
             </div>
             
-            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-orange-50 transition-all duration-300 transform hover:scale-102 hover:shadow-md">
+            <div class="flex items-center justify-between p-4 bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg hover:from-orange-100 hover:to-orange-200 transition-all duration-300 transform hover:scale-102 hover:shadow-md border border-orange-200">
                 <div class="flex items-center">
-                    <div class="w-4 h-4 bg-orange-500 rounded-full mr-3 hover:animate-spin"></div>
-                    <span class="font-medium hover:text-orange-700 transition-colors">En cours</span>
+                    <div class="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center mr-3">
+                        <i class="fas fa-spinner fa-spin text-white"></i>
+                    </div>
+                    <span class="font-semibold text-gray-800 hover:text-orange-700 transition-colors">En cours</span>
                 </div>
-                <span class="font-bold text-orange-600 hover:scale-110 transition-transform duration-200">{{ stats.commandes_en_cours }}</span>
+                <span class="text-2xl font-bold text-orange-600 hover:scale-110 transition-transform duration-200">{{ stats.commandes_en_cours }}</span>
             </div>
-            
-
         </div>
         
-        <!-- Barre de progression globale -->
-        <div class="mt-6">
-            <div class="flex justify-between text-sm text-gray-600 mb-2">
-                <span>Progression journalière</span>
-                <span>{{ stats.taux_reussite }}%</span>
+        <!-- Barre de progression globale améliorée -->
+        <div class="mt-6 p-4 bg-gray-50 rounded-lg">
+            <div class="flex justify-between text-sm font-medium text-gray-700 mb-3">
+                <span class="flex items-center">
+                    <i class="fas fa-chart-line mr-2 text-purple-500"></i>
+                    Progression journalière
+                </span>
+                <span class="text-purple-600 font-bold text-lg">{{ stats.taux_reussite }}%</span>
             </div>
-            <div class="w-full bg-gray-200 rounded-full h-3">
-                <div class="bg-gradient-to-r from-green-500 to-blue-500 h-3 rounded-full transition-all duration-1000" style="width: {{ stats.taux_reussite }}%"></div>
+            <div class="w-full bg-gray-300 rounded-full h-4 overflow-hidden shadow-inner">
+                <div class="bg-gradient-to-r from-purple-500 via-blue-500 to-green-500 h-4 rounded-full transition-all duration-1000 flex items-center justify-end pr-2" style="width: {{ stats.taux_reussite }}%">
+                    {% if stats.taux_reussite > 10 %}
+                    <span class="text-xs text-white font-bold">{{ stats.taux_reussite }}%</span>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Articles populaires -->
-    <div class="group bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:shadow-2xl hover:scale-105 transform border border-gray-100 hover:border-teal-200">
+    <!-- Articles les Plus Traités -->
+    <div class="group bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:shadow-2xl border border-gray-100 hover:border-teal-200">
         <div class="flex items-center justify-between mb-6">
-            <h3 class="text-xl font-bold text-gray-800 group-hover:text-teal-600 transition-colors duration-300">Articles les Plus Traités</h3>
-            <div class="text-sm text-gray-500 group-hover:text-teal-500 transition-colors duration-300">Cette semaine</div>
+            <h3 class="text-xl font-bold text-gray-800 group-hover:text-teal-600 transition-colors duration-300 flex items-center">
+                <i class="fas fa-box-open text-teal-500 mr-3"></i>
+                Articles les Plus Traités
+            </h3>
+            <div class="text-sm text-gray-500 group-hover:text-teal-500 transition-colors duration-300 bg-gray-100 px-3 py-1 rounded-full">
+                <i class="fas fa-calendar-week mr-1"></i>
+                Cette semaine
+            </div>
         </div>
         
         <div class="space-y-3">
             {% for article in stats.articles_populaires %}
-            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-teal-50 transition-all duration-300 transform hover:scale-102 hover:shadow-md border border-transparent hover:border-teal-200">
-                <div class="flex items-center">
-                    <div class="w-10 h-10 bg-teal-100 rounded-lg flex items-center justify-center mr-3 transition-all duration-300 hover:bg-teal-500 hover:scale-110">
-                        <i class="fas fa-box text-teal-600 transition-colors duration-300 hover:text-white"></i>
+            <div class="flex items-center justify-between p-3 bg-gradient-to-r from-gray-50 to-teal-50 rounded-lg hover:from-teal-50 hover:to-teal-100 transition-all duration-300 transform hover:scale-102 hover:shadow-md border border-teal-100">
+                <div class="flex items-center flex-1 min-w-0">
+                    <div class="w-12 h-12 bg-gradient-to-br from-teal-400 to-teal-600 rounded-lg flex items-center justify-center mr-3 transition-all duration-300 hover:scale-110 flex-shrink-0">
+                        <i class="fas fa-box text-white text-lg"></i>
                     </div>
-                    <div>
-                        <p class="font-medium text-gray-800 hover:text-teal-700 transition-colors duration-300">{{ article.article__nom|truncatechars:25 }}</p>
-                        <p class="text-xs text-gray-500 hover:text-teal-500 transition-colors duration-300">{{ article.article__reference }}</p>
+                    <div class="min-w-0 flex-1">
+                        <p class="font-semibold text-gray-800 hover:text-teal-700 transition-colors duration-300 truncate">{{ article.article__nom|truncatechars:30 }}</p>
+                        <p class="text-xs text-gray-500 hover:text-teal-500 transition-colors duration-300 font-mono">{{ article.article__reference }}</p>
                     </div>
                 </div>
-                <div class="text-right">
-                    <p class="font-bold text-teal-600 hover:scale-110 transition-transform duration-200">{{ article.total_quantite }}</p>
-                    <p class="text-xs text-gray-500 hover:text-teal-500 transition-colors duration-300">{{ article.total_commandes }} cmd</p>
+                <div class="text-right ml-3 flex-shrink-0">
+                    <p class="text-xl font-bold text-teal-600 hover:scale-110 transition-transform duration-200">{{ article.total_quantite }}</p>
+                    <p class="text-xs text-gray-500 hover:text-teal-500 transition-colors duration-300 bg-teal-100 px-2 py-1 rounded-full">
+                        {{ article.total_commandes }} cmd
+                    </p>
                 </div>
             </div>
             {% empty %}
-            <div class="text-center py-8">
-                <i class="fas fa-chart-bar text-4xl text-gray-300 mb-3"></i>
-                <p class="text-gray-500">Aucune donnée cette semaine</p>
+            <div class="text-center py-12">
+                <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-chart-bar text-4xl text-gray-300"></i>
+                </div>
+                <p class="text-gray-500 font-medium">Aucune donnée cette semaine</p>
+                <p class="text-sm text-gray-400 mt-1">Les articles populaires s'afficheront ici</p>
             </div>
             {% endfor %}
         </div>
     </div>
 </div>
 
-<!-- Raccourcis vers les pages de suivi -->
-<div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+
+<!-- Section 4: Actions Rapides de Supervision - Grid responsive -->
+<div class="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-lg p-6 mb-8 border border-gray-100">
     <div class="flex items-center justify-between mb-6">
-        <h3 class="text-xl font-bold text-gray-800 flex items-center">
-            <i class="fas fa-tachometer-alt text-purple-500 mr-3"></i>
+        <h3 class="text-2xl font-bold text-gray-800 flex items-center">
+            <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
+                <i class="fas fa-tachometer-alt text-purple-600"></i>
+            </div>
             Actions Rapides de Supervision
         </h3>
+        <span class="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+            <i class="fas fa-bolt mr-1"></i>
+            Accès rapide
+        </span>
     </div>
     
-    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-4">
-
-        
-        <a href="{% url 'Superpreparation:commandes_en_preparation' %}" class="group p-4 bg-orange-50 hover:bg-orange-100 rounded-lg transition-all duration-300 transform hover:scale-105">
-            <div class="flex items-center justify-between mb-2">
-                <i class="fas fa-cog text-orange-600 text-2xl group-hover:rotate-180 transition-transform duration-500"></i>
-                <span class="bg-orange-600 text-white text-xs px-2 py-1 rounded-full">{{ stats.commandes_en_cours }}</span>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <!-- Suivi Préparation -->
+        <a href="{% url 'Superpreparation:commandes_en_preparation' %}" 
+           class="group relative p-5 bg-gradient-to-br from-orange-50 to-orange-100 hover:from-orange-100 hover:to-orange-200 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-xl border-2 border-orange-200 hover:border-orange-400 overflow-hidden">
+            <!-- Effet de fond -->
+            <div class="absolute top-0 right-0 w-24 h-24 bg-orange-300 rounded-full opacity-20 -mr-12 -mt-12 group-hover:scale-150 transition-transform duration-500"></div>
+            
+            <div class="relative">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center group-hover:rotate-180 transition-transform duration-500 shadow-lg">
+                        <i class="fas fa-cog text-white text-xl"></i>
+                    </div>
+                    <span class="bg-orange-600 text-white text-sm font-bold px-3 py-1 rounded-full shadow-md">{{ stats.commandes_en_cours }}</span>
+                </div>
+                <h4 class="font-bold text-lg text-orange-800 mb-1">Suivi Préparation</h4>
+                <p class="text-sm text-orange-600 flex items-center">
+                    <i class="fas fa-arrow-right mr-2"></i>
+                    En cours de traitement
+                </p>
             </div>
-            <h4 class="font-semibold text-orange-800">Suivi Préparation</h4>
-            <p class="text-sm text-orange-600">En cours de traitement</p>
         </a>
         
-        <a href="#" class="group p-4 bg-yellow-50 hover:bg-yellow-100 rounded-lg transition-all duration-300 transform hover:scale-105">
-            <div class="flex items-center justify-between mb-2">
-                <i class="fas fa-truck text-yellow-600 text-2xl group-hover:translate-x-2 transition-transform"></i>
-                <span class="bg-yellow-600 text-white text-xs px-2 py-1 rounded-full"></span>
+        <!-- Articles retournés -->
+        <a href="{% url 'Superpreparation:service_liste_articles_retournes' %}" 
+           class="group relative p-5 bg-gradient-to-br from-yellow-50 to-yellow-100 hover:from-yellow-100 hover:to-yellow-200 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-xl border-2 border-yellow-200 hover:border-yellow-400 overflow-hidden">
+            <!-- Effet de fond -->
+            <div class="absolute top-0 right-0 w-24 h-24 bg-yellow-300 rounded-full opacity-20 -mr-12 -mt-12 group-hover:scale-150 transition-transform duration-500"></div>
+            
+            <div class="relative">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="w-12 h-12 bg-yellow-500 rounded-lg flex items-center justify-center group-hover:translate-x-2 transition-transform duration-300 shadow-lg">
+                        <i class="fas fa-undo text-white text-xl"></i>
+                    </div>
+                    <span class="bg-yellow-600 text-white text-sm font-bold px-3 py-1 rounded-full shadow-md">{{ stats.commandes_retournees }}</span>
+                </div>
+                <h4 class="font-bold text-lg text-yellow-800 mb-1">Articles Retournés</h4>
+                <p class="text-sm text-yellow-600 flex items-center">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>
+                    Nécessitent attention
+                </p>
             </div>
-            <h4 class="font-semibold text-yellow-800">Les articles retournés </h4>
-            <p class="text-sm text-yellow-600">Nécessitent attention</p>
         </a>
         
-   
+        <!-- Commandes confirmées -->
+        <a href="{% url 'Superpreparation:commandes_confirmees' %}" 
+           class="group relative p-5 bg-gradient-to-br from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-xl border-2 border-blue-200 hover:border-blue-400 overflow-hidden">
+            <!-- Effet de fond -->
+            <div class="absolute top-0 right-0 w-24 h-24 bg-blue-300 rounded-full opacity-20 -mr-12 -mt-12 group-hover:scale-150 transition-transform duration-500"></div>
+            
+            <div class="relative">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                        <i class="fas fa-clipboard-check text-white text-xl"></i>
+                    </div>
+                    <span class="bg-blue-600 text-white text-sm font-bold px-3 py-1 rounded-full shadow-md">{{ stats.commandes_confirmees_today }}</span>
+                </div>
+                <h4 class="font-bold text-lg text-blue-800 mb-1">Commandes Confirmées</h4>
+                <p class="text-sm text-blue-600 flex items-center">
+                    <i class="fas fa-check-circle mr-2"></i>
+                    Prêtes à traiter
+                </p>
+            </div>
+        </a>
     </div>
 </div>
 
-<!-- Activité récente -->
-<div class="group bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:shadow-2xl hover:scale-105 transform border border-gray-100 hover:border-purple-200">
+
+<!-- Section 5: Activité Récente - Pleine largeur -->
+<div class="bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:shadow-2xl border border-gray-100 hover:border-purple-200 mb-8">
     <div class="flex items-center justify-between mb-6">
-        <h3 class="text-xl font-bold text-gray-800 flex items-center group-hover:text-purple-600 transition-colors duration-300">
-            <i class="fas fa-clock text-purple-500 mr-3 group-hover:animate-spin transition-all duration-300"></i>
+        <h3 class="text-2xl font-bold text-gray-800 flex items-center">
+            <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
+                <i class="fas fa-history text-purple-600"></i>
+            </div>
             Activité Récente
         </h3>
-        <div class="text-sm text-gray-500 group-hover:text-purple-500 transition-colors duration-300">
-            {{ stats.activite_recente|length }} action{{ stats.activite_recente|length|pluralize }} récente{{ stats.activite_recente|length|pluralize }}
+        <div class="flex items-center space-x-3">
+            <span class="text-sm text-gray-500 bg-purple-100 px-3 py-1 rounded-full font-medium">
+                <i class="fas fa-list mr-1"></i>
+                {{ stats.activite_recente|length }} action{{ stats.activite_recente|length|pluralize }}
+            </span>
         </div>
     </div>
     
-    <div class="space-y-3">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {% for activite in stats.activite_recente %}
-        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-green-50 transition-all duration-300 transform hover:scale-102 hover:shadow-md border border-transparent hover:border-green-200">
-            <div class="flex items-center">
-                <div class="w-3 h-3 bg-green-500 rounded-full mr-4 animate-pulse hover:animate-ping"></div>
-                <div>
-                    <p class="font-medium text-gray-800 hover:text-green-700 transition-colors duration-300">Commande #{{ activite.commande.id_yz }}</p>
-                    <p class="text-sm text-gray-600 hover:text-green-600 transition-colors duration-300">{{ activite.commande.client.nom }} {{ activite.commande.client.prenom }}</p>
+        <div class="group p-4 bg-gradient-to-br from-gray-50 to-green-50 rounded-lg hover:from-green-50 hover:to-green-100 transition-all duration-300 transform hover:scale-102 hover:shadow-lg border border-green-200">
+            <div class="flex items-start justify-between mb-3">
+                <div class="flex items-center">
+                    <div class="w-3 h-3 bg-green-500 rounded-full mr-2 animate-pulse"></div>
+                    <span class="text-xs font-semibold text-green-600 bg-green-100 px-2 py-1 rounded-full">
+                        Terminée
+                    </span>
                 </div>
+                <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                    <i class="fas fa-clock mr-1"></i>
+                    {{ activite.date_fin|date:"H:i" }}
+                </span>
             </div>
-            <div class="text-right">
-                <p class="text-sm text-gray-500 hover:text-green-500 transition-colors duration-300">{{ activite.date_fin|date:"H:i" }}</p>
-                <p class="text-xs text-green-600 font-medium hover:scale-110 transition-transform duration-200">Terminée</p>
+            
+            <div class="mb-2">
+                <p class="font-bold text-gray-800 hover:text-green-700 transition-colors duration-300 flex items-center">
+                    <i class="fas fa-box-open text-green-500 mr-2"></i>
+                    Commande #{{ activite.commande.id_yz }}
+                </p>
+                <p class="text-sm text-gray-600 hover:text-green-600 transition-colors duration-300 mt-1 flex items-center">
+                    <i class="fas fa-user text-gray-400 mr-2"></i>
+                    {{ activite.commande.client.nom }} {{ activite.commande.client.prenom }}
+                </p>
+            </div>
+            
+            <div class="flex items-center justify-between pt-3 border-t border-green-200">
+                <span class="text-xs text-gray-500">
+                    <i class="fas fa-map-marker-alt mr-1"></i>
+                    {{ activite.commande.ville.nom|default:"N/A" }}
+                </span>
+                <span class="text-sm font-bold text-green-600">
+                    {{ activite.commande.total_cmd|floatformat:0 }} DH
+                </span>
             </div>
         </div>
         {% empty %}
-        <div class="text-center py-8">
-            <i class="fas fa-clock text-4xl text-gray-300 mb-3"></i>
-            <p class="text-gray-500">Aucune activité récente</p>
+        <div class="col-span-full text-center py-12">
+            <div class="w-24 h-24 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-history text-5xl text-purple-300"></i>
+            </div>
+            <p class="text-gray-500 font-semibold text-lg">Aucune activité récente</p>
+            <p class="text-sm text-gray-400 mt-2">Les activités apparaîtront ici une fois les préparations terminées</p>
         </div>
         {% endfor %}
     </div>
 </div>
 {% block extra_js %}
 {{ block.super }}
-<!-- Auto-refresh et animations -->
+<!-- Scripts améliorés pour animations et interactions -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Animation pour les compteurs
+    // === Animation fluide des compteurs ===
     function animateCounters() {
-        const counters = document.querySelectorAll('.text-3xl.font-bold');
+        const counters = document.querySelectorAll('.text-4xl.font-bold, .text-2xl.font-bold');
         counters.forEach(counter => {
-            const target = parseInt(counter.textContent);
+            const text = counter.textContent.trim();
+            const target = parseInt(text.replace(/[^0-9]/g, ''));
+            
+            if (isNaN(target) || target === 0) return;
+            
             let count = 0;
-            const increment = target / 20;
+            const increment = target / 30;
+            const duration = 1500; // 1.5 secondes
+            const stepTime = duration / 30;
             
             const timer = setInterval(() => {
                 count += increment;
                 if (count >= target) {
-                    counter.textContent = target;
+                    counter.textContent = text.replace(/\d+/, target);
                     clearInterval(timer);
                 } else {
-                    counter.textContent = Math.floor(count);
+                    counter.textContent = text.replace(/\d+/, Math.floor(count));
                 }
-            }, 50);
+            }, stepTime);
         });
     }
     
-    // Auto-refresh toutes les 30 secondes
-    setInterval(() => {
-        location.reload();
-    }, 30000);
-    
-    // Animation au chargement
-    animateCounters();
-    
-    // Interaction hover pour les cartes
-    const cards = document.querySelectorAll('.group');
-    cards.forEach(card => {
-        card.addEventListener('mouseenter', function() {
-            this.style.transform = 'translateY(-2px) scale(1.02)';
+    // === Animation d'apparition progressive des cartes ===
+    function animateCards() {
+        const cards = document.querySelectorAll('.group, [class*="bg-white"], [class*="bg-gradient"]');
+        cards.forEach((card, index) => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            
+            setTimeout(() => {
+                card.style.transition = 'all 0.5s ease-out';
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            }, index * 50); // Délai progressif
         });
-        
-        card.addEventListener('mouseleave', function() {
-            this.style.transform = 'translateY(0) scale(1)';
+    }
+    
+    // === Auto-refresh intelligent (toutes les 60 secondes) ===
+    let refreshTimer;
+    function startAutoRefresh() {
+        refreshTimer = setInterval(() => {
+            console.log('🔄 Rafraîchissement automatique du dashboard...');
+            location.reload();
+        }, 60000); // 60 secondes
+    }
+    
+    // Pause auto-refresh si l'utilisateur est inactif
+    let isActive = true;
+    document.addEventListener('visibilitychange', function() {
+        if (document.hidden) {
+            clearInterval(refreshTimer);
+            isActive = false;
+        } else {
+            if (!isActive) {
+                startAutoRefresh();
+                isActive = true;
+            }
+        }
+    });
+    
+    // === Effet de survol amélioré pour les cartes ===
+    const hoverCards = document.querySelectorAll('.group, [class*="hover:scale"]');
+    hoverCards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
         });
     });
     
-    // Status indicator
-    const statusDiv = document.createElement('div');
-    statusDiv.className = 'fixed bottom-4 right-4 bg-green-500 text-white px-3 py-1 rounded-full text-sm font-medium shadow-lg';
-    statusDiv.innerHTML = '<i class="fas fa-wifi mr-2"></i>Supervision Active';
-    document.body.appendChild(statusDiv);
+    // === Indicateur de statut en temps réel ===
+    function createStatusIndicator() {
+        const statusDiv = document.createElement('div');
+        statusDiv.id = 'status-indicator';
+        statusDiv.className = 'fixed bottom-6 right-6 bg-gradient-to-r from-green-500 to-green-600 text-white px-4 py-2 rounded-full text-sm font-semibold shadow-2xl flex items-center space-x-2 z-50 animate-float';
+        statusDiv.innerHTML = `
+            <div class="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+            <span><i class="fas fa-wifi mr-2"></i>Supervision Active</span>
+            <span class="text-xs opacity-75 ml-2" id="refresh-timer">60s</span>
+        `;
+        document.body.appendChild(statusDiv);
+        
+        // Mise à jour du timer
+        let seconds = 60;
+        setInterval(() => {
+            seconds--;
+            if (seconds <= 0) seconds = 60;
+            const timerEl = document.getElementById('refresh-timer');
+            if (timerEl) {
+                timerEl.textContent = seconds + 's';
+                if (seconds <= 10) {
+                    timerEl.classList.add('text-yellow-200');
+                } else {
+                    timerEl.classList.remove('text-yellow-200');
+                }
+            }
+        }, 1000);
+    }
+    
+    // === Tooltip amélioré ===
+    function initTooltips() {
+        const tooltipElements = document.querySelectorAll('[title]');
+        tooltipElements.forEach(el => {
+            el.addEventListener('mouseenter', function(e) {
+                const title = this.getAttribute('title');
+                if (!title) return;
+                
+                const tooltip = document.createElement('div');
+                tooltip.className = 'fixed bg-gray-900 text-white text-xs px-3 py-2 rounded-lg shadow-xl z-50';
+                tooltip.textContent = title;
+                tooltip.style.left = e.pageX + 'px';
+                tooltip.style.top = (e.pageY - 40) + 'px';
+                tooltip.id = 'custom-tooltip';
+                
+                document.body.appendChild(tooltip);
+                this.removeAttribute('title');
+                this.setAttribute('data-original-title', title);
+            });
+            
+            el.addEventListener('mouseleave', function() {
+                const tooltip = document.getElementById('custom-tooltip');
+                if (tooltip) tooltip.remove();
+                
+                const originalTitle = this.getAttribute('data-original-title');
+                if (originalTitle) {
+                    this.setAttribute('title', originalTitle);
+                }
+            });
+        });
+    }
+    
+    // === Initialisation ===
+    setTimeout(() => {
+        animateCounters();
+        animateCards();
+    }, 100);
+    
+    createStatusIndicator();
+    startAutoRefresh();
+    initTooltips();
+    
+    console.log('✅ Dashboard de Supervision initialisé avec succès');
 });
 </script>
 
@@ -315,24 +524,50 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-<!-- Styles personnalisés -->
+<!-- Styles personnalisés améliorés -->
 <style>
+/* === Animations personnalisées === */
 @keyframes pulse-green {
     0%, 100% { background-color: #10b981; }
     50% { background-color: #059669; }
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+}
+
+@keyframes shimmer {
+    0% { background-position: -1000px 0; }
+    100% { background-position: 1000px 0; }
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .animate-pulse-green {
     animation: pulse-green 2s infinite;
 }
 
-/* Effets de hover améliorés */
+.animate-float {
+    animation: float 3s ease-in-out infinite;
+}
+
+/* === Effets de hover === */
 .group:hover .fa-cog {
     animation: spin 2s linear infinite;
 }
 
-.group:hover .fa-truck {
-    animation: truck-move 1s ease-in-out infinite alternate;
+.group:hover .fa-undo {
+    animation: bounce 0.5s ease-in-out;
 }
 
 .group:hover .fa-coins {
@@ -347,14 +582,15 @@ document.addEventListener('DOMContentLoaded', function() {
     transform: scale(1.02);
 }
 
-@keyframes truck-move {
-    from { transform: translateX(0); }
-    to { transform: translateX(5px); }
-}
-
+/* === Animations spécifiques === */
 @keyframes spin {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
+}
+
+@keyframes bounce {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
 }
 
 @keyframes coin-flip {
@@ -363,19 +599,14 @@ document.addEventListener('DOMContentLoaded', function() {
     100% { transform: rotateY(360deg); }
 }
 
-@keyframes bounce {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-}
-
-/* Gradient borders */
+/* === Gradient borders === */
 .border-gradient {
     background: linear-gradient(white, white) padding-box,
                 linear-gradient(45deg, #3b82f6, #8b5cf6, #06d6a0) border-box;
     border: 2px solid transparent;
 }
 
-/* Effets de pulsation personnalisés */
+/* === Animation de pulsation === */
 .animate-pulse-custom {
     animation: pulse-custom 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
@@ -391,19 +622,79 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 }
 
-/* Animation de glissement fluide */
+/* === Animation de glissement === */
 .slide-in {
-    animation: slide-in 0.5s ease-out;
+    animation: slideInUp 0.5s ease-out;
 }
 
-@keyframes slide-in {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
+/* === Scrollbar personnalisé === */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #8b5cf6, #6366f1);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #7c3aed, #4f46e5);
+}
+
+/* === Effets de carte === */
+.card-hover-effect {
+    position: relative;
+    overflow: hidden;
+}
+
+.card-hover-effect::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.2),
+        transparent
+    );
+    transition: left 0.5s;
+}
+
+.card-hover-effect:hover::before {
+    left: 100%;
+}
+
+/* === Responsive improvements === */
+@media (max-width: 768px) {
+    .text-4xl {
+        font-size: 2rem;
     }
-    to {
-        opacity: 1;
-        transform: translateY(0);
+    
+    .text-2xl {
+        font-size: 1.5rem;
+    }
+}
+
+/* === Badge animations === */
+.badge-pulse {
+    animation: badge-pulse 2s infinite;
+}
+
+@keyframes badge-pulse {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+    }
+    50% {
+        box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
     }
 }
 </style>

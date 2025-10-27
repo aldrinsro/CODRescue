@@ -520,13 +520,13 @@
                                 </div>
                             </td>
                             <td class="px-4 py-4 whitespace-nowrap text-center">
-                                <a href="{% url 'Prepacommande:detail_prepa' commande.pk %}" 
+                                <button onclick="afficherPanierModal({{ commande.pk }})" 
                                    class="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md shadow-sm text-white transition-all hover:shadow-lg"
                                    style="background-color: var(--preparation-primary); hover:background-color: var(--preparation-dark);"
                                    title="Voir le panier de cette commande">
                                     <i class="fas fa-shopping-cart mr-1"></i> 
                                     {{ commande.paniers.count }} article{{ commande.paniers.count|pluralize }}
-                                </a>
+                                </button>
                             </td>
                             <td class="px-4 py-4 whitespace-nowrap text-center">
                                 <div class="flex flex-col space-y-2">
@@ -1167,6 +1167,112 @@ function updateCommandeEtat(commandeId, nouvelEtat) {
             }
         }
     }
+}
+
+// ================== MODALE PANIER ==================
+
+function afficherPanierModal(commandeId) {
+    // Afficher un loader
+    Swal.fire({
+        title: 'Chargement du panier...',
+        html: '<div class="flex justify-center"><i class="fas fa-spinner fa-spin text-4xl" style="color: var(--preparation-primary);"></i></div>',
+        showConfirmButton: false,
+        allowOutsideClick: false
+    });
+
+    // Récupérer les détails du panier via AJAX
+    fetch(`/operateur-preparation/api/panier/${commandeId}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const paniers = data.paniers;
+                const commande = data.commande;
+                
+                // Construire le HTML du panier
+                let panierHTML = `
+                    <div class="text-left">
+                        <div class="mb-4 p-4 bg-gray-50 rounded-lg">
+                            <h3 class="font-bold text-lg mb-2">Commande #${commande.id_yz}</h3>
+                            <div class="grid grid-cols-2 gap-2 text-sm">
+                                <div><strong>Client:</strong> ${commande.client}</div>
+                                <div><strong>Total:</strong> ${commande.total} DH</div>
+                                <div><strong>Ville:</strong> ${commande.ville}</div>
+                                <div><strong>État:</strong> ${commande.etat}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-3 max-h-96 overflow-y-auto">
+                `;
+                
+                paniers.forEach((panier, index) => {
+                    panierHTML += `
+                        <div class="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                            <div class="flex items-start space-x-4">
+                                <div class="flex-shrink-0">
+                                    <div class="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
+                                        ${panier.image ? 
+                                            `<img src="${panier.image}" alt="${panier.article}" class="w-full h-full object-cover rounded-lg">` :
+                                            `<i class="fas fa-box text-2xl text-gray-400"></i>`
+                                        }
+                                    </div>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <h4 class="font-semibold text-gray-900 truncate">${panier.article}</h4>
+                                    <div class="mt-1 text-sm text-gray-600">
+                                        ${panier.couleur ? `<span class="inline-flex items-center mr-2"><i class="fas fa-palette mr-1"></i> ${panier.couleur}</span>` : ''}
+                                        ${panier.pointure ? `<span class="inline-flex items-center"><i class="fas fa-shoe-prints mr-1"></i> ${panier.pointure}</span>` : ''}
+                                    </div>
+                                    <div class="mt-2 flex justify-between items-center">
+                                        <span class="text-sm text-gray-600">Qté: <strong>${panier.quantite}</strong></span>
+                                        <span class="text-sm font-semibold" style="color: var(--preparation-primary);">${panier.prix_unitaire} DH</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                panierHTML += `
+                        </div>
+                        
+                        <div class="mt-4 pt-4 border-t">
+                            <div class="flex justify-between items-center text-lg font-bold">
+                                <span>Total:</span>
+                                <span style="color: var(--preparation-primary);">${commande.total} DH</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                Swal.fire({
+                    title: `<i class="fas fa-shopping-cart mr-2"></i> Panier de la commande #${commande.id_yz}`,
+                    html: panierHTML,
+                    width: '700px',
+                    confirmButtonText: '<i class="fas fa-times mr-2"></i> Fermer',
+                    confirmButtonColor: 'var(--preparation-primary)',
+                    customClass: {
+                        title: 'text-lg',
+                        htmlContainer: 'text-left'
+                    }
+                });
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erreur',
+                    text: data.message || 'Impossible de charger le panier',
+                    confirmButtonColor: 'var(--preparation-primary)'
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Erreur',
+                text: 'Une erreur est survenue lors du chargement du panier',
+                confirmButtonColor: 'var(--preparation-primary)'
+            });
+        });
 }
 </script>
 

@@ -348,13 +348,39 @@ CMDInit - CMDInit.csv
 Stage/
 stages/
 N8N/
+n8n/
+
+# Ngrok - Tunneling service (utilisé avec N8N)
+ngrok
+ngrok.exe
+ngrok.yml
+.ngrok2/
+*.ngrok.io
+*ngrok*
+
+# Docker et conteneurs
+docker-compose.override.yml
+.docker/
+*.log
+
+# Ollama et modèles AI
+ollama/
+*.gguf
+*.bin
+
+# PostgreSQL et bases de données de développement
+*.db
+*.sqlite3
+*.sql.gz
+pgdata/
+postgres-data/
 
 # ========================================
 # MODIFICATIONS LOCALES - À NE PAS COMMITER
 # ========================================
 # Fichiers de configuration modifiés localement
-config/settings.py
-.env.example
+# config/settings.py
+# .env.example
 
 # Autres fichiers modifiés localement (ajoutez ici selon vos besoins)
 # local_modifications/
