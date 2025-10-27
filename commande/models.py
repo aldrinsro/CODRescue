@@ -484,6 +484,7 @@ class Panier(models.Model):
     quantite = models.IntegerField()
     prix_panier = models.FloatField(default=0)
     sous_total = models.FloatField()
+    sous_total_remise = models.FloatField(default=0)
     remise_appliquer = models.BooleanField(default=False)
     type_remise_appliquee = models.CharField(max_length=20, choices=CHOIX_TYPE_REMISE, blank=True, default='')
     type_prix_gele = models.CharField(max_length=30, choices=CHOIX_TYPE_PRIX, blank=True, default='', verbose_name="Type de prix gelé")
@@ -746,14 +747,18 @@ class RemisePanier(models.Model):
     def calculer_montant_remise(self):
         """
         Calcule le montant de la remise à appliquer sur le sous-total du panier.
+        Utilise sous_total_remise s'il existe (sous-total original), sinon utilise sous_total.
 
         Returns:
             Decimal: Montant de la remise en DH
         """
         from decimal import Decimal
 
-        # Base de calcul = sous-total du panier (prix_panier * quantite)
-        sous_total_panier = Decimal(str(self.panier.sous_total))
+        # Base de calcul = sous-total original si remise déjà appliquée, sinon sous-total actuel
+        if self.panier.sous_total_remise > 0:
+            sous_total_panier = Decimal(str(self.panier.sous_total_remise))
+        else:
+            sous_total_panier = Decimal(str(self.panier.sous_total))
 
         if self.type_remise == 'POURCENTAGE':
             # Remise en pourcentage du sous-total
@@ -772,13 +777,14 @@ class RemisePanier(models.Model):
         """
         Applique la remise sur le panier en recalculant son sous-total.
         Le nouveau sous-total = sous-total actuel - montant de la remise.
+        Le sous-total original est sauvegardé dans panier.sous_total_remise.
 
         Returns:
             Decimal: Nouveau sous-total après application de la remise
         """
         from decimal import Decimal
 
-        # Sauvegarder le sous-total original avant remise (si pas déjà fait)
+        # Sauvegarder le sous-total original avant remise dans sous_total_remise
         sous_total_original = Decimal(str(self.panier.sous_total))
 
         # Calculer le montant de la remise
@@ -793,33 +799,36 @@ class RemisePanier(models.Model):
             nouveau_sous_total = Decimal('0')
 
         # Mettre à jour le panier
+        # IMPORTANT: Sauvegarder le sous-total original dans sous_total_remise AVANT de modifier sous_total
+        self.panier.sous_total_remise = float(sous_total_original)
         self.panier.sous_total = float(nouveau_sous_total)
         self.panier.remise_appliquer = True
-        self.panier.save(update_fields=['sous_total', 'remise_appliquer'])
+        self.panier.save(update_fields=['sous_total', 'sous_total_remise', 'remise_appliquer'])
 
         # Sauvegarder cette remise
         self.save()
 
-        print(f"✅ Remise appliquée sur {self.panier}: -{montant_remise} DH (nouveau sous-total: {nouveau_sous_total} DH)")
+        print(f"✅ Remise appliquée sur {self.panier}: -{montant_remise} DH (sous-total original: {sous_total_original} DH → nouveau: {nouveau_sous_total} DH)")
 
         return nouveau_sous_total
 
     def retirer_remise(self):
         """
-        Retire la remise du panier en restaurant le sous-total original.
+        Retire la remise du panier en restaurant le sous-total original depuis panier.sous_total_remise.
 
         Returns:
             Decimal: Sous-total restauré (avant remise)
         """
         from decimal import Decimal
 
-        if self.montant_applique > 0:
-            # Restaurer le sous-total original
-            sous_total_original = Decimal(str(self.panier.sous_total)) + Decimal(str(self.montant_applique))
+        # Restaurer le sous-total original depuis le champ sous_total_remise
+        if self.panier.sous_total_remise > 0:
+            sous_total_original = Decimal(str(self.panier.sous_total_remise))
 
             self.panier.sous_total = float(sous_total_original)
+            self.panier.sous_total_remise = 0  # Réinitialiser le champ
             self.panier.remise_appliquer = False
-            self.panier.save(update_fields=['sous_total', 'remise_appliquer'])
+            self.panier.save(update_fields=['sous_total', 'sous_total_remise', 'remise_appliquer'])
 
             print(f"🔄 Remise retirée de {self.panier}: +{self.montant_applique} DH (sous-total restauré: {sous_total_original} DH)")
 
@@ -890,10 +899,10 @@ class EtatCommande(models.Model):
 class Operation(models.Model):
     TYPE_OPERATION_CHOICES = [
         # Opérations spécifiques de confirmation
-        ('APPEL', 'Appel '),
-        ("Appel Whatsapp", "Appel Whatsapp"),
-        ("Message Whatsapp", "Appel Whatsapp "),
-        ("Vocal Whatsapp", "Vocal Whatsapp "),
+        ('APPEL', 'Appel'),
+        ("Appel Whatsapp", "Appel WhatsApp"),
+        ("Message Whatsapp", "Message WhatsApp"),
+        ("Vocal Whatsapp", "Vocal WhatsApp"),
         ('ENVOI_SMS', 'Envoi de SMS'),
     ]
     Type_Commentaire_CHOICES=[

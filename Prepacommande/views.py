@@ -3502,10 +3502,6 @@ def rafraichir_articles_commande_prepa(request, commande_id):
         return JsonResponse({"error": f"Erreur interne: {str(e)}"}, status=500)
 
 
-
-
-
-
 @login_required
 def api_panier_commande_livraison(request, commande_id):
     """API pour récupérer le panier d'une commande pour les opérateurs de livraison"""

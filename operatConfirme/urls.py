@@ -54,9 +54,9 @@ urlpatterns = [
     path('recherche-globale/suggestions/', search_views.search_suggestions_api, name='search_suggestions_api'),
 
     # URLs pour la gestion des remises sur panier
-    path('api/panier/<int:panier_id>/appliquer-remise/', views.appliquer_remise_panier, name='appliquer_remise_panier'),
-    path('api/panier/<int:panier_id>/retirer-remise/', views.retirer_remise_panier, name='retirer_remise_panier'),
-    path('api/panier/<int:panier_id>/calculer-remise-preview/', views.calculer_remise_panier_preview, name='calculer_remise_panier_preview'),
+    path('appliquer-remise/<int:panier_id>/', views.appliquer_remise_panier, name='appliquer_remise_panier'),
+    path('retirer-remise/<int:panier_id>/', views.retirer_remise_panier, name='retirer_remise_panier'),
+    path('calculer-remise-preview/<int:panier_id>/', views.calculer_remise_panier_preview, name='calculer_remise_panier_preview'),
 
     # Notifications supprimées
 ] 

@@ -3300,9 +3300,6 @@ def appliquer_remise_panier(request, panier_id):
                 'error': 'Une remise est déjà appliquée sur ce panier. Veuillez d\'abord la retirer.'
             }, status=400)
 
-        # Sauvegarder le sous-total original
-        sous_total_original = Decimal(str(panier.sous_total))
-
         # Créer la remise avec transaction
         with transaction.atomic():
             remise = RemisePanier.objects.create(
@@ -3314,11 +3311,15 @@ def appliquer_remise_panier(request, panier_id):
             )
 
             # Appliquer la remise (calcule et modifie le sous_total du panier)
+            # La méthode appliquer_remise() sauvegarde automatiquement le sous-total original dans panier.sous_total_remise
             nouveau_sous_total = remise.appliquer_remise()
 
-            # Recalculer le total de la commande
-            commande.calculer_total()
-            commande.save(update_fields=['total_cmd'])
+            # Recalculer le total de la commande avec les frais de livraison
+            commande.recalculer_total_avec_frais()
+
+        # Récupérer le sous-total original depuis panier.sous_total_remise (sauvegardé par appliquer_remise)
+        panier.refresh_from_db()
+        sous_total_original = Decimal(str(panier.sous_total_remise))
 
         # Retourner les informations
         return JsonResponse({
@@ -3409,9 +3410,8 @@ def retirer_remise_panier(request, panier_id):
         with transaction.atomic():
             sous_total_restaure = remise.retirer_remise()
 
-            # Recalculer le total de la commande
-            commande.calculer_total()
-            commande.save(update_fields=['total_cmd'])
+            # Recalculer le total de la commande avec les frais de livraison
+            commande.recalculer_total_avec_frais()
 
         return JsonResponse({
             'success': True,
@@ -3490,7 +3490,11 @@ def calculer_remise_panier_preview(request, panier_id):
             }, status=400)
 
         # Calculer la remise
-        sous_total_actuel = Decimal(str(panier.sous_total))
+        # Utiliser sous_total_remise si disponible (cas où une remise est déjà appliquée), sinon sous_total
+        if panier.sous_total_remise > 0:
+            sous_total_actuel = Decimal(str(panier.sous_total_remise))
+        else:
+            sous_total_actuel = Decimal(str(panier.sous_total))
 
         if type_remise == 'POURCENTAGE':
             montant_remise = sous_total_actuel * (valeur_remise / Decimal('100'))

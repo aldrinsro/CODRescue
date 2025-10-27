@@ -86,7 +86,7 @@ def liste_articles(request):
         ).distinct()
     
     # Gestion de la pagination flexible
-    items_per_page = request.GET.get('items_per_page', 12)
+    items_per_page = request.GET.get('items_per_page', 10)
     start_range = request.GET.get('start_range', '')
     end_range = request.GET.get('end_range', '')
     
