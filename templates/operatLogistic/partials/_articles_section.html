@@ -277,7 +277,15 @@
             <div class="flex items-center space-x-4">
                 <!-- Nom et référence -->
                 <div class="min-w-0 flex-1">
-                    <div class="font-semibold text-lg" style="color: var(--logistic-primary, #2C5454);">{{ panier.article.nom }}</div>
+                    <div class="font-semibold text-lg" style="color: var(--logistic-primary, #2C5454);">
+                        {{ panier.article.nom }}
+                        
+                        {% if panier.remise_personnalisee %}
+                        <span class="inline-flex items-center px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium ml-2 animate-pulse">
+                            <i class="fas fa-tag mr-1"></i>Remise Appliquée
+                        </span>
+                        {% endif %}
+                    </div>
                     <div class="text-sm text-gray-500">
                         <i class="fas fa-hashtag mr-1"></i>Réf: {{ panier.article.reference }}
                     </div>

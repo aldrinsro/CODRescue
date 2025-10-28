@@ -382,7 +382,14 @@
                                         </span>
                                     {% endif %}
                                     <div>
-                                        <div class="font-medium text-gray-900">{{ panier.article.nom }}</div>
+                                        <div class="font-medium text-gray-900 flex items-center">
+                                            {{ panier.article.nom }}
+                                            {% if panier.remise_personnalisee %}
+                                            <span class="inline-flex items-center px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium ml-2 animate-pulse">
+                                                <i class="fas fa-tag mr-1"></i>Remise Appliquée
+                                            </span>
+                                            {% endif %}
+                                        </div>
                                         {% if panier.article.reference %}
                                             <div class="text-xs text-gray-500">Réf: {{ panier.article.reference }}</div>
                                         {% endif %}
