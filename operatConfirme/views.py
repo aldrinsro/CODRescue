@@ -1941,6 +1941,419 @@ def _handle_delete_panier(request, commande, operateur):
         })
 
 
+def _handle_save_client_info(request, commande, operateur):
+    """
+    Gère la sauvegarde des informations du client via AJAX.
+    
+    Args:
+        request: L'objet HttpRequest contenant les données POST
+        commande: L'instance de la commande à modifier
+        operateur: L'opérateur effectuant l'action
+    
+    Returns:
+        JsonResponse avec le statut de l'opération
+    """
+    # ========== 1. RÉCUPÉRATION DES DONNÉES ==========
+    nom = request.POST.get('nom', '').strip()
+    prenom = request.POST.get('prenom', '').strip()
+    telephone = request.POST.get('telephone', '').strip()
+    
+    print(f"👤 Sauvegarde infos client: {prenom} {nom}, Tel: {telephone}")
+    
+    try:
+        # ========== 2. MISE À JOUR DU CLIENT ==========
+        client = commande.client
+        client.nom = nom
+        client.prenom = prenom
+        client.numero_tel = telephone
+        client.save()
+        
+        # ========== 3. RÉPONSE JSON ==========
+        return JsonResponse({
+            'success': True,
+            'message': 'Informations client sauvegardées avec succès'
+        })
+    
+    except Exception as e:
+        print(f"❌ Erreur lors de la sauvegarde des infos client: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur serveur: {str(e)}'
+        })
+
+
+def _handle_update_quantity(request, commande, operateur):
+    """
+    Gère la modification de la quantité d'un article via AJAX.
+    
+    Args:
+        request: L'objet HttpRequest contenant les données POST
+        commande: L'instance de la commande à modifier
+        operateur: L'opérateur effectuant l'action
+    
+    Returns:
+        JsonResponse avec le statut de l'opération
+    """
+    from commande.models import Panier
+    
+    # ========== 1. RÉCUPÉRATION ET VALIDATION DES DONNÉES ==========
+    panier_id = request.POST.get('panier_id')
+    
+    try:
+        nouvelle_quantite = int(request.POST.get('nouvelle_quantite', 1))
+        if nouvelle_quantite < 1:
+            return JsonResponse({
+                'success': False,
+                'error': 'La quantité doit être au moins 1'
+            })
+        if nouvelle_quantite > 999:
+            return JsonResponse({
+                'success': False,
+                'error': 'La quantité ne peut pas dépasser 999'
+            })
+    except (ValueError, TypeError):
+        return JsonResponse({
+            'success': False,
+            'error': 'Quantité invalide'
+        })
+    
+    try:
+        # ========== 2. RÉCUPÉRATION DU PANIER ==========
+        try:
+            panier = Panier.objects.get(id=panier_id, commande=commande)
+        except Panier.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': f'Article avec l\'ID panier {panier_id} non trouvé dans cette commande'
+            })
+        
+        # ========== 3. SAUVEGARDE DES INFORMATIONS ==========
+        ancienne_quantite = panier.quantite
+        etait_upsell = panier.article.isUpsell
+        
+        print(f"🔢 Modification quantité panier {panier_id}: {ancienne_quantite} → {nouvelle_quantite}")
+        
+        # ========== 4. MODIFICATION DE LA QUANTITÉ ==========
+        # IMPORTANT: Le prix_panier reste INCHANGÉ (prix historique gelé)
+        panier.quantite = nouvelle_quantite
+        panier.sous_total = float(panier.prix_panier * nouvelle_quantite)
+        panier.save()
+        
+        # ========== 5. RECALCUL DU COMPTEUR UPSELL SI NÉCESSAIRE ==========
+        if etait_upsell:
+            _recalculer_compteur_upsell(commande)
+        
+        # ========== 6. RECALCUL DU TOTAL AVEC FRAIS ==========
+        commande.recalculer_total_avec_frais()
+        
+        # ========== 7. RÉPONSE JSON ==========
+        return JsonResponse({
+            'success': True,
+            'message': f'Quantité modifiée de {ancienne_quantite} à {nouvelle_quantite}',
+            'sous_total': float(panier.sous_total),
+            'total_commande': float(commande.total_cmd),
+            'compteur': commande.compteur
+        })
+    
+    except Exception as e:
+        print(f"❌ Erreur lors de la modification de quantité: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur serveur: {str(e)}'
+        })
+
+
+def _handle_update_operation(request, commande, operateur):
+    """
+    Gère la mise à jour d'une opération existante via AJAX.
+    
+    Args:
+        request: L'objet HttpRequest contenant les données POST
+        commande: L'instance de la commande à modifier
+        operateur: L'opérateur effectuant l'action
+    
+    Returns:
+        JsonResponse avec le statut de l'opération
+    """
+    from commande.models import Operation
+    import logging
+    
+    logger = logging.getLogger(__name__)
+    
+    # ========== 1. RÉCUPÉRATION ET VALIDATION DES DONNÉES ==========
+    operation_id = request.POST.get('operation_id')
+    nouveau_commentaire = request.POST.get('nouveau_commentaire', '').strip()
+    
+    print(f"🔄 Mise à jour opération {operation_id} pour commande {commande.id}")
+    print(f"📝 Nouveau commentaire: '{nouveau_commentaire}'")
+    
+    if not operation_id or not nouveau_commentaire:
+        print(f"❌ Données manquantes - operation_id: '{operation_id}', commentaire: '{nouveau_commentaire}'")
+        return JsonResponse({
+            'success': False,
+            'error': 'ID opération et commentaire requis'
+        })
+    
+    try:
+        # ========== 2. RÉCUPÉRATION DE L'OPÉRATION ==========
+        try:
+            operation = Operation.objects.get(id=operation_id, commande=commande)
+        except Operation.DoesNotExist:
+            print(f"❌ Opération {operation_id} introuvable pour commande {commande.id}")
+            return JsonResponse({
+                'success': False,
+                'error': 'Opération introuvable'
+            })
+        
+        # ========== 3. SAUVEGARDE DE L'ANCIEN COMMENTAIRE ==========
+        ancien_commentaire = operation.conclusion
+        print(f"📋 Ancien commentaire: '{ancien_commentaire}'")
+        
+        # ========== 4. MISE À JOUR DE L'OPÉRATION ==========
+        operation.conclusion = nouveau_commentaire
+        operation.operateur = operateur  # Mettre à jour l'opérateur qui modifie
+        operation.save()
+        
+        print(f"✅ Opération {operation_id} sauvegardée en base de données")
+        
+        # ========== 5. VÉRIFICATION POST-SAUVEGARDE ==========
+        operation_verif = Operation.objects.get(id=operation_id)
+        print(f"🔍 Vérification en base: conclusion = '{operation_verif.conclusion}'")
+        
+        # ========== 6. RÉPONSE JSON ==========
+        return JsonResponse({
+            'success': True,
+            'message': 'Opération mise à jour avec succès',
+            'operation_id': operation_id,
+            'nouveau_commentaire': nouveau_commentaire,
+            'ancien_commentaire': ancien_commentaire,
+            'debug_info': {
+                'verification_conclusion': operation_verif.conclusion,
+                'total_operations': Operation.objects.filter(commande=commande).count()
+            }
+        })
+    
+    except Exception as e:
+        print(f"❌ Erreur mise à jour opération: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur serveur: {str(e)}'
+        })
+
+
+def _handle_create_operation(request, commande, operateur):
+    """
+    Gère la création d'une nouvelle opération via AJAX.
+    
+    Args:
+        request: L'objet HttpRequest contenant les données POST
+        commande: L'instance de la commande à modifier
+        operateur: L'opérateur effectuant l'action
+    
+    Returns:
+        JsonResponse avec le statut de l'opération
+    """
+    from commande.models import Operation
+    
+    # ========== 1. RÉCUPÉRATION ET VALIDATION DES DONNÉES ==========
+    type_operation = request.POST.get('type_operation')
+    commentaire = request.POST.get('commentaire', '').strip()
+    
+    print(f"🆕 Création nouvelle opération pour commande {commande.id}")
+    print(f"📝 Type: '{type_operation}', Commentaire: '{commentaire}'")
+    
+    if not type_operation or not commentaire:
+        print(f"❌ Données manquantes - type: '{type_operation}', commentaire: '{commentaire}'")
+        return JsonResponse({
+            'success': False,
+            'error': 'Type d\'opération et commentaire requis'
+        })
+    
+    try:
+        # ========== 2. VALIDATION DU TYPE D'OPÉRATION ==========
+        allowed_types = {choice[0] for choice in Operation.TYPE_OPERATION_CHOICES}
+        if type_operation not in allowed_types:
+            return JsonResponse({
+                'success': False,
+                'error': "Type d'opération non autorisé"
+            })
+        
+        # ========== 3. CRÉATION DE LA NOUVELLE OPÉRATION ==========
+        nouvelle_operation = Operation.objects.create(
+            type_operation=type_operation,
+            conclusion=commentaire,
+            commande=commande,
+            operateur=operateur
+        )
+        
+        print(f"✅ Nouvelle opération créée avec ID: {nouvelle_operation.id}")
+        
+        # ========== 4. VÉRIFICATION POST-CRÉATION ==========
+        toutes_operations = Operation.objects.filter(commande=commande)
+        print(f"📊 {toutes_operations.count()} opération(s) totales pour cette commande")
+        
+        # ========== 5. RÉPONSE JSON ==========
+        return JsonResponse({
+            'success': True,
+            'message': 'Nouvelle opération créée avec succès',
+            'operation_id': nouvelle_operation.id,
+            'type_operation': nouvelle_operation.type_operation,
+            'commentaire': nouvelle_operation.conclusion,
+            'debug_info': {
+                'total_operations': toutes_operations.count(),
+                'operation_date': nouvelle_operation.date_operation.strftime('%d/%m/%Y %H:%M')
+            }
+        })
+    
+    except Exception as e:
+        print(f"❌ Erreur création opération: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur serveur: {str(e)}'
+        })
+
+
+def _handle_save_livraison(request, commande, operateur):
+    """
+    Gère la sauvegarde des informations de livraison via AJAX.
+    
+    Args:
+        request: L'objet HttpRequest contenant les données POST
+        commande: L'instance de la commande à modifier
+        operateur: L'opérateur effectuant l'action
+    
+    Returns:
+        JsonResponse avec le statut de l'opération
+    """
+    from parametre.models import Ville
+    
+    # ========== 1. RÉCUPÉRATION DES DONNÉES ==========
+    ville_id = request.POST.get('ville_livraison')
+    adresse = request.POST.get('adresse_livraison', '').strip()
+    
+    print(f"🚚 Sauvegarde livraison: Ville ID={ville_id}, Adresse={adresse[:50] if adresse else 'N/A'}")
+    
+    try:
+        # ========== 2. MISE À JOUR DE LA VILLE ==========
+        if ville_id:
+            try:
+                nouvelle_ville = Ville.objects.get(id=ville_id)
+                commande.ville = nouvelle_ville
+            except Ville.DoesNotExist:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Ville de livraison invalide'
+                })
+        
+        # ========== 3. MISE À JOUR DE L'ADRESSE ==========
+        commande.adresse = adresse
+        
+        # ========== 4. RECALCUL DU TOTAL AVEC FRAIS ==========
+        commande.recalculer_total_avec_frais()
+        
+        # ========== 5. SAUVEGARDE ==========
+        commande.save()
+        
+        # ========== 6. PRÉPARATION DU MESSAGE DE SUCCÈS ==========
+        elements_sauvegardes = []
+        if ville_id:
+            elements_sauvegardes.append(f"ville: {commande.ville.nom}")
+        if adresse:
+            elements_sauvegardes.append(f"adresse: {adresse[:50]}{'...' if len(adresse) > 50 else ''}")
+        
+        if elements_sauvegardes:
+            message = f"Informations de livraison sauvegardées ({', '.join(elements_sauvegardes)})"
+        else:
+            message = 'Section livraison validée'
+        
+        # ========== 7. RÉPONSE JSON ==========
+        return JsonResponse({
+            'success': True,
+            'message': message,
+            'ville_nom': commande.ville.nom if commande.ville else None,
+            'region_nom': commande.ville.region.nom_region if commande.ville and commande.ville.region else None,
+            'frais_livraison': commande.montant_frais_livraison,
+            'adresse': adresse,
+            'nouveau_total': commande.total_cmd,
+            'sous_total_articles': commande.sous_total_articles
+        })
+    
+    except Exception as e:
+        print(f"❌ Erreur lors de la sauvegarde de la livraison: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur serveur: {str(e)}'
+        })
+
+
+def _handle_toggle_frais_livraison(request, commande, operateur):
+    """
+    Gère l'activation/désactivation des frais de livraison via AJAX.
+    
+    Args:
+        request: L'objet HttpRequest contenant les données POST
+        commande: L'instance de la commande à modifier
+        operateur: L'opérateur effectuant l'action
+    
+    Returns:
+        JsonResponse avec le statut de l'opération
+    """
+    # ========== 1. RÉCUPÉRATION ET VALIDATION DES DONNÉES ==========
+    nouveau_statut = request.POST.get('frais_livraison_actif') == 'true'
+    ancien_statut = commande.frais_livraison
+    
+    print(f"💰 Toggle frais de livraison: {ancien_statut} → {nouveau_statut}")
+    
+    try:
+        # ========== 2. MISE À JOUR DU STATUT ==========
+        commande.frais_livraison = nouveau_statut
+        commande.save()
+        
+        # ========== 3. RECALCUL DU TOTAL AVEC FRAIS ==========
+        commande.recalculer_total_avec_frais()
+        
+        # ========== 4. PRÉPARATION DU MESSAGE ET DES INFOS D'AFFICHAGE ==========
+        if nouveau_statut:
+            message = "Frais de livraison activés et inclus dans le total"
+            statut_display = "Activés"
+            couleur = "green"
+        else:
+            message = "Frais de livraison désactivés et retirés du total"
+            statut_display = "Désactivés"
+            couleur = "gray"
+        
+        # ========== 5. RÉPONSE JSON ==========
+        return JsonResponse({
+            'success': True,
+            'message': message,
+            'nouveau_statut': nouveau_statut,
+            'statut_display': statut_display,
+            'couleur': couleur,
+            'total_commande': float(commande.total_cmd),
+            'frais_livraison_ville': float(commande.montant_frais_livraison),
+            'ancien_statut': ancien_statut
+        })
+    
+    except Exception as e:
+        print(f"❌ Erreur lors du toggle des frais de livraison: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur serveur: {str(e)}'
+        })
+
+
 @login_required
 def modifier_commande(request, commande_id):
     """Page de modification complète d'une commande pour les opérateurs de confirmation"""
@@ -1994,284 +2407,28 @@ def modifier_commande(request, commande_id):
                 return _handle_delete_panier(request, commande, operateur)
             
             elif action == 'save_client_info':
-                # Sauvegarder les informations du client
-                nom = request.POST.get('nom')
-                prenom = request.POST.get('prenom')
-                telephone = request.POST.get('telephone')
-
-                try:
-                    client = commande.client
-                    client.nom = nom
-                    client.prenom = prenom
-                    client.numero_tel = telephone
-                    client.save()
-                    return JsonResponse({'success': True, 'message': 'Informations client sauvegardées'})
-                except Exception as e:
-                    return JsonResponse({'success': False, 'error': str(e)})
+                # Déléguer à la fonction spécialisée
+                return _handle_save_client_info(request, commande, operateur)
             
             elif action == 'update_quantity':
-                # Modifier la quantité d'un article
-                from commande.models import Panier
-                
-                panier_id = request.POST.get('panier_id')
-                nouvelle_quantite = int(request.POST.get('nouvelle_quantite', 1))
-                
-                try:
-                    panier = Panier.objects.get(id=panier_id, commande=commande)
-                    ancienne_quantite = panier.quantite
-                    etait_upsell = panier.article.isUpsell
-                    
-
-                    # Modifier la quantité - le prix_panier reste INCHANGÉ (prix historique gelé)
-                    panier.quantite = nouvelle_quantite
-                    panier.sous_total = float(panier.prix_panier * nouvelle_quantite)
-                    panier.save()
-
-                    # Recalculer le compteur si c'était un article upsell
-                    if etait_upsell:
-                        # Compter la quantité totale d'articles upsell (après modification)
-                        from django.db.models import Sum
-                        total_quantite_upsell = commande.paniers.filter(article__isUpsell=True).aggregate(
-                            total=Sum('quantite')
-                        )['total'] or 0
-
-                        # Le compteur ne s'incrémente qu'à partir de 2 unités d'articles upsell
-                        if total_quantite_upsell >= 2:
-                            commande.compteur = total_quantite_upsell - 1
-                        else:
-                            commande.compteur = 0
-
-                        commande.save()
-
-                        # Mettre à jour les type_prix_gele de tous les paniers upsell
-                        mettre_a_jour_types_prix_gele_upsell(commande)
-
-                        # Recalculer TOUS les articles de la commande avec le nouveau compteur
-                        commande.recalculer_totaux_upsell()
-                    
-                    # Recalculer le total de la commande avec les frais de livraison
-                    commande.recalculer_total_avec_frais()
-                    
-                    return JsonResponse({
-                        'success': True,
-                        'message': f'Quantité modifiée de {ancienne_quantite} à {nouvelle_quantite}',
-                        'sous_total': float(panier.sous_total),
-                        'total_commande': float(commande.total_cmd),
-                        'compteur': commande.compteur
-                    })
-                    
-                except Panier.DoesNotExist:
-                    return JsonResponse({
-                        'success': False,
-                        'error': f'Article avec l\'ID panier {panier_id} non trouvé dans cette commande'
-                    })
-                except Exception as e:
-                    return JsonResponse({
-                        'success': False,
-                        'error': str(e)
-                    })
+                # Déléguer à la fonction spécialisée
+                return _handle_update_quantity(request, commande, operateur)
             
             elif action == 'update_operation':
-                # Mettre à jour une opération existante
-                try:
-                    from commande.models import Operation
-                    import logging
-                    logger = logging.getLogger(__name__)
-                    
-                    operation_id = request.POST.get('operation_id')
-                    nouveau_commentaire = request.POST.get('nouveau_commentaire', '').strip()
-                    
-                    print(f"🔄 DEBUG: Mise à jour opération {operation_id} pour commande {commande.id}")
-                    print(f"📝 DEBUG: Nouveau commentaire: '{nouveau_commentaire}'")
-                    print(f"🔍 DEBUG: Données POST reçues: {dict(request.POST)}")
-                    
-                    if not operation_id or not nouveau_commentaire:
-                        print(f"❌ DEBUG: Données manquantes - operation_id: '{operation_id}', commentaire: '{nouveau_commentaire}'")
-                        return JsonResponse({'success': False, 'error': 'ID opération et commentaire requis'})
-                    
-                    # Récupérer et mettre à jour l'opération
-                    operation = Operation.objects.get(id=operation_id, commande=commande)
-                    ancien_commentaire = operation.conclusion
-                    
-                    print(f"📋 DEBUG: Ancien commentaire: '{ancien_commentaire}'")
-                    
-                    operation.conclusion = nouveau_commentaire
-                    operation.operateur = operateur  # Mettre à jour l'opérateur qui modifie
-                    operation.save()
-                    
-                    print(f"✅ DEBUG: Opération {operation_id} sauvegardée en base de données")
-                    
-                    # Vérification post-sauvegarde
-                    operation_verif = Operation.objects.get(id=operation_id)
-                    print(f"🔍 DEBUG: Vérification en base: conclusion = '{operation_verif.conclusion}'")
-                    
-                    # Vérifier toutes les opérations de cette commande
-                    toutes_operations = Operation.objects.filter(commande=commande)
-                    print(f"📊 DEBUG: {toutes_operations.count()} opération(s) totales pour cette commande:")
-                    for op in toutes_operations:
-                        print(f"   - ID {op.id}: {op.type_operation} - '{op.conclusion}'")
-                    
-                    return JsonResponse({
-                        'success': True,
-                        'message': 'Opération mise à jour avec succès en base de données',
-                        'operation_id': operation_id,
-                        'nouveau_commentaire': nouveau_commentaire,
-                        'ancien_commentaire': ancien_commentaire,
-                        'debug_info': {
-                            'verification_conclusion': operation_verif.conclusion,
-                            'total_operations': toutes_operations.count()
-                        }
-                    })
-                    
-                except Operation.DoesNotExist:
-                    print(f"❌ DEBUG: Opération {operation_id} introuvable pour commande {commande.id}")
-                    return JsonResponse({'success': False, 'error': 'Opération introuvable'})
-                except Exception as e:
-                    print(f"❌ DEBUG: Erreur mise à jour opération: {str(e)}")
-                    import traceback
-                    traceback.print_exc()
-                    return JsonResponse({'success': False, 'error': str(e)})
+                # Déléguer à la fonction spécialisée
+                return _handle_update_operation(request, commande, operateur)
             
             elif action == 'create_operation':
-                # Créer une nouvelle opération immédiatement
-                try:
-                    from commande.models import Operation
-                    
-                    type_operation = request.POST.get('type_operation')
-                    commentaire = request.POST.get('commentaire', '').strip()
-                    
-                    print(f"🆕 DEBUG: Création nouvelle opération pour commande {commande.id}")
-                    print(f"📝 DEBUG: Type: '{type_operation}', Commentaire: '{commentaire}'")
-                    print(f"🔍 DEBUG: Données POST reçues: {dict(request.POST)}")
-                    
-                    if not type_operation or not commentaire:
-                        print(f"❌ DEBUG: Données manquantes - type: '{type_operation}', commentaire: '{commentaire}'")
-                        return JsonResponse({'success': False, 'error': 'Type d\'opération et commentaire requis'})
-                    
-                    # Valider le type d'opération
-                    allowed_types = {choice[0] for choice in Operation.TYPE_OPERATION_CHOICES}
-                    if type_operation not in allowed_types:
-                        return JsonResponse({'success': False, 'error': "Type d'opération non autorisé"})
-
-                    # Créer la nouvelle opération
-                    nouvelle_operation = Operation.objects.create(
-                        type_operation=type_operation,
-                        conclusion=commentaire,
-                        commande=commande,
-                        operateur=operateur
-                    )
-                    
-                    print(f"✅ DEBUG: Nouvelle opération créée avec ID: {nouvelle_operation.id}")
-                    
-                    # Vérifier toutes les opérations de cette commande
-                    toutes_operations = Operation.objects.filter(commande=commande)
-                    print(f"📊 DEBUG: {toutes_operations.count()} opération(s) totales pour cette commande:")
-                    for op in toutes_operations:
-                        print(f"   - ID {op.id}: {op.type_operation} - '{op.conclusion}'")
-                    
-                    return JsonResponse({
-                        'success': True,
-                        'message': 'Nouvelle opération créée avec succès en base de données',
-                        'operation_id': nouvelle_operation.id,
-                        'type_operation': nouvelle_operation.type_operation,
-                        'commentaire': nouvelle_operation.conclusion,
-                        'debug_info': {
-                            'total_operations': toutes_operations.count(),
-                            'operation_date': nouvelle_operation.date_operation.strftime('%d/%m/%Y %H:%M')
-                        }
-                    })
-                    
-                except Exception as e:
-                    print(f"❌ DEBUG: Erreur création opération: {str(e)}")
-                    import traceback
-                    traceback.print_exc()
-                    return JsonResponse({'success': False, 'error': str(e)})
+                # Déléguer à la fonction spécialisée
+                return _handle_create_operation(request, commande, operateur)
             
             elif action == 'save_livraison':
-                # Sauvegarder les informations de livraison (ville + adresse)
-                try:
-                    ville_id = request.POST.get('ville_livraison')
-                    adresse = request.POST.get('adresse_livraison', '').strip()
-                    
-                    # Mettre à jour la ville de livraison si fournie
-                    if ville_id:
-                        try:
-                            nouvelle_ville = Ville.objects.get(id=ville_id)
-                            commande.ville = nouvelle_ville
-                        except Ville.DoesNotExist:
-                            return JsonResponse({'success': False, 'error': 'Ville de livraison invalide'})
-                    
-                    # Mettre à jour l'adresse (pas obligatoire)
-                    commande.adresse = adresse
-                    
-                    # Recalculer le total avec les nouveaux frais de livraison
-                    commande.recalculer_total_avec_frais()
-                    
-                    # Sauvegarder les modifications
-                    commande.save()
-                    
-                    # Préparer le message de succès
-                    elements_sauvegardes = []
-                    if ville_id:
-                        elements_sauvegardes.append(f"ville: {commande.ville.nom}")
-                    if adresse:
-                        elements_sauvegardes.append(f"adresse: {adresse[:50]}{'...' if len(adresse) > 50 else ''}")
-                    
-                    if elements_sauvegardes:
-                        message = f"Informations de livraison sauvegardées ({', '.join(elements_sauvegardes)})"
-                    else:
-                        message = 'Section livraison validée'
-                    
-                    return JsonResponse({
-                        'success': True,
-                        'message': message,
-                        'ville_nom': commande.ville.nom if commande.ville else None,
-                        'region_nom': commande.ville.region.nom_region if commande.ville and commande.ville.region else None,
-                        'frais_livraison': commande.montant_frais_livraison,
-                        'adresse': adresse,
-                        'nouveau_total': commande.total_cmd,
-                        'sous_total_articles': commande.sous_total_articles
-                    })
-                    
-                except Exception as e:
-                    return JsonResponse({'success': False, 'error': str(e)})
+                # Déléguer à la fonction spécialisée
+                return _handle_save_livraison(request, commande, operateur)
             
             elif action == 'toggle_frais_livraison':
-                # Changer le statut des frais de livraison
-                try:
-                    nouveau_statut = request.POST.get('frais_livraison_actif') == 'true'
-                    ancien_statut = commande.frais_livraison
-                    
-                    # Mettre à jour le statut
-                    commande.frais_livraison = nouveau_statut
-                    commande.save()
-                    
-                    # Recalculer le total avec les frais de livraison
-                    commande.recalculer_total_avec_frais()
-                    
-                    # Préparer le message de succès
-                    if nouveau_statut:
-                        message = "Frais de livraison activés et inclus dans le total"
-                        statut_display = "Activés"
-                        couleur = "green"
-                    else:
-                        message = "Frais de livraison désactivés et retirés du total"
-                        statut_display = "Désactivés"
-                        couleur = "gray"
-                    
-                    return JsonResponse({
-                        'success': True,
-                        'message': message,
-                        'nouveau_statut': nouveau_statut,
-                        'statut_display': statut_display,
-                        'couleur': couleur,
-                        'total_commande': float(commande.total_cmd),
-                        'frais_livraison_ville': float(commande.montant_frais_livraison),
-                        'ancien_statut': ancien_statut
-                    })
-                    
-                except Exception as e:
-                    return JsonResponse({'success': False, 'error': str(e)})
+                # Déléguer à la fonction spécialisée
+                return _handle_toggle_frais_livraison(request, commande, operateur)
             
             # ================ TRAITEMENT NORMAL DU FORMULAIRE ================
             
@@ -3370,6 +3527,25 @@ def appliquer_remise_panier(request, panier_id):
                 'error': 'La valeur de la remise doit être supérieure à 0'
             }, status=400)
 
+        # Récupérer le sous-total actuel du panier (avant remise)
+        sous_total_actuel = Decimal(str(panier.sous_total))
+
+        # Validation selon le type de remise
+        if type_remise == 'POURCENTAGE':
+            # Contrainte: Le pourcentage ne doit pas dépasser 100%
+            if valeur_remise > Decimal('100'):
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Le pourcentage de remise ne peut pas dépasser 100%'
+                }, status=400)
+        else:  # MONTANT_FIXE
+            # Contrainte: Le montant fixe ne doit pas dépasser le sous-total
+            if valeur_remise > sous_total_actuel:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Le montant de la remise ({valeur_remise:.2f} DH) ne peut pas dépasser le sous-total du panier ({sous_total_actuel:.2f} DH)'
+                }, status=400)
+
         # Vérifier si une remise existe déjà
         if hasattr(panier, 'remise_personnalisee'):
             return JsonResponse({
@@ -3573,17 +3749,30 @@ def calculer_remise_panier_preview(request, panier_id):
         else:
             sous_total_actuel = Decimal(str(panier.sous_total))
 
+        # Validation selon le type de remise
         if type_remise == 'POURCENTAGE':
+            # Contrainte: Le pourcentage ne doit pas dépasser 100%
+            if valeur_remise > Decimal('100'):
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Le pourcentage de remise ne peut pas dépasser 100%'
+                }, status=400)
             montant_remise = sous_total_actuel * (valeur_remise / Decimal('100'))
             pourcentage_reduction = valeur_remise
         else:  # MONTANT_FIXE
+            # Contrainte: Le montant fixe ne doit pas dépasser le sous-total
+            if valeur_remise > sous_total_actuel:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Le montant de la remise ({valeur_remise:.2f} DH) ne peut pas dépasser le sous-total du panier ({sous_total_actuel:.2f} DH)'
+                }, status=400)
             montant_remise = valeur_remise
             if sous_total_actuel > 0:
                 pourcentage_reduction = (montant_remise / sous_total_actuel) * Decimal('100')
             else:
                 pourcentage_reduction = Decimal('0')
 
-        # Limiter la remise au sous-total
+        # Limiter la remise au sous-total (sécurité supplémentaire)
         if montant_remise > sous_total_actuel:
             montant_remise = sous_total_actuel
 
