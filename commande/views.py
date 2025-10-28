@@ -2768,10 +2768,12 @@ def affecter_preparation(request, commande_id):
     if request.method == 'POST':
         try:
             # Vérifier que l'utilisateur est admin ou superviseur
+            is_admin = request.user.is_staff or request.user.is_superuser
             try:
                 operateur_admin = Operateur.objects.get(user=request.user, type_operateur__in=['ADMIN', 'SUPERVISEUR_PREPARATION'])
             except Operateur.DoesNotExist:
-                return JsonResponse({'success': False, 'message': 'Accès non autorisé.'})
+                if not is_admin:
+                    return JsonResponse({'success': False, 'message': 'Accès non autorisé.'})
             
             # Récupérer les données de la requête
             data = json.loads(request.body)
@@ -2949,12 +2951,15 @@ def affecter_preparation_multiple(request):
     """Affecte plusieurs commandes confirmées à un opérateur de préparation."""
     try:
         # Vérifier que l'utilisateur est Admin ou Superviseur préparation
+        is_admin = request.user.is_staff or request.user.is_superuser
         try:
             operateur_admin = Operateur.objects.get(user=request.user)
             if operateur_admin.type_operateur not in ['ADMIN', 'SUPERVISEUR_PREPARATION']:
-                return JsonResponse({'success': False, 'message': 'Accès non autorisé.'})
+                if not is_admin:
+                    return JsonResponse({'success': False, 'message': 'Accès non autorisé.'})
         except Operateur.DoesNotExist:
-            return JsonResponse({'success': False, 'message': 'Accès non autorisé.'})
+            if not is_admin:
+                return JsonResponse({'success': False, 'message': 'Accès non autorisé.'})
         
         data = json.loads(request.body)
         commandes_ids = data.get('commande_ids', [])
@@ -3086,9 +3091,14 @@ def api_panier_commande(request, commande_id):
     from parametre.models import Operateur
     
     # Vérifier que l'utilisateur est autorisé (admin ou opérateur)
-    try:
-        operateur = Operateur.objects.get(user=request.user)
-    except Operateur.DoesNotExist:
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Authentification requise'}, status=401)
+    
+    # Permettre l'accès aux admins/staff ou aux opérateurs
+    is_admin = request.user.is_staff or request.user.is_superuser
+    has_operateur_profile = Operateur.objects.filter(user=request.user).exists()
+    
+    if not (is_admin or has_operateur_profile):
         return JsonResponse({'error': 'Accès non autorisé'}, status=403)
     
     if request.method == 'GET':
