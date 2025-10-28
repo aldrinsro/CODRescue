@@ -24,8 +24,6 @@ function geturlcommentaire() {
 }
     
 
-
-
 // Fonction pour ouvrir la modale de commentaire
 function openCommentModal(operationType, operationName) {
     console.log('Ouverture modale pour:', operationType, operationName);
@@ -1484,8 +1482,6 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('❌ Erreur lors de l\'initialisation:', error);
     }
 });
-
-
 
 
 // Fonction pour changer l'opération (ancienne fonction - gardée pour compatibilité)
