@@ -3530,21 +3530,14 @@ def appliquer_remise_panier(request, panier_id):
         # Récupérer le sous-total actuel du panier (avant remise)
         sous_total_actuel = Decimal(str(panier.sous_total))
 
-        # Validation selon le type de remise
-        if type_remise == 'POURCENTAGE':
-            # Contrainte: Le pourcentage ne doit pas dépasser 100%
-            if valeur_remise > Decimal('100'):
-                return JsonResponse({
-                    'success': False,
-                    'error': 'Le pourcentage de remise ne peut pas dépasser 100%'
-                }, status=400)
-        else:  # MONTANT_FIXE
-            # Contrainte: Le montant fixe ne doit pas dépasser le sous-total
-            if valeur_remise > sous_total_actuel:
-                return JsonResponse({
-                    'success': False,
-                    'error': f'Le montant de la remise ({valeur_remise:.2f} DH) ne peut pas dépasser le sous-total du panier ({sous_total_actuel:.2f} DH)'
-                }, status=400)
+        # On ne travaille qu'en pourcentage
+        type_remise = 'POURCENTAGE'
+        # Contrainte: Le pourcentage ne doit pas dépasser 100%
+        if valeur_remise > Decimal('100'):
+            return JsonResponse({
+                'success': False,
+                'error': 'Le pourcentage de remise ne peut pas dépasser 100%'
+            }, status=400)
 
         # Vérifier si une remise existe déjà
         if hasattr(panier, 'remise_personnalisee'):
@@ -3749,28 +3742,16 @@ def calculer_remise_panier_preview(request, panier_id):
         else:
             sous_total_actuel = Decimal(str(panier.sous_total))
 
-        # Validation selon le type de remise
-        if type_remise == 'POURCENTAGE':
-            # Contrainte: Le pourcentage ne doit pas dépasser 100%
-            if valeur_remise > Decimal('100'):
-                return JsonResponse({
-                    'success': False,
-                    'error': 'Le pourcentage de remise ne peut pas dépasser 100%'
-                }, status=400)
-            montant_remise = sous_total_actuel * (valeur_remise / Decimal('100'))
-            pourcentage_reduction = valeur_remise
-        else:  # MONTANT_FIXE
-            # Contrainte: Le montant fixe ne doit pas dépasser le sous-total
-            if valeur_remise > sous_total_actuel:
-                return JsonResponse({
-                    'success': False,
-                    'error': f'Le montant de la remise ({valeur_remise:.2f} DH) ne peut pas dépasser le sous-total du panier ({sous_total_actuel:.2f} DH)'
-                }, status=400)
-            montant_remise = valeur_remise
-            if sous_total_actuel > 0:
-                pourcentage_reduction = (montant_remise / sous_total_actuel) * Decimal('100')
-            else:
-                pourcentage_reduction = Decimal('0')
+        # On ne travaille qu'en pourcentage
+        type_remise = 'POURCENTAGE'
+        # Contrainte: Le pourcentage ne doit pas dépasser 100%
+        if valeur_remise > Decimal('100'):
+            return JsonResponse({
+                'success': False,
+                'error': 'Le pourcentage de remise ne peut pas dépasser 100%'
+            }, status=400)
+        montant_remise = sous_total_actuel * (valeur_remise / Decimal('100'))
+        pourcentage_reduction = valeur_remise
 
         # Limiter la remise au sous-total (sécurité supplémentaire)
         if montant_remise > sous_total_actuel:
