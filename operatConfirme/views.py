@@ -2032,30 +2032,79 @@ def _handle_update_quantity(request, commande, operateur):
         # ========== 3. SAUVEGARDE DES INFORMATIONS ==========
         ancienne_quantite = panier.quantite
         etait_upsell = panier.article.isUpsell
-        
+
         print(f"🔢 Modification quantité panier {panier_id}: {ancienne_quantite} → {nouvelle_quantite}")
-        
+
         # ========== 4. MODIFICATION DE LA QUANTITÉ ==========
         # IMPORTANT: Le prix_panier reste INCHANGÉ (prix historique gelé)
         panier.quantite = nouvelle_quantite
-        panier.sous_total = float(panier.prix_panier * nouvelle_quantite)
+
+        # Calculer le nouveau sous-total AVANT remise
+        nouveau_sous_total_sans_remise = float(panier.prix_panier * nouvelle_quantite)
+
+        # ========== 4.1. GESTION DE LA REMISE SI APPLIQUÉE ==========
+        from commande.models import RemisePanier
+        from decimal import Decimal
+
+        remise_info = None  # Pour la réponse JSON
+
+        # Vérifier si une remise est appliquée sur ce panier
+        if hasattr(panier, 'remise_personnalisee'):
+            remise = panier.remise_personnalisee
+
+            print(f"🏷️ Remise détectée sur panier {panier_id}: {remise.type_remise} {remise.valeur_remise}")
+
+            # Mettre à jour le sous_total_remise avec le nouveau sous-total sans remise
+            panier.sous_total_remise = nouveau_sous_total_sans_remise
+
+            # Recalculer le montant de la remise sur le nouveau sous-total
+            montant_remise = remise.calculer_montant_remise()
+            remise.montant_applique = float(montant_remise)
+            remise.save()
+
+            # Calculer le nouveau sous-total AVEC remise
+            nouveau_sous_total_avec_remise = Decimal(str(nouveau_sous_total_sans_remise)) - montant_remise
+
+            # Appliquer le sous-total avec remise
+            panier.sous_total = float(nouveau_sous_total_avec_remise)
+
+            print(f"   ✅ Remise recalculée: {nouveau_sous_total_sans_remise} DH - {montant_remise} DH = {nouveau_sous_total_avec_remise} DH")
+
+            # Préparer les infos de remise pour la réponse JSON
+            remise_info = {
+                'sous_total_original': float(nouveau_sous_total_sans_remise),
+                'montant_remise': float(montant_remise),
+                'nouveau_sous_total': float(nouveau_sous_total_avec_remise),
+                'type_remise': remise.type_remise,
+                'valeur_remise': float(remise.valeur_remise)
+            }
+        else:
+            # Pas de remise: sous-total = prix_panier * quantité
+            panier.sous_total = nouveau_sous_total_sans_remise
+
         panier.save()
-        
+
         # ========== 5. RECALCUL DU COMPTEUR UPSELL SI NÉCESSAIRE ==========
         if etait_upsell:
             _recalculer_compteur_upsell(commande)
-        
+
         # ========== 6. RECALCUL DU TOTAL AVEC FRAIS ==========
         commande.recalculer_total_avec_frais()
-        
+
         # ========== 7. RÉPONSE JSON ==========
-        return JsonResponse({
+        response_data = {
             'success': True,
             'message': f'Quantité modifiée de {ancienne_quantite} à {nouvelle_quantite}',
             'sous_total': float(panier.sous_total),
             'total_commande': float(commande.total_cmd),
             'compteur': commande.compteur
-        })
+        }
+
+        # Ajouter les infos de remise si elle existe
+        if remise_info:
+            response_data['remise'] = remise_info
+
+        return JsonResponse(response_data)
     
     except Exception as e:
         print(f"❌ Erreur lors de la modification de quantité: {str(e)}")

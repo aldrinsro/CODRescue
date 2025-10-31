@@ -122,13 +122,14 @@
                 <div class="text-center min-w-0">
                     <div class="text-sm text-gray-500">Prix actuel</div>
 
-                    <!-- Utiliser le filtre get_prix_effectif_panier pour garantir la cohérence avec le sous-total -->
+                    <!-- Utiliser le prix_panier (prix historique gelé) pour le prix unitaire -->
+                    <!-- Le filtre get_prix_effectif_panier est utilisé UNIQUEMENT pour le libellé et la couleur -->
                     {% with panier|get_prix_effectif_panier as prix_effectif %}
                     <div class="font-medium {{ prix_effectif.couleur_classe }}"
                          id="prix-unitaire-{{ panier.id }}"
-                         data-prix-gele="{{ prix_effectif.prix_unitaire|floatformat:2 }}"
+                         data-prix-gele="{{ panier.prix_panier|floatformat:2 }}"
                          data-couleur-gelee="{{ prix_effectif.couleur_classe }}">
-                        {{ prix_effectif.prix_unitaire|floatformat:2 }} DH
+                        {{ panier.prix_panier|floatformat:2 }} DH
                     </div>
                     <div class="text-xs {{ prix_effectif.couleur_classe }} mt-1"
                          id="prix-libelle-{{ panier.id }}"

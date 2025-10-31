@@ -95,6 +95,7 @@ function afficherPrixUpsellDynamiques(compteurActuel) {
         if (articleData.has_promo_active) return;
         if (articleData.phase === 'LIQUIDATION' || articleData.phase === 'EN_TEST') return;
 
+        
         // Récupérer la quantité actuelle du panier
         const quantiteInput = document.getElementById(`quantite-${panierId}`);
         const quantite = quantiteInput ? parseInt(quantiteInput.value) || 1 : 1;
@@ -2754,13 +2755,49 @@ function mettreAJourTotauxConfirmation(panierId, data) {
             console.log(`✅ Sous-total mis à jour pour article ${panierId}: ${parseFloat(data.sous_total).toFixed(2)} DH`);
         }
     }
-    
+
+    // ========== GESTION DE LA MISE À JOUR DE LA REMISE ==========
+    // Si une remise est présente dans la réponse, mettre à jour son affichage
+    if (data.remise && panierId) {
+        const panierCard = document.querySelector(`[data-article-id="${panierId}"]`);
+        if (panierCard) {
+            const remiseContainer = panierCard.querySelector('.remise-info-container');
+
+            if (remiseContainer) {
+                console.log(`🏷️ Mise à jour de l'affichage de la remise pour panier ${panierId}`);
+
+                // Mettre à jour le contenu du badge de remise avec les nouvelles valeurs
+                remiseContainer.innerHTML = `
+                    <div class="bg-green-50 border-l-4 border-green-500 p-2 text-xs">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-green-700 font-semibold">
+                                <i class="fas fa-tag mr-1"></i>Remise
+                                ${data.remise.type_remise === 'POURCENTAGE' ? `${data.remise.valeur_remise}%` : ''}
+                            </span>
+                            <button type="button" onclick="retirerRemise(${panierId})"
+                                    class="text-red-500 hover:text-red-700 text-xs"
+                                    title="Retirer la remise">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="text-gray-700">
+                            <span class="line-through text-gray-500">${data.remise.sous_total_original.toFixed(2)} DH</span>
+                            <strong class="text-red-600 ml-2">- ${data.remise.montant_remise.toFixed(2)} DH</strong>
+                        </div>
+                    </div>
+                `;
+
+                console.log(`   ✅ Remise mise à jour: ${data.remise.sous_total_original.toFixed(2)} DH → -${data.remise.montant_remise.toFixed(2)} DH = ${data.remise.nouveau_sous_total.toFixed(2)} DH`);
+            }
+        }
+    }
+
     // Utiliser la fonction centralisée pour tous les autres totaux
     mettreAJourTousLesTotaux(data);
-    
+
     // Déclencher un événement personnalisé pour signaler la mise à jour
-    window.dispatchEvent(new CustomEvent('totauxMisAJour', { 
-        detail: { 
+    window.dispatchEvent(new CustomEvent('totauxMisAJour', {
+        detail: {
             panierId: panierId,
             data: data
         }
