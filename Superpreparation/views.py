@@ -1455,6 +1455,118 @@ def api_commande_produits(request, commande_id):
         return JsonResponse({'success': False, 'message': f'Erreur: {str(e)}'})
 
 
+# ==================== FONCTIONS HELPERS UPSELL ====================
+
+def determiner_type_prix_gele(article, compteur):
+    """
+    Détermine le type de prix gelé à enregistrer dans le panier.
+
+    PRIORITÉ 1: Les phases spéciales (promotion, liquidation, test) sont TOUJOURS gelées,
+                même pour les articles upsell.
+
+    PRIORITÉ 2: Les articles upsell en phase normale → enregistrer le niveau upsell actuel
+                basé sur le compteur au moment de la création du panier.
+
+    PRIORITÉ 3: Les articles normaux en phase normale ont le type 'normal'.
+    """
+    # PRIORITÉ 1: Phases spéciales et promotions (même pour les articles upsell)
+    # Ces types doivent être gelés car ils représentent des prix spéciaux
+    if hasattr(article, 'has_promo_active') and article.has_promo_active:
+        return 'promotion'
+    elif article.phase == 'LIQUIDATION':
+        return 'liquidation'
+    elif article.phase == 'EN_TEST':
+        return 'test'
+
+    # PRIORITÉ 2: Articles upsell en phase normale → enregistrer le niveau selon le compteur
+    # Le niveau upsell est gelé au moment de l'ajout du panier
+    if article.isUpsell:
+        if compteur == 0:
+            return 'normal'  # Pas encore de niveau upsell
+        elif compteur == 1:
+            return 'upsell_niveau_1'
+        elif compteur == 2:
+            return 'upsell_niveau_2'
+        elif compteur == 3:
+            return 'upsell_niveau_3'
+        elif compteur >= 4:
+            return 'upsell_niveau_4'
+        else:
+            return 'normal'
+
+    # PRIORITÉ 3: Articles normaux en phase normale
+    return 'normal'
+
+
+def mettre_a_jour_types_prix_gele_upsell(commande):
+    """
+    Met à jour dynamiquement les type_prix_gele de tous les paniers upsell
+    en fonction du compteur actuel de la commande.
+
+    Cette fonction doit être appelée après chaque modification du panier qui peut
+    impacter le compteur (ajout, suppression, modification de quantité).
+
+    IMPORTANT: Seuls les paniers upsell en phase normale sont mis à jour.
+    Les paniers en promotion, liquidation ou test conservent leur type_prix_gele fixe.
+    """
+    from commande.models import Panier
+
+    # Récupérer tous les paniers upsell de la commande
+    paniers_upsell = commande.paniers.filter(article__isUpsell=True)
+
+    for panier in paniers_upsell:
+        article = panier.article
+
+        # Recalculer le type_prix_gele basé sur le compteur actuel
+        nouveau_type = determiner_type_prix_gele(article, commande.compteur)
+
+        # Mettre à jour uniquement si le type a changé et que ce n'est pas une phase spéciale
+        # (les phases spéciales restent figées)
+        if nouveau_type != panier.type_prix_gele and nouveau_type not in ['promotion', 'liquidation', 'test']:
+            ancien_type = panier.type_prix_gele
+            panier.type_prix_gele = nouveau_type
+            panier.save(update_fields=['type_prix_gele'])
+            print(f"🔄 Panier {panier.id} mis à jour: {ancien_type} → {nouveau_type} (compteur={commande.compteur})")
+
+
+def _recalculer_compteur_upsell(commande):
+    """
+    Recalcule le compteur upsell de la commande et met à jour tous les paniers concernés.
+
+    Cette fonction centralise la logique de recalcul du compteur upsell:
+    - Compte les articles upsell dans la commande
+    - Applique la règle: compteur = max(0, total_upsell - 1) si total >= 2, sinon 0
+    - Met à jour les type_prix_gele de tous les paniers upsell
+    - Recalcule tous les totaux
+
+    Args:
+        commande: L'instance de la commande à recalculer
+    """
+    from django.db.models import Sum
+
+    # Compter la quantité totale d'articles upsell
+    total_quantite_upsell = commande.paniers.filter(
+        article__isUpsell=True
+    ).aggregate(total=Sum('quantite'))['total'] or 0
+
+    # Règle métier: Le compteur s'incrémente à partir de 2 unités d'articles upsell
+    # 0-1 unités → compteur = 0
+    # 2+ unités → compteur = total - 1
+    if total_quantite_upsell >= 2:
+        commande.compteur = total_quantite_upsell - 1
+    else:
+        commande.compteur = 0
+
+    commande.save()
+
+    # Mettre à jour les type_prix_gele de tous les paniers upsell
+    mettre_a_jour_types_prix_gele_upsell(commande)
+
+    # Recalculer tous les totaux
+    commande.recalculer_totaux_upsell()
+
+    print(f"🔄 Compteur upsell recalculé: {commande.compteur} (total articles upsell: {total_quantite_upsell})")
+
 
 @superviseur_preparation_required
 def modifier_commande_superviseur(request, commande_id):
@@ -1511,71 +1623,52 @@ def modifier_commande_superviseur(request, commande_id):
                         variante=variante
                     ).first()
 
+                    # ========== CRÉATION OU MISE À JOUR DU PANIER ==========
                     if panier_existant:
-                        # Si l'article+variante existe déjà, mettre à jour la quantité
+                        # Article existe déjà → Incrémenter la quantité
                         panier_existant.quantite += quantite
+                        panier_existant.sous_total = float(panier_existant.prix_panier * panier_existant.quantite)
                         panier_existant.save()
                         panier = panier_existant
                         print(f"🔄 Article existant mis à jour: ID={article.id}, variante={variante.id if variante else 'None'}, nouvelle quantité={panier.quantite}")
                     else:
-                        # Si l'article+variante n'existe pas, créer un nouveau panier
+                        # Nouvel article → Créer un panier avec le bon prix et type_prix_gele
+                        from commande.templatetags.commande_filters import get_prix_upsell_avec_compteur
+                        prix_panier_initial = get_prix_upsell_avec_compteur(article, commande.compteur)
+                        sous_total_initial = float(prix_panier_initial * quantite)
+                        type_prix = determiner_type_prix_gele(article, commande.compteur)
+
                         panier = Panier.objects.create(
                             commande=commande,
                             article=article,
-                            variante=variante,
                             quantite=quantite,
-                            sous_total=0  # Sera recalculé après
+                            prix_panier=float(prix_panier_initial),
+                            sous_total=sous_total_initial,
+                            variante=variante,
+                            type_prix_gele=type_prix
                         )
-                        print(f"➕ Nouvel article ajouté: ID={article.id}, variante={variante.id if variante else 'None'}, quantité={quantite}")
-                    
-                    # Recalculer le compteur après ajout (logique de confirmation)
+                        print(f"➕ Nouvel article ajouté: ID={article.id}, variante={variante.id if variante else 'None'}, quantité={quantite}, type_prix_gele={type_prix}")
+
+                    # ========== RECALCUL DU COMPTEUR UPSELL ==========
                     if article.isUpsell and hasattr(article, 'prix_upsell_1') and article.prix_upsell_1 is not None:
-                        # Compter la quantité totale d'articles upsell (après ajout)
-                        total_quantite_upsell = commande.paniers.filter(article__isUpsell=True).aggregate(
-                            total=Sum('quantite')
-                        )['total'] or 0
-                        
-                        # Le compteur ne s'incrémente qu'à partir de 2 unités d'articles upsell
-                        # 0-1 unités upsell → compteur = 0
-                        # 2+ unités upsell → compteur = total_quantite_upsell - 1
-                        if total_quantite_upsell >= 2:
-                            commande.compteur = total_quantite_upsell - 1
-                        else:
-                            commande.compteur = 0
-                        
-                        commande.save()
-                        # Recalculer TOUS les articles de la commande avec le nouveau compteur
-                        commande.recalculer_totaux_upsell()
-                    else:
-                        # Pour les articles normaux, juste calculer le sous-total
-                        from commande.templatetags.commande_filters import get_prix_upsell_avec_compteur
-                        prix_unitaire = get_prix_upsell_avec_compteur(article, commande.compteur)
-                        sous_total = prix_unitaire * panier.quantite
-                        panier.sous_total = float(sous_total)
-                        panier.save()
-                
-                    # Recalculer le total de la commande avec frais de livraison
-                    total_articles = commande.paniers.aggregate(
-                        total=Sum('sous_total')
-                    )['total'] or 0
+                        _recalculer_compteur_upsell(commande)
+
+                    # ========== RECALCUL DU TOTAL AVEC FRAIS ==========
+                    commande.recalculer_total_avec_frais()
+
+                    # ========== RÉPONSE JSON ==========
+                    # Calculer les statistiques pour la réponse
+                    total_articles = commande.paniers.aggregate(total=Sum('sous_total'))['total'] or 0
                     frais_livraison = commande.ville.frais_livraison if commande.ville else 0
-
-                    # Inclure les frais seulement si activés
-                    if commande.frais_livraison:
-                        commande.total_cmd = float(total_articles) + float(frais_livraison)
-                    else:
-                        commande.total_cmd = float(total_articles)
-                    commande.save()
-
-                    # Calculer les statistiques upsell pour la réponse
-                    articles_upsell = commande.paniers.filter(article__isUpsell=True)
-                    total_quantite_upsell = articles_upsell.aggregate(
+                    total_quantite_upsell = commande.paniers.filter(article__isUpsell=True).aggregate(
                         total=Sum('quantite')
                     )['total'] or 0
 
+                    message = 'Article ajouté avec succès' if not panier_existant else f'Quantité mise à jour ({panier.quantite})'
+
                     return JsonResponse({
                         'success': True,
-                        'message': f'Article {article.nom} ajouté avec succès',
+                        'message': message,
                         'article_id': article.id,
                         'article_nom': article.nom,
                         'quantite': panier.quantite,
@@ -1640,51 +1733,34 @@ def modifier_commande_superviseur(request, commande_id):
                     panier = Panier.objects.get(id=panier_id, commande=commande)
                     article = panier.article
 
+                    # ========== SAUVEGARDE DES INFORMATIONS ==========
+                    ancienne_quantite = panier.quantite
+                    etait_upsell = article.isUpsell
+
+                    print(f"🔢 Modification quantité panier {panier_id}: {ancienne_quantite} → {nouvelle_quantite}")
+
+                    # ========== MODIFICATION DE LA QUANTITÉ ==========
                     if nouvelle_quantite <= 0:
                         # Supprimer l'article si quantité <= 0
                         panier.delete()
                         message = f'Article {article.nom} supprimé de la commande'
                     else:
-                        # Mettre à jour la quantité
+                        # IMPORTANT: Le prix_panier reste INCHANGÉ (prix historique gelé)
                         panier.quantite = nouvelle_quantite
-
-                        # Recalculer le sous-total
-                        if article.isUpsell and hasattr(article, 'prix_upsell_1') and article.prix_upsell_1 is not None:
-                            # Recalculer le compteur upsell
-                            total_quantite_upsell = commande.paniers.filter(article__isUpsell=True).aggregate(
-                                total=Sum('quantite')
-                            )['total'] or 0
-
-                            if total_quantite_upsell >= 2:
-                                commande.compteur = total_quantite_upsell - 1
-                            else:
-                                commande.compteur = 0
-                            commande.save()
-                            commande.recalculer_totaux_upsell()
-                        else:
-                            from commande.templatetags.commande_filters import get_prix_upsell_avec_compteur
-                            prix_unitaire = get_prix_upsell_avec_compteur(article, commande.compteur)
-                            sous_total = prix_unitaire * panier.quantite
-                            panier.sous_total = float(sous_total)
-                            panier.save()
-
+                        panier.sous_total = float(panier.prix_panier * nouvelle_quantite)
+                        panier.save()
                         message = f'Quantité de {article.nom} mise à jour: {nouvelle_quantite}'
 
+                    # ========== RECALCUL DU COMPTEUR UPSELL SI NÉCESSAIRE ==========
+                    if etait_upsell:
+                        _recalculer_compteur_upsell(commande)
 
+                    # ========== RECALCUL DU TOTAL AVEC FRAIS ==========
+                    commande.recalculer_total_avec_frais()
 
-        # Recalculer le total de la commande
-                    total_articles = commande.paniers.aggregate(
-                        total=Sum('sous_total')
-                    )['total'] or 0
+                    # ========== RÉPONSE JSON ==========
+                    total_articles = commande.paniers.aggregate(total=Sum('sous_total'))['total'] or 0
                     frais_livraison = commande.ville.frais_livraison if commande.ville else 0
-
-                    # Inclure les frais seulement si activés
-                    if commande.frais_livraison:
-                        commande.total_cmd = float(total_articles) + float(frais_livraison)
-                    else:
-                        commande.total_cmd = float(total_articles)
-                    commande.save()
-
 
                     return JsonResponse({
                         'success': True,
@@ -1709,47 +1785,35 @@ def modifier_commande_superviseur(request, commande_id):
             elif action == 'delete_article':
                 # Supprimer un article de la commande
                 from commande.models import Panier
-                
-                
+
                 panier_id = request.POST.get('panier_id')
-                
-                
+
                 try:
                     panier = Panier.objects.get(id=panier_id, commande=commande)
-                    article_nom = panier.article.nom
-                    etait_upsell = panier.article.isUpsell  # Sauvegarder avant suppression
-                    panier.delete()
-                    
-                    # Recalculer le compteur upsell si nécessaire
-                    if etait_upsell:
-                        total_quantite_upsell = commande.paniers.filter(article__isUpsell=True).aggregate(
-                            total=Sum('quantite')
-                        )['total'] or 0
-                        
-                        if total_quantite_upsell >= 2:
-                            commande.compteur = total_quantite_upsell - 1
-                        else:
-                            commande.compteur = 0
-                        
-                        commande.save()
-                        commande.recalculer_totaux_upsell()
-                    
-                    # Recalculer le total de la commande
-                    total_articles = commande.paniers.aggregate(
-                        total=Sum('sous_total')
-                    )['total'] or 0
-                    frais_livraison = commande.ville.frais_livraison if commande.ville else 0
 
-                    # Inclure les frais seulement si activés
-                    if commande.frais_livraison:
-                        commande.total_cmd = float(total_articles) + float(frais_livraison)
-                    else:
-                        commande.total_cmd = float(total_articles)
-                    commande.save()
+                    # ========== SAUVEGARDE DES INFORMATIONS AVANT SUPPRESSION ==========
+                    article_nom = panier.article.nom
+                    etait_upsell = panier.article.isUpsell
+
+                    print(f"🗑️ Suppression panier {panier_id}: {article_nom} (upsell: {etait_upsell})")
+
+                    # ========== SUPPRESSION DU PANIER ==========
+                    panier.delete()
+
+                    # ========== RECALCUL DU COMPTEUR UPSELL SI NÉCESSAIRE ==========
+                    if etait_upsell:
+                        _recalculer_compteur_upsell(commande)
+
+                    # ========== RECALCUL DU TOTAL AVEC FRAIS ==========
+                    commande.recalculer_total_avec_frais()
+
+                    # ========== RÉPONSE JSON ==========
+                    total_articles = commande.paniers.aggregate(total=Sum('sous_total'))['total'] or 0
+                    frais_livraison = commande.ville.frais_livraison if commande.ville else 0
 
                     return JsonResponse({
                         'success': True,
-                        'message': f'Article {article_nom} supprimé avec succès',
+                        'message': f'Article "{article_nom}" supprimé avec succès',
                         'compteur_upsell': commande.compteur,
                         'articles_count': commande.paniers.count(),
                         'sous_total_articles': float(total_articles),
@@ -1987,6 +2051,14 @@ def api_articles_disponibles_prepa(request):
 
                         'prix_actuel': float(article.prix_actuel or article.prix_unitaire),
 
+                        'prix_upsell_1': float(article.prix_upsell_1) if article.prix_upsell_1 else 0.0,
+
+                        'prix_upsell_2': float(article.prix_upsell_2) if article.prix_upsell_2 else 0.0,
+
+                        'prix_upsell_3': float(article.prix_upsell_3) if article.prix_upsell_3 else 0.0,
+
+                        'prix_upsell_4': float(article.prix_upsell_4) if article.prix_upsell_4 else 0.0,
+
                         'qte_disponible': stock,
 
                         'isUpsell': bool(article.isUpsell),
@@ -2122,6 +2194,14 @@ def api_articles_disponibles_prepa(request):
                         'prix_unitaire': float(article.prix_unitaire),
 
                         'prix_actuel': float(article.prix_actuel or article.prix_unitaire),
+
+                        'prix_upsell_1': float(article.prix_upsell_1) if article.prix_upsell_1 else 0.0,
+
+                        'prix_upsell_2': float(article.prix_upsell_2) if article.prix_upsell_2 else 0.0,
+
+                        'prix_upsell_3': float(article.prix_upsell_3) if article.prix_upsell_3 else 0.0,
+
+                        'prix_upsell_4': float(article.prix_upsell_4) if article.prix_upsell_4 else 0.0,
 
                         'qte_disponible': variante.qte_disponible,
 

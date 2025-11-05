@@ -1,6 +1,8 @@
 {% extends 'composant_generale/Superpreparation/base.html' %}
 {% load barcode_filters %}
 {% load unicode_filters %}
+{% load remise_filters %}
+{% load commande_filters %}
 
 {% block title %}{{ page_title }} - YZ-CMD{% endblock %}
 
@@ -127,10 +129,6 @@
                 <i class="fas fa-info-circle mr-2"></i>Informations Générales de la Commande
             </h2>
             <button type="button" title="Afficher/Masquer la section" onclick="toggleSection('infosGeneralesBody', this)" aria-expanded="false" class="px-3 py-1.5 text-sm rounded-lg bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 text-blue-700 hover:from-blue-100 hover:to-blue-200 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-200">Afficher <span class="chevron ml-2 inline-block transition-transform duration-300"><i class="fas fa-chevron-down"></i></span></button>
-        </div>
-        <div class="text-xs text-blue-600 mb-4 flex items-center">
-            <i class="fas fa-info-circle mr-1 text-blue-500"></i>
-            Astuce : cliquez sur « Afficher/Masquer » pour dérouler ou replier cette section.
         </div>
         <div id="infosGeneralesBody" class="hidden overflow-hidden transition-all duration-300 ease-out">
         
@@ -365,7 +363,7 @@
                         <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Article</th>
                         <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Variante</th>
                         <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Quantité</th>
-                        <th scope="col" class="px-4 py-3 text-right text-xs font-medium text-white uppercase tracking-wider">Prix Unitaire</th>
+                        <th scope="col" class="px-4 py-3 text-right text-xs font-medium text-white uppercase tracking-wider">Prix Panier</th>
                         <th scope="col" class="px-4 py-3 text-right text-xs font-medium text-white uppercase tracking-wider">Sous Total</th>
                     </tr>
                 </thead>
@@ -420,8 +418,46 @@
                                 {% endif %}
                             </td>
                             <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{{ panier.quantite }}</td>
-                            <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 text-right">{{ panier.prix_unitaire|floatformat:2 }} DH</td>
-                            <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 text-right">{{ panier.total_ligne|floatformat:2 }} DH</td>
+                            <td class="px-4 py-4 whitespace-nowrap text-sm text-right">
+                                {% with panier|get_prix_effectif_panier as prix_effectif %}
+                                <div class="font-medium {{ prix_effectif.couleur_classe }}">
+                                    {{ panier.prix_panier|floatformat:2 }} DH
+                                </div>
+                                <div class="text-xs {{ prix_effectif.couleur_classe }}">
+                                    {{ prix_effectif.libelle }}
+                                </div>
+                                {% if panier.remise_personnalisee %}
+                                <div class="mt-1 inline-flex items-center px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                                    <i class="fas fa-tag mr-1"></i>
+                                    {% if panier.remise_personnalisee.type_remise == 'POURCENTAGE' %}
+                                        -{{ panier.remise_personnalisee.valeur_remise }}%
+                                    {% else %}
+                                        {% widthratio panier.remise_personnalisee.montant_applique panier.sous_total_remise 100 as pourcentage_calc %}
+                                        -{{ pourcentage_calc }}%
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                                {% endwith %}
+                            </td>
+                            <td class="px-4 py-4 whitespace-nowrap text-sm text-right">
+                                {% if panier.remise_personnalisee %}
+                                <div class="space-y-1">
+                                    <div class="text-sm font-bold text-gray-900">
+                                        {{ panier.total_ligne|floatformat:2 }} DH
+                                    </div>
+                                    <div class="text-xs text-gray-500 line-through">
+                                        {{ panier.sous_total_remise|floatformat:2 }} DH
+                                    </div>
+                                    <div class="text-xs text-red-600 font-medium">
+                                        -{{ panier.remise_personnalisee.montant_applique|floatformat:2 }} DH
+                                    </div>
+                                </div>
+                                {% else %}
+                                <div class="text-sm text-gray-500">
+                                    {{ panier.total_ligne|floatformat:2 }} DH
+                                </div>
+                                {% endif %}
+                            </td>
                         </tr>
                     {% empty %}
                         <tr>
