@@ -2036,9 +2036,94 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             console.log('✅ Compteur upsell mis à jour:', compteur);
+
+            // ========== RECALCULER DYNAMIQUEMENT LES PRIX UPSELL DE TOUS LES ARTICLES ==========
+            // Appeler la fonction pour recalculer les prix de tous les articles upsell
+            recalculerPrixUpsellTousArticles(compteur);
         }
 
         console.log('✅ Tous les totaux mis à jour avec succès');
+    }
+
+    // Fonction pour recalculer dynamiquement les prix upsell de tous les articles
+    function recalculerPrixUpsellTousArticles(nouveauCompteur) {
+        console.log(`🔄 Recalcul des prix upsell avec compteur = ${nouveauCompteur}`);
+
+        // Parcourir toutes les cartes d'articles dans le panier
+        const articlesCards = document.querySelectorAll('.article-card[data-article]');
+
+        articlesCards.forEach(card => {
+            try {
+                // Récupérer les données de l'article
+                const articleDataStr = card.getAttribute('data-article');
+                if (!articleDataStr) return;
+
+                const articleData = JSON.parse(articleDataStr);
+                const panierId = card.getAttribute('data-article-id');
+
+                // Vérifier si c'est un article upsell
+                if (!articleData.isUpsell) {
+                    console.log(`⏭️ Article ${panierId} n'est pas upsell, ignoré`);
+                    return;
+                }
+
+                // Calculer le nouveau prix selon le compteur
+                let nouveauPrixUnitaire;
+                if (nouveauCompteur === 0) {
+                    nouveauPrixUnitaire = articleData.prix_actuel || articleData.prix_unitaire;
+                } else if (nouveauCompteur === 1 && articleData.prix_upsell_1) {
+                    nouveauPrixUnitaire = articleData.prix_upsell_1;
+                } else if (nouveauCompteur === 2 && articleData.prix_upsell_2) {
+                    nouveauPrixUnitaire = articleData.prix_upsell_2;
+                } else if (nouveauCompteur === 3 && articleData.prix_upsell_3) {
+                    nouveauPrixUnitaire = articleData.prix_upsell_3;
+                } else if (nouveauCompteur >= 4 && articleData.prix_upsell_4) {
+                    nouveauPrixUnitaire = articleData.prix_upsell_4;
+                } else {
+                    // Fallback si prix upsell non défini
+                    nouveauPrixUnitaire = articleData.prix_actuel || articleData.prix_unitaire;
+                }
+
+                // Récupérer la quantité actuelle
+                const quantiteInput = document.getElementById(`quantite-${panierId}`);
+                const quantite = quantiteInput ? parseInt(quantiteInput.value) : 1;
+
+                // Calculer le nouveau sous-total
+                const nouveauSousTotal = nouveauPrixUnitaire * quantite;
+
+                // Mettre à jour l'affichage du prix unitaire
+                const prixUnitaireElement = document.getElementById(`prix-unitaire-${panierId}`);
+                if (prixUnitaireElement) {
+                    prixUnitaireElement.textContent = `${parseFloat(nouveauPrixUnitaire).toFixed(2)} DH`;
+                    prixUnitaireElement.className = 'font-medium text-green-600'; // Couleur pour upsell
+                }
+
+                // Mettre à jour le libellé du prix
+                const prixLibelleElement = document.getElementById(`prix-libelle-${panierId}`);
+                if (prixLibelleElement) {
+                    if (nouveauCompteur > 0) {
+                        prixLibelleElement.innerHTML = `<i class="fas fa-arrow-up mr-1"></i>Prix upsell niveau ${nouveauCompteur}`;
+                        prixLibelleElement.className = 'text-xs text-green-600 mt-1';
+                    } else {
+                        prixLibelleElement.innerHTML = `<i class="fas fa-tag mr-1"></i>Prix normal`;
+                        prixLibelleElement.className = 'text-xs text-gray-600 mt-1';
+                    }
+                }
+
+                // Mettre à jour l'affichage du sous-total
+                const sousTotalElement = document.getElementById(`sous-total-${panierId}`);
+                if (sousTotalElement) {
+                    sousTotalElement.textContent = `${parseFloat(nouveauSousTotal).toFixed(2)} DH`;
+                }
+
+                console.log(`✅ Prix article ${panierId} recalculé: ${nouveauPrixUnitaire} DH (compteur=${nouveauCompteur})`);
+
+            } catch (error) {
+                console.error(`❌ Erreur lors du recalcul du prix pour l'article:`, error);
+            }
+        });
+
+        console.log(`✅ Recalcul des prix upsell terminé`);
     }
 
     // Fonctions pour la modale d'information upsell
