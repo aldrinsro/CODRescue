@@ -120,6 +120,9 @@ def liste_commandes(request):
     except (ValueError, TypeError):
         items_per_page = 10
     
+    # Initialiser page_number par défaut
+    page_number = request.GET.get('page', 1)
+
     # Gestion des plages personnalisées (style Excel)
     if start_range and end_range:
         try:
@@ -132,7 +135,7 @@ def liste_commandes(request):
                     end_range = total_count
                 if start_range > total_count:
                     start_range = 1
-                
+
                 # Calculer la page de départ
                 page_number = ((start_range - 1) // items_per_page) + 1
                 # Ajuster items_per_page pour couvrir la plage demandée
@@ -145,9 +148,7 @@ def liste_commandes(request):
         except (ValueError, TypeError):
             start_range = ''
             end_range = ''
-    else:
-        page_number = request.GET.get('page', 1)
-    
+
     paginator = Paginator(commandes, items_per_page)
     page_obj = paginator.get_page(page_number)
 
@@ -3378,10 +3379,10 @@ def commandes_livrees(request):
                     items_per_page = 25
             except (ValueError, TypeError):
                 items_per_page = 25
-            
+
             paginator = Paginator(commandes_livrees, items_per_page)
             page_number = request.GET.get('page', 1)
-    page_obj = paginator.get_page(page_number)
+            page_obj = paginator.get_page(page_number)
     
     # Statistiques
     today = timezone.now().date()
@@ -3458,7 +3459,7 @@ def commandes_livrees(request):
             'html_table_body': html_table_body,
             'html_pagination': html_pagination,
             'html_pagination_info': html_pagination_info,
-            'total_count': commandes_livrees.count()
+            'total_count': commandes_non_paginees.count()
         })
     
     context = {

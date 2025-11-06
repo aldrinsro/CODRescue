@@ -94,22 +94,7 @@
                         <i class="fas fa-list mr-2"></i>
                         Toutes les commandes
                         <span class="ml-2 bg-gray-100 text-gray-900 py-0.5 px-2.5 rounded-full text-xs font-medium">{{ stats.total_affectees }}</span>
-                    </a>
-
-                    <a href="{% url 'Prepacommande:liste_prepa' %}?filter=affectees_supervision{% if search_query %}&search={{ search_query }}{% endif %}" 
-                       class="{% if filter_type == 'affectees_supervision' %}border-blue-500 text-blue-600{% else %}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{% endif %} whitespace-nowrap py-2 px-1 border-b-2 font-medium text-xs transition-colors duration-200">
-                        <i class="fas fa-user-shield mr-2"></i>
-                        Affectées par supervision
-                        <span class="ml-2 bg-indigo-100 text-indigo-900 py-0.5 px-2.5 rounded-full text-xs font-medium">{{ stats_par_type.affectees_supervision|default:0 }}</span>
-                    </a>
-
-                    <a href="{% url 'Prepacommande:liste_prepa' %}?filter=renvoyees_logistique{% if search_query %}&search={{ search_query }}{% endif %}" 
-                       class="{% if filter_type == 'renvoyees_logistique' %}border-blue-500 text-blue-600{% else %}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{% endif %} whitespace-nowrap py-2 px-1 border-b-2 font-medium text-xs transition-colors duration-200">
-                        <i class="fas fa-truck mr-2"></i>
-                        Renvoyées par logistique
-                        <span class="ml-2 bg-red-100 text-red-900 py-0.5 px-2.5 rounded-full text-xs font-medium">{{ stats_par_type.renvoyees_logistique }}</span>
-                    </a>
-
+                    </a>              
                 </nav>
             </div>
         </div>

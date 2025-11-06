@@ -593,6 +593,18 @@
             }
             params.append('page', page); // Add current page to params
 
+            // Préserver les paramètres de pagination qui ne sont pas dans le formulaire
+            const currentParams = new URLSearchParams(window.location.search);
+            if (currentParams.has('items_per_page')) {
+                params.set('items_per_page', currentParams.get('items_per_page'));
+            }
+            if (currentParams.has('start_range')) {
+                params.set('start_range', currentParams.get('start_range'));
+            }
+            if (currentParams.has('end_range')) {
+                params.set('end_range', currentParams.get('end_range'));
+            }
+
             try {
                 const response = await fetch(`{% url 'commande:liste' %}?${params.toString()}`, {
                     headers: {
@@ -605,10 +617,10 @@
                 }
 
                 const data = await response.json();
-                
+
                 commandTableBody.innerHTML = data.html_table_body;
                 paginationControls.innerHTML = data.html_pagination;
-                
+
                 // Mettre à jour l'affichage des informations de pagination
                 const paginationInfo = document.getElementById('paginationInfo');
                 if (paginationInfo) {
@@ -628,6 +640,9 @@
                     noResultsMessage.classList.add('hidden');
                 }
 
+                // Mettre à jour l'URL dans la barre d'adresse
+                const newUrl = `${window.location.pathname}?${params.toString()}`;
+                window.history.pushState({}, '', newUrl);
 
                 // Re-attach event listeners to new pagination links
                 attachPaginationListeners();

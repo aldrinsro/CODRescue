@@ -110,10 +110,6 @@
                                class="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 transition-colors mr-2">
                                 <i class="fas fa-eye mr-1"></i> Détail
                             </a>
-                            <button onclick="ouvrirModalTraitement({{ commande.pk }}, '{{ commande.id_yz }}', '{{ commande.num_cmd|default:commande.id_yz }}')"
-                               class="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-orange-600 hover:bg-orange-700 transition-colors">
-                                <i class="fas fa-tools mr-1"></i> Traiter
-                            </button>
                         </td>
                     </tr>
                     {% empty %}

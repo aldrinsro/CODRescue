@@ -324,58 +324,6 @@
     <div id="paginationInfoContainer">
         {% include 'commande/partials/_livrees_pagination_info.html' %}
     </div>
-
-    <!-- Pagination -->
-    {% if page_obj.has_other_pages %}
-    <div class="flex items-center justify-between bg-white px-4 py-3 sm:px-6 rounded-lg shadow-md mt-4">
-        <div class="flex flex-1 justify-between sm:hidden">
-            {% if page_obj.has_previous %}
-                <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}" class="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Précédent</a>
-            {% endif %}
-            {% if page_obj.has_next %}
-                <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}" class="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Suivant</a>
-            {% endif %}
-        </div>
-        <div class="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
-            <div>
-                <p class="text-sm text-gray-700">
-                    Affiche de
-                    <span class="font-medium">{{ page_obj.start_index }}</span>
-                    à
-                    <span class="font-medium">{{ page_obj.end_index }}</span>
-                    sur
-                    <span class="font-medium">{{ page_obj.paginator.count }}</span>
-                    résultats
-                </p>
-            </div>
-            <div>
-                <nav class="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
-                    {% if page_obj.has_previous %}
-                        <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}" class="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0">
-                            <span class="sr-only">Précédent</span>
-                            <i class="fas fa-chevron-left h-5 w-5"></i>
-                        </a>
-                    {% endif %}
-                    
-                    {% for i in page_obj.paginator.page_range %}
-                        {% if i == page_obj.number %}
-                            <a href="#" aria-current="page" class="relative z-10 inline-flex items-center px-4 py-2 text-sm font-semibold text-white focus:z-20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2" style="background-color: var(--admin-color);">{{ i }}</a>
-                        {% else %}
-                            <a href="?page={{ i }}{% if search_query %}&search={{ search_query }}{% endif %}" class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0">{{ i }}</a>
-                        {% endif %}
-                    {% endfor %}
-
-                    {% if page_obj.has_next %}
-                        <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}" class="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0">
-                            <span class="sr-only">Suivant</span>
-                            <i class="fas fa-chevron-right h-5 w-5"></i>
-                        </a>
-                    {% endif %}
-                </nav>
-            </div>
-        </div>
-    </div>
-    {% endif %}
     {% endif %}
 </div>
 
@@ -384,34 +332,56 @@
     
     // Variables globales pour la pagination
     let currentPage = 1;
-    let currentItemsPerPage = {{ items_per_page|default:25 }};
+    let currentItemsPerPage = {% if items_per_page == 'all' %}'all'{% else %}{{ items_per_page|default:25 }}{% endif %};
     let currentStartRange = '{{ start_range|default:"" }}';
     let currentEndRange = '{{ end_range|default:"" }}';
     let currentSearchQuery = '{{ search_query|default:"" }}';
 
     // Fonction pour mettre à jour l'URL sans recharger la page
     function updateUrl(page, itemsPerPage, startRange, endRange, searchQuery) {
-        const url = new URL(window.location.href);
+        // Créer une URL propre avec seulement le chemin
+        const url = new URL(window.location.origin + window.location.pathname);
+
+        // Ajouter tous les paramètres nécessaires
         url.searchParams.set('page', page);
-        
-        if (itemsPerPage !== null) url.searchParams.set('items_per_page', itemsPerPage);
-        if (startRange !== null) url.searchParams.set('start_range', startRange);
-        if (endRange !== null) url.searchParams.set('end_range', endRange);
-        if (searchQuery !== null) url.searchParams.set('search', searchQuery);
-        
+
+        if (itemsPerPage !== null && itemsPerPage !== undefined) {
+            url.searchParams.set('items_per_page', itemsPerPage);
+        }
+        if (startRange !== null && startRange !== undefined && startRange !== '') {
+            url.searchParams.set('start_range', startRange);
+        }
+        if (endRange !== null && endRange !== undefined && endRange !== '') {
+            url.searchParams.set('end_range', endRange);
+        }
+        if (searchQuery !== null && searchQuery !== undefined && searchQuery !== '') {
+            url.searchParams.set('search', searchQuery);
+        }
+
         window.history.pushState({}, '', url.toString());
     }
 
     // Fonction pour charger les données via AJAX
     function loadData(page, itemsPerPage, startRange, endRange, searchQuery) {
-        const url = new URL(window.location.href);
+        // Créer une URL propre avec seulement le chemin
+        const url = new URL(window.location.origin + window.location.pathname);
+
+        // Ajouter tous les paramètres nécessaires
         url.searchParams.set('page', page);
-        
-        if (itemsPerPage !== null) url.searchParams.set('items_per_page', itemsPerPage);
-        if (startRange !== null) url.searchParams.set('start_range', startRange);
-        if (endRange !== null) url.searchParams.set('end_range', endRange);
-        if (searchQuery !== null) url.searchParams.set('search', searchQuery);
-        
+
+        if (itemsPerPage !== null && itemsPerPage !== undefined) {
+            url.searchParams.set('items_per_page', itemsPerPage);
+        }
+        if (startRange !== null && startRange !== undefined && startRange !== '') {
+            url.searchParams.set('start_range', startRange);
+        }
+        if (endRange !== null && endRange !== undefined && endRange !== '') {
+            url.searchParams.set('end_range', endRange);
+        }
+        if (searchQuery !== null && searchQuery !== undefined && searchQuery !== '') {
+            url.searchParams.set('search', searchQuery);
+        }
+
         // Ajouter le header AJAX
         fetch(url.toString(), {
             headers: {
@@ -426,29 +396,43 @@
                 if (tableBody) {
                     tableBody.innerHTML = data.html_table_body;
                 }
-                
+
                 // Mettre à jour la pagination
                 const paginationControls = document.getElementById('paginationControls');
                 if (paginationControls) {
                     paginationControls.innerHTML = data.html_pagination;
                 }
-                
+
                 // Mettre à jour les informations de pagination
                 const paginationInfoContainer = document.getElementById('paginationInfoContainer');
                 if (paginationInfoContainer) {
                     paginationInfoContainer.innerHTML = data.html_pagination_info;
                 }
-                
+
                 // Mettre à jour l'URL
                 updateUrl(page, itemsPerPage, startRange, endRange, searchQuery);
-                
+
                 // Mettre à jour les variables globales
                 currentPage = page;
-                if (itemsPerPage !== null) currentItemsPerPage = itemsPerPage;
-                if (startRange !== null) currentStartRange = startRange;
-                if (endRange !== null) currentEndRange = endRange;
-                if (searchQuery !== null) currentSearchQuery = searchQuery;
-                
+                if (itemsPerPage !== null && itemsPerPage !== undefined) {
+                    currentItemsPerPage = itemsPerPage;
+                }
+                if (startRange !== null && startRange !== undefined) {
+                    currentStartRange = startRange;
+                }
+                if (endRange !== null && endRange !== undefined) {
+                    currentEndRange = endRange;
+                }
+                if (searchQuery !== null && searchQuery !== undefined) {
+                    currentSearchQuery = searchQuery;
+                }
+
+                // Mettre à jour le select pour afficher la bonne valeur
+                const itemsPerPageSelect = document.getElementById('itemsPerPageSelect');
+                if (itemsPerPageSelect && currentItemsPerPage) {
+                    itemsPerPageSelect.value = currentItemsPerPage;
+                }
+
                 // Réattacher les event listeners
                 attachEventListeners();
             } else {
