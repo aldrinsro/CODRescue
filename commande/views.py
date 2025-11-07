@@ -3182,6 +3182,13 @@ def api_panier_commande(request, commande_id):
             # Construire la liste des articles pour le JSON
             articles_data = []
             for panier in paniers:
+                # Construire l'URL de l'image
+                image_url = None
+                if panier.article.image:
+                    image_url = panier.article.image.url
+                elif panier.article.image_url:
+                    image_url = panier.article.image_url
+
                 article_dict = {
                     'nom': str(panier.article.nom),
                     'reference': str(panier.article.reference) if panier.article.reference else 'N/A',
@@ -3189,7 +3196,14 @@ def api_panier_commande(request, commande_id):
                     'prix_panier': float(panier.prix_panier) if panier.prix_panier else float(panier.article.prix_unitaire),
                     'prix_unitaire': float(panier.article.prix_unitaire),
                     'quantite': panier.quantite,
-                    'sous_total': float(panier.sous_total)
+                    'sous_total': float(panier.sous_total),
+                    'sous_total_remise': float(panier.sous_total_remise) if panier.sous_total_remise else 0,
+                    'remise_appliquee': panier.remise_appliquer,
+                    'type_remise_appliquee': panier.type_remise_appliquee if panier.type_remise_appliquee else '',
+                    'image_url': image_url,
+                    'phase': panier.article.phase,
+                    'isUpsell': panier.article.isUpsell,
+                    'has_promo_active': panier.article.has_promo_active
                 }
 
                 # Ajouter les informations de la variante si elle existe

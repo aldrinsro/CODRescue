@@ -5,13 +5,7 @@
             {{ commande.id_yz }}
         </div>
     </td>
-    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-600">
-        {% if commande.num_cmd != commande.id_yz|stringformat:"s" %}
-            {{ commande.num_cmd }}
-        {% else %}
-            <span class="text-gray-400 italic">Auto</span>
-        {% endif %}
-    </td>
+
     <td class="px-4 py-4 whitespace-nowrap">
         <div class="text-sm font-medium text-gray-900">
             {% if commande.client.nom or commande.client.prenom %}

@@ -309,51 +309,179 @@
         </div>
         
         {% if paniers %}
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200 border border-gray-200" style="border-collapse: collapse;">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-b border-gray-200">Article</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-b border-gray-200">Quantité</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200">Sous-total</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                        {% for panier in paniers %}
-                        <tr class="hover:bg-gray-50 transition-colors">
-                            <td class="px-4 py-4 text-sm font-medium text-gray-900 border-r border-gray-200">
-                                <div class="flex items-center">
-                                    {% if panier.article.image %}
-                                        <img src="{{ panier.article.image.url }}" alt="{{ panier.article.nom }}" class="h-10 w-10 rounded-full object-cover mr-3">
-                                    {% else %}
-                                        <div class="h-10 w-10 rounded-full flex items-center justify-center mr-3" style="background-color: var(--admin-light-accent);">
-                                            <i class="fas fa-box-open text-gray-400"></i>
-                                        </div>
-                                    {% endif %}
-                                    <div>
-                                        <div class="font-medium text-gray-900">{{ panier.article.reference}}</div>
-                                        <div class="text-xs text-gray-500">
-                                            <span class="inline-flex items-center px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
-                                                <i class="fas fa-ruler-vertical mr-1"></i>{{ panier.variante.pointure }} </span>
-                                               <span class="inline-flex items-center px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">
-                                                <i class="fas fa-palette mr-1"></i>{{ panier.variante.couleur }}
-                                                </span>
+            <div class="space-y-4">
+                {% for panier in paniers %}
+                <div class="article-card p-4 bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-all shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <!-- Informations de l'article -->
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-4">
+                                <!-- Image de l'article -->
+                                <div class="flex-shrink-0">
+                                    <div class="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 border-2 border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                                        {% if panier.article.image %}
+                                            <img src="{{ panier.article.image.url }}" alt="Image de {{ panier.article.nom }}"
+                                                 class="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
+                                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                        {% elif panier.article.image_url %}
+                                            <img src="{{ panier.article.image_url }}" alt="Image de {{ panier.article.nom }}"
+                                                 class="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
+                                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                        {% endif %}
+                                        <div class="w-full h-full flex items-center justify-center text-gray-400 {% if panier.article.image or panier.article.image_url %}hidden{% endif %}">
+                                            <i class="fas fa-image text-xl"></i>
                                         </div>
                                     </div>
                                 </div>
-                            </td>
-                            <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200">
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                    {{ panier.quantite }}
-                                </span>
-                            </td>
-                            <td class="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                {{ panier.sous_total|floatformat:2 }} DH
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+
+                                <!-- Nom et référence -->
+                                <div class="min-w-0 flex-1">
+                                    <div class="font-semibold text-lg article-title" style="color: #4B352A;">
+                                        {{ panier.article.nom }}
+
+                                        {% if panier.variante %}
+                                        <span class="inline-flex items-center px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium ml-2">
+                                            <i class="fas fa-layer-group mr-1"></i>Variante
+                                        </span>
+                                        {% endif %}
+
+                                        {% if panier.remise_personnalisee %}
+                                        <span class="inline-flex items-center px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium ml-2 animate-pulse">
+                                            <i class="fas fa-tag mr-1"></i>Remise appliquée
+                                        </span>
+                                        {% endif %}
+                                    </div>
+
+                                    <div class="text-sm text-gray-500">
+                                        <i class="fas fa-hashtag mr-1"></i>Réf:
+                                        {% if panier.variante and panier.variante.reference_variante %}
+                                            <span class="text-gray-500">{{ panier.variante.reference_variante }}</span>
+                                        {% else %}
+                                            <span class="text-gray-500">{{ panier.article.reference }}</span>
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- Badges de statut -->
+                                    <div class="mt-2 flex flex-wrap gap-2">
+                                     
+                                        {% if panier.article.has_promo_active %}
+                                            <span class="inline-flex items-center px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                                                <i class="fas fa-tag mr-1"></i>PROMO
+                                            </span>
+                                        {% endif %}
+
+                                        {% if panier.article.phase == 'LIQUIDATION' %}
+                                            <span class="inline-flex items-center px-2 py-1 bg-orange-500 text-white rounded-full text-xs font-medium">
+                                                <i class="fas fa-fire mr-1"></i>LIQUIDATION
+                                            </span>
+                                        {% endif %}
+
+                                        {% if panier.article.isUpsell %}
+                                            <span class="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                                                <i class="fas fa-arrow-up mr-1"></i>UPSELL
+                                            </span>
+                                        {% endif %}
+
+                                        {% if panier.article.phase == 'EN_TEST' %}
+                                            <span class="inline-flex items-center px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">
+                                                <i class="fas fa-flask mr-1"></i>EN TEST
+                                            </span>
+                                        {% endif %}
+
+                                        <!-- Variantes -->
+                                        {% if panier.variante %}
+                                            {% if panier.variante.pointure %}
+                                                <span class="inline-flex items-center px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+                                                    <i class="fas fa-ruler-vertical mr-1"></i>{{ panier.variante.pointure }}
+                                                </span>
+                                            {% endif %}
+
+                                            {% if panier.variante.couleur %}
+                                                <span class="inline-flex items-center px-2 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-medium">
+                                                    <i class="fas fa-palette mr-1"></i>{{ panier.variante.couleur }}
+                                                </span>
+                                            {% endif %}
+                                        {% endif %}
+
+                                        {% if panier.article.categorie %}
+                                            <span class="inline-flex items-center px-2 py-1 bg-teal-100 text-teal-700 rounded-full text-xs font-medium">
+                                                <i class="fas fa-tag mr-1"></i>{{ panier.article.categorie }}
+                                            </span>
+                                        {% endif %}
+
+                                    
+                                    </div>
+                                </div>
+
+                                <!-- Quantité -->
+                                <div class="text-center min-w-0">
+                                    <div class="text-sm text-gray-500 mb-2">Quantité</div>
+                                    <div class="flex items-center justify-center gap-1">
+                                        <span class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                                            {{ panier.quantite }}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <!-- Prix unitaire -->
+                                <div class="text-center min-w-0">
+                                    <div class="text-sm text-gray-500 mb-2">Prix unitaire</div>
+                                    {% if panier.prix_panier %}
+                                        <div class="font-medium text-gray-900">{{ panier.prix_panier|floatformat:2 }} DH</div>
+                                        {% if panier.prix_panier != panier.article.prix_unitaire %}
+                                            <div class="text-xs text-gray-500 mt-1">
+                                                Actuel: {{ panier.article.prix_unitaire|floatformat:2 }} DH
+                                            </div>
+                                        {% endif %}
+                                    {% else %}
+                                        <div class="font-medium text-gray-900">{{ panier.article.prix_unitaire|floatformat:2 }} DH</div>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Sous-total -->
+                                <div class="text-center min-w-0">
+                                    <div class="text-sm text-gray-500 mb-2">Sous-total</div>
+
+                                    {% if panier.remise_personnalisee %}
+                                        <!-- Remise personnalisée appliquée -->
+                                        <div class="text-lg font-bold text-green-600">{{ panier.sous_total|floatformat:2 }} DH</div>
+
+                                        <!-- Détails de la remise personnalisée -->
+                                        <div class="remise-info-container mt-2 text-left">
+                                            <div class="bg-green-50 border-l-4 border-green-500 p-2 text-xs rounded">
+                                                <div class="flex items-center justify-between mb-1">
+                                                    <span class="text-green-700 font-semibold">
+                                                        <i class="fas fa-tag mr-1"></i>Remise
+                                                        {% if panier.remise_personnalisee.type_remise == 'POURCENTAGE' %}
+                                                            {{ panier.remise_personnalisee.valeur_remise }}%
+                                                        {% else %}
+                                                            Fixe
+                                                        {% endif %}
+                                                    </span>
+                                                </div>
+                                                <div class="text-gray-700">
+                                                    <span class="line-through text-gray-500">{{ panier.sous_total_remise|floatformat:2 }} DH</span>
+                                                    <strong class="text-red-600 ml-2">-{{ panier.remise_personnalisee.montant_applique|floatformat:2 }} DH</strong>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% elif panier.remise_appliquer and panier.sous_total_remise > 0 %}
+                                        <!-- Remise prédéfinie appliquée -->
+                                        <div class="text-lg font-bold text-green-600">{{ panier.sous_total_remise|floatformat:2 }} DH</div>
+                                        <div class="text-xs text-gray-500 line-through mt-1">{{ panier.sous_total|floatformat:2 }} DH</div>
+                                        <div class="text-xs text-green-600 mt-1">
+                                            <i class="fas fa-tag mr-1"></i>{{ panier.type_remise_appliquee|upper|default:"Remise" }}
+                                        </div>
+                                    {% else %}
+                                        <!-- Aucune remise -->
+                                        <div class="text-lg font-bold" style="color: #6d4b3b;">{{ panier.sous_total|floatformat:2 }} DH</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
             </div>
         {% else %}
             <div class="text-center py-8">

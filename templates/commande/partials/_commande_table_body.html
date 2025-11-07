@@ -6,14 +6,7 @@
             <span class="font-bold" style="color: var(--admin-color);">{{ commande.id_yz }}</span>
         </div>
     </td>
-    <!-- N° Externe -->
-    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-600 border-r border-gray-200">
-        {% if commande.num_cmd != commande.id_yz|stringformat:"s" %}
-            {{ commande.num_cmd }}
-        {% else %}
-            <span class="text-gray-400 italic">Auto</span>
-        {% endif %}
-    </td>
+
     <!-- Client -->
     <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200">{{ commande.client.get_full_name }}</td>
     <!-- Date -->
