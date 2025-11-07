@@ -313,55 +313,73 @@ def creer_commande(request):
                 # Traiter les articles du panier
                 total_commande = 0
                 article_counter = 0
-                
+
+                # Importer les fonctions nécessaires pour la gestion des upsells
+                from commande.templatetags.commande_filters import get_prix_upsell_avec_compteur
+                from operatConfirme.views import determiner_type_prix_gele, _recalculer_compteur_upsell
+
                 while f'article_{article_counter}' in request.POST:
                     article_id = request.POST.get(f'article_{article_counter}')
                     variante_id = request.POST.get(f'variante_{article_counter}')
                     if article_id:
                         article = Article.objects.get(pk=article_id)
                         quantite = int(request.POST.get(f'quantite_{article_counter}', 1))
-                        
+
                         # Récupérer la variante si spécifiée
                         variante = None
-                        if variante_id:
+                        if variante_id and variante_id not in ['', 'null', 'undefined']:
                             from article.models import VarianteArticle
-                            variante = VarianteArticle.objects.get(pk=variante_id)
-                            
-                            # Vérifier la disponibilité du stock de la variante
-                            if variante.qte_disponible < quantite:
-                                messages.error(request, f"Stock insuffisant pour {article.nom} - {variante.couleur.nom} {variante.pointure.pointure}. Stock disponible: {variante.qte_disponible}")
+                            try:
+                                variante = VarianteArticle.objects.get(pk=variante_id, actif=True)
+
+                                # Vérifier la disponibilité du stock de la variante
+                                if variante.qte_disponible < quantite:
+                                    messages.error(request, f"Stock insuffisant pour {article.nom} - {variante.couleur.nom} {variante.pointure.pointure}. Stock disponible: {variante.qte_disponible}")
+                                    return render(request, 'commande/creer.html', context)
+
+                                # Décrémenter le stock de la variante
+                                variante.qte_disponible -= quantite
+                                variante.save()
+                            except VarianteArticle.DoesNotExist:
+                                messages.error(request, f"La variante sélectionnée pour {article.nom} n'existe pas ou n'est plus active.")
                                 return render(request, 'commande/creer.html', context)
-                            
-                            # Décrémenter le stock de la variante
-                            variante.qte_disponible -= quantite
-                            variante.save()
-                        
-                        # Calculer le sous-total selon la logique upsell
-                        from commande.templatetags.commande_filters import calculer_sous_total_upsell
-                        sous_total = calculer_sous_total_upsell(article, quantite)
-                        
-                        # Créer le panier
+
+                        # Calculer le prix unitaire selon le compteur actuel (logique upsell complète)
+                        prix_panier = get_prix_upsell_avec_compteur(article, commande.compteur)
+                        sous_total = float(prix_panier * quantite)
+
+                        # Déterminer le type de prix gelé (promotion, liquidation, test, upsell, normal)
+                        type_prix = determiner_type_prix_gele(article, commande.compteur)
+
+                        # Créer le panier avec tous les champs nécessaires
                         Panier.objects.create(
                             commande=commande,
                             article=article,
                             variante=variante,
                             quantite=quantite,
-                            sous_total=sous_total
+                            prix_panier=float(prix_panier),  # Prix unitaire gelé au moment de la création
+                            sous_total=sous_total,
+                            type_prix_gele=type_prix  # Type de prix pour l'historique
                         )
-                        
+
                         # Mettre à jour le total
                         total_commande += sous_total
-                        
-                        # Incrémenter le compteur si c'est un article upsell
-                        if article.isUpsell and quantite > 1:
-                            commande.compteur += 1
-                    
+
+                        # Recalculer le compteur upsell après chaque ajout d'article upsell
+                        # Cette fonction met à jour automatiquement tous les paniers upsell existants
+                        if article.isUpsell:
+                            _recalculer_compteur_upsell(commande)
+
                     article_counter += 1
-                
+
+                # Marquer la commande comme contenant des articles upsell si nécessaire
+                has_upsell = commande.paniers.filter(article__isUpsell=True).exists()
+                commande.is_upsell = has_upsell
+
                 # Mettre à jour le total de la commande
                 commande.total_cmd = total_commande
                 commande.save()
-                
+
                 # Recalculer le total avec les frais de livraison si activés
                 commande.recalculer_total_avec_frais()
                 
@@ -578,15 +596,64 @@ def modifier_commande(request, pk):
     
     clients = Client.objects.all()
     villes = Ville.objects.all()
-    articles = Article.objects.all()
-    paniers = Panier.objects.filter(commande=commande)
+    articles = Article.objects.all().order_by('nom')
+    paniers = Panier.objects.filter(commande=commande).select_related('article', 'variante', 'variante__couleur', 'variante__pointure')
     etats_disponibles = EnumEtatCmd.objects.all().order_by('ordre', 'libelle')
-    
-    # Sérialiser les articles en JSON avant de les passer au template
-    articles_json = serializers.serialize('json', articles, fields=('nom', 'reference', 'description', 'prix_unitaire', 'qte_disponible', 'categorie', 'couleur', 'pointure', 'image'))
-    
-    # Sérialiser les paniers en JSON avant de les passer au template
-    paniers_json = serializers.serialize('json', paniers, fields=('article', 'quantite', 'sous_total'))
+
+    # Préparer les données JSON pour les articles (même format que creer_commande)
+    articles_data = []
+    for article in articles:
+        # Déterminer l'URL de l'image (priorité à l'image locale)
+        image_url = ''
+        if article.image:
+            image_url = article.image.url
+        elif article.image_url:
+            image_url = article.image_url
+
+        articles_data.append({
+            'id': article.pk,
+            'nom': str(article.nom or ''),
+            'reference': str(article.reference or ''),
+            'prix_unitaire': float(article.prix_unitaire) if article.prix_unitaire else 0.0,
+            'qte_disponible': int(article.get_total_qte_disponible()),
+            'stock_total': int(article.get_total_qte_disponible()),  # Alias pour compatibilité
+            'couleur': str(article.couleur or ''),
+            'pointure': str(article.pointure or ''),
+            'categorie': str(article.categorie) if hasattr(article, 'categorie') and article.categorie else '',
+            'phase': str(article.phase or ''),
+            'has_promo_active': bool(article.has_promo_active),
+            'isUpsell': bool(article.isUpsell),
+            'image_url': image_url
+        })
+
+    # Préparer les données JSON pour les paniers (avec infos des variantes)
+    paniers_data = []
+    for panier in paniers:
+        panier_dict = {
+            'id': panier.pk,
+            'fields': {
+                'article': panier.article.pk,
+                'quantite': panier.quantite,
+                'sous_total': float(panier.sous_total),
+                'variante': panier.variante.pk if panier.variante else None,
+            }
+        }
+
+        # Ajouter les informations de la variante si elle existe
+        if panier.variante:
+            panier_dict['variante_info'] = {
+                'id': panier.variante.pk,
+                'couleur': str(panier.variante.couleur.nom) if panier.variante.couleur else '',
+                'pointure': str(panier.variante.pointure.pointure) if panier.variante.pointure else '',
+                'prix_actuel': float(panier.variante.prix_actuel) if panier.variante.prix_actuel else float(panier.article.prix_unitaire),
+                'stock': int(panier.variante.qte_disponible)
+            }
+
+        paniers_data.append(panier_dict)
+
+    # Convertir en JSON
+    articles_json = json.dumps(articles_data)
+    paniers_json = json.dumps(paniers_data)
 
     # Détecter si on vient de la page "À Traiter"
     from_a_traiter = request.GET.get('from') == 'a_traiter'

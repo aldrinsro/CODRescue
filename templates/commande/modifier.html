@@ -425,12 +425,12 @@
             {% endif %}
 
             <!-- Articles du Panier -->
-            <div id="cartItemsContainer" class="space-y-4 mb-6">
+            <div id="articles-container" class="space-y-4 mb-6">
                 <!-- Les articles seront ajoutés ici par JavaScript -->
             </div>
-            
+
             <div class="flex justify-between items-center">
-            <button type="button" id="addArticleBtn" class="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors shadow-md">
+            <button type="button" id="addArticleBtn" onclick="ouvrirModalAjouterArticle(event)" class="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors shadow-md">
                 <i class="fas fa-plus mr-2"></i> Ajouter un article
             </button>
 
@@ -444,6 +444,10 @@
         </form>
     </div>
 </div>
+
+<!-- Includes des modaux pour l'ajout d'articles -->
+{% include 'composant_generale/modal_ajout_articles.html' %}
+{% include 'composant_generale/modal_confirmation_suppression.html' with modal_id='confirmDeleteModal' %}
 
 <!-- Container pour les toasts -->
 <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2">
@@ -485,12 +489,19 @@
 }
 </style>
 
-<script type="application/json" id="articles_data">
+<!-- Script JSON pour les articles disponibles -->
+<script type="application/json" id="articles-data">
     {{ articles_json|safe }}
 </script>
-<script type="application/json" id="paniers_data">
+
+<!-- Script JSON pour les articles dans le panier -->
+<script type="application/json" id="paniers-data">
     {{ paniers_json|safe }}
 </script>
+
+<!-- Script pour la gestion des modaux d'ajout d'articles -->
+<script src="{% static 'js/modal_ajout_articles.js' %}"></script>
+
 <script>
     // Fonction pour afficher les toasts
     function showToast(message, type = 'info') {
@@ -528,106 +539,58 @@
             {% endfor %}
         {% endif %}
 
-        const addArticleBtn = document.getElementById('addArticleBtn');
-        const cartItemsContainer = document.getElementById('cartItemsContainer');
-        const articles = JSON.parse(document.getElementById('articles_data').textContent);
-        const totalCmdInput = document.getElementById('total_cmd');
+        // Charger les articles existants du panier depuis paniers-data
+        const paniersDataElement = document.getElementById('paniers-data');
+        if (paniersDataElement) {
+            try {
+                const paniersData = JSON.parse(paniersDataElement.textContent);
+                console.log('📦 Chargement des articles existants du panier:', paniersData.length);
 
-        let articleCounter = 0;
+                // Charger d'abord les articles disponibles pour avoir les infos complètes
+                const articlesDataElement = document.getElementById('articles-data');
+                if (articlesDataElement) {
+                    const articlesDisponibles = JSON.parse(articlesDataElement.textContent);
 
-        function calculateTotal() {
-            let total = 0;
-            document.querySelectorAll('.sous-total-article').forEach(input => {
-                total += parseFloat(input.value) || 0;
-            });
-            totalCmdInput.value = total.toFixed(2);
-        }
+                    // Pour chaque article du panier, l'ajouter au conteneur
+                    paniersData.forEach(panierItem => {
+                        // Trouver l'article correspondant dans articlesDisponibles
+                        const articleData = articlesDisponibles.find(art => art.id === panierItem.fields.article);
 
-        function addArticleRow(articleData = null) {
-            const div = document.createElement('div');
-            div.classList.add('flex', 'flex-col', 'md:flex-row', 'gap-4', 'bg-gray-50', 'p-4', 'rounded-lg', 'border', 'border-gray-200');
-            div.innerHTML = `
-                <div class="flex-grow">
-                    <label for="article_${articleCounter}" class="block text-sm font-semibold mb-2" style="color: var(--admin-color);">Article:</label>
-                    <select name="article_${articleCounter}" id="article_${articleCounter}" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--admin-accent-color)] focus:border-transparent transition duration-200 article-select" required>
-                        <option value="">Sélectionner un article</option>
-                        ${articles.map(article => `<option value="${article.pk}" data-prix="${article.fields.prix_unitaire}">${article.fields.nom} (${article.fields.reference}) - ${article.fields.prix_unitaire} DH</option>`).join('')}
-                    </select>
-                </div>
-                <div class="w-full md:w-auto">
-                    <label for="quantite_${articleCounter}" class="block text-sm font-semibold mb-2" style="color: var(--admin-color);">Quantité:</label>
-                    <input type="number" name="quantite_${articleCounter}" id="quantite_${articleCounter}" min="1" value="${articleData ? articleData.quantite : 1}" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--admin-accent-color)] focus:border-transparent transition duration-200 quantite-input" required>
-                </div>
-                <div class="w-full md:w-auto">
-                    <label for="sous_total_${articleCounter}" class="block text-sm font-semibold mb-2" style="color: var(--admin-color);">Sous-total (DH):</label>
-                    <input type="number" name="sous_total_${articleCounter}" id="sous_total_${articleCounter}" step="0.01" min="0" class="w-full p-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed sous-total-article" readonly required value="${articleData ? articleData.sous_total : ''}">
-                </div>
-                <div class="flex items-end">
-                    <button type="button" class="remove-article-btn px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors shadow-md">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            `;
+                        if (articleData) {
+                            // Si l'article a une variante
+                            if (panierItem.fields.variante && panierItem.variante_info) {
+                                // Utiliser les informations de variante fournies par le backend
+                                const varianteData = {
+                                    id: panierItem.variante_info.id,
+                                    prix_actuel: panierItem.variante_info.prix_actuel,
+                                    stock: panierItem.variante_info.stock,
+                                    couleur: panierItem.variante_info.couleur,
+                                    pointure: panierItem.variante_info.pointure
+                                };
 
-            cartItemsContainer.appendChild(div);
+                                console.log('✅ Chargement variante:', varianteData);
+                                ajouterVarianteAuPanierConfirmation(articleData, varianteData, panierItem.fields.quantite);
+                            } else {
+                                // Article sans variante
+                                console.log('✅ Chargement article sans variante:', articleData.nom);
+                                ajouterArticleAuPanier(articleData, panierItem.fields.quantite);
+                            }
+                        } else {
+                            console.warn('⚠️ Article non trouvé:', panierItem.fields.article);
+                        }
+                    });
 
-            const currentArticleSelect = document.getElementById(`article_${articleCounter}`);
-            const currentQuantiteInput = document.getElementById(`quantite_${articleCounter}`);
-            const currentSousTotalInput = document.getElementById(`sous_total_${articleCounter}`);
-            const removeBtn = div.querySelector('.remove-article-btn');
-
-            if (articleData && articleData.article_pk) {
-                currentArticleSelect.value = articleData.article_pk;
-            }
-
-            const updateSousTotal = () => {
-                const selectedArticleId = currentArticleSelect.value;
-                const quantite = parseFloat(currentQuantiteInput.value);
-                const selectedArticle = articles.find(art => art.pk == selectedArticleId);
-
-                if (selectedArticle && !isNaN(quantite) && quantite > 0) {
-                    const prixUnitaire = parseFloat(selectedArticle.fields.prix_unitaire);
-                    currentSousTotalInput.value = (prixUnitaire * quantite).toFixed(2);
-                } else {
-                    currentSousTotalInput.value = '0.00';
+                    // Recalculer le total après avoir chargé tous les articles
+                    if (typeof calculerTotal === 'function') {
+                        console.log('🧮 Recalcul du total...');
+                        calculerTotal();
+                    }
                 }
-                calculateTotal();
-            };
-
-            currentArticleSelect.addEventListener('change', updateSousTotal);
-            currentQuantiteInput.addEventListener('input', updateSousTotal);
-
-            removeBtn.addEventListener('click', () => {
-                div.remove();
-                calculateTotal();
-            });
-
-            // Initial calculation if data is provided (for modification scenario)
-            if (articleData) {
-                updateSousTotal();
+            } catch (error) {
+                console.error('❌ Erreur lors du chargement des articles du panier:', error);
+                console.error('❌ Stack:', error.stack);
             }
-            
-            articleCounter++;
         }
-
-        addArticleBtn.addEventListener('click', () => addArticleRow());
-
-        // Handle initial articles if any (for modification view)
-        const initialArticlesDataElement = document.getElementById('paniers_data');
-        if (initialArticlesDataElement) {
-            const initialArticles = JSON.parse(initialArticlesDataElement.textContent);
-            initialArticles.forEach(item => {
-                addArticleRow({
-                    article_pk: item.fields.article, // Access fields directly
-                    quantite: item.fields.quantite,
-                    sous_total: item.fields.sous_total
-                });
-            });
-        }
-        // No else block needed here as for modification, we only add rows if data exists.
-
-        // Initial total calculation
-        calculateTotal();
         
         // Gestion de l'annulation de commande
         const btnAnnulerCommande = document.getElementById('btnAnnulerCommande');
@@ -862,16 +825,37 @@
                 totalDisplay.textContent = parseFloat(total).toFixed(2) + ' DH';
             }
         }
-        
-        // Observer les changements du total
+
+        // Observer les changements du total pour mettre à jour l'affichage
         const totalInput = document.getElementById('total_cmd');
         if (totalInput) {
-            const originalCalculateTotal = calculateTotal;
-            calculateTotal = function() {
-                originalCalculateTotal();
+            // Créer un MutationObserver pour surveiller les changements de valeur
+            const observer = new MutationObserver(function() {
                 updateTotalDisplay();
-            };
+            });
+
+            // Surveiller aussi les événements input et change
+            totalInput.addEventListener('input', updateTotalDisplay);
+            totalInput.addEventListener('change', updateTotalDisplay);
         }
+
+        // Gestion de la soumission du formulaire panierForm
+        const panierForm = document.getElementById('panierForm');
+        if (panierForm) {
+            panierForm.addEventListener('submit', function(e) {
+                console.log('📤 Soumission du formulaire panier détectée');
+
+                // Générer les champs cachés pour les articles avant soumission
+                if (typeof genererChampsCachesPanier === 'function') {
+                    genererChampsCachesPanier();
+                } else {
+                    console.warn('⚠️ Fonction genererChampsCachesPanier non trouvée');
+                }
+            });
+        }
+
+        // Initialiser l'affichage du total
+        updateTotalDisplay();
     });
 </script>
 {% endblock content %} 

@@ -1049,53 +1049,72 @@ function ajouterVarianteAuPanierConfirmation(articleData, variante, quantiteInit
 
 /**
  * Fonction pour générer les champs cachés du panier avant soumission
+ * @param {HTMLFormElement} formElement - Le formulaire cible (optionnel, utilise le premier formulaire par défaut)
  */
-function genererChampsCachesPanier() {
+function genererChampsCachesPanier(formElement = null) {
     console.log('🔧 Génération des champs cachés du panier...');
-    
-    // Supprimer les anciens champs cachés
-    const anciensChamps = document.querySelectorAll('input[name^="article_"], input[name^="variante_"], input[name^="quantite_"]');
-    anciensChamps.forEach(champ => champ.remove());
-    
+
+    // Déterminer le formulaire à utiliser
+    let targetForm = formElement;
+    if (!targetForm) {
+        // Chercher le formulaire panierForm en priorité, sinon le premier formulaire
+        targetForm = document.getElementById('panierForm') || document.querySelector('form');
+    }
+
+    if (!targetForm) {
+        console.error('❌ Aucun formulaire trouvé');
+        return;
+    }
+
+    console.log('📋 Formulaire cible:', targetForm.id || 'formulaire sans ID');
+
+    // Supprimer les anciens champs cachés dans ce formulaire
+    const anciensChamps = targetForm.querySelectorAll('input[name^="article_"], input[name^="variante_"], input[name^="quantite_"]');
+    anciensChamps.forEach(champ => {
+        console.log('🗑️ Suppression ancien champ:', champ.name);
+        champ.remove();
+    });
+
     const articlesContainer = document.getElementById('articles-container');
     if (!articlesContainer) {
         console.warn('⚠️ Conteneur des articles non trouvé');
         return;
     }
-    
+
     const articles = articlesContainer.querySelectorAll('[id^="article-"], [id^="variante-"]');
     console.log('📦 Articles trouvés dans le panier:', articles.length);
-    
+
     let compteur = 0;
     articles.forEach(article => {
         try {
             // Extraire les données de l'article
             const articleId = article.getAttribute('data-article-id');
             const varianteId = article.getAttribute('data-variante-id');
-            const quantite = article.querySelector('input[type="number"]')?.value || 1;
-            
+            const quantiteInput = article.querySelector('input[type="number"]');
+            const quantite = quantiteInput ? quantiteInput.value : 1;
+
             if (articleId) {
                 // Créer les champs cachés
                 const champArticle = document.createElement('input');
                 champArticle.type = 'hidden';
                 champArticle.name = `article_${compteur}`;
                 champArticle.value = articleId;
-                document.querySelector('form').appendChild(champArticle);
-                
+                targetForm.appendChild(champArticle);
+
                 if (varianteId) {
                     const champVariante = document.createElement('input');
                     champVariante.type = 'hidden';
                     champVariante.name = `variante_${compteur}`;
                     champVariante.value = varianteId;
-                    document.querySelector('form').appendChild(champVariante);
+                    targetForm.appendChild(champVariante);
                 }
-                
+
                 const champQuantite = document.createElement('input');
                 champQuantite.type = 'hidden';
                 champQuantite.name = `quantite_${compteur}`;
                 champQuantite.value = quantite;
-                document.querySelector('form').appendChild(champQuantite);
-                
+                targetForm.appendChild(champQuantite);
+
                 console.log(`✅ Champ ${compteur}: article=${articleId}, variante=${varianteId || 'none'}, quantite=${quantite}`);
                 compteur++;
             }
@@ -1103,7 +1122,7 @@ function genererChampsCachesPanier() {
             console.error('❌ Erreur lors de la génération du champ:', error);
         }
     });
-    
+
     console.log(`🎯 ${compteur} champs cachés générés pour le panier`);
 }
 
