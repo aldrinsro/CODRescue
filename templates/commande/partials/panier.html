@@ -1,0 +1,253 @@
+<!-- Modal du panier -->
+<div id="cartModal" class="fixed inset-0 flex items-center justify-center z-50 hidden" style="background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(8px);">
+    <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div class="p-6 border-b">
+            <div class="flex justify-between items-center">
+                <h3 class="text-2xl font-bold text-gray-800">D�tails du panier</h3>
+                <button id="closeCartModal" class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+        </div>
+        <div id="cartContent" class="p-6">
+            <!-- Contenu du panier sera charg� ici -->
+        </div>
+    </div>
+</div>
+
+<script>
+    /**
+     * Fonction pour construire le HTML du panier
+     * @param {Object} data - Donn�es du panier retourn�es par l'API
+     * @returns {string} HTML du panier
+     */
+    function buildCartHTML(data) {
+        const commande = data.commande;
+        const articles = data.articles;
+
+        let html = `
+            <div class="space-y-4">
+                <!-- En-t�te r�capitulatif de la commande -->
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h4 class="font-semibold text-blue-800">Commande YZ-${commande.id_yz}</h4>
+                            <p class="text-blue-700 text-sm">Client: ${commande.client_nom}</p>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-lg font-bold text-blue-800">${commande.total_articles} article${commande.total_articles > 1 ? 's' : ''}</div>
+                            <div class="text-sm text-blue-600">Total: ${commande.total_montant.toFixed(2)} DH</div>
+                        </div>
+                    </div>
+                </div>`;
+
+        if (articles.length > 0) {
+            html += `
+                <!-- Tableau des articles -->
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Article</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">R�f�rence</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prix unitaire</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantit�</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sous-total</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">`;
+
+            articles.forEach(article => {
+                // Utiliser prix_panier (prix gelé) si disponible, sinon prix_unitaire
+                const prixPanier = article.prix_panier || article.prix_unitaire || 0;
+                const prixUnitaire = article.prix_unitaire || 0;
+
+                // Afficher les deux prix si différents
+                let prixHTML = `${parseFloat(prixPanier).toFixed(2)} DH`;
+                if (prixPanier !== prixUnitaire && article.prix_panier) {
+                    prixHTML = `
+                        <div class="text-sm font-medium text-gray-900">${parseFloat(prixPanier).toFixed(2)} DH</div>
+                        <div class="text-xs text-gray-500">Prix actuel: ${parseFloat(prixUnitaire).toFixed(2)} DH</div>
+                    `;
+                }
+
+                // Construire la description avec variante si elle existe
+                let descriptionHTML = '';
+                if (article.description) {
+                    descriptionHTML = `<div class="text-sm text-gray-500">${article.description}</div>`;
+                }
+
+                // Afficher les informations de la variante (couleur, pointure)
+                if (article.variante) {
+                    const varianteInfo = [];
+                    if (article.variante.couleur) {
+                        varianteInfo.push(`<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                            <i class="fas fa-palette mr-1"></i>${article.variante.couleur}
+                        </span>`);
+                    }
+                    if (article.variante.pointure) {
+                        varianteInfo.push(`<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800">
+                            <i class="fas fa-shoe-prints mr-1"></i>${article.variante.pointure}
+                        </span>`);
+                    }
+                    if (varianteInfo.length > 0) {
+                        descriptionHTML += `<div class="flex gap-1 mt-1">${varianteInfo.join(' ')}</div>`;
+                    }
+                }
+
+                html += `
+                            <tr class="hover:bg-gray-50 transition-colors">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-sm font-medium text-gray-900">${article.nom}</div>
+                                    ${descriptionHTML}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    ${article.reference}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    ${prixHTML}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                        ${article.quantite}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+                                    ${parseFloat(article.sous_total).toFixed(2)} DH
+                                </td>
+                            </tr>`;
+            });
+
+            html += `
+                        </tbody>
+                    </table>
+                </div>`;
+        } else {
+            html += `
+                <!-- Message panier vide -->
+                <div class="text-center py-8">
+                    <i class="fas fa-shopping-basket text-4xl text-gray-400 mb-4"></i>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">Panier vide</h3>
+                    <p class="text-gray-500">Cette commande ne contient aucun article.</p>
+                </div>`;
+        }
+
+        // Construire le récapitulatif avec les frais de livraison
+        const fraisLivraison = commande.frais_livraison || 0;
+        const totalFinal = commande.total_final || commande.total_montant;
+
+        html += `
+                <!-- Récapitulatif final -->
+                <div class="bg-gray-50 rounded-lg p-4 mt-4">
+                    <div class="space-y-2">
+                        <div class="flex justify-between">
+                            <span class="text-sm text-gray-600">Sous-total articles:</span>
+                            <span class="text-sm font-medium">${parseFloat(commande.total_montant).toFixed(2)} DH</span>
+                        </div>`;
+
+        // Afficher les frais de livraison uniquement s'ils existent
+        if (fraisLivraison > 0) {
+            html += `
+                        <div class="flex justify-between">
+                            <span class="text-sm text-gray-600">
+                                <i class="fas fa-truck mr-1"></i>Frais de livraison:
+                            </span>
+                            <span class="text-sm font-medium text-blue-600">${parseFloat(fraisLivraison).toFixed(2)} DH</span>
+                        </div>`;
+        } else {
+            html += `
+                        <div class="flex justify-between">
+                            <span class="text-sm text-gray-600">
+                                <i class="fas fa-truck mr-1"></i>Frais de livraison:
+                            </span>
+                            <span class="text-sm font-medium text-green-600">
+                                <i class="fas fa-check-circle mr-1"></i>Non appliqué
+                            </span>
+                        </div>`;
+        }
+
+        html += `
+                        <hr class="border-gray-300">
+                        <div class="flex justify-between">
+                            <span class="text-lg font-semibold text-gray-900">Total commande:</span>
+                            <span class="text-lg font-bold text-green-600">${parseFloat(totalFinal).toFixed(2)} DH</span>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+
+        return html;
+    }
+
+    /**
+     * Fonction pour afficher le panier d'une commande
+     * @param {number} commandeId - ID de la commande
+     * @param {string} apiUrl - URL de l'API (optionnel, par defaut: /api/commande/{id}/panier/)
+     */
+    function viewCart(commandeId, apiUrl = null) {
+        console.log('Chargement du panier pour la commande:', commandeId);
+
+        // Utiliser l'URL personnalisee si fournie, sinon l'URL par defaut
+        const url = apiUrl || `/api/commande/${commandeId}/panier/`;
+        console.log('URL API:', url);
+
+        fetch(url)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Erreur HTTP: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log(' Donn�es du panier re�ues:', data);
+
+                if (data.success) {
+                    const html = buildCartHTML(data);
+                    document.getElementById('cartContent').innerHTML = html;
+                    document.getElementById('cartModal').classList.remove('hidden');
+                } else {
+                    alert(data.error || 'Erreur lors du chargement du panier');
+                }
+            })
+            .catch(error => {
+                console.error('L Erreur lors du chargement du panier:', error);
+                alert('Erreur lors du chargement du panier: ' + error.message);
+            });
+    }
+
+    /**
+     * Initialisation des gestionnaires d'�v�nements du modal panier
+     */
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('<� Initialisation du modal panier');
+
+        // Gestionnaire pour le bouton de fermeture
+        const closeCartModalBtn = document.getElementById('closeCartModal');
+        const cartModal = document.getElementById('cartModal');
+
+        if (closeCartModalBtn) {
+            closeCartModalBtn.addEventListener('click', function() {
+                if (cartModal) {
+                    cartModal.classList.add('hidden');
+                    console.log(' Modal panier ferm�');
+                }
+            });
+        }
+
+        // Fermer la modal en cliquant � l'ext�rieur
+        window.addEventListener('click', function(event) {
+            if (cartModal && event.target === cartModal) {
+                cartModal.classList.add('hidden');
+                console.log(' Modal panier ferm� (clic ext�rieur)');
+            }
+        });
+
+        // Fermer avec la touche �chap
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape' && cartModal && !cartModal.classList.contains('hidden')) {
+                cartModal.classList.add('hidden');
+                console.log(' Modal panier ferm� (touche �chap)');
+            }
+        });
+    });
+</script>

@@ -3161,14 +3161,16 @@ def api_panier_commande(request, commande_id):
     
     if request.method == 'GET':
         try:
-            # Récupérer la commande avec ses paniers
+            # Récupérer la commande avec ses paniers et variantes
             commande = get_object_or_404(
                 Commande.objects.select_related('client', 'ville').prefetch_related(
-                    'paniers__article'
+                    'paniers__article',
+                    'paniers__variante__couleur',
+                    'paniers__variante__pointure'
                 ),
                 pk=commande_id
             )
-            
+
             # Préparer les données pour le template
             paniers = commande.paniers.all()
             total_articles = sum(panier.quantite for panier in paniers)
@@ -3176,18 +3178,31 @@ def api_panier_commande(request, commande_id):
             frais_livraison = commande.ville.frais_livraison if commande.ville else 0
             # Convertir explicitement en float pour éviter l'erreur Decimal + float
             total_final = float(total_montant) + float(frais_livraison)
-            
+
             # Construire la liste des articles pour le JSON
             articles_data = []
             for panier in paniers:
-                articles_data.append({
+                article_dict = {
                     'nom': str(panier.article.nom),
                     'reference': str(panier.article.reference) if panier.article.reference else 'N/A',
                     'description': str(panier.article.description) if panier.article.description else '',
+                    'prix_panier': float(panier.prix_panier) if panier.prix_panier else float(panier.article.prix_unitaire),
                     'prix_unitaire': float(panier.article.prix_unitaire),
                     'quantite': panier.quantite,
                     'sous_total': float(panier.sous_total)
-                })
+                }
+
+                # Ajouter les informations de la variante si elle existe
+                if panier.variante:
+                    article_dict['variante'] = {
+                        'id': panier.variante.pk,
+                        'couleur': str(panier.variante.couleur.nom) if panier.variante.couleur else None,
+                        'pointure': str(panier.variante.pointure.pointure) if panier.variante.pointure else None
+                    }
+                else:
+                    article_dict['variante'] = None
+
+                articles_data.append(article_dict)
             
             return JsonResponse({
                 'success': True,
