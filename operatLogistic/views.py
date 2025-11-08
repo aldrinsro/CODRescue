@@ -1138,13 +1138,6 @@ def marque_retournee(request, commande_id):
     try : 
         commande= get_object_or_404(Commande,id=commande_id)
 
-         # Vérifier que la commande est bien en cours de livraison
-        if not commande.etat_actuel or commande.etat_actuel.enum_etat.libelle != 'Mise en distribution':
-            return JsonResponse({
-                'success': False, 
-                'error': 'Cette commande n\'est pas en Mise en distribution. Seules les commandes en Mise en distribution peuvent être livrées partiellement.'
-            })
-        
         articles_retournees = request.POST.get('articles_retournes','[]')
         
         commentaire = request.POST.get('commentaire', '').strip()
@@ -1257,17 +1250,17 @@ def api_panier_commande(request, commande_id):
         commande = get_object_or_404(Commande, id=commande_id)
         print(f"🔧 DEBUG API: Commande trouvée {commande.id_yz}")
         
-        # Récupérer les paniers avec les articles
-        paniers = commande.paniers.select_related('article').all()
+        # Récupérer les paniers avec les articles et variantes
+        paniers = commande.paniers.select_related('article', 'variante__couleur', 'variante__pointure').prefetch_related('remise_personnalisee').all()
         print(f"🔧 DEBUG API: Nombre de paniers trouvés: {paniers.count()}")
-        
+
         # Préparer les données du panier avec calcul de prix upsell
         paniers_data = []
         for panier in paniers:
             try:
                 # Calculer le prix en fonction du compteur et de l'upsell (même logique que detail_commande)
                 prix_actuel = float(panier.article.prix_unitaire or 0)  # Prix de base par défaut
-                
+
                 if commande.compteur and commande.compteur > 0 and getattr(panier.article, 'isUpsell', False):
                     if commande.compteur == 1 and getattr(panier.article, 'prix_upsell_1', None):
                         prix_actuel = float(panier.article.prix_upsell_1)
@@ -1277,21 +1270,50 @@ def api_panier_commande(request, commande_id):
                         prix_actuel = float(panier.article.prix_upsell_3)
                     elif commande.compteur >= 4 and getattr(panier.article, 'prix_upsell_4', None):
                         prix_actuel = float(panier.article.prix_upsell_4)
-                
-                paniers_data.append({
+
+                # Préparer les données de base
+                panier_dict = {
                     'id': panier.id,
                     'nom': panier.article.nom or '',
                     'reference': getattr(panier.article, 'reference', '') or '',
                     'quantite': panier.quantite or 0,
                     'prix_unitaire': f"{float(panier.article.prix_unitaire or 0):.2f}",
+                    'prix_panier': f"{float(panier.prix_panier or panier.article.prix_unitaire or 0):.2f}",
                     'prix_actuel': f"{prix_actuel:.2f}",
                     'sous_total': f"{float(panier.sous_total or 0):.2f}",
+                    'sous_total_remise': f"{float(panier.sous_total_remise or 0):.2f}" if panier.sous_total_remise else "0.00",
+                    'remise_appliquee': panier.remise_appliquer,
+                    'type_remise_appliquee': panier.type_remise_appliquee if panier.type_remise_appliquee else '',
                     'pointure': getattr(panier.article, 'pointure', '') or '',
                     'couleur': getattr(panier.article, 'couleur', '') or '',
                     'article_id': panier.article.id,
                     'is_upsell': getattr(panier.article, 'isUpsell', False),
                     'compteur': commande.compteur or 0,
-                })
+                    'phase': panier.article.phase,
+                    'has_promo_active': getattr(panier.article, 'has_promo_active', False),
+                }
+
+                # Ajouter les informations de la variante si elle existe
+                if panier.variante:
+                    panier_dict['variante'] = {
+                        'id': panier.variante.pk,
+                        'couleur': str(panier.variante.couleur.nom) if panier.variante.couleur else None,
+                        'pointure': str(panier.variante.pointure.pointure) if panier.variante.pointure else None,
+                    }
+                else:
+                    panier_dict['variante'] = None
+
+                # Ajouter les informations de remise personnalisée si elle existe
+                if panier.remise_personnalisee:
+                    panier_dict['remise_personnalisee'] = {
+                        'type_remise': panier.remise_personnalisee.type_remise,
+                        'valeur_remise': float(panier.remise_personnalisee.valeur_remise),
+                        'montant_applique': float(panier.remise_personnalisee.montant_applique),
+                    }
+                else:
+                    panier_dict['remise_personnalisee'] = None
+
+                paniers_data.append(panier_dict)
             except Exception as panier_error:
                 print(f"❌ Erreur traitement panier {panier.id}: {panier_error}")
                 # Ajouter quand même le panier avec des valeurs par défaut
