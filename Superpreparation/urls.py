@@ -36,8 +36,14 @@ urlpatterns = [
     path('api/commande-info/<int:commande_id>/', views.api_commande_info, name='api_commande_info'),
 
 
- 
+
     path('modifier-commande-superviseur/<int:commande_id>/', views.modifier_commande_superviseur, name='modifier_commande_superviseur'),
+
+    # Routes pour la gestion des remises personnalisées
+    path('appliquer-remise/<int:panier_id>/', views.appliquer_remise_panier_superviseur, name='appliquer_remise_panier_superviseur'),
+    path('retirer-remise/<int:panier_id>/', views.retirer_remise_panier_superviseur, name='retirer_remise_panier_superviseur'),
+    path('calculer-remise-preview/<int:panier_id>/', views.calculer_remise_panier_preview_superviseur, name='calculer_remise_panier_preview_superviseur'),
+
     path('api/commande/<int:commande_id>/produits/', views.api_commande_produits, name='api_commande_produits'),
 
 

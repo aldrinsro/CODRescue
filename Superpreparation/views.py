@@ -30,6 +30,15 @@ from django.views.decorators.http import require_POST
 from article.forms import PromotionForm
 from decimal import Decimal
 
+# Import des fonctions de gestion des remises depuis operatConfirme
+from operatConfirme.views import (
+    _recalculer_remises_apres_changement_compteur,
+    appliquer_remise_panier as appliquer_remise_operateur,
+    retirer_remise_panier as retirer_remise_operateur,
+    calculer_remise_panier_preview as calculer_remise_preview_operateur
+)
+from django.views.decorators.http import require_http_methods
+
 
 @superviseur_preparation_required
 def home_view(request):
@@ -1538,11 +1547,15 @@ def _recalculer_compteur_upsell(commande):
     - Applique la règle: compteur = max(0, total_upsell - 1) si total >= 2, sinon 0
     - Met à jour les type_prix_gele de tous les paniers upsell
     - Recalcule tous les totaux
+    - Recalcule les remises si le compteur a changé
 
     Args:
         commande: L'instance de la commande à recalculer
     """
     from django.db.models import Sum
+
+    # Sauvegarder l'ancien compteur pour détecter les changements
+    ancien_compteur = commande.compteur
 
     # Compter la quantité totale d'articles upsell
     total_quantite_upsell = commande.paniers.filter(
@@ -1565,7 +1578,12 @@ def _recalculer_compteur_upsell(commande):
     # Recalculer tous les totaux
     commande.recalculer_totaux_upsell()
 
-    print(f"🔄 Compteur upsell recalculé: {commande.compteur} (total articles upsell: {total_quantite_upsell})")
+    print(f"🔄 Compteur upsell recalculé: {ancien_compteur} → {commande.compteur} (total articles upsell: {total_quantite_upsell})")
+
+    # Si le compteur a changé, recalculer toutes les remises (fonction importée depuis operatConfirme)
+    if ancien_compteur != commande.compteur:
+        print(f"   ⚠️ Changement de compteur détecté: {ancien_compteur} → {commande.compteur}")
+        _recalculer_remises_apres_changement_compteur(commande)
 
 
 @superviseur_preparation_required
@@ -3442,11 +3460,11 @@ def rafraichir_articles_commande_prepa(request, commande_id):
         commande = Commande.objects.get(id=commande_id)
         
         # Pour les superviseurs, on ne vérifie pas l'affectation spécifique
-        # Ils peuvent accéder à toutes les commandes en préparation
+        # Ils peuvent accéder à toutes les commandes en préparation ET confirmées
         if operateur and operateur.type_operateur == 'SUPERVISEUR_PREPARATION':
-            # Vérifier seulement que la commande est en préparation
+            # Vérifier que la commande est en préparation OU confirmée
             etat_preparation = commande.etats.filter(
-                enum_etat__libelle__in=['En préparation', 'À imprimer'],
+                enum_etat__libelle__in=['En préparation', 'À imprimer', 'Confirmée', 'En cours de confirmation', 'Affectée', 'Retour Confirmation'],
                 date_fin__isnull=True
             ).first()
         else:
@@ -3456,7 +3474,7 @@ def rafraichir_articles_commande_prepa(request, commande_id):
                 enum_etat__libelle__in=['En préparation', 'À imprimer'],
                 date_fin__isnull=True
             ).first()
-        
+
         if not etat_preparation:
             return JsonResponse({'error': 'Cette commande ne vous est pas affectée.'}, status=403)
         
@@ -5056,3 +5074,74 @@ def api_commande_info(request, commande_id):
             'error': f'Erreur lors du chargement des informations: {str(e)}'
         }, status=500)
 
+
+# ========================================
+# GESTION DES REMISES PERSONNALISÉES
+# ========================================
+# Les fonctions sont réutilisées depuis operatConfirme.views
+# Pas besoin de décorateur login_required car les fonctions importées l'ont déjà
+
+@require_http_methods(["POST"])
+def appliquer_remise_panier_superviseur(request, panier_id):
+    """
+    Applique une remise personnalisée sur un panier (wrapper pour superviseur).
+    Réutilise directement la fonction de operatConfirme.
+    """
+    print(f"🔄 [SUPERVISEUR] Appliquer remise - Panier ID: {panier_id}, User: {request.user}")
+    try:
+        result = appliquer_remise_operateur(request, panier_id)
+        print(f"✅ [SUPERVISEUR] Remise appliquée avec succès - Panier ID: {panier_id}")
+        return result
+    except Exception as e:
+        import traceback
+        print(f"❌ [SUPERVISEUR] Erreur appliquer_remise_panier_superviseur: {str(e)}")
+        print(traceback.format_exc())
+        from django.http import JsonResponse
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur dans le wrapper superviseur: {str(e)}'
+        }, status=500)
+
+
+@require_http_methods(["POST"])
+def retirer_remise_panier_superviseur(request, panier_id):
+    """
+    Retire une remise appliquée sur un panier (wrapper pour superviseur).
+    Réutilise directement la fonction de operatConfirme.
+    """
+    print(f"🔄 [SUPERVISEUR] Retirer remise - Panier ID: {panier_id}, User: {request.user}")
+    try:
+        result = retirer_remise_operateur(request, panier_id)
+        print(f"✅ [SUPERVISEUR] Remise retirée avec succès - Panier ID: {panier_id}")
+        return result
+    except Exception as e:
+        import traceback
+        print(f"❌ [SUPERVISEUR] Erreur retirer_remise_panier_superviseur: {str(e)}")
+        print(traceback.format_exc())
+        from django.http import JsonResponse
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur dans le wrapper superviseur: {str(e)}'
+        }, status=500)
+
+
+@require_http_methods(["GET"])
+def calculer_remise_panier_preview_superviseur(request, panier_id):
+    """
+    Calcule et retourne un aperçu de la remise sans l'appliquer (wrapper pour superviseur).
+    Réutilise directement la fonction de operatConfirme.
+    """
+    print(f"🔄 [SUPERVISEUR] Calculer preview remise - Panier ID: {panier_id}, User: {request.user}")
+    try:
+        result = calculer_remise_preview_operateur(request, panier_id)
+        print(f"✅ [SUPERVISEUR] Preview calculé avec succès - Panier ID: {panier_id}")
+        return result
+    except Exception as e:
+        import traceback
+        print(f"❌ [SUPERVISEUR] Erreur calculer_remise_panier_preview_superviseur: {str(e)}")
+        print(traceback.format_exc())
+        from django.http import JsonResponse
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur dans le wrapper superviseur: {str(e)}'
+        }, status=500)

@@ -136,10 +136,22 @@ function afficherPrixUpsellDynamiques(compteurActuel) {
             libelleElement.setAttribute('data-couleur-gelee', couleurClasse);
         }
 
-        // Mettre à jour l'affichage du sous-total
+        // ========== MISE À JOUR DU SOUS-TOTAL AVEC GESTION DES REMISES ==========
+        // IMPORTANT: Ne pas mettre à jour le sous-total si une remise est appliquée
+        // Car le sous-total avec remise doit être géré par le backend
+        const remiseContainer = card.querySelector('.remise-info-container');
+        const hasRemise = remiseContainer && remiseContainer.innerHTML.trim();
+
         const sousTotalElement = document.getElementById(`sous-total-${panierId}`);
-        if (sousTotalElement) {
+        if (sousTotalElement && !hasRemise) {
+            // Pas de remise: mettre à jour normalement
             sousTotalElement.textContent = `${sousTotal.toFixed(2)} DH`;
+            sousTotalElement.style.color = '#6d4b3b'; // Couleur marron normale
+        } else if (sousTotalElement && hasRemise) {
+            // Remise appliquée: ne PAS mettre à jour le sous-total ici
+            // Le backend a déjà calculé le sous-total avec remise
+            // On garde juste la couleur verte pour indiquer la remise
+            console.log(`⚠️ Article ${panierId} a une remise: sous-total géré par le backend`);
         }
     });
 }
@@ -2747,13 +2759,85 @@ function modifierQuantiteDirecte(panierId, nouvelleQuantite) {
 
 // Fonction pour mettre à jour les totaux en temps réel (utilisée lors des changements de quantité)
 function mettreAJourTotauxConfirmation(panierId, data) {
-    // Mettre à jour le sous-total de la ligne spécifique (seulement pour les changements de quantité)
+    // ========== MISE À JOUR DU PRIX UNITAIRE EFFECTIF ==========
+    // Important pour les articles upsells dont le prix change selon le compteur
+    if (data.prix_unitaire_effectif !== undefined && panierId) {
+        const prixUnitaireElement = document.getElementById(`prix-unitaire-${panierId}`);
+        if (prixUnitaireElement) {
+            prixUnitaireElement.textContent = `${parseFloat(data.prix_unitaire_effectif).toFixed(2)} DH`;
+            console.log(`💰 Prix unitaire mis à jour pour article ${panierId}: ${parseFloat(data.prix_unitaire_effectif).toFixed(2)} DH (suivant compteur ${data.compteur || 'N/A'})`);
+        }
+    }
+
+    // ========== MISE À JOUR DU SOUS-TOTAL ==========
     if (data.sous_total !== undefined && panierId) {
         const sousTotalElement = document.getElementById(`sous-total-${panierId}`);
         if (sousTotalElement) {
             sousTotalElement.textContent = `${parseFloat(data.sous_total).toFixed(2)} DH`;
-            console.log(`✅ Sous-total mis à jour pour article ${panierId}: ${parseFloat(data.sous_total).toFixed(2)} DH`);
+
+            // ========== MISE À JOUR DE LA COULEUR DU SOUS-TOTAL ==========
+            // Si une remise est appliquée, le sous-total doit être vert, sinon marron
+            if (data.remise) {
+                sousTotalElement.style.color = '#059669'; // Vert pour remise appliquée
+                console.log(`✅ Sous-total mis à jour pour article ${panierId}: ${parseFloat(data.sous_total).toFixed(2)} DH (AVEC REMISE - couleur verte)`);
+            } else {
+                sousTotalElement.style.color = '#6d4b3b'; // Marron pour normal
+                console.log(`✅ Sous-total mis à jour pour article ${panierId}: ${parseFloat(data.sous_total).toFixed(2)} DH (SANS REMISE - couleur marron)`);
+            }
         }
+    }
+
+    // ========== MISE À JOUR DES PRIX DE TOUS LES UPSELLS SI LE COMPTEUR A CHANGÉ ==========
+    // Quand le compteur change, tous les articles upsells doivent voir leurs prix mis à jour
+    if (data.compteur !== undefined) {
+        console.log(`🔄 Compteur mis à jour: ${data.compteur} - Mise à jour de tous les prix upsells`);
+
+        // Sauvegarder les infos de remise avant d'appeler afficherPrixUpsellDynamiques
+        const paniersAvecRemise = {};
+        const autresUpsellsAvecRemise = [];
+
+        document.querySelectorAll('.article-card').forEach(card => {
+            const id = card.getAttribute('data-article-id');
+            const remiseContainer = card.querySelector('.remise-info-container');
+            const articleData = JSON.parse(card.getAttribute('data-article'));
+
+            if (remiseContainer && remiseContainer.innerHTML.trim()) {
+                paniersAvecRemise[id] = {
+                    hasRemise: true,
+                    sousTotalElement: card.querySelector(`#sous-total-${id}`)
+                };
+
+                // Vérifier si c'est un article upsell différent de celui qu'on a modifié
+                if (articleData.isUpsell && id !== panierId.toString()) {
+                    autresUpsellsAvecRemise.push(id);
+                }
+            }
+        });
+
+        // Si le compteur a changé ET qu'il y a d'autres articles upsells avec remise,
+        // on doit rafraîchir toute la section pour avoir les bons sous-totaux avec remise
+        if (autresUpsellsAvecRemise.length > 0) {
+            console.log(`⚠️ Détection de ${autresUpsellsAvecRemise.length} autre(s) article(s) upsell avec remise affectés par le changement de compteur`);
+            console.log(`🔄 Rafraîchissement complet de la section pour recalculer toutes les remises...`);
+
+            // Rafraîchir toute la section des articles pour avoir les remises recalculées
+            if (typeof rafraichirSectionArticles === 'function') {
+                rafraichirSectionArticles();
+                return; // Sortir de la fonction, le rafraîchissement gérera tout
+            }
+        }
+
+        // Sinon, mettre à jour normalement les prix upsells
+        if (typeof afficherPrixUpsellDynamiques === 'function') {
+            afficherPrixUpsellDynamiques(data.compteur);
+        }
+
+        // Restaurer les couleurs des sous-totaux pour les articles avec remise
+        Object.keys(paniersAvecRemise).forEach(id => {
+            if (paniersAvecRemise[id].sousTotalElement) {
+                paniersAvecRemise[id].sousTotalElement.style.color = '#059669'; // Vert pour remise
+            }
+        });
     }
 
     // ========== GESTION DE LA MISE À JOUR DE LA REMISE ==========
@@ -2764,7 +2848,7 @@ function mettreAJourTotauxConfirmation(panierId, data) {
             const remiseContainer = panierCard.querySelector('.remise-info-container');
 
             if (remiseContainer) {
-                console.log(`🏷️ Mise à jour de l'affichage de la remise pour panier ${panierId}`);
+                console.log(`🏷️ Mise à jour de l'affichage de la remise pour panier ${panierId} (recalcul après changement de compteur/quantité)`);
 
                 // Mettre à jour le contenu du badge de remise avec les nouvelles valeurs
                 remiseContainer.innerHTML = `

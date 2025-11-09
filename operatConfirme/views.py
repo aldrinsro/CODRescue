@@ -1660,42 +1660,92 @@ def mettre_a_jour_types_prix_gele_upsell(commande):
             print(f"🔄 Panier {panier.id} mis à jour: {ancien_type} → {nouveau_type} (compteur={commande.compteur})")
 
 
+def _recalculer_remises_apres_changement_compteur(commande):
+    """
+    Recalcule toutes les remises personnalisées des paniers après un changement de compteur upsell.
+
+    Cette fonction est nécessaire car:
+    - Le compteur upsell détermine le prix unitaire effectif
+    - Les remises en pourcentage dépendent du prix effectif
+    - Quand le compteur change, toutes les remises doivent être recalculées
+
+    Args:
+        commande: L'instance de la commande
+    """
+    from decimal import Decimal
+    from commande.templatetags.remise_filters import calculer_prix_unitaire_effectif
+
+    # Récupérer tous les paniers avec une remise personnalisée
+    paniers_avec_remise = commande.paniers.filter(remise_appliquer=True).prefetch_related('remise_personnalisee')
+
+    for panier in paniers_avec_remise:
+        if hasattr(panier, 'remise_personnalisee'):
+            remise = panier.remise_personnalisee
+
+            # Recalculer le sous-total basé sur le prix effectif actuel (avec le nouveau compteur)
+            prix_unitaire_effectif = calculer_prix_unitaire_effectif(panier)
+            quantite = Decimal(str(panier.quantite))
+            sous_total_sans_remise = prix_unitaire_effectif * quantite
+
+            # Mettre à jour le sous_total_remise
+            panier.sous_total_remise = float(sous_total_sans_remise)
+
+            # Recalculer le montant de la remise
+            montant_remise = remise.calculer_montant_remise()
+            remise.montant_applique = float(montant_remise)
+            remise.save()
+
+            # Recalculer le sous-total avec remise
+            sous_total_avec_remise = sous_total_sans_remise - montant_remise
+            panier.sous_total = float(sous_total_avec_remise)
+            panier.save()
+
+            print(f"   🏷️ Remise recalculée pour panier {panier.id}: {sous_total_sans_remise} DH - {montant_remise} DH = {sous_total_avec_remise} DH")
+
+
 def _recalculer_compteur_upsell(commande):
     """
     Recalcule le compteur upsell de la commande et met à jour tous les paniers concernés.
-    
+
     Cette fonction centralise la logique de recalcul du compteur upsell:
     - Compte les articles upsell dans la commande
     - Applique la règle: compteur = max(0, total_upsell - 1) si total >= 2, sinon 0
     - Met à jour les type_prix_gele de tous les paniers upsell
     - Recalcule tous les totaux
-    
+    - Recalcule toutes les remises personnalisées
+
     Args:
         commande: L'instance de la commande à recalculer
     """
     from django.db.models import Sum
-    
+
     # Compter la quantité totale d'articles upsell
     total_quantite_upsell = commande.paniers.filter(
         article__isUpsell=True
     ).aggregate(total=Sum('quantite'))['total'] or 0
-    
+
     # Règle métier: Le compteur s'incrémente à partir de 2 unités d'articles upsell
     # 0-1 unités → compteur = 0
     # 2+ unités → compteur = total - 1
+    ancien_compteur = commande.compteur
     if total_quantite_upsell >= 2:
         commande.compteur = total_quantite_upsell - 1
     else:
         commande.compteur = 0
-    
+
     commande.save()
-    
+
     # Mettre à jour les type_prix_gele de tous les paniers upsell
     mettre_a_jour_types_prix_gele_upsell(commande)
-    
+
     # Recalculer tous les totaux
     commande.recalculer_totaux_upsell()
-    
+
+    # Si le compteur a changé, recalculer toutes les remises personnalisées
+    if ancien_compteur != commande.compteur:
+        print(f"🔄 Compteur upsell changé: {ancien_compteur} → {commande.compteur}")
+        _recalculer_remises_apres_changement_compteur(commande)
+
     print(f"🔄 Compteur upsell recalculé: {commande.compteur} (total articles upsell: {total_quantite_upsell})")
 
 
@@ -2038,35 +2088,49 @@ def _handle_update_quantity(request, commande, operateur):
         # ========== 4. MODIFICATION DE LA QUANTITÉ ==========
         # IMPORTANT: Le prix_panier reste INCHANGÉ (prix historique gelé)
         panier.quantite = nouvelle_quantite
+        panier.save()
 
-        # Calculer le nouveau sous-total AVANT remise
-        nouveau_sous_total_sans_remise = float(panier.prix_panier * nouvelle_quantite)
+        # ========== 5. RECALCUL DU COMPTEUR UPSELL SI NÉCESSAIRE ==========
+        # IMPORTANT: _recalculer_compteur_upsell gère automatiquement le recalcul des remises
+        if etait_upsell:
+            _recalculer_compteur_upsell(commande)
+            # Rafraîchir le panier pour avoir les données à jour
+            panier.refresh_from_db()
+            commande.refresh_from_db()
 
-        # ========== 4.1. GESTION DE LA REMISE SI APPLIQUÉE ==========
+        # ========== 6. GESTION DE LA REMISE SI APPLIQUÉE ET SI PAS UPSELL ==========
+        # Si c'était un article upsell, la remise a déjà été recalculée dans _recalculer_compteur_upsell
+        # On ne recalcule la remise manuellement que pour les articles non-upsell
         from commande.models import RemisePanier
         from decimal import Decimal
+        from commande.templatetags.remise_filters import calculer_prix_unitaire_effectif
 
         remise_info = None  # Pour la réponse JSON
 
-        # Vérifier si une remise est appliquée sur ce panier
-        if hasattr(panier, 'remise_personnalisee'):
+        if not etait_upsell and hasattr(panier, 'remise_personnalisee'):
             remise = panier.remise_personnalisee
 
-            print(f"🏷️ Remise détectée sur panier {panier_id}: {remise.type_remise} {remise.valeur_remise}")
+            print(f"🏷️ Remise détectée sur panier non-upsell {panier_id}: {remise.type_remise} {remise.valeur_remise}")
 
-            # Mettre à jour le sous_total_remise avec le nouveau sous-total sans remise
-            panier.sous_total_remise = nouveau_sous_total_sans_remise
+            # Calculer le sous-total basé sur le prix effectif actuel
+            prix_unitaire_effectif = calculer_prix_unitaire_effectif(panier)
+            quantite = Decimal(str(nouvelle_quantite))
+            nouveau_sous_total_sans_remise = prix_unitaire_effectif * quantite
 
-            # Recalculer le montant de la remise sur le nouveau sous-total
+            # Mettre à jour le sous_total_remise
+            panier.sous_total_remise = float(nouveau_sous_total_sans_remise)
+
+            # Recalculer le montant de la remise
             montant_remise = remise.calculer_montant_remise()
             remise.montant_applique = float(montant_remise)
             remise.save()
 
             # Calculer le nouveau sous-total AVEC remise
-            nouveau_sous_total_avec_remise = Decimal(str(nouveau_sous_total_sans_remise)) - montant_remise
+            nouveau_sous_total_avec_remise = nouveau_sous_total_sans_remise - montant_remise
 
             # Appliquer le sous-total avec remise
             panier.sous_total = float(nouveau_sous_total_avec_remise)
+            panier.save()
 
             print(f"   ✅ Remise recalculée: {nouveau_sous_total_sans_remise} DH - {montant_remise} DH = {nouveau_sous_total_avec_remise} DH")
 
@@ -2078,26 +2142,40 @@ def _handle_update_quantity(request, commande, operateur):
                 'type_remise': remise.type_remise,
                 'valeur_remise': float(remise.valeur_remise)
             }
-        else:
-            # Pas de remise: sous-total = prix_panier * quantité
-            panier.sous_total = nouveau_sous_total_sans_remise
+        elif not etait_upsell:
+            # Pas de remise et pas upsell: recalculer le sous-total basé sur le prix effectif
+            prix_unitaire_effectif = calculer_prix_unitaire_effectif(panier)
+            quantite = Decimal(str(nouvelle_quantite))
+            panier.sous_total = float(prix_unitaire_effectif * quantite)
+            panier.save()
 
-        panier.save()
+        # Si c'était un article upsell avec remise, récupérer les infos pour la réponse
+        if etait_upsell and hasattr(panier, 'remise_personnalisee'):
+            panier.refresh_from_db()
+            remise = panier.remise_personnalisee
+            remise_info = {
+                'sous_total_original': float(panier.sous_total_remise),
+                'montant_remise': float(remise.montant_applique),
+                'nouveau_sous_total': float(panier.sous_total),
+                'type_remise': remise.type_remise,
+                'valeur_remise': float(remise.valeur_remise)
+            }
 
-        # ========== 5. RECALCUL DU COMPTEUR UPSELL SI NÉCESSAIRE ==========
-        if etait_upsell:
-            _recalculer_compteur_upsell(commande)
-
-        # ========== 6. RECALCUL DU TOTAL AVEC FRAIS ==========
+        # ========== 7. RECALCUL DU TOTAL AVEC FRAIS ==========
         commande.recalculer_total_avec_frais()
 
-        # ========== 7. RÉPONSE JSON ==========
+        # ========== 8. CALCUL DU PRIX UNITAIRE EFFECTIF POUR L'AFFICHAGE ==========
+        # Pour les articles upsells, le prix unitaire change selon le compteur
+        prix_unitaire_effectif = calculer_prix_unitaire_effectif(panier)
+
+        # ========== 9. RÉPONSE JSON ==========
         response_data = {
             'success': True,
             'message': f'Quantité modifiée de {ancienne_quantite} à {nouvelle_quantite}',
             'sous_total': float(panier.sous_total),
             'total_commande': float(commande.total_cmd),
-            'compteur': commande.compteur
+            'compteur': commande.compteur,
+            'prix_unitaire_effectif': float(prix_unitaire_effectif)  # Prix effectif actuel selon compteur/promo/liquidation
         }
 
         # Ajouter les infos de remise si elle existe
@@ -3558,7 +3636,10 @@ def appliquer_remise_panier(request, panier_id):
     try:
         # Récupérer l'opérateur
         try:
-            operateur = Operateur.objects.get(user=request.user, type_operateur='CONFIRMATION')
+            operateur = Operateur.objects.get(
+                user=request.user,
+                type_operateur__in=['CONFIRMATION', 'SUPERVISEUR_PREPARATION']
+            )
         except Operateur.DoesNotExist:
             return JsonResponse({
                 'success': False,
@@ -3566,7 +3647,14 @@ def appliquer_remise_panier(request, panier_id):
             }, status=403)
 
         # Récupérer le panier
-        panier = get_object_or_404(Panier, id=panier_id)
+        try:
+            panier = Panier.objects.get(id=panier_id)
+        except Panier.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Panier non trouvé'
+            }, status=404)
+
         commande = panier.commande
 
         # Vérifier que la commande appartient aux commandes accessibles par l'opérateur
@@ -3605,8 +3693,12 @@ def appliquer_remise_panier(request, panier_id):
                 'error': 'La valeur de la remise doit être supérieure à 0'
             }, status=400)
 
-        # Récupérer le sous-total actuel du panier (avant remise)
-        sous_total_actuel = Decimal(str(panier.sous_total))
+        # Calculer le sous-total basé sur le prix effectif actuel (upsells, promo, liquidation)
+        from commande.templatetags.remise_filters import calculer_prix_unitaire_effectif
+
+        prix_unitaire_effectif = calculer_prix_unitaire_effectif(panier)
+        quantite = Decimal(str(panier.quantite))
+        sous_total_actuel = prix_unitaire_effectif * quantite
 
         # On ne travaille qu'en pourcentage
         type_remise = 'POURCENTAGE'
@@ -3700,7 +3792,10 @@ def retirer_remise_panier(request, panier_id):
     try:
         # Récupérer l'opérateur
         try:
-            operateur = Operateur.objects.get(user=request.user, type_operateur='CONFIRMATION')
+            operateur = Operateur.objects.get(
+                user=request.user,
+                type_operateur__in=['CONFIRMATION', 'SUPERVISEUR_PREPARATION']
+            )
         except Operateur.DoesNotExist:
             return JsonResponse({
                 'success': False,
@@ -3708,7 +3803,14 @@ def retirer_remise_panier(request, panier_id):
             }, status=403)
 
         # Récupérer le panier
-        panier = get_object_or_404(Panier, id=panier_id)
+        try:
+            panier = Panier.objects.get(id=panier_id)
+        except Panier.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Panier non trouvé'
+            }, status=404)
+
         commande = panier.commande
 
         # Vérifier l'accès
@@ -3787,7 +3889,13 @@ def calculer_remise_panier_preview(request, panier_id):
 
     try:
         # Récupérer le panier
-        panier = get_object_or_404(Panier, id=panier_id)
+        try:
+            panier = Panier.objects.get(id=panier_id)
+        except Panier.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Panier non trouvé'
+            }, status=404)
 
         # Récupérer les paramètres
         type_remise = request.GET.get('type_remise', 'POURCENTAGE')
@@ -3813,12 +3921,12 @@ def calculer_remise_panier_preview(request, panier_id):
                 'error': 'La valeur de la remise doit être supérieure à 0'
             }, status=400)
 
-        # Calculer la remise
-        # Utiliser sous_total_remise si disponible (cas où une remise est déjà appliquée), sinon sous_total
-        if panier.sous_total_remise > 0:
-            sous_total_actuel = Decimal(str(panier.sous_total_remise))
-        else:
-            sous_total_actuel = Decimal(str(panier.sous_total))
+        # Calculer le sous-total basé sur le prix effectif actuel (upsells, promo, liquidation)
+        from commande.templatetags.remise_filters import calculer_prix_unitaire_effectif
+
+        prix_unitaire_effectif = calculer_prix_unitaire_effectif(panier)
+        quantite = Decimal(str(panier.quantite))
+        sous_total_actuel = prix_unitaire_effectif * quantite
 
         # On ne travaille qu'en pourcentage
         type_remise = 'POURCENTAGE'

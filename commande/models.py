@@ -747,21 +747,26 @@ class RemisePanier(models.Model):
     def calculer_montant_remise(self):
         """
         Calcule le montant de la remise à appliquer sur le sous-total du panier.
-        Utilise sous_total_remise s'il existe (sous-total original), sinon utilise sous_total.
+
+        IMPORTANT: Utilise le prix effectif actuel (upsells, promo, liquidation)
+        pour calculer le sous-total de base, et non le prix_panier gelé.
+
+        Cela permet d'appliquer un pourcentage de remise sur le prix réel actuel,
+        tenant compte des variations dynamiques (compteur upsell, promotions, etc.).
 
         Returns:
             Decimal: Montant de la remise en DH
         """
         from decimal import Decimal
+        from commande.templatetags.remise_filters import calculer_prix_unitaire_effectif
 
-        # Base de calcul = sous-total original si remise déjà appliquée, sinon sous-total actuel
-        if self.panier.sous_total_remise > 0:
-            sous_total_panier = Decimal(str(self.panier.sous_total_remise))
-        else:
-            sous_total_panier = Decimal(str(self.panier.sous_total))
+        # Calculer le sous-total basé sur le prix effectif actuel
+        prix_unitaire_effectif = calculer_prix_unitaire_effectif(self.panier)
+        quantite = Decimal(str(self.panier.quantite))
+        sous_total_panier = prix_unitaire_effectif * quantite
 
         if self.type_remise == 'POURCENTAGE':
-            # Remise en pourcentage du sous-total
+            # Remise en pourcentage du sous-total effectif
             montant = sous_total_panier * (Decimal(str(self.valeur_remise)) / Decimal('100'))
         else:
             # Montant fixe
@@ -776,18 +781,25 @@ class RemisePanier(models.Model):
     def appliquer_remise(self):
         """
         Applique la remise sur le panier en recalculant son sous-total.
-        Le nouveau sous-total = sous-total actuel - montant de la remise.
-        Le sous-total original est sauvegardé dans panier.sous_total_remise.
+
+        IMPORTANT: Recalcule d'abord le sous-total basé sur le prix effectif actuel
+        (upsells, promo, liquidation) pour avoir une base cohérente avec le prix réel.
+
+        Le nouveau sous-total = sous-total effectif - montant de la remise.
+        Le sous-total effectif est sauvegardé dans panier.sous_total_remise.
 
         Returns:
             Decimal: Nouveau sous-total après application de la remise
         """
         from decimal import Decimal
+        from commande.templatetags.remise_filters import calculer_prix_unitaire_effectif
 
-        # Sauvegarder le sous-total original avant remise dans sous_total_remise
-        sous_total_original = Decimal(str(self.panier.sous_total))
+        # Calculer le sous-total basé sur le prix effectif actuel
+        prix_unitaire_effectif = calculer_prix_unitaire_effectif(self.panier)
+        quantite = Decimal(str(self.panier.quantite))
+        sous_total_original = prix_unitaire_effectif * quantite
 
-        # Calculer le montant de la remise
+        # Calculer le montant de la remise (utilise déjà calculer_prix_unitaire_effectif en interne)
         montant_remise = self.calculer_montant_remise()
         self.montant_applique = float(montant_remise)
 
@@ -799,7 +811,7 @@ class RemisePanier(models.Model):
             nouveau_sous_total = Decimal('0')
 
         # Mettre à jour le panier
-        # IMPORTANT: Sauvegarder le sous-total original dans sous_total_remise AVANT de modifier sous_total
+        # IMPORTANT: Sauvegarder le sous-total effectif dans sous_total_remise AVANT de modifier sous_total
         self.panier.sous_total_remise = float(sous_total_original)
         self.panier.sous_total = float(nouveau_sous_total)
         self.panier.remise_appliquer = True
@@ -808,7 +820,7 @@ class RemisePanier(models.Model):
         # Sauvegarder cette remise
         self.save()
 
-        print(f"✅ Remise appliquée sur {self.panier}: -{montant_remise} DH (sous-total original: {sous_total_original} DH → nouveau: {nouveau_sous_total} DH)")
+        print(f"✅ Remise appliquée sur {self.panier}: -{montant_remise} DH (sous-total effectif: {sous_total_original} DH → nouveau: {nouveau_sous_total} DH)")
 
         return nouveau_sous_total
 

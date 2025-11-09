@@ -757,197 +757,14 @@
                     </div>
                 </div>
 
-            {% load static %}
-            {% load commande_filters %}
-            {% load remise_filters %}
-            {% load l10n %}
-            
-            {% for panier in commande.paniers.all %}
-            
-              <div class="article-card p-4 bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-all shadow-sm" 
-              data-article-id="{{ panier.id }}"
-              data-article='{"id": {{ panier.article.id|default:0 }}, "nom": "{{ panier.article.nom|default:''|escapejs }}", "reference": "{{ panier.article.reference|default:''|escapejs }}", "prix_actuel": {{ panier.article.prix_actuel|default:0|unlocalize }}, "prix_unitaire": {{ panier.article.prix_unitaire|default:0|unlocalize }}, "prix_upsell_1": {{ panier.article.prix_upsell_1|default:0|unlocalize}}, "prix_upsell_2": {{ panier.article.prix_upsell_2|default:0|unlocalize }}, "prix_upsell_3": {{ panier.article.prix_upsell_3|default:0|unlocalize }}, "prix_upsell_4": {{ panier.article.prix_upsell_4|default:0|unlocalize }}, "prix_remise_1": {{ panier.article.prix_remise_1|default:0|unlocalize }}, "prix_remise_2": {{ panier.article.prix_remise_2|default:0|unlocalize }}, "prix_remise_3": {{ panier.article.prix_remise_3|default:0|unlocalize }}, "prix_remise_4": {{ panier.article.prix_remise_4|default:0|unlocalize }}, "isUpsell": {{ panier.article.isUpsell|default_if_none:False|yesno:"true,false" }}, "pointure": "{{ panier.pointure|default:''|escapejs }}", "couleur": "{{ panier.couleur|default:''|escapejs }}", "categorie": "{{ panier.article.categorie|default:''|escapejs }}", "qte_article": {{ panier.article.qte_disponible|default:0 }}, "phase": "{{ panier.article.phase|default:''|escapejs }}", "has_promo_active": {{ panier.article.has_promo_active|default_if_none:False|yesno:"true,false" }}{% if panier.variante_id %}, "variante_id": {{ panier.variante_id|default:0 }}, "qte_variante": {{ panier.variante.qte_disponible|default:0 }}{% endif %}}'>
-              <div class="flex items-center justify-between">
-                    <!-- Informations de l'article -->
-                    <div class="flex-1">
-                        <div class="flex items-center space-x-4">
-                            <div class="flex-shrink-0">
-                                <div class="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 border-2 border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                                    {% if panier.article.image %}
-                                        <img src="/media/{{ panier.article.image }}" alt="Image de {{ panier.article.nom }}" 
-                                             class="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
-                                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                                    {% elif panier.article.image_url %}
-                                        <img src="{{ panier.article.image_url }}" alt="Image de {{ panier.article.nom }}" 
-                                             class="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
-                                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                                    {% endif %}
-                                    <div class="w-full h-full flex items-center justify-center text-gray-400 {% if panier.article.image or panier.article.image_url %}hidden{% endif %}">
-                                        <i class="fas fa-image text-xl"></i>
-                                    </div>
-                                </div>
-                            </div>
-                            <!-- Nom et référence -->
-                            <div class="min-w-0 flex-1">
-                                
-                                <div class="font-semibold text-lg article-title" style="color: #4B352A;">
-                                    {{ panier.article.nom }}
+            <!-- Section des articles avec support des remises -->
+            {% include 'Superpreparation/partials/_articles_section.html' %}
 
-                                    {% if panier.variante %}
-                                    <span class="inline-flex items-center px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium ml-2">
-                                        <i class="fas fa-layer-group mr-1"></i>Variante
-                                    </span>
-                                    {% endif %}
 
-                                    {% if panier.article.isUpsell %}
-                                    <span class="inline-flex items-center px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-semibold ml-2">
-                                        <i class="fas fa-arrow-up mr-1"></i>UPSELL
-                                    </span>
-                                    {% endif %}
-                                </div>
-                                <div class="text-sm text-gray-500">
-                                    <i class="fas fa-hashtag mr-1"></i>Réf: 
-                                    {% if panier.variante and panier.variante.reference_variante %}
-                                    <span class="text-gray-500 ">
-                                        {{ panier.variante.reference_variante }}
-                                    </span>
-                                    {% endif %}
-                                </div>
-                                <!-- Informations détaillées -->
-                                <div class="mt-2 flex flex-wrap gap-2">
-                                    {% if panier.variante and panier.variante.pointure %}
-                                    <span class="inline-flex items-center px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
-                                        <i class="fas fa-ruler-vertical mr-1"></i>{{ panier.variante.pointure }}
-                                    </span>
-                                    {% else %}
-                                    <span class="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-xs">
-                                        <i class="fas fa-ruler-vertical mr-1"></i>Taille N/A
-                                    </span>
-                                    {% endif %}
-                                    
-                                    {% if panier.variante and panier.variante.couleur %}
-                                    <span class="inline-flex items-center px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">
-                                        <i class="fas fa-palette mr-1"></i>{{ panier.variante.couleur }}
-                                    </span>
-                                    {% elif panier.couleur %}
-                                    <span class="inline-flex items-center px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">
-                                        <i class="fas fa-palette mr-1"></i>{{ panier.couleur }}
-                                    </span>
-                                    {% else %}
-                                    <span class="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-xs">
-                                        <i class="fas fa-palette mr-1"></i>Couleur N/A
-                                    </span>
-                                    {% endif %}
-                                    
-                                    {% if panier.article.categorie %}
-                                    <span class="inline-flex items-center px-2 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-medium">
-                                        <i class="fas fa-tag mr-1"></i>{{ panier.article.categorie }}
-                                    </span>
-                                    {% else %}
-                                    <span class="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-xs">
-                                        <i class="fas fa-tag mr-1"></i>Catégorie N/A
-                                    </span>
-                                    {% endif %}
-            
-                                    <!-- Affichage du stock de la variante -->
-                                    {% if panier.variante %}
-                                    <span class="inline-flex items-center px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
-                                        <i class="fas fa-boxes mr-1"></i>Stock variante: {{ panier.variante.qte_disponible|default:0 }}
-                                    </span>
-                                    {% else %}
-                                    <span class="inline-flex items-center px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
-                                        <i class="fas fa-boxes mr-1"></i>Stock article: {{ panier.article.qte_disponible|default:0 }}
-                                    </span>
-                                    {% endif %}
-            
-                                </div>
-                            </div>
-                            
-                            <!-- Quantité -->
-                            <div class="text-center min-w-0">
-                                <div class="text-sm text-gray-500">Quantité</div>
-                                <div class="flex items-center justify-center gap-1">
-                                    <button type="button" onclick="modifierQuantite({{ panier.id }}, -1)" class="w-6 h-6 bg-gray-200 hover:bg-gray-300 rounded text-sm transition-colors hover:bg-red-200">-</button>
-                                    <input type="number" id="quantite-{{ panier.id }}" value="{{ panier.quantite }}" min="1" max="99" 
-                                           data-previous-value="{{ panier.quantite }}"
-                                           class="w-16 text-center font-medium border border-gray-300 rounded px-2 py-1 focus:border-blue-500 focus:outline-none"
-                                           onchange="modifierQuantiteDirecte({{ panier.id }}, this.value)"
-                                           onblur="modifierQuantiteDirecte({{ panier.id }}, this.value)">
-                                    <button type="button" onclick="modifierQuantite({{ panier.id }}, 1)" class="w-6 h-6 bg-gray-200 hover:bg-gray-300 rounded text-sm transition-colors hover:bg-green-200">+</button>
-                                </div>
-                            </div>
-                            
-                            <!-- Prix unitaire -->
-                            <div class="text-center min-w-0">
-                                <div class="text-sm text-gray-500">Prix actuel</div>
-                                
-                                <!-- Utiliser le filtre get_prix_effectif_panier pour la logique des remises -->
-                                {% with panier|get_prix_effectif_panier as prix_effectif %}
-                                <div class="font-medium {{ prix_effectif.couleur_classe }}" id="prix-unitaire-{{ panier.id }}">
-                                    {{ prix_effectif.prix_unitaire|floatformat:2 }} DH
-                                </div>
-                                <div class="text-xs {{ prix_effectif.couleur_classe }} mt-1" id="prix-libelle-{{ panier.id }}">
-                                    <i class="{{ prix_effectif.icone }} mr-1"></i>{{ prix_effectif.libelle }}
-                                </div>
-                                {% endwith %}
-                            </div>
-                            
-                            <!-- Sous-total -->
-                            <div class="text-center min-w-0">
-                                <div class="text-sm text-gray-500">Sous-total</div>
-                                
-                                <!-- Utiliser le prix effectif calculé précédemment -->
-                                {% with panier|get_prix_effectif_panier as prix_effectif %}
-                                <div class="text-lg font-bold" style="color: #6d4b3b;" id="sous-total-{{ panier.id }}">
-                                    {{ prix_effectif.sous_total|floatformat:2 }} DH
-                                </div>
-                                {% endwith %}
-                            </div>
-                        </div>
-                    </div>
-                    
-                     <!-- Boutons d'action -->
-               <div class="flex space-x-2 ml-4">
-                <!-- Bouton Remise - PROTECTION: Ne fonctionne que si remise_appliquer est activé -->
-                {% if panier.article.phase != 'LIQUIDATION' and not panier.article.has_promo_active %}
-                <button type="button" onclick="ouvrirModalRemise({{ panier.id }})"
-                        class="px-3 py-2 bg-purple-500 hover:bg-purple-600 text-white text-sm rounded-lg transition-colors flex items-center {% if not panier.remise_appliquer %}opacity-50 cursor-not-allowed{% endif %}"
-                        title="{% if panier.remise_appliquer %}Appliquer une remise{% else %}Activez d'abord la remise avec le bouton vert ci-dessus{% endif %}"
-                        id="btn-remise-{{ panier.id }}"
-                        {% if not panier.remise_appliquer %}disabled{% endif %}>
-                    <i class="fas fa-percent mr-1"></i>Remise
-                </button>
-                {% elif panier.article.phase == 'LIQUIDATION' %}
-                <button type="button"
-                        class="px-3 py-2 bg-gray-400 text-white text-sm rounded-lg flex items-center cursor-not-allowed opacity-50"
-                        title="Les articles en liquidation ne peuvent pas avoir de remise"
-                        disabled>
-                    <i class="fas fa-ban mr-1"></i>Liquidation
-                </button>
-                {% elif panier.article.has_promo_active %}
-                <button type="button"
-                        class="px-3 py-2 bg-gray-400 text-white text-sm rounded-lg flex items-center cursor-not-allowed opacity-50"
-                        title="Les articles en promotion ne peuvent pas avoir de remise"
-                        disabled>
-                    <i class="fas fa-fire mr-1"></i>Promotion
-                </button>
-                {% endif %}
-                   
-                        <button type="button" onclick="supprimerArticle({{ panier.id }})" 
-                                class="px-3 py-2 bg-red-500 hover:bg-red-600 text-white text-sm rounded-lg transition-colors flex items-center" 
-                                title="Supprimer">
-                            <i class="fas fa-trash mr-1"></i>Supprimer
-                        </button>
-                    </div>
-                </div>
-            </div>
-            {% endfor %} 
-            
-                  
-            <!-- Script pour la gestion des remises - inclus directement dans le partial -->
-            <script src="{% static 'js/operatConfirme/Confirmation_commande/Remise.js' %}"></script>
-            
-            
+            <!-- Script pour la gestion des remises - Version Superviseur -->
+            <script src="{% static 'js/Superpreparation/Remise.js' %}"></script>
+
+
                 
                 <div class="flex justify-between items-center mt-4 p-4 bg-gray-50 rounded-lg">
                     <div class="text-sm text-gray-600">
@@ -5530,5 +5347,8 @@ window.afficherArticles = function(articles) {
         </div>
     </div>
 </div>
+
+<!-- Modal de remise personnalisée -->
+{% include 'Superpreparation/partials/_modal_remise.html' %}
 
 {% endblock %} 

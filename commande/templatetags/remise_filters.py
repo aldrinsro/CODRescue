@@ -3,6 +3,55 @@ from decimal import Decimal, ROUND_HALF_UP
 
 register = template.Library()
 
+
+def calculer_prix_unitaire_effectif(panier):
+    """
+    Calcule le prix unitaire effectif d'un panier en tenant compte de:
+    - Promotion active (priorité 1)
+    - Phase LIQUIDATION (priorité 2)
+    - Phase EN_TEST (priorité 3)
+    - Upsell avec compteur (priorité 4)
+    - Prix normal (défaut)
+
+    Cette fonction est utilisée pour calculer les remises en pourcentage
+    sur le prix actuel réel (et non sur prix_panier gelé).
+
+    Args:
+        panier: L'objet Panier
+
+    Returns:
+        Decimal: Prix unitaire effectif
+    """
+    article = panier.article
+    commande = panier.commande
+
+    # Promotion active - priorité sur tout
+    if hasattr(article, 'has_promo_active') and article.has_promo_active:
+        return Decimal(str(article.prix_actuel or article.prix_unitaire))
+
+    # Phase liquidation
+    if article.phase == 'LIQUIDATION':
+        prix_liq = article.Prix_liquidation if hasattr(article, 'Prix_liquidation') and article.Prix_liquidation else article.prix_actuel or article.prix_unitaire
+        return Decimal(str(prix_liq))
+
+    # Phase test
+    if article.phase == 'EN_TEST':
+        return Decimal(str(article.prix_actuel or article.prix_unitaire))
+
+    # Article upsell avec compteur
+    if hasattr(article, 'isUpsell') and article.isUpsell and commande.compteur > 0:
+        if commande.compteur == 1 and article.prix_upsell_1:
+            return Decimal(str(article.prix_upsell_1))
+        elif commande.compteur == 2 and article.prix_upsell_2:
+            return Decimal(str(article.prix_upsell_2))
+        elif commande.compteur == 3 and article.prix_upsell_3:
+            return Decimal(str(article.prix_upsell_3))
+        elif commande.compteur >= 4 and article.prix_upsell_4:
+            return Decimal(str(article.prix_upsell_4))
+
+    # Prix normal
+    return Decimal(str(article.prix_actuel or article.prix_unitaire))
+
 @register.filter
 def get_prix_affichage_remise(article, quantite=1):
     """
@@ -255,15 +304,6 @@ def get_prix_effectif_panier(panier):
                     'icone': 'fas fa-flask',
                     'est_remise': False
                 }
-            elif type_prix_gele.startswith('remise_'):
-                return {
-                    'prix_unitaire': float(prix_unitaire_effectif),
-                    'sous_total': float(sous_total_actuel),
-                    'libelle': f'Prix {type_prix_gele.replace("_", " ")} appliquée',
-                    'couleur_classe': 'text-purple-600',
-                    'icone': 'fas fa-percent',
-                    'est_remise': True
-                }
             elif type_prix_gele == 'normal':
                 return {
                     'prix_unitaire': float(prix_unitaire_effectif),
@@ -274,73 +314,8 @@ def get_prix_effectif_panier(panier):
                     'est_remise': False
                 }
 
-    # Vérifier si une remise a été explicitement appliquée
-    # PROTECTION: Les articles en liquidation et en promotion ne doivent jamais être traités comme ayant une remise
-    article_en_promotion = hasattr(article, 'has_promo_active') and article.has_promo_active
-    if hasattr(panier, 'remise_appliquer') and panier.remise_appliquer and article.phase != 'LIQUIDATION' and not article_en_promotion:
-        type_remise = getattr(panier, 'type_remise_appliquee', '')
-        
-        # Retourner le prix avec le libellé approprié selon le type de remise
-        if type_remise == 'remise_1':
-            return {
-                'prix_unitaire': float(prix_unitaire_effectif),
-                'sous_total': float(sous_total_actuel),
-                'libelle': 'Prix remise 1 appliquée',
-                'couleur_classe': 'text-purple-600',
-                'icone': 'fas fa-percent',
-                'est_remise': True
-            }
-        elif type_remise == 'remise_2':
-            return {
-                'prix_unitaire': float(prix_unitaire_effectif),
-                'sous_total': float(sous_total_actuel),
-                'libelle': 'Prix remise 2 appliquée',
-                'couleur_classe': 'text-purple-600',
-                'icone': 'fas fa-percent',
-                'est_remise': True
-            }
-        elif type_remise == 'remise_3':
-            return {
-                'prix_unitaire': float(prix_unitaire_effectif),
-                'sous_total': float(sous_total_actuel),
-                'libelle': 'Prix remise 3 appliquée',
-                'couleur_classe': 'text-purple-600',
-                'icone': 'fas fa-percent',
-                'est_remise': True
-            }
-        elif type_remise == 'remise_4':
-            return {
-                'prix_unitaire': float(prix_unitaire_effectif),
-                'sous_total': float(sous_total_actuel),
-                'libelle': 'Prix remise 4 appliquée',
-                'couleur_classe': 'text-purple-600',
-                'icone': 'fas fa-percent',
-                'est_remise': True
-            }
-        else:
-            # Remise personnalisée
-            return {
-                'prix_unitaire': float(prix_unitaire_effectif),
-                'sous_total': float(sous_total_actuel),
-                'libelle': 'Prix remisé',
-                'couleur_classe': 'text-purple-600',
-                'icone': 'fas fa-percent',
-                'est_remise': True
-            }
-    
-    # Aucune remise appliquée - utiliser la logique standard MAIS exclure les calculs upsell
-    # si le panier a une remise disponible (pour éviter les conflits)
-
-    # Vérifier si l'article a des prix de remise configurés
-    article_a_remise_disponible = any([
-        getattr(article, 'prix_remise_1', None),
-        getattr(article, 'prix_remise_2', None),
-        getattr(article, 'prix_remise_3', None),
-        getattr(article, 'prix_remise_4', None)
-    ])
-
-    # Pour tous les articles sans remise appliquée et sans type_prix_gele,
-    # calculer dynamiquement le libellé selon le compteur actuel
+    # Logique standard pour déterminer le prix
+    # Calculer dynamiquement le libellé selon le compteur actuel
     from commande.templatetags.commande_filters import get_prix_upsell_avec_compteur
 
     # Obtenir le prix selon le compteur actuel de la commande

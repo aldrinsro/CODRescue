@@ -65,7 +65,7 @@ function calculerApercu() {
     }
 
     // Construire l'URL avec les param�tres
-    const url = `/operateur-confirme/calculer-remise-preview/${panierId}/?type_remise=${typeRemise}&valeur_remise=${valeurRemise}`;
+    const url = `/Superpreparation/calculer-remise-preview/${panierId}/?type_remise=${typeRemise}&valeur_remise=${valeurRemise}`;
 
     // Afficher un indicateur de chargement
     previewContainer.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Calcul en cours...</div>';
@@ -153,8 +153,8 @@ function appliquerRemise() {
     // R�cup�rer le CSRF token
     const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
 
-    // Appeler l'API
-    fetch(`/operateur-confirme/appliquer-remise/${panierId}/`, {
+    // Appeler l'API (route superviseur)
+    fetch(`/Superpreparation/appliquer-remise/${panierId}/`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -204,8 +204,8 @@ function retirerRemise(panierId) {
     // R�cup�rer le CSRF token
     const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
 
-    // Appeler l'API
-    fetch(`/operateur-confirme/retirer-remise/${panierId}/`, {
+    // Appeler l'API (route superviseur)
+    fetch(`/Superpreparation/retirer-remise/${panierId}/`, {
         method: 'POST',
         headers: {
             'X-CSRFToken': csrfToken,

@@ -5,7 +5,7 @@
 
 {% for panier in commande.paniers.all %}
 
-  <div class="article-card p-4 bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-all shadow-sm" 
+  <div class="article-card p-4 bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-all shadow-sm"
   data-article-id="{{ panier.id }}"
   data-article='{"id": {{ panier.article.id|default:0 }}, "nom": "{{ panier.article.nom|default:''|escapejs }}", "reference": "{{ panier.article.reference|default:''|escapejs }}", "prix_actuel": {{ panier.article.prix_actuel|default:0|unlocalize }}, "prix_unitaire": {{ panier.article.prix_unitaire|default:0|unlocalize }}, "prix_upsell_1": {{ panier.article.prix_upsell_1|default:0|unlocalize}}, "prix_upsell_2": {{ panier.article.prix_upsell_2|default:0|unlocalize }}, "prix_upsell_3": {{ panier.article.prix_upsell_3|default:0|unlocalize }}, "prix_upsell_4": {{ panier.article.prix_upsell_4|default:0|unlocalize }}, "prix_remise_1": {{ panier.article.prix_remise_1|default:0|unlocalize }}, "prix_remise_2": {{ panier.article.prix_remise_2|default:0|unlocalize }}, "prix_remise_3": {{ panier.article.prix_remise_3|default:0|unlocalize }}, "prix_remise_4": {{ panier.article.prix_remise_4|default:0|unlocalize }}, "isUpsell": {{ panier.article.isUpsell|default_if_none:False|yesno:"true,false" }}, "pointure": "{{ panier.pointure|default:''|escapejs }}", "couleur": "{{ panier.couleur|default:''|escapejs }}", "categorie": "{{ panier.article.categorie|default:''|escapejs }}", "qte_article": {{ panier.article.qte_disponible|default:0 }}, "phase": "{{ panier.article.phase|default:''|escapejs }}", "has_promo_active": {{ panier.article.has_promo_active|default_if_none:False|yesno:"true,false" }}{% if panier.variante_id %}, "variante_id": {{ panier.variante_id|default:0 }}, "qte_variante": {{ panier.variante.qte_disponible|default:0 }}{% endif %}}'>
   <div class="flex items-center justify-between">
@@ -15,11 +15,11 @@
                 <div class="flex-shrink-0">
                     <div class="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 border-2 border-gray-200 shadow-sm hover:shadow-md transition-shadow">
                         {% if panier.article.image %}
-                            <img src="/media/{{ panier.article.image }}" alt="Image de {{ panier.article.nom }}" 
+                            <img src="/media/{{ panier.article.image }}" alt="Image de {{ panier.article.nom }}"
                                  class="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
                                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                         {% elif panier.article.image_url %}
-                            <img src="{{ panier.article.image_url }}" alt="Image de {{ panier.article.nom }}" 
+                            <img src="{{ panier.article.image_url }}" alt="Image de {{ panier.article.nom }}"
                                  class="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
                                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                         {% endif %}
@@ -30,7 +30,7 @@
                 </div>
                 <!-- Nom et référence -->
                 <div class="min-w-0 flex-1">
-                    
+
                     <div class="font-semibold text-lg article-title" style="color: #4B352A;">
                         {{ panier.article.nom }}
 
@@ -47,7 +47,7 @@
                         {% endif %}
                     </div>
                     <div class="text-sm text-gray-500">
-                        <i class="fas fa-hashtag mr-1"></i>Réf: 
+                        <i class="fas fa-hashtag mr-1"></i>Réf:
                         {% if panier.variante and panier.variante.reference_variante %}
                         <span class="text-gray-500 ">
                             {{ panier.variante.reference_variante }}
@@ -65,7 +65,7 @@
                             <i class="fas fa-ruler-vertical mr-1"></i>Taille N/A
                         </span>
                         {% endif %}
-                        
+
                         {% if panier.variante and panier.variante.couleur %}
                         <span class="inline-flex items-center px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">
                             <i class="fas fa-palette mr-1"></i>{{ panier.variante.couleur }}
@@ -79,7 +79,7 @@
                             <i class="fas fa-palette mr-1"></i>Couleur N/A
                         </span>
                         {% endif %}
-                        
+
                         {% if panier.article.categorie %}
                         <span class="inline-flex items-center px-2 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-medium">
                             <i class="fas fa-tag mr-1"></i>{{ panier.article.categorie }}
@@ -103,13 +103,13 @@
 
                     </div>
                 </div>
-                
+
                 <!-- Quantité -->
                 <div class="text-center min-w-0">
                     <div class="text-sm text-gray-500">Quantité</div>
                     <div class="flex items-center justify-center gap-1">
                         <button type="button" onclick="modifierQuantite({{ panier.id }}, -1)" class="w-6 h-6 bg-gray-200 hover:bg-gray-300 rounded text-sm transition-colors hover:bg-red-200">-</button>
-                        <input type="number" id="quantite-{{ panier.id }}" value="{{ panier.quantite }}" min="1" max="99" 
+                        <input type="number" id="quantite-{{ panier.id }}" value="{{ panier.quantite }}" min="1" max="99"
                                data-previous-value="{{ panier.quantite }}"
                                class="w-16 text-center font-medium border border-gray-300 rounded px-2 py-1 focus:border-blue-500 focus:outline-none"
                                onchange="modifierQuantiteDirecte({{ panier.id }}, this.value)"
@@ -117,7 +117,7 @@
                         <button type="button" onclick="modifierQuantite({{ panier.id }}, 1)" class="w-6 h-6 bg-gray-200 hover:bg-gray-300 rounded text-sm transition-colors hover:bg-green-200">+</button>
                     </div>
                 </div>
-                
+
                 <!-- Prix unitaire -->
                 <div class="text-center min-w-0">
                     <div class="text-sm text-gray-500">Prix actuel</div>
@@ -139,7 +139,7 @@
                     </div>
                     {% endwith %}
                 </div>
-                
+
                 <!-- Sous-total -->
                 <div class="text-center min-w-0">
                     <div class="text-sm text-gray-500">Sous-total</div>
@@ -178,7 +178,7 @@
                 </div>
             </div>
         </div>
-        
+
          <!-- Boutons d'action -->
    <div class="flex flex-col space-y-2 ml-4">
             <!-- Bouton Appliquer remise (affiché seulement si aucune remise n'est appliquée) -->

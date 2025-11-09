@@ -378,15 +378,7 @@ def get_type_remise_appliquee(panier):
             'icone': 'fas fa-fire'
         }
     
-    # Vérifier si c'est vraiment une remise (prix inférieur au prix normal)
-    prix_normal = article.prix_actuel or article.prix_unitaire
-    if prix_normal and prix_unitaire_effectif < Decimal(str(prix_normal)):
-        return {
-            'type': 'personnalise',
-            'libelle': 'Prix remisé', 
-            'couleur': 'text-purple-600',
-            'icone': 'fas fa-percent'
-        }
+   
     
     # Pas de remise détectée
     return None
