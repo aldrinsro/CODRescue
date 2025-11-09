@@ -1,0 +1,478 @@
+{% extends 'composant_generale/operatPrepa/base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }} - YZ-CMD{% endblock %}
+
+{% block page_title %}{{ page_title }}{% endblock %}
+{% block page_subtitle %}{{ page_subtitle }}{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="main-content transition-all duration-300" id="mainContent">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 text-white p-6 rounded-xl shadow-lg"
+         style="background: linear-gradient(to right, var(--preparation-primary), var(--preparation-dark));">
+        <div>
+            <h1 class="text-3xl font-bold flex items-center mb-2">
+                <i class="fas fa-box-open mr-3" style="color: var(--preparation-border-accent);"></i>
+                {{ page_title }}
+            </h1>
+            <p style="color: var(--preparation-border-accent);">{{ page_subtitle }}</p>
+        </div>
+    </div>
+
+    <!-- Statistiques rapides -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
+        <!-- Total des commandes à collecter -->
+        <div class="group bg-white rounded-xl shadow-lg p-4 sm:p-6 transition-all duration-300 hover:shadow-2xl hover:scale-105 border border-gray-100" style="border-color: var(--preparation-border-accent);">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <div class="p-3 sm:p-4 rounded-full bg-gradient-to-r from-orange-100 to-orange-200 text-orange-600 transition-all duration-300 group-hover:from-orange-500 group-hover:to-orange-600 group-hover:text-white group-hover:scale-110">
+                        <i class="fas fa-box-open text-xl sm:text-2xl"></i>
+                    </div>
+                    <div class="ml-3 sm:ml-4">
+                        <p class="text-xs sm:text-sm font-medium text-gray-600 group-hover:text-gray-700 transition-colors duration-300">À Collecter</p>
+                        <p class="text-2xl sm:text-3xl font-bold text-gray-900 transition-all duration-300 group-hover:text-orange-600">{{ stats.total_a_collecter }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Valeur totale -->
+        <div class="group bg-white rounded-xl shadow-lg p-4 sm:p-6 transition-all duration-300 hover:shadow-2xl hover:scale-105 border border-gray-100" style="border-color: var(--preparation-border-accent);">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <div class="p-3 sm:p-4 rounded-full bg-gradient-to-r from-green-100 to-green-200 text-green-600 transition-all duration-300 group-hover:from-green-500 group-hover:to-green-600 group-hover:text-white group-hover:scale-110">
+                        <i class="fas fa-coins text-xl sm:text-2xl"></i>
+                    </div>
+                    <div class="ml-3 sm:ml-4">
+                        <p class="text-xs sm:text-sm font-medium text-gray-600 group-hover:text-gray-700 transition-colors duration-300">Valeur Totale</p>
+                        <p class="text-2xl sm:text-3xl font-bold text-gray-900 transition-all duration-300 group-hover:text-green-600">{{ stats.valeur_totale|floatformat:0 }} DH</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-lg border p-4 sm:p-6 mb-6 sm:mb-8 preparation-card" style="border-color: var(--preparation-border-accent);">
+        <div class="mb-4 sm:mb-6 flex flex-col gap-4">
+            <div class="flex-1">
+                <p class="text-sm sm:text-base text-gray-700 mb-2">
+                    Liste des commandes en préparation - À marquer comme collectées
+                </p>
+                {% if search_query %}
+                    <div class="flex items-center text-xs sm:text-sm text-gray-600">
+                        <i class="fas fa-search mr-2"></i>
+                        <span class="truncate">Résultats pour : "<strong>{{ search_query }}</strong>"</span>
+                        <a href="{% url 'Prepacommande:commandes_collectees' %}" class="ml-2 text-blue-600 hover:text-blue-800 flex-shrink-0">
+                            <i class="fas fa-times-circle"></i> Effacer
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+            <div class="w-full">
+                <div class="flex gap-2">
+                    <form method="GET" class="flex flex-1">
+                        <input type="text" name="search" value="{{ search_query }}"
+                               placeholder="Rechercher par ID, nom, téléphone..."
+                               class="flex-1 block px-3 py-2 border border-gray-300 rounded-l-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
+                        <button type="submit" class="inline-flex items-center px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium rounded-r-md border border-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 touch-manipulation">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Barre d'actions groupées -->
+        <div id="bulkActionsBar" class="hidden mb-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <span class="text-sm font-medium text-orange-900">
+                        <span id="selectedCount">0</span> commande(s) sélectionnée(s)
+                    </span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button onclick="bulkChangerEtat('Collectée')"
+                            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-orange-500 hover:bg-orange-600 transition-all">
+                        <i class="fas fa-box mr-2"></i> Marquer comme Collectées
+                    </button>
+                    <button onclick="clearSelection()"
+                            class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 transition-all">
+                        <i class="fas fa-times mr-2"></i> Annuler
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Vue Desktop/Tablette -->
+        <div class="hidden lg:block overflow-x-auto rounded-lg shadow-sm border border-gray-200">
+            <table id="cmdTable" class="min-w-full divide-y divide-gray-200">
+                <thead style="background-color: var(--preparation-primary);">
+                    <tr>
+                        <th scope="col" class="px-4 py-3 text-center text-xs font-medium text-white uppercase tracking-wider">
+                            <input type="checkbox" id="selectAll" onchange="toggleSelectAll()"
+                                   class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
+                        </th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">ID YZ</th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">N° Externe</th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Client</th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Téléphone</th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Ville</th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Date Affectation</th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Total</th>
+                        <th scope="col" class="px-4 py-3 text-center text-xs font-medium text-white uppercase tracking-wider">Panier</th>
+                        <th scope="col" class="px-4 py-3 text-center text-xs font-medium text-white uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% if commandes_affectees %}
+                        {% for commande in commandes_affectees %}
+                        <tr class="hover:bg-gray-50" data-commande-id="{{ commande.id }}" data-etat="En préparation">
+                            <td class="px-4 py-4 whitespace-nowrap text-center">
+                                <input type="checkbox"
+                                       class="commande-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                                       data-commande-id="{{ commande.id }}"
+                                       data-etat="En préparation"
+                                       onchange="updateBulkActionsBar()">
+                            </td>
+                            <td class="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                {{ commande.id_yz }}
+                            </td>
+                            <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{{ commande.num_cmd|default:"-" }}</td>
+                            <td class="px-4 py-4 whitespace-nowrap">
+                                <div class="text-sm font-medium text-gray-900">{{ commande.client.prenom }} {{ commande.client.nom }}</div>
+                                {% if commande.client.email %}
+                                <div class="text-xs text-gray-500">{{ commande.client.email }}</div>
+                                {% endif %}
+                            </td>
+                            <td class="px-4 py-4 whitespace-nowrap">
+                                {% if commande.client.numero_tel %}
+                                <div class="text-sm text-gray-900 font-medium">
+                                    <i class="fas fa-phone mr-1"></i>
+                                    {{ commande.client.numero_tel }}
+                                </div>
+                                {% else %}
+                                <div class="text-sm text-gray-500">Non renseigné</div>
+                                {% endif %}
+                            </td>
+                            <td class="px-4 py-4 whitespace-nowrap">
+                                {% if commande.ville %}
+                                    <div class="text-sm text-gray-900">{{ commande.ville.nom }}</div>
+                                    <div class="text-xs text-gray-500">{{ commande.ville.region.nom_region }}</div>
+                                {% else %}
+                                    <div class="text-sm text-gray-500">Non définie</div>
+                                {% endif %}
+                            </td>
+                            <td class="px-4 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900">{{ commande.etat_actuel.date_debut|date:"d/m/Y" }}</div>
+                                <div class="text-xs text-gray-500">{{ commande.etat_actuel.date_debut|date:"H:i" }}</div>
+                            </td>
+                            <td class="px-4 py-4 whitespace-nowrap">
+                                <div class="text-sm font-bold text-green-600">{{ commande.total_cmd|floatformat:2 }} DH</div>
+                            </td>
+                            <td class="px-4 py-4 whitespace-nowrap text-center">
+                                <a href="{% url 'Prepacommande:detail_prepa' commande.pk %}"
+                                   class="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md shadow-sm text-white transition-all hover:shadow-lg"
+                                   style="background-color: var(--preparation-primary); hover:background-color: var(--preparation-dark);"
+                                   title="Voir le panier de cette commande">
+                                    <i class="fas fa-shopping-cart mr-1"></i>
+                                    {{ commande.paniers.count }} article{{ commande.paniers.count|pluralize }}
+                                </a>
+                            </td>
+                            <td class="px-4 py-4 whitespace-nowrap text-center">
+                                <div class="flex flex-col space-y-2">
+                                    <a href="{% url 'Prepacommande:detail_prepa' commande.pk %}"
+                                       class="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md shadow-sm text-white transition-all hover:shadow-lg"
+                                       style="background-color: var(--preparation-primary); hover:background-color: var(--preparation-dark);"
+                                       title="Traiter la commande">
+                                        <i class="fas fa-tasks mr-1"></i> Traiter
+                                    </a>
+
+                                    <button onclick="changerEtatCommande({{ commande.id }}, 'Collectée')"
+                                            class="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-orange-500 hover:bg-orange-600 transition-all hover:shadow-lg"
+                                            title="Marquer comme collectée"
+                                            id="btn-collecter-{{ commande.id }}">
+                                        <i class="fas fa-box mr-1"></i> Collecter
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="10" class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">
+                                <div class="flex flex-col items-center py-8">
+                                    <i class="fas fa-inbox text-4xl text-gray-300 mb-4"></i>
+                                    <h3 class="text-lg font-medium text-gray-600 mb-2">Aucune commande collectée</h3>
+                                    <p class="text-gray-500">Vous n'avez actuellement aucune commande dans l'état "Collectée".</p>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Vue Mobile -->
+        <div class="lg:hidden space-y-4">
+            {% if commandes_affectees %}
+                {% for commande in commandes_affectees %}
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4" data-commande-id="{{ commande.id }}" data-etat="En préparation">
+                    <div class="flex items-center justify-between mb-3">
+                        <input type="checkbox"
+                               class="commande-checkbox w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 mr-3"
+                               data-commande-id="{{ commande.id }}"
+                               data-etat="En préparation"
+                               onchange="updateBulkActionsBar()">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full flex items-center justify-center">
+                                <span class="text-white font-bold text-sm">{{ commande.id_yz }}</span>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-gray-900">{{ commande.client.prenom }} {{ commande.client.nom }}</h3>
+                                <p class="text-sm text-gray-500">{{ commande.num_cmd|default:"-" }}</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-lg font-bold text-green-600">{{ commande.total_cmd|floatformat:2 }} DH</div>
+                            <div class="text-xs text-gray-500">{{ commande.paniers.count }} article{{ commande.paniers.count|pluralize }}</div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col space-y-2">
+                        <a href="{% url 'Prepacommande:detail_prepa' commande.pk %}"
+                           class="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white transition-all"
+                           style="background-color: var(--preparation-primary); hover:background-color: var(--preparation-dark);">
+                            <i class="fas fa-tasks mr-2"></i> Traiter la commande
+                        </a>
+
+                        <button onclick="changerEtatCommande({{ commande.id }}, 'Collectée')"
+                                class="w-full inline-flex items-center justify-center px-3 py-2 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-orange-500 hover:bg-orange-600 transition-all"
+                                title="Marquer comme collectée"
+                                id="btn-collecter-{{ commande.id }}">
+                            <i class="fas fa-box mr-1"></i> Marquer comme Collectée
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+                    <i class="fas fa-inbox text-4xl text-gray-300 mb-4"></i>
+                    <h3 class="text-lg font-medium text-gray-600 mb-2">Aucune commande à collecter</h3>
+                    <p class="text-gray-500">Vous n'avez actuellement aucune commande en préparation à collecter.</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Pagination -->
+        {% if paginator.num_pages > 1 %}
+        <div class="bg-white rounded-xl shadow-lg border p-6 mt-6" style="border-color: var(--preparation-border-accent);">
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="text-sm text-gray-700">
+                    <span class="font-medium">Page {{ current_page }}</span>
+                    sur
+                    <span class="font-medium">{{ total_pages }}</span>
+                    ({{ paginator.count }} commande{{ paginator.count|pluralize }} au total)
+                </div>
+
+                <div class="flex items-center space-x-2">
+                    {% if has_previous %}
+                        <a href="?page={{ previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if items_per_page != 10 %}&per_page={{ items_per_page }}{% endif %}"
+                           class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
+                            <i class="fas fa-chevron-left mr-1"></i>
+                            Précédent
+                        </a>
+                    {% else %}
+                        <span class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-400 bg-gray-100 cursor-not-allowed">
+                            <i class="fas fa-chevron-left mr-1"></i>
+                            Précédent
+                        </span>
+                    {% endif %}
+
+                    {% if has_next %}
+                        <a href="?page={{ next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if items_per_page != 10 %}&per_page={{ items_per_page }}{% endif %}"
+                           class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
+                            Suivant
+                            <i class="fas fa-chevron-right ml-1"></i>
+                        </a>
+                    {% else %}
+                        <span class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-400 bg-gray-100 cursor-not-allowed">
+                            Suivant
+                            <i class="fas fa-chevron-right ml-1"></i>
+                        </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Fonction pour tout sélectionner/désélectionner
+function toggleSelectAll() {
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const checkboxes = document.querySelectorAll('.commande-checkbox');
+
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = selectAllCheckbox.checked;
+    });
+
+    updateBulkActionsBar();
+}
+
+// Fonction pour mettre à jour la barre d'actions groupées
+function updateBulkActionsBar() {
+    const checkboxes = document.querySelectorAll('.commande-checkbox:checked');
+    const bulkActionsBar = document.getElementById('bulkActionsBar');
+    const selectedCount = document.getElementById('selectedCount');
+
+    if (checkboxes.length > 0) {
+        bulkActionsBar.classList.remove('hidden');
+        selectedCount.textContent = checkboxes.length;
+    } else {
+        bulkActionsBar.classList.add('hidden');
+    }
+
+    const allCheckboxes = document.querySelectorAll('.commande-checkbox');
+    const selectAllCheckbox = document.getElementById('selectAll');
+    if (selectAllCheckbox) {
+        selectAllCheckbox.checked = allCheckboxes.length > 0 && checkboxes.length === allCheckboxes.length;
+    }
+}
+
+// Fonction pour annuler la sélection
+function clearSelection() {
+    const checkboxes = document.querySelectorAll('.commande-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = false;
+    });
+
+    const selectAllCheckbox = document.getElementById('selectAll');
+    if (selectAllCheckbox) {
+        selectAllCheckbox.checked = false;
+    }
+
+    updateBulkActionsBar();
+}
+
+// Fonction pour changer l'état de plusieurs commandes
+function bulkChangerEtat(nouvelEtat) {
+    const checkboxes = document.querySelectorAll('.commande-checkbox:checked');
+
+    if (checkboxes.length === 0) {
+        showNotification('Aucune commande sélectionnée', 'error');
+        return;
+    }
+
+    const commandeIds = Array.from(checkboxes).map(cb => cb.dataset.commandeId);
+
+    const bulkActionsBar = document.getElementById('bulkActionsBar');
+    const originalContent = bulkActionsBar.innerHTML;
+    bulkActionsBar.innerHTML = `
+        <div class="flex items-center justify-center p-4">
+            <i class="fas fa-spinner fa-spin mr-3 text-orange-600"></i>
+            <span class="text-sm font-medium text-orange-900">Traitement de ${commandeIds.length} commande(s) en cours...</span>
+        </div>
+    `;
+
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+
+    fetch('/operateur-preparation/api/bulk-changer-etat-commandes/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken,
+        },
+        body: JSON.stringify({
+            commande_ids: commandeIds,
+            nouvel_etat: nouvelEtat
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(`${data.updated_count} commande(s) mise(s) à jour avec succès !`, 'success', 4000);
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            bulkActionsBar.innerHTML = originalContent;
+            showNotification(data.error || 'Erreur lors de la mise à jour', 'error');
+        }
+    })
+    .catch(error => {
+        bulkActionsBar.innerHTML = originalContent;
+        showNotification('Erreur de connexion', 'error');
+    });
+}
+
+// Fonction pour changer l'état d'une commande
+function changerEtatCommande(commandeId, nouvelEtat) {
+    const button = event.target.closest('button');
+    const originalContent = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> En cours...';
+    button.disabled = true;
+
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+
+    fetch(`/operateur-preparation/api/changer-etat-commande/${commandeId}/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken,
+        },
+        body: JSON.stringify({
+            nouvel_etat: nouvelEtat
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('État mis à jour avec succès !', 'success');
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            button.innerHTML = originalContent;
+            button.disabled = false;
+            showNotification(data.error || 'Erreur lors de la mise à jour', 'error');
+        }
+    })
+    .catch(error => {
+        button.innerHTML = originalContent;
+        button.disabled = false;
+        showNotification('Erreur de connexion', 'error');
+    });
+}
+
+// Fonction pour afficher une notification
+function showNotification(message, type = 'info', duration = 3000) {
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all transform translate-x-full opacity-0 max-w-sm`;
+
+    if (type === 'success') {
+        notification.classList.add('bg-green-500', 'text-white');
+        notification.innerHTML = `<i class="fas fa-check-circle mr-2"></i>${message}`;
+    } else if (type === 'error') {
+        notification.classList.add('bg-red-500', 'text-white');
+        notification.innerHTML = `<i class="fas fa-exclamation-circle mr-2"></i>${message}`;
+    } else {
+        notification.classList.add('bg-blue-500', 'text-white');
+        notification.innerHTML = `<i class="fas fa-info-circle mr-2"></i>${message}`;
+    }
+
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+        notification.classList.remove('translate-x-full', 'opacity-0');
+        notification.classList.add('translate-x-0', 'opacity-100');
+    }, 100);
+
+    setTimeout(() => {
+        notification.classList.remove('translate-x-0', 'opacity-100');
+        notification.classList.add('translate-x-full', 'opacity-0');
+        setTimeout(() => notification.remove(), 500);
+    }, duration);
+}
+</script>
+{% endblock %}

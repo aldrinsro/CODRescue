@@ -89,12 +89,39 @@
                             background: #a8a8a8;
                         }
                     </style>
-                    <a href="{% url 'Prepacommande:liste_prepa' %}{% if search_query %}?search={{ search_query }}{% endif %}" 
-                       class="{% if filter_type == 'all' %}border-blue-500 text-blue-600{% else %}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{% endif %} whitespace-nowrap py-2 px-1 border-b-2 font-medium text-xs transition-colors duration-200">
-                        <i class="fas fa-list mr-2"></i>
-                        Toutes les commandes
-                        <span class="ml-2 bg-gray-100 text-gray-900 py-0.5 px-2.5 rounded-full text-xs font-medium">{{ stats.total_affectees }}</span>
-                    </a>              
+                    <a href="{% url 'Prepacommande:liste_prepa' %}{% if search_query %}?search={{ search_query }}{% endif %}"
+                       class="{% if filter_type == 'all' or not filter_type %}border-blue-500 text-blue-600{% else %}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{% endif %} whitespace-nowrap py-2 px-3 border-b-2 font-medium text-xs sm:text-sm transition-colors duration-200">
+                        <i class="fas fa-list mr-1 sm:mr-2"></i>
+                        <span class="hidden sm:inline">Toutes</span>
+                        <span class="ml-1 sm:ml-2 bg-gray-100 text-gray-900 py-0.5 px-2 rounded-full text-xs font-medium">{{ stats.total_affectees }}</span>
+                    </a>
+
+                    <a href="{% url 'Prepacommande:liste_prepa' %}?etat=en_preparation{% if search_query %}&search={{ search_query }}{% endif %}"
+                       class="{% if filter_type == 'en_preparation' %}border-green-500 text-green-600{% else %}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{% endif %} whitespace-nowrap py-2 px-3 border-b-2 font-medium text-xs sm:text-sm transition-colors duration-200">
+                        <i class="fas fa-box-open mr-1 sm:mr-2 text-green-500"></i>
+                        <span class="hidden sm:inline">En préparation</span><span class="sm:hidden">Prép.</span>
+                        {% if stats.en_preparation %}
+                        <span class="ml-1 sm:ml-2 bg-green-100 text-green-900 py-0.5 px-2 rounded-full text-xs font-medium">{{ stats.en_preparation }}</span>
+                        {% endif %}
+                    </a>
+
+                    <a href="{% url 'Prepacommande:liste_prepa' %}?etat=collectee{% if search_query %}&search={{ search_query }}{% endif %}"
+                       class="{% if filter_type == 'collectee' %}border-orange-500 text-orange-600{% else %}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{% endif %} whitespace-nowrap py-2 px-3 border-b-2 font-medium text-xs sm:text-sm transition-colors duration-200">
+                        <i class="fas fa-check-circle mr-1 sm:mr-2 text-orange-500"></i>
+                        <span class="hidden sm:inline">Collectée</span><span class="sm:hidden">Coll.</span>
+                        {% if stats.collectee %}
+                        <span class="ml-1 sm:ml-2 bg-orange-100 text-orange-900 py-0.5 px-2 rounded-full text-xs font-medium">{{ stats.collectee }}</span>
+                        {% endif %}
+                    </a>
+
+                    <a href="{% url 'Prepacommande:liste_prepa' %}?etat=emballee{% if search_query %}&search={{ search_query }}{% endif %}"
+                       class="{% if filter_type == 'emballee' %}border-purple-500 text-purple-600{% else %}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{% endif %} whitespace-nowrap py-2 px-3 border-b-2 font-medium text-xs sm:text-sm transition-colors duration-200">
+                        <i class="fas fa-boxes mr-1 sm:mr-2 text-purple-500"></i>
+                        <span class="hidden sm:inline">Emballée</span><span class="sm:hidden">Emb.</span>
+                        {% if stats.emballee %}
+                        <span class="ml-1 sm:ml-2 bg-purple-100 text-purple-900 py-0.5 px-2 rounded-full text-xs font-medium">{{ stats.emballee }}</span>
+                        {% endif %}
+                    </a>
                 </nav>
             </div>
         </div>
@@ -143,11 +170,40 @@
             </div>
         </div>
         
+        <!-- Barre d'actions groupées -->
+        <div id="bulkActionsBar" class="hidden mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <span class="text-sm font-medium text-blue-900">
+                        <span id="selectedCount">0</span> commande(s) sélectionnée(s)
+                    </span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button onclick="bulkChangerEtat('Collectée')"
+                            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-orange-500 hover:bg-orange-600 transition-all">
+                        <i class="fas fa-box mr-2"></i> Marquer comme Collectées
+                    </button>
+                    <button onclick="bulkChangerEtat('Emballée')"
+                            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-purple-500 hover:bg-purple-600 transition-all">
+                        <i class="fas fa-boxes mr-2"></i> Marquer comme Emballées
+                    </button>
+                    <button onclick="clearSelection()"
+                            class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 transition-all">
+                        <i class="fas fa-times mr-2"></i> Annuler
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Vue Desktop/Tablette -->
         <div class="hidden lg:block overflow-x-auto rounded-lg shadow-sm border border-gray-200">
             <table id="cmdTable" class="min-w-full divide-y divide-gray-200">
                 <thead style="background-color: var(--preparation-primary);">
                     <tr>
+                        <th scope="col" class="px-4 py-3 text-center text-xs font-medium text-white uppercase tracking-wider">
+                            <input type="checkbox" id="selectAll" onchange="toggleSelectAll()"
+                                   class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
+                        </th>
                         <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">ID YZ</th>
                         <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">N° Externe</th>
                         <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Client</th>
@@ -165,7 +221,14 @@
                 <tbody class="bg-white divide-y divide-gray-200">
                     {% if commandes_affectees %}
                         {% for commande in commandes_affectees %}
-                        <tr class="hover:bg-gray-50" data-commande-id="{{ commande.id }}">
+                        <tr class="hover:bg-gray-50" data-commande-id="{{ commande.id }}" data-etat="{{ commande.etat_actuel.enum_etat.libelle }}">
+                            <td class="px-4 py-4 whitespace-nowrap text-center">
+                                <input type="checkbox"
+                                       class="commande-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                                       data-commande-id="{{ commande.id }}"
+                                       data-etat="{{ commande.etat_actuel.enum_etat.libelle }}"
+                                       onchange="updateBulkActionsBar()">
+                            </td>
                             <td class="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                                 {{ commande.id_yz }}
                             </td>
@@ -559,7 +622,7 @@
                         {% endfor %}
                     {% else %}
                         <tr>
-                            <td colspan="13" class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">
+                            <td colspan="14" class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">
                                 <div class="flex flex-col items-center py-8">
                                     <i class="fas fa-inbox text-4xl text-gray-300 mb-4"></i>
                                     <h3 class="text-lg font-medium text-gray-600 mb-2">Aucune commande affectée</h3>
@@ -576,9 +639,14 @@
         <div class="lg:hidden space-y-4">
             {% if commandes_affectees %}
                 {% for commande in commandes_affectees %}
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4" data-commande-id="{{ commande.id }}">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4" data-commande-id="{{ commande.id }}" data-etat="{{ commande.etat_actuel.enum_etat.libelle }}">
                     <!-- En-tête de la carte -->
                     <div class="flex items-center justify-between mb-3">
+                        <input type="checkbox"
+                               class="commande-checkbox w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 mr-3"
+                               data-commande-id="{{ commande.id }}"
+                               data-etat="{{ commande.etat_actuel.enum_etat.libelle }}"
+                               onchange="updateBulkActionsBar()">
                         <div class="flex items-center space-x-3">
                             <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
                                 <span class="text-white font-bold text-sm">{{ commande.id_yz }}</span>
@@ -1026,6 +1094,197 @@ function changerEtatCommande(commandeId, nouvelEtat) {
         showNotification('Erreur de connexion', 'error');
     });
 }
+
+// ==================== GESTION DE LA SÉLECTION MULTIPLE ====================
+
+// Fonction pour tout sélectionner/désélectionner
+function toggleSelectAll() {
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const checkboxes = document.querySelectorAll('.commande-checkbox');
+
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = selectAllCheckbox.checked;
+    });
+
+    updateBulkActionsBar();
+}
+
+// Fonction pour mettre à jour la barre d'actions groupées
+function updateBulkActionsBar() {
+    const checkboxes = document.querySelectorAll('.commande-checkbox:checked');
+    const bulkActionsBar = document.getElementById('bulkActionsBar');
+    const selectedCount = document.getElementById('selectedCount');
+
+    if (checkboxes.length > 0) {
+        bulkActionsBar.classList.remove('hidden');
+        selectedCount.textContent = checkboxes.length;
+    } else {
+        bulkActionsBar.classList.add('hidden');
+    }
+
+    // Mettre à jour l'état de la case "Tout sélectionner"
+    const allCheckboxes = document.querySelectorAll('.commande-checkbox');
+    const selectAllCheckbox = document.getElementById('selectAll');
+    if (selectAllCheckbox) {
+        selectAllCheckbox.checked = allCheckboxes.length > 0 && checkboxes.length === allCheckboxes.length;
+    }
+}
+
+// Fonction pour annuler la sélection
+function clearSelection() {
+    const checkboxes = document.querySelectorAll('.commande-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = false;
+    });
+
+    const selectAllCheckbox = document.getElementById('selectAll');
+    if (selectAllCheckbox) {
+        selectAllCheckbox.checked = false;
+    }
+
+    updateBulkActionsBar();
+}
+
+// Fonction pour changer l'état de plusieurs commandes
+function bulkChangerEtat(nouvelEtat) {
+    const checkboxes = document.querySelectorAll('.commande-checkbox:checked');
+
+    if (checkboxes.length === 0) {
+        showNotification('Aucune commande sélectionnée', 'error');
+        return;
+    }
+
+    // Récupérer les IDs des commandes sélectionnées
+    const commandeIds = [];
+    checkboxes.forEach(checkbox => {
+        const commandeId = checkbox.dataset.commandeId;
+        const etatActuel = checkbox.dataset.etat;
+
+        // Vérifier si le changement d'état est valide
+        if (nouvelEtat === 'Collectée' && etatActuel === 'En préparation') {
+            commandeIds.push(commandeId);
+        } else if (nouvelEtat === 'Emballée' && etatActuel === 'Collectée') {
+            commandeIds.push(commandeId);
+        }
+    });
+
+    if (commandeIds.length === 0) {
+        let message = '';
+        if (nouvelEtat === 'Collectée') {
+            message = 'Aucune commande sélectionnée n\'est en état "En préparation"';
+        } else if (nouvelEtat === 'Emballée') {
+            message = 'Aucune commande sélectionnée n\'est en état "Collectée"';
+        }
+        showNotification(message, 'error');
+        return;
+    }
+
+    if (commandeIds.length < checkboxes.length) {
+        const diff = checkboxes.length - commandeIds.length;
+        showNotification(`${diff} commande(s) ignorée(s) car pas dans l'état requis`, 'info', 4000);
+    }
+
+    // Afficher un message de chargement
+    const bulkActionsBar = document.getElementById('bulkActionsBar');
+    const originalContent = bulkActionsBar.innerHTML;
+    bulkActionsBar.innerHTML = `
+        <div class="flex items-center justify-center p-4">
+            <i class="fas fa-spinner fa-spin mr-3 text-blue-600"></i>
+            <span class="text-sm font-medium text-blue-900">Traitement de ${commandeIds.length} commande(s) en cours...</span>
+        </div>
+    `;
+
+    // Récupérer le token CSRF
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+    if (!csrfToken) {
+        console.error('Token CSRF manquant');
+        bulkActionsBar.innerHTML = originalContent;
+        showNotification('Erreur: Token CSRF manquant', 'error');
+        return;
+    }
+
+    // Envoyer la requête AJAX
+    fetch('/operateur-preparation/api/bulk-changer-etat-commandes/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken,
+        },
+        body: JSON.stringify({
+            commande_ids: commandeIds,
+            nouvel_etat: nouvelEtat
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('La réponse n\'est pas du JSON');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Mettre à jour l'interface pour chaque commande
+            data.updated_commandes.forEach(commandeId => {
+                updateCommandeEtat(commandeId, nouvelEtat);
+            });
+
+            // Réinitialiser la sélection
+            clearSelection();
+
+            // Afficher une notification de succès
+            showNotification(`${data.updated_count} commande(s) mise(s) à jour avec succès !`, 'success', 4000);
+
+            // Restaurer la barre d'actions
+            bulkActionsBar.innerHTML = originalContent;
+        } else {
+            bulkActionsBar.innerHTML = originalContent;
+            showNotification(data.error || 'Erreur lors de la mise à jour', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        bulkActionsBar.innerHTML = originalContent;
+        showNotification('Erreur de connexion', 'error');
+    });
+}
+
+// Fonction pour afficher une notification
+function showNotification(message, type = 'info', duration = 3000) {
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all transform translate-x-full opacity-0 max-w-sm`;
+
+    if (type === 'success') {
+        notification.classList.add('bg-green-500', 'text-white');
+        notification.innerHTML = `<i class="fas fa-check-circle mr-2"></i>${message}`;
+    } else if (type === 'error') {
+        notification.classList.add('bg-red-500', 'text-white');
+        notification.innerHTML = `<i class="fas fa-exclamation-circle mr-2"></i>${message}`;
+    } else {
+        notification.classList.add('bg-blue-500', 'text-white');
+        notification.innerHTML = `<i class="fas fa-info-circle mr-2"></i>${message}`;
+    }
+
+    document.body.appendChild(notification);
+
+    // Animer l'entrée
+    setTimeout(() => {
+        notification.classList.remove('translate-x-full', 'opacity-0');
+        notification.classList.add('translate-x-0', 'opacity-100');
+    }, 100);
+
+    // Animer la sortie
+    setTimeout(() => {
+        notification.classList.remove('translate-x-0', 'opacity-100');
+        notification.classList.add('translate-x-full', 'opacity-0');
+        setTimeout(() => notification.remove(), 500);
+    }, duration);
+}
+
+// ==================== FIN GESTION DE LA SÉLECTION MULTIPLE ====================
 
 // Fonction pour mettre à jour l'interface après changement d'état
 function updateCommandeEtat(commandeId, nouvelEtat) {

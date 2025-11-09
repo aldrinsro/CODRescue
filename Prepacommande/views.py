@@ -890,6 +890,34 @@ def liste_prepa(request):
             + stats_par_type["affectees_supervision"]
         )
 
+    # Calculer les statistiques par état
+    stats_etats = {
+        "en_preparation": toutes_commandes.filter(etats__enum_etat__libelle="En préparation", etats__date_fin__isnull=True).distinct().count(),
+        "collectee": toutes_commandes.filter(etats__enum_etat__libelle="Collectée", etats__date_fin__isnull=True).distinct().count(),
+        "emballee": toutes_commandes.filter(etats__enum_etat__libelle="Emballée", etats__date_fin__isnull=True).distinct().count(),
+    }
+
+    # Gérer le filtre par état
+    etat_filter = request.GET.get("etat", "")
+    if etat_filter == "en_preparation":
+        if isinstance(commandes_affectees, list):
+            commandes_affectees = [cmd for cmd in commandes_affectees if cmd.etat_actuel and cmd.etat_actuel.enum_etat.libelle == "En préparation"]
+        else:
+            commandes_affectees = commandes_affectees.filter(etats__enum_etat__libelle="En préparation", etats__date_fin__isnull=True)
+        filter_type = "en_preparation"
+    elif etat_filter == "collectee":
+        if isinstance(commandes_affectees, list):
+            commandes_affectees = [cmd for cmd in commandes_affectees if cmd.etat_actuel and cmd.etat_actuel.enum_etat.libelle == "Collectée"]
+        else:
+            commandes_affectees = commandes_affectees.filter(etats__enum_etat__libelle="Collectée", etats__date_fin__isnull=True)
+        filter_type = "collectee"
+    elif etat_filter == "emballee":
+        if isinstance(commandes_affectees, list):
+            commandes_affectees = [cmd for cmd in commandes_affectees if cmd.etat_actuel and cmd.etat_actuel.enum_etat.libelle == "Emballée"]
+        else:
+            commandes_affectees = commandes_affectees.filter(etats__enum_etat__libelle="Emballée", etats__date_fin__isnull=True)
+        filter_type = "emballee"
+
     # Vérifier si c'est une requête AJAX pour les statistiques
     if request.GET.get("ajax") == "stats":
         from django.http import JsonResponse
@@ -899,6 +927,9 @@ def liste_prepa(request):
                 "affectees_supervision": stats_par_type.get("affectees_supervision", 0),
                 "total_affectees": total_affectees,
                 "renvoyees_logistique": stats_par_type.get("renvoyees_logistique", 0),
+                "en_preparation": stats_etats.get("en_preparation", 0),
+                "collectee": stats_etats.get("collectee", 0),
+                "emballee": stats_etats.get("emballee", 0),
             }
         )
 
@@ -926,6 +957,9 @@ def liste_prepa(request):
             "total_affectees": total_affectees,
             "valeur_totale": valeur_totale,
             "commandes_urgentes": commandes_urgentes,
+            "en_preparation": stats_etats.get("en_preparation", 0),
+            "collectee": stats_etats.get("collectee", 0),
+            "emballee": stats_etats.get("emballee", 0),
         },
         "stats_par_type": stats_par_type,
         "operateur_profile": operateur_profile,
@@ -3946,6 +3980,325 @@ def api_changer_etat_commande(request, commande_id):
         
     except Commande.DoesNotExist:
         return JsonResponse({"success": False, "error": "Commande non trouvée"}, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({"success": False, "error": "Données JSON invalides"}, status=400)
+    except Exception as e:
+        return JsonResponse({"success": False, "error": f"Erreur serveur: {str(e)}"}, status=500)
+
+
+@login_required
+def commandes_collectees(request):
+    """Liste des commandes En préparation à collecter pour les opérateurs de préparation"""
+    from django.core.paginator import Paginator
+
+    try:
+        operateur_profile = request.user.profil_operateur
+
+        # Vérifier que l'utilisateur est un opérateur de préparation
+        if not operateur_profile.is_preparation:
+            messages.error(
+                request,
+                "Accès non autorisé. Vous n'êtes pas un opérateur de préparation.",
+            )
+            return redirect("login")
+
+    except Operateur.DoesNotExist:
+        messages.error(request, "Votre profil opérateur n'existe pas.")
+        return redirect("login")
+
+    # Récupérer les commandes dans l'état "En préparation" affectées à cet opérateur
+    commandes_affectees = (
+        Commande.objects.filter(
+            etats__enum_etat__libelle="En préparation",
+            etats__operateur=operateur_profile,
+            etats__date_fin__isnull=True,  # État actif (en cours)
+        )
+        .select_related("client", "ville", "ville__region")
+        .prefetch_related("paniers__article", "etats")
+        .distinct()
+        .order_by("-etats__date_debut")
+    )
+
+    # Recherche
+    search_query = request.GET.get("search", "").strip()
+    if search_query:
+        commandes_affectees = commandes_affectees.filter(
+            Q(id_yz__icontains=search_query)
+            | Q(num_cmd__icontains=search_query)
+            | Q(client__nom__icontains=search_query)
+            | Q(client__prenom__icontains=search_query)
+            | Q(client__numero_tel__icontains=search_query)
+        )
+
+    # Ajouter l'état précédent pour chaque commande
+    for commande in commandes_affectees:
+        etats_commande = commande.etats.all().order_by("date_debut")
+
+        # Trouver l'état actuel (En préparation)
+        etat_actuel = None
+        for etat in etats_commande:
+            if etat.enum_etat.libelle == "En préparation" and not etat.date_fin:
+                etat_actuel = etat
+                break
+
+        # Trouver l'état précédent
+        if etat_actuel:
+            etat_precedent = None
+            for etat in reversed(etats_commande):
+                if etat.date_fin and etat.date_fin < etat_actuel.date_debut:
+                    etat_precedent = etat
+                    break
+            commande.etat_precedent = etat_precedent
+
+    # Pagination
+    items_per_page = request.GET.get("per_page", 10)
+    try:
+        items_per_page = int(items_per_page)
+        if items_per_page not in [5, 10, 25, 50, 100]:
+            items_per_page = 10
+    except (ValueError, TypeError):
+        items_per_page = 10
+
+    paginator = Paginator(commandes_affectees, items_per_page)
+    page_number = request.GET.get("page", 1)
+    commandes_affectees = paginator.get_page(page_number)
+
+    # Statistiques
+    stats = {
+        "total_a_collecter": paginator.count,
+        "valeur_totale": sum([cmd.total_cmd or 0 for cmd in paginator.object_list]),
+    }
+
+    context = {
+        "commandes_affectees": commandes_affectees,
+        "page_title": "Commandes à Collecter",
+        "page_subtitle": "Liste des commandes en préparation - À marquer comme collectées",
+        "stats": stats,
+        "search_query": search_query,
+        "items_per_page": items_per_page,
+        "paginator": paginator,
+        "current_page": commandes_affectees.number,
+        "total_pages": paginator.num_pages,
+        "has_previous": commandes_affectees.has_previous(),
+        "has_next": commandes_affectees.has_next(),
+        "previous_page_number": commandes_affectees.previous_page_number() if commandes_affectees.has_previous() else None,
+        "next_page_number": commandes_affectees.next_page_number() if commandes_affectees.has_next() else None,
+    }
+
+    return render(request, "Prepacommande/commandes_collectees.html", context)
+
+
+@login_required
+def commandes_emballees(request):
+    """Liste des commandes Collectées à emballer pour les opérateurs de préparation"""
+    from django.core.paginator import Paginator
+
+    try:
+        operateur_profile = request.user.profil_operateur
+
+        # Vérifier que l'utilisateur est un opérateur de préparation
+        if not operateur_profile.is_preparation:
+            messages.error(
+                request,
+                "Accès non autorisé. Vous n'êtes pas un opérateur de préparation.",
+            )
+            return redirect("login")
+
+    except Operateur.DoesNotExist:
+        messages.error(request, "Votre profil opérateur n'existe pas.")
+        return redirect("login")
+
+    # Récupérer les commandes dans l'état "Collectée" affectées à cet opérateur
+    commandes_affectees = (
+        Commande.objects.filter(
+            etats__enum_etat__libelle="Collectée",
+            etats__operateur=operateur_profile,
+            etats__date_fin__isnull=True,  # État actif (en cours)
+        )
+        .select_related("client", "ville", "ville__region")
+        .prefetch_related("paniers__article", "etats")
+        .distinct()
+        .order_by("-etats__date_debut")
+    )
+
+    # Recherche
+    search_query = request.GET.get("search", "").strip()
+    if search_query:
+        commandes_affectees = commandes_affectees.filter(
+            Q(id_yz__icontains=search_query)
+            | Q(num_cmd__icontains=search_query)
+            | Q(client__nom__icontains=search_query)
+            | Q(client__prenom__icontains=search_query)
+            | Q(client__numero_tel__icontains=search_query)
+        )
+
+    # Ajouter l'état précédent pour chaque commande
+    for commande in commandes_affectees:
+        etats_commande = commande.etats.all().order_by("date_debut")
+
+        # Trouver l'état actuel (Collectée)
+        etat_actuel = None
+        for etat in etats_commande:
+            if etat.enum_etat.libelle == "Collectée" and not etat.date_fin:
+                etat_actuel = etat
+                break
+
+        # Trouver l'état précédent
+        if etat_actuel:
+            etat_precedent = None
+            for etat in reversed(etats_commande):
+                if etat.date_fin and etat.date_fin < etat_actuel.date_debut:
+                    etat_precedent = etat
+                    break
+            commande.etat_precedent = etat_precedent
+
+    # Pagination
+    items_per_page = request.GET.get("per_page", 10)
+    try:
+        items_per_page = int(items_per_page)
+        if items_per_page not in [5, 10, 25, 50, 100]:
+            items_per_page = 10
+    except (ValueError, TypeError):
+        items_per_page = 10
+
+    paginator = Paginator(commandes_affectees, items_per_page)
+    page_number = request.GET.get("page", 1)
+    commandes_affectees = paginator.get_page(page_number)
+
+    # Statistiques
+    stats = {
+        "total_a_emballer": paginator.count,
+        "valeur_totale": sum([cmd.total_cmd or 0 for cmd in paginator.object_list]),
+    }
+
+    context = {
+        "commandes_affectees": commandes_affectees,
+        "page_title": "Commandes à Emballer",
+        "page_subtitle": "Liste des commandes collectées - À marquer comme emballées",
+        "stats": stats,
+        "search_query": search_query,
+        "items_per_page": items_per_page,
+        "paginator": paginator,
+        "current_page": commandes_affectees.number,
+        "total_pages": paginator.num_pages,
+        "has_previous": commandes_affectees.has_previous(),
+        "has_next": commandes_affectees.has_next(),
+        "previous_page_number": commandes_affectees.previous_page_number() if commandes_affectees.has_previous() else None,
+        "next_page_number": commandes_affectees.next_page_number() if commandes_affectees.has_next() else None,
+    }
+
+    return render(request, "Prepacommande/commandes_emballees.html", context)
+
+
+@login_required
+def api_bulk_changer_etat_commandes(request):
+    """API pour changer l'état de plusieurs commandes en une seule fois"""
+    if request.method != "POST":
+        return JsonResponse({"success": False, "error": "Méthode non autorisée"}, status=405)
+
+    try:
+        # Vérifier que l'utilisateur est un opérateur de préparation
+        operateur = Operateur.objects.get(
+            user=request.user, type_operateur="PREPARATION"
+        )
+    except Operateur.DoesNotExist:
+        return JsonResponse({"success": False, "error": "Accès non autorisé"}, status=403)
+
+    try:
+        # Récupérer les données de la requête
+        data = json.loads(request.body)
+        commande_ids = data.get('commande_ids', [])
+        nouvel_etat = data.get('nouvel_etat')
+
+        if not commande_ids:
+            return JsonResponse({"success": False, "error": "Aucune commande sélectionnée"}, status=400)
+
+        if not nouvel_etat:
+            return JsonResponse({"success": False, "error": "Nouvel état non spécifié"}, status=400)
+
+        # Vérifier que l'état est valide
+        etats_valides = ['Collectée', 'Emballée']
+        if nouvel_etat not in etats_valides:
+            return JsonResponse({"success": False, "error": f"État invalide. États autorisés: {', '.join(etats_valides)}"}, status=400)
+
+        # Récupérer l'état enum correspondant
+        try:
+            nouvel_etat_enum = EnumEtatCmd.objects.get(libelle=nouvel_etat)
+        except EnumEtatCmd.DoesNotExist:
+            return JsonResponse({"success": False, "error": f"État '{nouvel_etat}' non trouvé dans le système"}, status=400)
+
+        updated_commandes = []
+        errors = []
+
+        # Traiter chaque commande
+        for commande_id in commande_ids:
+            try:
+                with transaction.atomic():
+                    # Récupérer la commande
+                    commande = Commande.objects.get(id=commande_id)
+
+                    # Vérifier que la commande est affectée à cet opérateur
+                    etat_actuel = commande.etats.filter(
+                        operateur=operateur,
+                        enum_etat__libelle__in=["En préparation", "À imprimer", "Collectée", "Emballée"],
+                        date_fin__isnull=True,
+                    ).first()
+
+                    if not etat_actuel:
+                        errors.append(f"Commande {commande_id}: non affectée à cet opérateur")
+                        continue
+
+                    # Vérifier la logique de transition d'état
+                    etat_actuel_libelle = etat_actuel.enum_etat.libelle
+
+                    if nouvel_etat == 'Collectée':
+                        if etat_actuel_libelle not in ['En préparation', 'À imprimer']:
+                            errors.append(f"Commande {commande_id}: impossible de passer à 'Collectée' depuis l'état '{etat_actuel_libelle}'")
+                            continue
+                    elif nouvel_etat == 'Emballée':
+                        if etat_actuel_libelle not in ['Collectée']:
+                            errors.append(f"Commande {commande_id}: impossible de passer à 'Emballée' depuis l'état '{etat_actuel_libelle}'")
+                            continue
+
+                    # Terminer l'état actuel
+                    etat_actuel.date_fin = timezone.now()
+                    etat_actuel.save()
+
+                    # Créer le nouvel état
+                    EtatCommande.objects.create(
+                        commande=commande,
+                        enum_etat=nouvel_etat_enum,
+                        operateur=operateur,
+                        date_debut=timezone.now(),
+                        commentaire=f"État changé vers {nouvel_etat} par l'opérateur de préparation (action groupée)"
+                    )
+
+                    updated_commandes.append(commande_id)
+
+            except Commande.DoesNotExist:
+                errors.append(f"Commande {commande_id}: non trouvée")
+            except Exception as e:
+                errors.append(f"Commande {commande_id}: {str(e)}")
+
+        # Préparer la réponse
+        response_data = {
+            "success": len(updated_commandes) > 0,
+            "updated_count": len(updated_commandes),
+            "updated_commandes": updated_commandes,
+            "nouvel_etat": nouvel_etat,
+        }
+
+        if errors:
+            response_data["errors"] = errors
+            response_data["error_count"] = len(errors)
+
+        if len(updated_commandes) > 0:
+            response_data["message"] = f"{len(updated_commandes)} commande(s) mise(s) à jour avec succès"
+        else:
+            response_data["error"] = "Aucune commande n'a pu être mise à jour"
+
+        return JsonResponse(response_data)
+
     except json.JSONDecodeError:
         return JsonResponse({"success": False, "error": "Données JSON invalides"}, status=400)
     except Exception as e:

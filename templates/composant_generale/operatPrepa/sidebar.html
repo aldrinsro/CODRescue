@@ -39,6 +39,14 @@
                     <i class="fas fa-box-open mr-3 text-green-400 transition-transform duration-200 flex-shrink-0"></i>
                     <span class="whitespace-nowrap">En Préparation</span>
                 </a>
+                <a href="{% url 'Prepacommande:commandes_collectees' %}" class="flex items-center px-4 py-2 text-white hover:text-white transition-all duration-200 transform hover:translate-x-1 border-l-4 border-transparent hover:border-orange-400 hover:shadow-lg" style="hover:background-color: var(--preparation-hover-bg);">
+                    <i class="fas fa-box-open mr-3 text-orange-400 transition-transform duration-200 flex-shrink-0"></i>
+                    <span class="whitespace-nowrap">À Collecter</span>
+                </a>
+                <a href="{% url 'Prepacommande:commandes_emballees' %}" class="flex items-center px-4 py-2 text-white hover:text-white transition-all duration-200 transform hover:translate-x-1 border-l-4 border-transparent hover:border-purple-400 hover:shadow-lg" style="hover:background-color: var(--preparation-hover-bg);">
+                    <i class="fas fa-boxes mr-3 text-purple-400 transition-transform duration-200 flex-shrink-0"></i>
+                    <span class="whitespace-nowrap">À Emballer</span>
+                </a>
                 <a href="{% url 'Prepacommande:commandes_retournees' %}" class="flex items-center px-4 py-2 text-white hover:text-white transition-all duration-200 transform hover:translate-x-1 border-l-4 border-transparent hover:border-blue-400 hover:shadow-lg" style="hover:background-color: var(--preparation-hover-bg);">
                     <i class="fas fa-undo mr-3 text-yellow-400 transition-transform duration-200 flex-shrink-0"></i>
                     <span class="whitespace-nowrap">Retournées </span>

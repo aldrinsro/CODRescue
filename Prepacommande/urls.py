@@ -9,6 +9,8 @@ urlpatterns = [
     path('home/', views.home_view, name='home_redirect'),
     path('liste-prepa/', views.liste_prepa, name='liste_prepa'),
     path('en-preparation/', views.commandes_en_preparation, name='commandes_en_preparation'),
+    path('collectees/', views.commandes_collectees, name='commandes_collectees'),
+    path('emballees/', views.commandes_emballees, name='commandes_emballees'),
     path('livrees-partiellement/', views.commandes_livrees_partiellement, name='commandes_livrees_partiellement'),
     path('retournees/', views.commandes_retournees, name='commandes_retournees'),
     path('profile/', views.profile_view, name='profile'),
@@ -23,7 +25,8 @@ urlpatterns = [
     path('api/commande/<int:commande_id>/articles-livree-partiellement/', views.api_articles_commande_livree_partiellement, name='api_articles_commande_livree_partiellement'),
     path('api/traiter-commande-retournee/<int:commande_id>/', views.traiter_commande_retournee_api, name='traiter_commande_retournee_api'),
     path('api/changer-etat-commande/<int:commande_id>/', views.api_changer_etat_commande, name='api_changer_etat_commande'),
-   
+    path('api/bulk-changer-etat-commandes/', views.api_bulk_changer_etat_commandes, name='api_bulk_changer_etat_commandes'),
+
     # URLs pour la gestion des articles pendant la préparation
     path('commande/<int:commande_id>/rafraichir-articles/', views.rafraichir_articles_commande_prepa, name='rafraichir_articles_commande_prepa'),
 
