@@ -3,9 +3,7 @@
     <td class="px-4 py-3 text-sm font-medium text-gray-900 border-r border-b border-gray-200">
         {{ commande.id_yz }}
     </td>
-    <td class="px-4 py-3 text-sm text-gray-500 border-r border-b border-gray-200">
-        {{ commande.num_cmd|default:"-" }}
-    </td>
+
     <td class="px-4 py-3 text-sm text-gray-900 border-r border-b border-gray-200">
         <div class="font-medium">{{ commande.client.nom|default:"" }} {{ commande.client.prenom|default:"" }}</div>
         <div class="text-gray-500">{{ commande.client.numero_tel|default:"-" }}</div>

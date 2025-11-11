@@ -383,9 +383,81 @@ def get_type_remise_appliquee(panier):
     # Pas de remise détectée
     return None
 
-@register.filter  
+@register.filter
 def est_remise_appliquee(panier):
     """
     Vérifie si une remise a été appliquée sur ce panier
     """
     return get_type_remise_appliquee(panier) is not None
+
+
+@register.filter
+def operation_style(type_operation):
+    """
+    Retourne les classes CSS et l'icône pour un type d'opération
+    Retourne un dictionnaire avec 'bg_class', 'text_class', et 'icon'
+    """
+    styles_map = {
+        'AUCUNE_ACTION': {
+            'bg_class': 'bg-gray-100',
+            'text_class': 'text-gray-800',
+            'icon': 'fas fa-minus'
+        },
+        'APPEL_1': {
+            'bg_class': 'bg-blue-100',
+            'text_class': 'text-blue-800',
+            'icon': 'fas fa-phone'
+        },
+        'APPEL_2': {
+            'bg_class': 'bg-indigo-100',
+            'text_class': 'text-indigo-800',
+            'icon': 'fas fa-phone'
+        },
+        'APPEL_3': {
+            'bg_class': 'bg-purple-100',
+            'text_class': 'text-purple-800',
+            'icon': 'fas fa-phone'
+        },
+        'APPEL_4': {
+            'bg_class': 'bg-pink-100',
+            'text_class': 'text-pink-800',
+            'icon': 'fas fa-phone'
+        },
+        'APPEL_5': {
+            'bg_class': 'bg-red-100',
+            'text_class': 'text-red-800',
+            'icon': 'fas fa-phone'
+        },
+        'APPEL_6': {
+            'bg_class': 'bg-orange-100',
+            'text_class': 'text-orange-800',
+            'icon': 'fas fa-phone'
+        },
+        'APPEL_7': {
+            'bg_class': 'bg-yellow-100',
+            'text_class': 'text-yellow-800',
+            'icon': 'fas fa-phone'
+        },
+        'APPEL_8': {
+            'bg_class': 'bg-red-100',
+            'text_class': 'text-red-800',
+            'icon': 'fas fa-phone-slash'
+        },
+        'ENVOI_SMS': {
+            'bg_class': 'bg-green-100',
+            'text_class': 'text-green-800',
+            'icon': 'fas fa-sms'
+        },
+        'PROPOSITION_ABONNEMENT': {
+            'bg_class': 'bg-teal-100',
+            'text_class': 'text-teal-800',
+            'icon': 'fas fa-gift'
+        },
+    }
+
+    # Retourner le style correspondant ou un style par défaut
+    return styles_map.get(type_operation, {
+        'bg_class': 'bg-gray-100',
+        'text_class': 'text-gray-800',
+        'icon': 'fas fa-cogs'
+    })

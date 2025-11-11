@@ -150,7 +150,7 @@ def liste_commandes(request):
     ).distinct().select_related(
         'client', 'ville', 'ville__region'
     ).prefetch_related(
-        'etats__enum_etat', 'paniers__article'
+        'etats__enum_etat', 'paniers__article', 'operations'
     ).order_by('-etats__date_debut')
     
     # Recherche
