@@ -1418,7 +1418,12 @@ def detail_prepa(request, pk):
         commande = (
             Commande.objects.select_related("client", "ville", "ville__region")
             .prefetch_related(
-                "paniers__article", "etats__enum_etat", "etats__operateur"
+                "paniers__article",
+                "paniers__variante",
+                "paniers__variante__couleur",
+                "paniers__variante__pointure",
+                "etats__enum_etat",
+                "etats__operateur"
             )
             .get(id=pk)
         )
@@ -1442,8 +1447,14 @@ def detail_prepa(request, pk):
         return redirect("Prepacommande:liste_prepa")
 
     # Récupérer les paniers (articles) de la commande
-    paniers = commande.paniers.all().select_related("article")
-    
+    paniers = commande.paniers.all().select_related(
+        "article",
+        "variante",
+        "variante__couleur",
+        "variante__pointure",
+        "remise_personnalisee"
+    )
+
     # Initialiser les variables pour les cas de livraison partielle/renvoi
     articles_livres = []
     articles_renvoyes = []
@@ -1452,13 +1463,58 @@ def detail_prepa(request, pk):
     commande_originale = None  # Initialiser à None
     etat_articles_renvoyes = {}  # Initialiser à un dictionnaire vide
 
-    # Ajouter le prix unitaire, le total de chaque ligne, et l'URL d'image si disponible
+    # Ajouter le prix unitaire, le total de chaque ligne, l'URL d'image et les variantes
     articles_image_urls = {}
+    total_articles = 0
+    total_remises = 0
+
     for panier in paniers:
-        panier.prix_unitaire = (
+        # Prix unitaire - utiliser prix_panier qui est le prix historique gelé
+        panier.prix_unitaire = panier.prix_panier if panier.prix_panier else (
             panier.sous_total / panier.quantite if panier.quantite > 0 else 0
         )
-        panier.total_ligne = panier.sous_total
+
+        # Calculer le sous-total avant remise
+        panier.sous_total_avant_remise = panier.prix_panier * panier.quantite if panier.prix_panier else panier.sous_total
+
+        # Gérer les remises
+        panier.a_remise = False
+        panier.montant_remise = 0
+        panier.info_remise = ""
+
+        # Vérifier si une remise personnalisée existe
+        if hasattr(panier, 'remise_personnalisee') and panier.remise_personnalisee:
+            remise = panier.remise_personnalisee
+            panier.a_remise = True
+            panier.montant_remise = float(remise.montant_applique)
+
+            if remise.type_remise == 'POURCENTAGE':
+                panier.info_remise = f"Remise {remise.valeur_remise}%"
+            else:
+                panier.info_remise = f"Remise {remise.valeur_remise} DH"
+
+            total_remises += panier.montant_remise
+        # Vérifier si une remise standard est appliquée
+        elif panier.remise_appliquer and panier.type_remise_appliquee:
+            panier.a_remise = True
+            # Calculer le montant de la remise
+            if panier.sous_total_remise and panier.sous_total_remise > 0:
+                panier.montant_remise = panier.sous_total_avant_remise - panier.sous_total_remise
+                panier.info_remise = f"Remise {panier.type_remise_appliquee}"
+                total_remises += panier.montant_remise
+
+        # Total ligne final (après remise si applicable)
+        if panier.a_remise:
+            if panier.sous_total_remise and panier.sous_total_remise > 0:
+                panier.total_ligne = panier.sous_total_remise
+            else:
+                panier.total_ligne = panier.sous_total_avant_remise - panier.montant_remise
+        else:
+            panier.total_ligne = panier.sous_total_avant_remise
+
+        total_articles += panier.total_ligne
+
+        # Image de l'article
         image_url = None
         try:
             # Protéger l'accès à .url si aucun fichier n'est associé
@@ -1473,6 +1529,14 @@ def detail_prepa(request, pk):
         # Egalement disponible dans le context si nécessaire
         if getattr(panier.article, "id", None) is not None:
             articles_image_urls[panier.article.id] = image_url
+
+        # Ajouter les informations de variante (couleur et pointure)
+        if panier.variante:
+            panier.couleur_display = panier.variante.couleur.nom if panier.variante.couleur else None
+            panier.pointure_display = panier.variante.pointure.pointure if panier.variante.pointure else None
+        else:
+            panier.couleur_display = None
+            panier.pointure_display = None
     
     # Récupérer tous les états de la commande pour afficher l'historique
     etats_commande = (
@@ -1623,10 +1687,9 @@ def detail_prepa(request, pk):
                             )
             except Exception:
                 pass
-    
-    # Calculer le total des articles
-    total_articles = sum(panier.total_ligne for panier in paniers)
-    
+
+    # Note: total_articles et total_remises sont déjà calculés dans la boucle des paniers ci-dessus
+
     # Récupérer les opérations associées à la commande
     operations = commande.operations.select_related("operateur").order_by(
         "-date_operation"
@@ -1796,6 +1859,7 @@ def detail_prepa(request, pk):
         "etat_precedent": etat_precedent,
         "etat_preparation": etat_preparation,
         "total_articles": total_articles,
+        "total_remises": total_remises,
         "operations": operations,
         "commande_barcode": commande_barcode,
         "is_commande_livree_partiellement": is_commande_livree_partiellement,
@@ -3305,23 +3369,45 @@ def api_panier_commande_prepa(request, commande_id):
     if not etat_preparation:
         return JsonResponse({"success": False, "message": "Commande non affectée"})
     
-    # Récupérer les paniers
-    paniers = commande.paniers.all().select_related("article")
-    
+    # Récupérer les paniers avec les variantes
+    paniers = commande.paniers.all().select_related(
+        "article",
+        "variante",
+        "variante__couleur",
+        "variante__pointure"
+    )
+
     paniers_data = []
     for panier in paniers:
+        # Récupérer les informations de variante
+        couleur = ""
+        pointure = ""
+        if panier.variante:
+            if panier.variante.couleur:
+                couleur = panier.variante.couleur.nom
+            if panier.variante.pointure:
+                pointure = panier.variante.pointure.pointure
+
+        # Construire le texte d'affichage
+        display_parts = [panier.article.nom]
+        if couleur:
+            display_parts.append(couleur)
+        if pointure:
+            display_parts.append(pointure)
+        display_text = " - ".join(display_parts)
+
         paniers_data.append(
             {
                 "id": panier.id,
                 "article_id": panier.article.id,
                 "article_nom": panier.article.nom,
                 "article_reference": panier.article.reference or "",
-                "article_couleur": panier.article.couleur,
-                "article_pointure": panier.article.pointure,
+                "article_couleur": couleur,
+                "article_pointure": pointure,
                 "quantite": panier.quantite,
                 "prix_unitaire": float(panier.article.prix_unitaire),
                 "sous_total": float(panier.sous_total),
-                "display_text": f"{panier.article.nom} - {panier.article.couleur} - {panier.article.pointure}",
+                "display_text": display_text,
             }
         )
 
@@ -3406,9 +3492,14 @@ def rafraichir_articles_commande_prepa(request, commande_id):
             )
         
         # Générer le HTML directement pour éviter les erreurs de template
-        paniers = commande.paniers.select_related("article").all()
+        paniers = commande.paniers.select_related(
+            "article",
+            "variante",
+            "variante__couleur",
+            "variante__pointure"
+        ).all()
         html_rows = []
-        
+
         for panier in paniers:
             # Utiliser le filtre Django pour calculer le prix selon la logique upsell
             from commande.templatetags.commande_filters import (
@@ -3453,7 +3544,18 @@ def rafraichir_articles_commande_prepa(request, commande_id):
                 upsell_info = ""
             
             sous_total = prix_calcule * panier.quantite
-            
+
+            # Récupérer les informations de variante
+            variante_html = ""
+            if panier.variante:
+                variante_parts = []
+                if panier.variante.couleur:
+                    variante_parts.append(f'<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"><i class="fas fa-palette mr-1"></i>{panier.variante.couleur.nom}</span>')
+                if panier.variante.pointure:
+                    variante_parts.append(f'<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800"><i class="fas fa-ruler mr-1"></i>{panier.variante.pointure.pointure}</span>')
+                if variante_parts:
+                    variante_html = f'<div class="flex gap-1 mt-1">{"".join(variante_parts)}</div>'
+
             html_row = f"""
             <tr data-panier-id="{panier.id}" data-article-id="{panier.article.id}">
                 <td class="px-4 py-3">
@@ -3466,6 +3568,7 @@ def rafraichir_articles_commande_prepa(request, commande_id):
                             <div class="text-sm text-gray-500">
                                 Réf: {panier.article.reference or 'N/A'}
                             </div>
+                            {variante_html}
                         </div>
                     </div>
                 </td>

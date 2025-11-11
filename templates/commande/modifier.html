@@ -1,5 +1,7 @@
 {% extends 'composant_generale/admin/base.html' %}
 {% load static %}
+{% load commande_filters %}
+{% load remise_filters %}
 
 {% block title %}Modifier Commande - YZ-CMD{% endblock %}
 
@@ -411,43 +413,91 @@
             <h2 class="text-2xl font-bold flex items-center" style="color: var(--admin-color);">
                 <i class="fas fa-shopping-cart mr-2"></i>Gestion du Panier
             </h2>
-            <div class="bg-blue-50 px-4 py-2 rounded-lg border border-blue-200">
-                <span class="text-sm font-medium text-blue-800">Total: </span>
-                <span id="totalDisplay" class="text-lg font-bold text-blue-900">{{ commande.total_cmd|floatformat:2 }} DH</span>
-            </div>
-        </div>
-        
-        <form method="post" id="panierForm" action="{% url 'commande:modifier' commande.pk %}">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="update_panier">
-            {% if from_a_traiter %}
-            <input type="hidden" name="from" value="a_traiter">
-            {% endif %}
-
-            <!-- Articles du Panier -->
-            <div id="articles-container" class="space-y-4 mb-6">
-                <!-- Les articles seront ajoutés ici par JavaScript -->
-            </div>
-
-            <div class="flex justify-between items-center">
-            <button type="button" id="addArticleBtn" onclick="ouvrirModalAjouterArticle(event)" class="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors shadow-md">
-                <i class="fas fa-plus mr-2"></i> Ajouter un article
-            </button>
-
-                <div class="flex space-x-3">
-                    <input type="number" name="total_cmd" id="total_cmd" step="0.01" min="0" value="{{ commande.total_cmd|floatformat:2 }}" class="w-32 p-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed text-center font-bold" readonly required>
-                    <button type="submit" class="px-6 py-2 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-colors shadow-md">
-                        <i class="fas fa-save mr-2"></i> Mettre à jour le panier
-                    </button>
+            <div class="flex items-center gap-4">
+                <div class="bg-blue-50 px-4 py-2 rounded-lg border border-blue-200">
+                    <span class="text-sm font-medium text-blue-800">Articles: </span>
+                    <span id="articleCount" class="text-lg font-bold text-blue-900">{{ commande.paniers.count }}</span>
+                </div>
+                <div class="bg-emerald-50 px-4 py-2 rounded-lg border border-emerald-200">
+                    <span class="text-sm font-medium text-emerald-800">Total: </span>
+                    <span id="totalDisplay" class="text-lg font-bold text-emerald-900">{{ commande.total_cmd|floatformat:2 }} DH</span>
                 </div>
             </div>
-        </form>
+        </div>
+
+        <!-- Articles du Panier -->
+        <div id="articles-container" class="space-y-4 mb-6">
+            {% include 'commande/partials/_articles_section.html' %}
+        </div>
+
+        <div class="flex justify-between items-center pt-4 border-t border-gray-200">
+            <div class="flex items-center space-x-3">
+                <button type="button" id="addArticleBtn" onclick="ouvrirModalAjouterArticle(event)" class="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors shadow-md">
+                    <i class="fas fa-plus mr-2"></i> Ajouter un article
+                </button>
+
+                <!-- Bouton Enregistrer (masqué par défaut, affiché quand il y a des articles temporaires) -->
+                <button type="button" id="btnEnregistrerArticles" onclick="enregistrerArticlesTemporaires()" class="hidden inline-flex items-center px-6 py-3 bg-green-500 text-white rounded-lg font-bold hover:bg-green-600 transition-colors shadow-lg animate-pulse">
+                    <i class="fas fa-save mr-2"></i> Enregistrer les ajouts (<span id="count-temporaires">0</span>)
+                </button>
+            </div>
+
+            <div class="text-right">
+                <div class="text-sm text-gray-600 mb-1">Total de la commande</div>
+                <div class="text-2xl font-bold text-emerald-600" id="total-commande-display">
+                    {{ commande.total_cmd|floatformat:2 }} DH
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
-<!-- Includes des modaux pour l'ajout d'articles -->
+<!-- Includes des modaux -->
 {% include 'composant_generale/modal_ajout_articles.html' %}
 {% include 'composant_generale/modal_confirmation_suppression.html' with modal_id='confirmDeleteModal' %}
+
+<!-- Modal Remise -->
+<div id="modalRemiseCommande" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full m-4">
+        <div class="flex items-center justify-between p-4 border-b border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-900">
+                <i class="fas fa-tag text-green-500 mr-2"></i>Appliquer une remise
+            </h3>
+            <button type="button" onclick="fermerModalRemiseCommande()" class="text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        <div class="p-4">
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Type de remise</label>
+                <select id="typeRemiseCommande" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500" onchange="calculerAperçuRemiseCommande()">
+                    <option value="POURCENTAGE">Pourcentage (%)</option>
+                    <option value="MONTANT_FIXE">Montant fixe (DH)</option>
+                </select>
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Valeur de la remise</label>
+                <input type="number" id="valeurRemiseCommande" min="0" step="0.01" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500" placeholder="Entrez la valeur" oninput="calculerAperçuRemiseCommande()">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Raison (optionnel)</label>
+                <textarea id="raisonRemiseCommande" rows="2" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500" placeholder="Motif de la remise"></textarea>
+            </div>
+            <div id="aperçuRemiseCommande" class="mb-4 p-3 bg-gray-50 rounded-lg hidden">
+                <div class="text-sm text-gray-600 mb-1">Aperçu:</div>
+                <div class="font-semibold text-gray-900" id="aperçuTexteCommande"></div>
+            </div>
+        </div>
+        <div class="flex justify-end gap-3 p-4 border-t border-gray-200">
+            <button type="button" onclick="fermerModalRemiseCommande()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">
+                Annuler
+            </button>
+            <button type="button" onclick="appliquerRemiseCommande()" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors">
+                <i class="fas fa-check mr-2"></i>Appliquer
+            </button>
+        </div>
+    </div>
+</div>
 
 <!-- Container pour les toasts -->
 <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2">
@@ -489,12 +539,11 @@
 }
 </style>
 
-<!-- Script JSON pour les articles disponibles -->
+<!-- Scripts JSON pour le modal d'ajout d'articles -->
 <script type="application/json" id="articles-data">
     {{ articles_json|safe }}
 </script>
 
-<!-- Script JSON pour les articles dans le panier -->
 <script type="application/json" id="paniers-data">
     {{ paniers_json|safe }}
 </script>
@@ -539,59 +588,10 @@
             {% endfor %}
         {% endif %}
 
-        // Charger les articles existants du panier depuis paniers-data
-        const paniersDataElement = document.getElementById('paniers-data');
-        if (paniersDataElement) {
-            try {
-                const paniersData = JSON.parse(paniersDataElement.textContent);
-                console.log('📦 Chargement des articles existants du panier:', paniersData.length);
+        // Les articles sont maintenant affichés directement via le partial template _articles_section.html
+        // Plus besoin de les charger via JavaScript depuis paniers-data
+        console.log('✅ Articles chargés via le template Django (pas de JS nécessaire)');
 
-                // Charger d'abord les articles disponibles pour avoir les infos complètes
-                const articlesDataElement = document.getElementById('articles-data');
-                if (articlesDataElement) {
-                    const articlesDisponibles = JSON.parse(articlesDataElement.textContent);
-
-                    // Pour chaque article du panier, l'ajouter au conteneur
-                    paniersData.forEach(panierItem => {
-                        // Trouver l'article correspondant dans articlesDisponibles
-                        const articleData = articlesDisponibles.find(art => art.id === panierItem.fields.article);
-
-                        if (articleData) {
-                            // Si l'article a une variante
-                            if (panierItem.fields.variante && panierItem.variante_info) {
-                                // Utiliser les informations de variante fournies par le backend
-                                const varianteData = {
-                                    id: panierItem.variante_info.id,
-                                    prix_actuel: panierItem.variante_info.prix_actuel,
-                                    stock: panierItem.variante_info.stock,
-                                    couleur: panierItem.variante_info.couleur,
-                                    pointure: panierItem.variante_info.pointure
-                                };
-
-                                console.log('✅ Chargement variante:', varianteData);
-                                ajouterVarianteAuPanierConfirmation(articleData, varianteData, panierItem.fields.quantite);
-                            } else {
-                                // Article sans variante
-                                console.log('✅ Chargement article sans variante:', articleData.nom);
-                                ajouterArticleAuPanier(articleData, panierItem.fields.quantite);
-                            }
-                        } else {
-                            console.warn('⚠️ Article non trouvé:', panierItem.fields.article);
-                        }
-                    });
-
-                    // Recalculer le total après avoir chargé tous les articles
-                    if (typeof calculerTotal === 'function') {
-                        console.log('🧮 Recalcul du total...');
-                        calculerTotal();
-                    }
-                }
-            } catch (error) {
-                console.error('❌ Erreur lors du chargement des articles du panier:', error);
-                console.error('❌ Stack:', error.stack);
-            }
-        }
-        
         // Gestion de l'annulation de commande
         const btnAnnulerCommande = document.getElementById('btnAnnulerCommande');
         if (btnAnnulerCommande) {
@@ -839,23 +839,504 @@
             totalInput.addEventListener('change', updateTotalDisplay);
         }
 
-        // Gestion de la soumission du formulaire panierForm
-        const panierForm = document.getElementById('panierForm');
-        if (panierForm) {
-            panierForm.addEventListener('submit', function(e) {
-                console.log('📤 Soumission du formulaire panier détectée');
-
-                // Générer les champs cachés pour les articles avant soumission
-                if (typeof genererChampsCachesPanier === 'function') {
-                    genererChampsCachesPanier();
-                } else {
-                    console.warn('⚠️ Fonction genererChampsCachesPanier non trouvée');
-                }
-            });
-        }
+        // Formulaire panier non utilisé - les articles sont gérés via API AJAX
+        // Plus besoin de soumission de formulaire pour le panier
 
         // Initialiser l'affichage du total
         updateTotalDisplay();
     });
+
+    // ==================== FONCTIONS POUR GESTION DES ARTICLES ====================
+
+    let panierIdRemiseEnCours = null;
+
+    // Modifier la quantité d'un article dans le panier
+    function modifierQuantiteCommande(panierId, delta) {
+        const quantiteInput = document.getElementById(`quantite-${panierId}`);
+        if (!quantiteInput) return;
+
+        let nouvelleQuantite = parseInt(quantiteInput.value) + delta;
+        if (nouvelleQuantite < 1) nouvelleQuantite = 1;
+
+        quantiteInput.value = nouvelleQuantite;
+        modifierQuantiteDirecteCommande(panierId, nouvelleQuantite);
+    }
+
+    // Modifier directement la quantité
+    function modifierQuantiteDirecteCommande(panierId, nouvelleQuantite) {
+        nouvelleQuantite = parseInt(nouvelleQuantite);
+        if (isNaN(nouvelleQuantite) || nouvelleQuantite < 1) {
+            showToast('La quantité doit être au moins 1', 'warning');
+            return;
+        }
+
+        fetch(`/commande/api/modifier-quantite/${panierId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({ quantite: nouvelleQuantite })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Mettre à jour le sous-total
+                const sousTotal = document.getElementById(`sous-total-${panierId}`);
+                if (sousTotal) sousTotal.textContent = `${data.nouveau_sous_total.toFixed(2)} DH`;
+
+                // Mettre à jour le total de la commande
+                const totalDisplay = document.getElementById('totalDisplay');
+                if (totalDisplay) totalDisplay.textContent = `${data.nouveau_total_commande.toFixed(2)} DH`;
+
+                const totalCommandeDisplay = document.getElementById('total-commande-display');
+                if (totalCommandeDisplay) totalCommandeDisplay.textContent = `${data.nouveau_total_commande.toFixed(2)} DH`;
+
+                showToast('Quantité mise à jour avec succès', 'success');
+            } else {
+                showToast('Erreur: ' + data.error, 'error');
+                // Restaurer la valeur précédente
+                const quantiteInput = document.getElementById(`quantite-${panierId}`);
+                if (quantiteInput) quantiteInput.value = quantiteInput.dataset.previousValue;
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            showToast('Une erreur est survenue', 'error');
+        });
+    }
+
+    // Supprimer un article du panier
+    function supprimerArticleCommande(panierId) {
+        if (!confirm('Voulez-vous vraiment supprimer cet article du panier ?')) return;
+
+        fetch(`/commande/api/supprimer-article/${panierId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Recharger la page pour afficher les changements
+                showToast('Article supprimé avec succès', 'success');
+                setTimeout(() => location.reload(), 500);
+            } else {
+                showToast('Erreur: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            showToast('Une erreur est survenue', 'error');
+        });
+    }
+
+    // Ouvrir le modal de remise
+    function ouvrirModalRemiseCommande(panierId) {
+        panierIdRemiseEnCours = panierId;
+        document.getElementById('typeRemiseCommande').value = 'POURCENTAGE';
+        document.getElementById('valeurRemiseCommande').value = '';
+        document.getElementById('raisonRemiseCommande').value = '';
+        document.getElementById('aperçuRemiseCommande').classList.add('hidden');
+        document.getElementById('modalRemiseCommande').classList.remove('hidden');
+    }
+
+    // Fermer le modal de remise
+    function fermerModalRemiseCommande() {
+        document.getElementById('modalRemiseCommande').classList.add('hidden');
+        panierIdRemiseEnCours = null;
+    }
+
+    // Calculer l'aperçu de la remise
+    function calculerAperçuRemiseCommande() {
+        const type = document.getElementById('typeRemiseCommande').value;
+        const valeur = parseFloat(document.getElementById('valeurRemiseCommande').value);
+
+        if (!panierIdRemiseEnCours || isNaN(valeur) || valeur <= 0) {
+            document.getElementById('aperçuRemiseCommande').classList.add('hidden');
+            return;
+        }
+
+        fetch(`/commande/api/calculer-remise-preview/${panierIdRemiseEnCours}/?type_remise=${type}&valeur_remise=${valeur}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const aperçu = document.getElementById('aperçuRemiseCommande');
+                const texte = document.getElementById('aperçuTexteCommande');
+
+                let message = `Sous-total actuel: ${data.data.sous_total_actuel.toFixed(2)} DH<br>`;
+                message += `Montant remise: -${data.data.montant_remise_calcule.toFixed(2)} DH<br>`;
+                message += `<strong>Nouveau sous-total: ${data.data.sous_total_apres_remise.toFixed(2)} DH</strong>`;
+
+                texte.innerHTML = message;
+                aperçu.classList.remove('hidden');
+            }
+        })
+        .catch(error => console.error('Erreur:', error));
+    }
+
+    // Appliquer la remise
+    function appliquerRemiseCommande() {
+        if (!panierIdRemiseEnCours) return;
+
+        const type = document.getElementById('typeRemiseCommande').value;
+        const valeur = parseFloat(document.getElementById('valeurRemiseCommande').value);
+        const raison = document.getElementById('raisonRemiseCommande').value;
+
+        if (isNaN(valeur) || valeur <= 0) {
+            showToast('Veuillez entrer une valeur valide', 'warning');
+            return;
+        }
+
+        fetch(`/commande/api/appliquer-remise/${panierIdRemiseEnCours}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({
+                type_remise: type,
+                valeur_remise: valeur,
+                raison_remise: raison
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(data.message, 'success');
+                fermerModalRemiseCommande();
+                setTimeout(() => location.reload(), 500);
+            } else {
+                showToast('Erreur: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            showToast('Une erreur est survenue', 'error');
+        });
+    }
+
+    // Retirer une remise
+    function retirerRemiseCommande(panierId) {
+        if (!confirm('Voulez-vous vraiment retirer cette remise ?')) return;
+
+        fetch(`/commande/api/retirer-remise/${panierId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(data.message, 'success');
+                setTimeout(() => location.reload(), 500);
+            } else {
+                showToast('Erreur: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            showToast('Une erreur est survenue', 'error');
+        });
+    }
+
+    // ==================== GESTION DES ARTICLES TEMPORAIRES ====================
+
+    // Liste pour stocker les articles/variantes ajoutés temporairement
+    let articlesTemporaires = [];
+
+    // Override de la fonction ajouterVarianteAuPanier pour afficher directement dans le partial
+    const ajouterVarianteAuPanierOriginal = window.ajouterVarianteAuPanier;
+    window.ajouterVarianteAuPanier = function(articleData, variante, quantiteInitiale = 1) {
+        console.log('📦 Ajout variante temporaire:', articleData, variante);
+
+        const itemData = {
+            article: articleData,
+            variante: variante,
+            quantite: quantiteInitiale,
+            timestamp: Date.now(),
+            tempId: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+        };
+
+        // Ajouter à la liste temporaire
+        articlesTemporaires.push(itemData);
+
+        // Afficher dans le conteneur avec la structure du partial
+        afficherArticleTemporairePartial(itemData);
+
+        // Mettre à jour le bouton Enregistrer
+        mettreAJourBoutonEnregistrer();
+
+        // Afficher une notification
+        showToast(`✅ Variante ajoutée: ${articleData.nom} - ${variante.couleur || ''} ${variante.pointure || ''}`, 'success');
+
+        // Fermer le modal des variantes
+        if (typeof fermerModalVariantes === 'function') {
+            fermerModalVariantes();
+        }
+    };
+
+    // Override de la fonction ajouterArticleAuPanier pour afficher directement dans le partial
+    const ajouterArticleAuPanierOriginal = window.ajouterArticleAuPanier;
+    window.ajouterArticleAuPanier = function(articleData, quantiteInitiale = 1) {
+        console.log('📦 Ajout article temporaire:', articleData);
+
+        const itemData = {
+            article: articleData,
+            variante: null,
+            quantite: quantiteInitiale,
+            timestamp: Date.now(),
+            tempId: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+        };
+
+        // Ajouter à la liste temporaire
+        articlesTemporaires.push(itemData);
+
+        // Afficher dans le conteneur avec la structure du partial
+        afficherArticleTemporairePartial(itemData);
+
+        // Mettre à jour le bouton Enregistrer
+        mettreAJourBoutonEnregistrer();
+
+        // Afficher une notification
+        showToast(`✅ Article ajouté: ${articleData.nom}`, 'success');
+
+        // Fermer le modal d'ajout
+        if (typeof fermerModalAjouterArticle === 'function') {
+            fermerModalAjouterArticle();
+        }
+    };
+
+    // Fonction pour générer le HTML d'un article temporaire (structure identique au partial)
+    function afficherArticleTemporairePartial(itemData) {
+        const article = itemData.article;
+        const variante = itemData.variante;
+        const quantite = itemData.quantite;
+        const tempId = itemData.tempId;
+
+        const prix = variante ? (variante.prix_unitaire || article.prix_actuel) : article.prix_actuel;
+        const sousTotal = (prix * quantite).toFixed(2);
+
+        // Informations de la variante
+        let varianteBadge = '';
+        let pointureBadge = '';
+        let couleurBadge = '';
+        let stockBadge = '';
+        let reference = article.reference || 'N/A';
+
+        if (variante) {
+            varianteBadge = '<span class="inline-flex items-center px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium ml-2"><i class="fas fa-layer-group mr-1"></i>Variante</span>';
+            reference = variante.reference_variante || article.reference || 'N/A';
+
+            pointureBadge = variante.pointure
+                ? `<span class="inline-flex items-center px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium"><i class="fas fa-ruler-vertical mr-1"></i>${variante.pointure}</span>`
+                : '<span class="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-xs"><i class="fas fa-ruler-vertical mr-1"></i>Taille N/A</span>';
+
+            couleurBadge = variante.couleur
+                ? `<span class="inline-flex items-center px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium"><i class="fas fa-palette mr-1"></i>${variante.couleur}</span>`
+                : '<span class="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-xs"><i class="fas fa-palette mr-1"></i>Couleur N/A</span>';
+
+            stockBadge = `<span class="inline-flex items-center px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium"><i class="fas fa-boxes mr-1"></i>Stock variante: ${variante.stock || 0}</span>`;
+        } else {
+            pointureBadge = '<span class="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-xs"><i class="fas fa-ruler-vertical mr-1"></i>Taille N/A</span>';
+            couleurBadge = article.couleur
+                ? `<span class="inline-flex items-center px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium"><i class="fas fa-palette mr-1"></i>${article.couleur}</span>`
+                : '<span class="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-xs"><i class="fas fa-palette mr-1"></i>Couleur N/A</span>';
+
+            stockBadge = `<span class="inline-flex items-center px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium"><i class="fas fa-boxes mr-1"></i>Stock article: ${article.qte_article || 0}</span>`;
+        }
+
+        const categorieBadge = article.categorie
+            ? `<span class="inline-flex items-center px-2 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-medium"><i class="fas fa-tag mr-1"></i>${article.categorie}</span>`
+            : '<span class="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-xs"><i class="fas fa-tag mr-1"></i>Catégorie N/A</span>';
+
+        const imageUrl = article.image_url || (article.image ? `/media/${article.image}` : '');
+        const imageHtml = imageUrl
+            ? `<img src="${imageUrl}" alt="Image de ${article.nom}" class="w-full h-full object-cover hover:scale-105 transition-transform duration-200" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">`
+            : '';
+
+        const html = `
+            <div class="article-card p-4 bg-orange-50 rounded-lg border-4 border-orange-400 hover:border-orange-500 transition-all shadow-lg relative"
+                 data-temp-id="${tempId}"
+                 data-temporaire="true"
+                 data-article-id="${article.id}"
+                 data-variante-id="${variante ? variante.id : ''}"
+                 data-quantite="${quantite}">
+
+                <!-- Badge "Non enregistré" -->
+                <div class="absolute top-2 right-2 z-10">
+                    <span class="inline-flex items-center px-3 py-1 bg-orange-500 text-white rounded-full text-xs font-bold shadow-md animate-pulse">
+                        <i class="fas fa-clock mr-1"></i>Non enregistré
+                    </span>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <div class="flex-1">
+                        <div class="flex items-center space-x-4">
+                            <div class="flex-shrink-0">
+                                <div class="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 border-2 border-orange-300 shadow-sm">
+                                    ${imageHtml}
+                                    <div class="w-full h-full flex items-center justify-center text-gray-400 ${imageUrl ? 'hidden' : ''}">
+                                        <i class="fas fa-image text-xl"></i>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="min-w-0 flex-1">
+                                <div class="font-semibold text-lg text-emerald-700">
+                                    ${article.nom}
+                                    ${varianteBadge}
+                                </div>
+                                <div class="text-sm text-gray-500">
+                                    <i class="fas fa-hashtag mr-1"></i>Réf: <span class="text-gray-500">${reference}</span>
+                                </div>
+                                <div class="mt-2 flex flex-wrap gap-2">
+                                    ${pointureBadge}
+                                    ${couleurBadge}
+                                    ${categorieBadge}
+                                    ${stockBadge}
+                                </div>
+                            </div>
+
+                            <div class="text-center min-w-0">
+                                <div class="text-sm text-gray-500">Quantité</div>
+                                <div class="font-medium text-lg">${quantite}</div>
+                            </div>
+
+                            <div class="text-center min-w-0">
+                                <div class="text-sm text-gray-500">Prix unitaire</div>
+                                <div class="font-medium text-emerald-600">${prix.toFixed(2)} DH</div>
+                            </div>
+
+                            <div class="text-center min-w-0">
+                                <div class="text-sm text-gray-500">Sous-total</div>
+                                <div class="text-lg font-bold text-emerald-600">${sousTotal} DH</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col space-y-2 ml-4">
+                        <button type="button" onclick="supprimerArticleTemporaire('${tempId}')"
+                                class="px-3 py-2 bg-red-500 hover:bg-red-600 text-white text-sm rounded-lg transition-colors flex items-center justify-center"
+                                title="Supprimer">
+                            <i class="fas fa-trash mr-1"></i>Supprimer
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Ajouter au début du conteneur
+        const container = document.getElementById('articles-container');
+        container.insertAdjacentHTML('afterbegin', html);
+    }
+
+    // Fonction pour supprimer un article temporaire
+    function supprimerArticleTemporaire(tempId) {
+        // Retirer de la liste
+        articlesTemporaires = articlesTemporaires.filter(item => item.tempId !== tempId);
+
+        // Retirer du DOM
+        const element = document.querySelector(`[data-temp-id="${tempId}"]`);
+        if (element) {
+            element.remove();
+        }
+
+        // Mettre à jour le bouton
+        mettreAJourBoutonEnregistrer();
+
+        showToast('Article retiré', 'info');
+    }
+
+    // Fonction pour mettre à jour le bouton Enregistrer
+    function mettreAJourBoutonEnregistrer() {
+        const btn = document.getElementById('btnEnregistrerArticles');
+        const count = document.getElementById('count-temporaires');
+
+        if (articlesTemporaires.length > 0) {
+            btn.classList.remove('hidden');
+            count.textContent = articlesTemporaires.length;
+        } else {
+            btn.classList.add('hidden');
+        }
+    }
+
+    // Fonction pour enregistrer tous les articles temporaires
+    async function enregistrerArticlesTemporaires() {
+        if (articlesTemporaires.length === 0) {
+            showToast('Aucun article à enregistrer', 'warning');
+            return;
+        }
+
+        if (!confirm(`Voulez-vous enregistrer ${articlesTemporaires.length} article(s) ?`)) {
+            return;
+        }
+
+        const commandeId = {{ commande.pk }};
+        let reussis = 0;
+        let erreurs = 0;
+
+        // Afficher un loader
+        const btn = document.getElementById('btnEnregistrerArticles');
+        const originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Enregistrement...';
+
+        // Enregistrer chaque article via l'API
+        for (const item of articlesTemporaires) {
+            try {
+                const formData = new FormData();
+                formData.append('action', 'add_article');
+                formData.append('article_id', item.article.id);
+                formData.append('quantite', item.quantite);
+
+                if (item.variante) {
+                    formData.append('variante_id', item.variante.id);
+                }
+
+                const response = await fetch(`/commande/api/ajouter-article/${commandeId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    reussis++;
+                } else {
+                    console.error('Erreur:', data.error);
+                    erreurs++;
+                }
+            } catch (error) {
+                console.error('Erreur lors de l\'ajout:', error);
+                erreurs++;
+            }
+        }
+
+        // Afficher le résultat
+        if (reussis > 0) {
+            showToast(`✅ ${reussis} article(s) enregistré(s) avec succès`, 'success');
+
+            // Recharger la page pour afficher les articles enregistrés
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        } else {
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+            showToast(`❌ Erreur: Aucun article n'a pu être enregistré`, 'error');
+        }
+
+        if (erreurs > 0) {
+            showToast(`⚠️ ${erreurs} erreur(s) lors de l'enregistrement`, 'warning');
+        }
+    }
 </script>
 {% endblock content %} 

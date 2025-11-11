@@ -3186,7 +3186,22 @@ def creer_envoi_region(request):
             date_livraison_prevue=timezone.now().date(),
         )
 
-        return JsonResponse({'success': True, 'envoi_id': envoi.id, 'numero': envoi.numero_envoi})
+        # Associer automatiquement les commandes préparées de cette région à l'envoi
+        commandes_preparees = Commande.objects.filter(
+            ville__region=region,
+            etats__enum_etat__libelle='Préparée',
+            etats__date_fin__isnull=True,
+            envoi__isnull=True  # Seulement les commandes pas encore dans un envoi
+        ).distinct()
+
+        nb_commandes_associees = commandes_preparees.update(envoi=envoi)
+
+        return JsonResponse({
+            'success': True,
+            'envoi_id': envoi.id,
+            'numero': envoi.numero_envoi,
+            'nb_commandes': nb_commandes_associees
+        })
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
@@ -3235,11 +3250,22 @@ def creer_envois_multiples(request):
                     date_envoi=timezone.now().date(),
                     date_livraison_prevue=timezone.now().date(),
                 )
-                
+
+                # Associer automatiquement les commandes préparées de cette région à l'envoi
+                commandes_preparees = Commande.objects.filter(
+                    ville__region=region,
+                    etats__enum_etat__libelle='Préparée',
+                    etats__date_fin__isnull=True,
+                    envoi__isnull=True  # Seulement les commandes pas encore dans un envoi
+                ).distinct()
+
+                nb_commandes_associees = commandes_preparees.update(envoi=envoi)
+
                 envois_crees.append({
                     'id': envoi.id,
                     'numero': envoi.numero_envoi,
-                    'region': region.nom_region
+                    'region': region.nom_region,
+                    'nb_commandes': nb_commandes_associees
                 })
                 
             except Region.DoesNotExist:
@@ -4855,11 +4881,13 @@ def export_commandes_envoi_excel(request, envoi_id):
             .distinct()
         )
 
-        if not commandes.exists():
-            print("🔎 Aucun lien direct commande→envoi. Fallback sur TOUTES les commandes de la région.")
+        # Si aucune commande n'est directement associée, prendre les commandes préparées de la région
+        if not commandes.exists() and envoi.region:
             commandes = (
                 Commande.objects.filter(
                     ville__region=envoi.region,
+                    etats__enum_etat__libelle='Préparée',
+                    etats__date_fin__isnull=True
                 )
                 .select_related('client', 'ville', 'ville__region')
                 .prefetch_related(
@@ -4867,9 +4895,12 @@ def export_commandes_envoi_excel(request, envoi_id):
                     'paniers__variante',
                     'paniers__variante__couleur',
                     'paniers__variante__pointure',
+                    'etats__enum_etat'
                 )
                 .distinct()
             )
+
+
         # Test: Créer un workbook simple d'abord
         try:
             wb = openpyxl.Workbook()

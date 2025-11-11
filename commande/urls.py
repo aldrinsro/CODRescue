@@ -54,7 +54,15 @@ urlpatterns = [
     # API
     path('api/commande/<int:commande_id>/panier/', views.api_panier_commande, name='api_panier_commande'),
     path('rechercher-client-telephone/', views.rechercher_client_telephone, name='rechercher_client_telephone'),
-    
+
+    # API Gestion des articles et remises
+    path('api/modifier-quantite/<int:panier_id>/', views.api_modifier_quantite_panier_commande, name='api_modifier_quantite_panier_commande'),
+    path('api/supprimer-article/<int:panier_id>/', views.api_supprimer_article_commande, name='api_supprimer_article_commande'),
+    path('api/appliquer-remise/<int:panier_id>/', views.api_appliquer_remise_commande, name='api_appliquer_remise_commande'),
+    path('api/retirer-remise/<int:panier_id>/', views.api_retirer_remise_commande, name='api_retirer_remise_commande'),
+    path('api/calculer-remise-preview/<int:panier_id>/', views.api_calculer_remise_preview_commande, name='api_calculer_remise_preview_commande'),
+    path('api/ajouter-article/<int:commande_id>/', views.api_ajouter_article_commande, name='api_ajouter_article_commande'),
+
     # Étiquettes professionnelles
     path('etiquettes/', views_etiquettes.EtiquetteGeneratorView.as_view(), name='etiquettes_generator'),
     path('etiquettes/generate/', views_etiquettes.EtiquetteGeneratorView.as_view(), name='generate_etiquettes'),
