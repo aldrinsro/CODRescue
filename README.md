@@ -384,3 +384,54 @@ Ce projet est sous licence MIT. Voir le fichier [LICENSE](LICENSE) pour plus de 
 [![GitHub forks](https://img.shields.io/github/forks/votre-username/CODRescue?style=social)](https://github.com/votre-username/CODRescue/network)
 
 </div>
+
+---
+
+# YZ-RescueV1
+
+YZ-RescueV1 est une plateforme de gestion opérationnelle pour le suivi, la préparation et la logistique des commandes e-commerce, conçue pour les équipes de gestion, de confirmation et de livraison.
+
+## Technologies utilisées
+- **Python 3.x** : Langage principal pour le backend
+- **Django** : Framework web principal (MVC, ORM, templates)
+- **JavaScript (ES6+)** : Frontend dynamique, gestion des modales, filtres, interactions utilisateur
+- **HTML/CSS (Tailwind, custom styles)** : Templates responsives et modernes
+- **SQLite / PostgreSQL** : Base de données (configurable)
+- **Bootstrap & FontAwesome** : UI, icônes et composants visuels
+
+## Fonctionnalités principales
+
+### 1. Gestion des commandes
+- Création, modification et suivi des commandes clients
+- Filtrage intelligent par ville, région, état, synchronisation, etc.
+- Système de pagination et recherche avancée
+- Historique complet des états et opérations sur chaque commande
+
+### 2. Système de remises et upsell
+- Application de remises personnalisées (pourcentage uniquement)
+- Gestion dynamique des prix upsell selon le niveau du client
+- Affichage contextuel des prix (promotion, liquidation, test, upsell, normal)
+
+### 3. Préparation et logistique
+- Module de préparation des commandes avec suivi d'état (en préparation, préparée, livrée, etc.)
+- Génération d'étiquettes, export Excel pour la logistique
+- Gestion des articles, variantes, stocks et opérations associées
+
+## Structure du projet
+- `article/` : Gestion des articles, modèles, variantes
+- `commande/` : Logique de commande, états, opérations, remises
+- `operatConfirme/` : Module opérateur confirmé (confirmation, suivi, modales)
+- `Superpreparation/` : Module de préparation avancée, logistique, export
+- `static/` : Fichiers JS, CSS, images
+- `templates/` : Templates Django pour toutes les vues
+
+## Démarrage rapide
+1. Cloner le projet
+2. Installer les dépendances Python : `pip install -r requirements.txt`
+3. Configurer la base de données dans `config/settings.py`
+4. Lancer le serveur : `python manage.py runserver`
+
+## Auteur
+Aldrin SRO
+
+Pour toute question ou contribution, consultez la documentation dans le dossier `docs/` ou ouvrez une issue sur le dépôt.

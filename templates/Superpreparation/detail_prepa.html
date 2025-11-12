@@ -102,13 +102,23 @@
             </div>
 
             <!-- Frais de livraison -->
+              {% if commande.frais_livraison is False %}
             <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <label class="block text-sm font-semibold mb-2 text-purple-600">Frais de livraison :</label>
+                <p class="text-lg font-medium text-purple-800">
+                    <i class="fas fa-truck mr-2"></i>
+                    Non inclus
+                </p>
+            </div>
+            {% else %}
+             <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
                 <label class="block text-sm font-semibold mb-2 text-purple-600">Frais de livraison :</label>
                 <p class="text-lg font-medium text-purple-800">
                     <i class="fas fa-truck mr-2"></i>
                     {{ commande.ville.frais_livraison|default:0|floatformat:2 }} DH
                 </p>
             </div>
+            {% endif %}
 
             <!-- Adresse de livraison -->
             <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 col-span-1 md:col-span-2 lg:col-span-3">

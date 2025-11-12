@@ -184,6 +184,17 @@
                         {% endfor %}
                     </select>
                 </div>
+                <!-- Filtre par date naturelle (AJAX) -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-calendar-alt mr-1"></i>Filtrer par date (naturelle)
+                    </label>
+                    <div class="flex gap-2">
+                <input type="date" id="datePickerInput" class="px-3 py-2 rounded-lg border focus:ring-2 focus:ring-offset-2 transition-all" style="border-color: var(--admin-accent-color); focus:ring-color: var(--admin-color); min-width: 160px;" placeholder="Date">
+                    
+                    </div>
+                    <div id="dateNaturalError" class="text-xs text-red-600 mt-1 hidden"></div>
+                </div>
                 <!-- Nouveau Filtre pour les Commandes Synchronisées -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -377,6 +388,88 @@
 <script src="{% static 'js/sync-enhanced.js' %}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Recherche AJAX par date naturelle
+        const dateNaturalInput = document.getElementById('dateNaturalInput');
+        const datePickerInput = document.getElementById('datePickerInput');
+        const dateNaturalSearchBtn = document.getElementById('dateNaturalSearchBtn');
+        const dateNaturalError = document.getElementById('dateNaturalError');
+        const commandTableBody = document.getElementById('commandTableBody');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const noResultsMessage = document.getElementById('noResultsMessage');
+
+        async function searchByNaturalDate() {
+            let value = '';
+            if (datePickerInput && datePickerInput.value) {
+                value = datePickerInput.value;
+            } else if (dateNaturalInput && dateNaturalInput.value.trim()) {
+                value = dateNaturalInput.value.trim();
+            }
+            if (!value) {
+                dateNaturalError.textContent = "Veuillez saisir ou sélectionner une date ou une expression (ex: aujourd'hui, hier, 7 derniers jours)";
+                dateNaturalError.classList.remove('hidden');
+                return;
+            }
+            dateNaturalError.classList.add('hidden');
+            if (loadingOverlay) loadingOverlay.classList.remove('hidden');
+            try {
+                const resp = await fetch('/commande/ajax/search_commandes_by_date/?date=' + encodeURIComponent(value), {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                const data = await resp.json();
+                if (!data.ok) {
+                    dateNaturalError.textContent = data.error || 'Erreur lors de la recherche.';
+                    dateNaturalError.classList.remove('hidden');
+                    commandTableBody.innerHTML = '';
+                    if (noResultsMessage) noResultsMessage.classList.remove('hidden');
+                    return;
+                }
+                // Générer le HTML du tableau (simple)
+                if (data.results.length === 0) {
+                    commandTableBody.innerHTML = '';
+                    if (noResultsMessage) noResultsMessage.classList.remove('hidden');
+                } else {
+                    if (noResultsMessage) noResultsMessage.classList.add('hidden');
+                    commandTableBody.innerHTML = data.results.map(c => `
+                        <tr>
+                            <td class=\"px-4 py-3 border-r border-b border-gray-200\">${c.id}</td>
+                            <td class=\"px-4 py-3 border-r border-b border-gray-200\">${c.client || ''}</td>
+                            <td class=\"px-4 py-3 border-r border-b border-gray-200\">${c.date}</td>
+                            <td class=\"px-4 py-3 border-r border-b border-gray-200\"></td>
+                            <td class=\"px-4 py-3 border-r border-b border-gray-200\">${c.total.toFixed(2)} DH</td>
+                            <td class=\"px-4 py-3 border-r border-b border-gray-200\"></td>
+                            <td class=\"px-4 py-3 border-r border-b border-gray-200 text-center\"></td>
+                            <td class=\"px-4 py-3 border-b border-gray-200\"></td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (e) {
+                dateNaturalError.textContent = 'Erreur technique: ' + e.message;
+                dateNaturalError.classList.remove('hidden');
+                commandTableBody.innerHTML = '';
+                if (noResultsMessage) noResultsMessage.classList.remove('hidden');
+            } finally {
+                if (loadingOverlay) loadingOverlay.classList.add('hidden');
+            }
+        }
+
+        if (dateNaturalSearchBtn) {
+            dateNaturalSearchBtn.addEventListener('click', searchByNaturalDate);
+        }
+        if (dateNaturalInput) {
+            dateNaturalInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    searchByNaturalDate();
+                }
+            });
+        }
+        if (datePickerInput) {
+            datePickerInput.addEventListener('change', function() {
+                if (datePickerInput.value) {
+                    searchByNaturalDate();
+                }
+            });
+        }
         // Page des commandes - Aucune fonctionnalité de suppression
         console.log('Page des commandes chargée');
         
@@ -870,4 +963,4 @@
     </div>
 </div>
 
-{% endblock content %} 
+{% endblock content %}

@@ -109,7 +109,11 @@ function afficherPrixUpsellDynamiques(compteurActuel) {
         // Déterminer le libellé selon le compteur
         let libelle, couleurClasse;
         if (compteurActuel > 0) {
-            libelle = `Prix upsell niveau ${compteurActuel}`;
+            if (compteurActuel >= 4) {
+                libelle = 'Prix Gros';
+            } else {
+                libelle = `Prix upsell niveau ${compteurActuel}`;
+            }
             couleurClasse = 'text-green-600';
         } else {
             libelle = 'Prix normal';

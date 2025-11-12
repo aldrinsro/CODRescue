@@ -245,7 +245,7 @@
                     </td>
 
                     <td class="px-4 py-4 whitespace-nowrap text-center">
-                        <button class="text-blue-600 hover:text-blue-800" onclick="viewCart('{{ commande.id }}')">
+                        <button class="text-blue-600 hover:text-blue-800" onclick="viewCartOperatConfirme('{{ commande.id }}')">
                             <i class="fas fa-shopping-basket"></i>
                         </button>
                     </td>
@@ -310,13 +310,11 @@ document.addEventListener('DOMContentLoaded', function() {
 // On crée une version wrapper qui utilise l'URL spécifique à operatConfirme
 const originalViewCart = typeof viewCart !== 'undefined' ? viewCart : null;
 
-function viewCart(commandeId) {
+function viewCartOperatConfirme(commandeId) {
     const customUrl = `/operateur-confirme/api/commande/${commandeId}/panier/`;
-    // Appeler la fonction du fichier panier.html avec l'URL personnalisée
     if (originalViewCart) {
         originalViewCart(commandeId, customUrl);
     }
 }
-
 </script>
 {% endblock %}
