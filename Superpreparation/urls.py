@@ -14,8 +14,7 @@ urlpatterns = [
     path('', views.home_view, name='home'),
     path('home/', views.home_view, name='home_redirect'),
 
-     #Gestion des commandes 
-    path('liste-prepa/', views.liste_prepa, name='liste_prepa'),
+  
     path('commandes-en-preparation/', views.commandes_en_preparation, name='commandes_en_preparation'),
     path('commandes-emballees/', views.commandes_emballees, name='commandes_emballees'),
     path('commandes-preparees/', views.commandes_preparees, name='commandes_preparees'),
