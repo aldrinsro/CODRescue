@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views, views_etiquettes
+from . import views_search
 
 app_name = 'commande'
  
@@ -68,4 +69,7 @@ urlpatterns = [
     path('etiquettes/generate/', views_etiquettes.EtiquetteGeneratorView.as_view(), name='generate_etiquettes'),
     path('api/commande/<int:commande_id>/articles/', views_etiquettes.get_commande_articles, name='get_commande_articles'),
     path('etiquettes/preview/<int:commande_id>/<int:template_id>/', views_etiquettes.preview_etiquette, name='preview_etiquette'),
+
+    #Rerche par periode 
+    path('ajax/search_commandes_by_date/', views_search.ajax_search_commandes_by_date, name='ajax_search_commandes_by_date'),
 ]

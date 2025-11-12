@@ -133,7 +133,7 @@ def get_prix_affichage_remise(article, quantite=1):
             libelle = 'Prix upsell niveau 3'
         elif quantite >= 5 and hasattr(article, 'prix_upsell_4') and article.prix_upsell_4:
             prix = article.prix_upsell_4
-            libelle = 'Prix upsell niveau 4'
+            libelle = 'Prix Gros'
         else:
             prix = article.prix_actuel or article.prix_unitaire
             libelle = 'Prix normal'
@@ -345,7 +345,10 @@ def get_prix_effectif_panier(panier):
         icone = 'fas fa-flask'
     elif compteur_actuel > 0 and hasattr(article, 'isUpsell') and article.isUpsell:
         # PRIORITÉ 2: Upsell dynamique (seulement si pas de phase spéciale)
-        libelle = f'Prix upsell niveau {compteur_actuel}'
+        if compteur_actuel >= 4:
+            libelle = 'Prix Gros'
+        else:
+            libelle = f'Prix upsell niveau {compteur_actuel}'
         couleur_classe = 'text-green-600'
         icone = 'fas fa-arrow-up'
     else:

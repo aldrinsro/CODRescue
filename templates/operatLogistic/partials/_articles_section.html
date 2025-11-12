@@ -318,20 +318,7 @@
                                             
                      
                         
-                        <!-- Badge de statut pour les opérateurs logistiques -->
-                        {% if panier.remise_personnalisee %}
-                            <span class="inline-flex items-center px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium">
-                                <i class="fas fa-hand-holding-usd mr-1"></i>Remise personnalisée
-                                {% if panier.remise_personnalisee.type_remise == 'POURCENTAGE' %}
-                                    {{ panier.remise_personnalisee.valeur_remise }}%
-                                {% endif %}
-                            </span>
-                        {% elif panier.remise_appliquer and panier.sous_total_remise > 0 %}
-                            <span class="inline-flex items-center px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">
-                                <i class="fas fa-percent mr-1"></i>{{ panier.type_remise_appliquee|upper|default:"REMISE" }}
-                            </span>
-                        {% endif %}
-
+                      
                         {% if panier.article.phase == 'PROMO' or panier.article.has_promo_active %}
                         <span class="inline-flex items-center px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">
                             <i class="fas fa-fire mr-1"></i>PROMO
