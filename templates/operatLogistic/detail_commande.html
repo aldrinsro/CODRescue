@@ -75,11 +75,11 @@
     <!-- En-tête avec navigation -->
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 text-white p-6 rounded-xl shadow-lg" style="background: linear-gradient(to right, var(--logistic-primary), var(--logistic-dark));">
         <div class="flex items-center space-x-4">
-            <a href="{% url 'operatLogistic:liste_commandes' %}" 
+            <button type="button" onclick="window.history.back()" 
                class="flex items-center px-4 py-2 bg-white text-gray-700 hover:bg-gray-100 rounded-lg transition-all duration-300 shadow-sm border border-gray-200 font-medium">
                 <i class="fas fa-arrow-left mr-2"></i>
-                Retour à la liste
-            </a>
+                Retour 
+            </button>
             <div class="text-2xl font-bold">
                 <i class="fas fa-truck mr-3" style="color: var(--logistic-light);"></i>
                 Commande {{ commande.id_yz }}
@@ -2686,10 +2686,8 @@ function mettreAJourDonneesAvantSoumission() {
                         </optgroup>
 
                         <optgroup label="Annulations" class="optgroup-annulations">
-                            <option value="Commande annulée par le client">Commande annulée par le client</option>
-                            <option value="Paiement refusé ou problème bancaire">Paiement refusé ou problème bancaire</option>
-                            <option value="Délai de livraison dépassé">Délai de livraison dépassé</option>
-                            <option value="Stock insuffisant après confirmation">Stock insuffisant après confirmation</option>
+                            <option value="Annulé au téléphone"> Annulé au téléphone </option>
+                            <option value="Annulé sur place"> Annulé sur place </option>
                         </optgroup>
 
                         <optgroup label="Autres motifs" class="optgroup-autres">
