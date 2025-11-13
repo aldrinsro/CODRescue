@@ -14,9 +14,9 @@
             </h1>
             <p style="color: var(--admin-accent-color);">Consultez les informations détaillées de cette commande.</p>
         </div>
-        <a href="{% url 'commande:confirmees' %}" class="mt-4 md:mt-0 inline-flex items-center text-white px-4 py-2 rounded-lg font-medium transition-all shadow-md hover:shadow-lg" style="background-color: var(--admin-color); hover:background-color: var(--admin-gradient-end);">
-            <i class="fas fa-arrow-left mr-2"></i>Retour aux commandes confirmées
-        </a>
+        <button type="button" onclick="window.history.back()" class="mt-4 md:mt-0 inline-flex items-center text-white px-4 py-2 rounded-lg font-medium transition-all shadow-md hover:shadow-lg" style="background-color: var(--admin-color);">
+            <i class="fas fa-arrow-left mr-2"></i>Retour à la page précédente
+        </button>
     </div>
 
     <!-- Section 1: Informations Client -->

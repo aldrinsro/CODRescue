@@ -570,8 +570,14 @@
                 <label for="raisonRemise" class="block text-sm font-medium text-gray-700 mb-2">
                     Raison de la remise (optionnel)
                 </label>
-                <textarea id="raisonRemise" rows="2" placeholder="Ex: Client fidèle, Produit endommagé..."
-                          class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"></textarea>
+                <select id="raisonRemise" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                    <option value="">-- Sélectionnez une raison --</option>
+                    <option value="Client fidèle">Client fidèle</option>
+                    <option value="Produit endommagé">Produit endommagé</option>
+                    <option value="Erreur de préparation">Erreur de préparation</option>
+                    <option value="Geste commercial">Geste commercial</option>
+                    <option value="Retard de livraison">Retard de livraison</option>
+                </select>
             </div>
 
             <!-- Aperçu de la remise -->

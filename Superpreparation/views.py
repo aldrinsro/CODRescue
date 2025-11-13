@@ -4295,7 +4295,8 @@ def commandes_confirmees(request):
         
         commande.etat_confirmation = etat_confirmation
 
-    # Récupérer les opérateurs de préparation actifs
+    # Récupérer les opérateurs de préparation actifs avec le nombre de commandes affectées
+    from django.db.models import Count, Q
     operateurs_preparation = Operateur.objects.filter(
         type_operateur='PREPARATION',
         actif=True
