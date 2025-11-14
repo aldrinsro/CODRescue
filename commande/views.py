@@ -2,13 +2,15 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST, require_http_methods
 from django.views.decorators.csrf import csrf_exempt
-from django.db.models import Q, Sum, Count
+from django.db.models import Q, Sum, Count, Value, CharField
+from django.db.models.functions import Cast, Substr, Length
 from django.db import models, transaction
 from django.core.paginator import Paginator
 from django.contrib import messages
 from django.core import serializers
 from django.http import JsonResponse, HttpResponse # Import HttpResponse for partial rendering
 import json
+import re
 from .models import Commande, Panier, EnumEtatCmd, EtatCommande, Operation
 from client.models import Client
 from parametre.models import Ville, Operateur, Region # Import Region
@@ -78,6 +80,21 @@ def liste_commandes(request):
             etats__date_fin__isnull=True  # État actuel
         ).distinct()
 
+    # Filtre par date de création
+    date_filter = request.GET.get('date_filter', '')
+    if date_filter:
+        from common.date_utils import parse_date_input
+        try:
+            start_date, end_date = parse_date_input(date_filter)
+            # Filtrer par plage de dates sur date_creation
+            commandes = commandes.filter(
+                date_creation__date__gte=start_date,
+                date_creation__date__lte=end_date
+            )
+        except ValueError:
+            # Si la date est invalide, ignorer le filtre
+            pass
+
     # Nouveau filtre pour les commandes synchronisées
     if sync_filter:
         commandes = commandes.filter(origine='SYNC') # Ensure we only filter synchronized commands
@@ -99,8 +116,25 @@ def liste_commandes(request):
             except ValueError:
                 pass # Ignore invalid date
 
-    # Triez par ID YZ croissant (1, 2, 3, ...)
-    commandes = commandes.order_by('id_yz')
+    # Gestion du tri/ordre
+    order_by = request.GET.get('order_by', '')
+    if order_by:
+        # Liste blanche des champs autorisés pour le tri
+        allowed_order_fields = [
+            'date_creation', '-date_creation',
+            'date_cmd', '-date_cmd',
+            'total_cmd', '-total_cmd',
+            'client__nom', '-client__nom',
+            'id_yz', '-id_yz'
+        ]
+        if order_by in allowed_order_fields:
+            commandes = commandes.order_by(order_by)
+        else:
+            # Tri par défaut si la valeur n'est pas valide
+            commandes = commandes.order_by('id_yz')
+    else:
+        # Tri par défaut : ID YZ croissant (1, 2, 3, ...)
+        commandes = commandes.order_by('id_yz')
 
     # Pagination flexible pour les administrateurs
     items_per_page = request.GET.get('items_per_page', '10')
@@ -198,8 +232,10 @@ def liste_commandes(request):
         'ville_init_filter': ville_init_filter,
         'region_filter': region_filter,
         'etat_filter': etat_filter,
+        'date_filter': date_filter, # Ajouter le filtre de date au contexte
         'sync_filter': sync_filter, # Ajouter le nouveau filtre au contexte
         'custom_sync_date': custom_sync_date, # Ajouter la date personnalisée au contexte
+        'order_by': order_by, # Ajouter le tri au contexte
         'items_per_page': items_per_page,
         'start_range': start_range,
         'end_range': end_range,

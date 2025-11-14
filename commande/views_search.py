@@ -18,9 +18,9 @@ def ajax_search_commandes_by_date(request):
         results = [
             {
                 'id': c.id,
-                'date': c.date_commande.strftime('%Y-%m-%d'),
+                'date': c.date_cmd.strftime('%Y-%m-%d') if c.date_cmd else '',
                 'client': str(getattr(c, 'client', '')),
-                'total': float(getattr(c, 'total', 0)),
+                'total': float(getattr(c, 'total_cmd', 0)),
             }
             for c in qs[:100]
         ]

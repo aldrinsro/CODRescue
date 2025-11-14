@@ -4,7 +4,6 @@
 {% block title %}Liste des Commandes - YZ-CMD{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/sync-enhanced.css' %}">
 <style>
     @keyframes slideInUp {
         from {
@@ -168,14 +167,13 @@
             
             <!-- Filtres spécifiques -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t border-gray-200">
-            
+
                 <!-- Filtre par état -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-tags mr-1"></i>Filtrer par état
+                        <i class="fas fa-tags mr-1"></i>État
                     </label>
-                    <select name="etat_filter" class="w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-offset-2 transition-all" 
-                            style="border-color: var(--admin-accent-color); focus:ring-color: var(--admin-color);">
+                    <select name="etat_filter" class="w-full px-3 py-2 rounded-md border border-gray-300 focus:ring-indigo-500 focus:border-indigo-500">
                         <option value="">Tous les états</option>
                         {% for etat in etats %}
                         <option value="{{ etat.id }}" {% if etat_filter == etat.id|stringformat:"s" %}selected{% endif %}>
@@ -184,36 +182,65 @@
                         {% endfor %}
                     </select>
                 </div>
-                <!-- Filtre par date naturelle (AJAX) -->
+
+                <!-- Filtre par date -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-calendar-alt mr-1"></i>Filtrer par date (naturelle)
+                        <i class="fas fa-calendar-alt mr-1"></i>Date de création
                     </label>
-                    <div class="flex gap-2">
-                <input type="date" id="datePickerInput" class="px-3 py-2 rounded-lg border focus:ring-2 focus:ring-offset-2 transition-all" style="border-color: var(--admin-accent-color); focus:ring-color: var(--admin-color); min-width: 160px;" placeholder="Date">
-                    
-                    </div>
-                    <div id="dateNaturalError" class="text-xs text-red-600 mt-1 hidden"></div>
+                    <select name="date_filter" class="w-full px-3 py-2 rounded-md border border-gray-300 focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="">Toutes les dates</option>
+                        <option value="aujourd'hui" {% if date_filter == "aujourd'hui" %}selected{% endif %}>Aujourd'hui</option>
+                        <option value="hier" {% if date_filter == "hier" %}selected{% endif %}>Hier</option>
+                        <option value="cette semaine" {% if date_filter == "cette semaine" %}selected{% endif %}>Cette semaine</option>
+                        <option value="7 derniers jours" {% if date_filter == "7 derniers jours" %}selected{% endif %}>7 derniers jours</option>
+                        <option value="30 derniers jours" {% if date_filter == "30 derniers jours" %}selected{% endif %}>30 derniers jours</option>
+                        <option value="ce mois" {% if date_filter == "ce mois" %}selected{% endif %}>Ce mois</option>
+                        <option value="le mois dernier" {% if date_filter == "le mois dernier" %}selected{% endif %}>Le mois dernier</option>
+                    </select>
                 </div>
-                <!-- Nouveau Filtre pour les Commandes Synchronisées -->
+
+                <!-- Filtre Synchronisation -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-sync-alt mr-1"></i>Commandes Synchronisées
+                        <i class="fas fa-sync-alt mr-1"></i>Synchronisation
                     </label>
-                    <select name="sync_filter" id="syncFilter" class="w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-offset-2 transition-all" 
-                            style="border-color: var(--admin-accent-color); focus:ring-color: var(--admin-color);">
-                        <option value="">Toutes les commandes</option>
+                    <select name="sync_filter" id="syncFilter" class="w-full px-3 py-2 rounded-md border border-gray-300 focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="">Toutes</option>
                         <option value="last_minute" {% if sync_filter == 'last_minute' %}selected{% endif %}>Dernière minute</option>
                         <option value="last_hour" {% if sync_filter == 'last_hour' %}selected{% endif %}>Dernière heure</option>
                         <option value="today" {% if sync_filter == 'today' %}selected{% endif %}>Aujourd'hui</option>
-                        <option value="last_24_hours" {% if sync_filter == 'last_24_hours' %}selected{% endif %}>Dernières 24 heures</option>
-                        <option value="last_7_days" {% if sync_filter == 'last_7_days' %}selected{% endif %}>Derniers 7 jours</option>
-                        <option value="custom_date" {% if sync_filter == 'custom_date' %}selected{% endif %}>Date personnalisée</option>
+                        <option value="last_24_hours" {% if sync_filter == 'last_24_hours' %}selected{% endif %}>24 heures</option>
+                        <option value="last_7_days" {% if sync_filter == 'last_7_days' %}selected{% endif %}>7 jours</option>
+                        <option value="custom_date" {% if sync_filter == 'custom_date' %}selected{% endif %}>Personnalisée</option>
                     </select>
-                    <input type="date" name="custom_sync_date" id="customSyncDate" 
-                           value="{{ custom_sync_date|default:'' }}" 
-                           class="w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-offset-2 transition-all mt-2 {% if sync_filter != 'custom_date' %}hidden{% endif %}" 
-                           style="border-color: var(--admin-accent-color); focus:ring-color: var(--admin-color);">
+                    <input type="date" name="custom_sync_date" id="customSyncDate"
+                           value="{{ custom_sync_date|default:'' }}"
+                           class="w-full px-3 py-2 rounded-md border border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 mt-2 {% if sync_filter != 'custom_date' %}hidden{% endif %}">
+                </div>
+
+                <!-- Filtre Ordre/Tri -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-sort mr-1"></i>Trier par
+                    </label>
+                    <select name="order_by" class="w-full px-3 py-2 rounded-md border border-gray-300 focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="">Par défaut</option>
+                        <optgroup label="Date de création">
+                            <option value="-date_creation" {% if order_by == '-date_creation' %}selected{% endif %}>➜ Plus récent</option>
+                            <option value="date_creation" {% if order_by == 'date_creation' %}selected{% endif %}>➜ Plus ancien</option>
+                        </optgroup>
+                        <optgroup label="Total">
+                            <option value="-total_cmd" {% if order_by == '-total_cmd' %}selected{% endif %}>➜ Plus élevé</option>
+                            <option value="total_cmd" {% if order_by == 'total_cmd' %}selected{% endif %}>➜ Plus bas</option>
+                        </optgroup>
+                        <optgroup label="Autre">
+                            <option value="client__nom" {% if order_by == 'client__nom' %}selected{% endif %}>➜ Client A-Z</option>
+                            <option value="-client__nom" {% if order_by == '-client__nom' %}selected{% endif %}>➜ Client Z-A</option>
+                            <option value="id_yz" {% if order_by == 'id_yz' %}selected{% endif %}>➜ N° ID croissant</option>
+                            <option value="-id_yz" {% if order_by == '-id_yz' %}selected{% endif %}>➜ N° ID décroissant</option>
+                        </optgroup>
+                    </select>
                 </div>
             </div>
         </form>
@@ -371,7 +398,7 @@
     </div>
 
     <!-- Informations de pagination -->
-    <div id="totalCommandsDisplay" class="flex justify-center mt-4">
+    <div id="totalCommandsDisplay" class="flex justify-center mt-5b">
         <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg px-4 py-2 border border-blue-200 shadow-sm">
             <div class="flex items-center space-x-2">
                 <i class="fas fa-info-circle text-sm" style="color: var(--admin-color);"></i>
@@ -388,88 +415,10 @@
 <script src="{% static 'js/sync-enhanced.js' %}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Recherche AJAX par date naturelle
-        const dateNaturalInput = document.getElementById('dateNaturalInput');
-        const datePickerInput = document.getElementById('datePickerInput');
-        const dateNaturalSearchBtn = document.getElementById('dateNaturalSearchBtn');
-        const dateNaturalError = document.getElementById('dateNaturalError');
         const commandTableBody = document.getElementById('commandTableBody');
         const loadingOverlay = document.getElementById('loadingOverlay');
         const noResultsMessage = document.getElementById('noResultsMessage');
 
-        async function searchByNaturalDate() {
-            let value = '';
-            if (datePickerInput && datePickerInput.value) {
-                value = datePickerInput.value;
-            } else if (dateNaturalInput && dateNaturalInput.value.trim()) {
-                value = dateNaturalInput.value.trim();
-            }
-            if (!value) {
-                dateNaturalError.textContent = "Veuillez saisir ou sélectionner une date ou une expression (ex: aujourd'hui, hier, 7 derniers jours)";
-                dateNaturalError.classList.remove('hidden');
-                return;
-            }
-            dateNaturalError.classList.add('hidden');
-            if (loadingOverlay) loadingOverlay.classList.remove('hidden');
-            try {
-                const resp = await fetch('/commande/ajax/search_commandes_by_date/?date=' + encodeURIComponent(value), {
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                });
-                const data = await resp.json();
-                if (!data.ok) {
-                    dateNaturalError.textContent = data.error || 'Erreur lors de la recherche.';
-                    dateNaturalError.classList.remove('hidden');
-                    commandTableBody.innerHTML = '';
-                    if (noResultsMessage) noResultsMessage.classList.remove('hidden');
-                    return;
-                }
-                // Générer le HTML du tableau (simple)
-                if (data.results.length === 0) {
-                    commandTableBody.innerHTML = '';
-                    if (noResultsMessage) noResultsMessage.classList.remove('hidden');
-                } else {
-                    if (noResultsMessage) noResultsMessage.classList.add('hidden');
-                    commandTableBody.innerHTML = data.results.map(c => `
-                        <tr>
-                            <td class=\"px-4 py-3 border-r border-b border-gray-200\">${c.id}</td>
-                            <td class=\"px-4 py-3 border-r border-b border-gray-200\">${c.client || ''}</td>
-                            <td class=\"px-4 py-3 border-r border-b border-gray-200\">${c.date}</td>
-                            <td class=\"px-4 py-3 border-r border-b border-gray-200\"></td>
-                            <td class=\"px-4 py-3 border-r border-b border-gray-200\">${c.total.toFixed(2)} DH</td>
-                            <td class=\"px-4 py-3 border-r border-b border-gray-200\"></td>
-                            <td class=\"px-4 py-3 border-r border-b border-gray-200 text-center\"></td>
-                            <td class=\"px-4 py-3 border-b border-gray-200\"></td>
-                        </tr>
-                    `).join('');
-                }
-            } catch (e) {
-                dateNaturalError.textContent = 'Erreur technique: ' + e.message;
-                dateNaturalError.classList.remove('hidden');
-                commandTableBody.innerHTML = '';
-                if (noResultsMessage) noResultsMessage.classList.remove('hidden');
-            } finally {
-                if (loadingOverlay) loadingOverlay.classList.add('hidden');
-            }
-        }
-
-        if (dateNaturalSearchBtn) {
-            dateNaturalSearchBtn.addEventListener('click', searchByNaturalDate);
-        }
-        if (dateNaturalInput) {
-            dateNaturalInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    searchByNaturalDate();
-                }
-            });
-        }
-        if (datePickerInput) {
-            datePickerInput.addEventListener('change', function() {
-                if (datePickerInput.value) {
-                    searchByNaturalDate();
-                }
-            });
-        }
         // Page des commandes - Aucune fonctionnalité de suppression
         console.log('Page des commandes chargée');
         
@@ -503,11 +452,9 @@
 
         // AJAX filtering logic
         const filterForm = document.getElementById('filterForm');
-        const commandTableBody = document.getElementById('commandTableBody');
+        // commandTableBody, loadingOverlay, noResultsMessage déjà déclarés ci-dessus
         const paginationControls = document.getElementById('paginationControls');
         const totalCommandsDisplay = document.getElementById('totalCommandsDisplay');
-        const loadingOverlay = document.getElementById('loadingOverlay');
-        const noResultsMessage = document.getElementById('noResultsMessage');
         const noResultsText = document.getElementById('noResultsText');
 
         function showLoading() {
