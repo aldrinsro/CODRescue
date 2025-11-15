@@ -82,7 +82,37 @@ def liste_commandes(request):
 
     # Filtre par date de création
     date_filter = request.GET.get('date_filter', '')
-    if date_filter:
+    date_start = request.GET.get('date_start', '')
+    date_end = request.GET.get('date_end', '')
+
+    # Si un intervalle personnalisé est fourni, l'utiliser en priorité
+    if date_start or date_end:
+        try:
+            if date_start and date_end:
+                # Les deux dates sont fournies
+                start_date = datetime.strptime(date_start, '%Y-%m-%d').date()
+                end_date = datetime.strptime(date_end, '%Y-%m-%d').date()
+                # S'assurer que start_date <= end_date
+                if start_date > end_date:
+                    start_date, end_date = end_date, start_date
+            elif date_start:
+                # Seulement la date de début
+                start_date = datetime.strptime(date_start, '%Y-%m-%d').date()
+                end_date = timezone.now().date()
+            else:
+                # Seulement la date de fin
+                start_date = datetime(2000, 1, 1).date()  # Date très ancienne
+                end_date = datetime.strptime(date_end, '%Y-%m-%d').date()
+
+            commandes = commandes.filter(
+                date_creation__date__gte=start_date,
+                date_creation__date__lte=end_date
+            )
+        except ValueError:
+            # Si les dates sont invalides, ignorer le filtre
+            pass
+    elif date_filter:
+        # Sinon, utiliser le filtre prédéfini
         from common.date_utils import parse_date_input
         try:
             start_date, end_date = parse_date_input(date_filter)
@@ -1326,7 +1356,11 @@ def commandes_non_affectees(request):
             Q(client__numero_tel__icontains=search_query) |
             Q(ville__nom__icontains=search_query)
         )
-    
+
+    # Appliquer les filtres réutilisables (date, sync, order)
+    from .utils import apply_commande_filters
+    commandes_non_affectees = apply_commande_filters(commandes_non_affectees, request)
+
     # Pagination flexible pour les administrateurs
     items_per_page = request.GET.get('items_per_page', '10')
     start_range = request.GET.get('start_range', '')
@@ -1412,6 +1446,8 @@ def commandes_non_affectees(request):
         actif=True
     ).count()
     
+    # Préparer le contexte avec les filtres réutilisables
+    from .utils import get_filter_context
     context = {
         'page_obj': page_obj,
         'search_query': search_query,
@@ -1429,6 +1465,8 @@ def commandes_non_affectees(request):
         'page_title': 'Commandes Non Affectées',
         'page_subtitle': 'Gestion des affectations de commandes',
     }
+    # Ajouter les variables des filtres
+    context.update(get_filter_context(request))
     # Si c'est une requête AJAX, retourner JSON
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         from django.template.loader import render_to_string
@@ -1487,7 +1525,80 @@ def commandes_a_traiter(request):
             Q(client__numero_tel__icontains=search_query) |
             Q(ville__nom__icontains=search_query)
         )
-    
+
+    # Filtre par date de création
+    date_filter = request.GET.get('date_filter', '')
+    date_start = request.GET.get('date_start', '')
+    date_end = request.GET.get('date_end', '')
+
+    if date_start or date_end:
+        try:
+            if date_start and date_end:
+                start_date = datetime.strptime(date_start, '%Y-%m-%d').date()
+                end_date = datetime.strptime(date_end, '%Y-%m-%d').date()
+                if start_date > end_date:
+                    start_date, end_date = end_date, start_date
+            elif date_start:
+                start_date = datetime.strptime(date_start, '%Y-%m-%d').date()
+                end_date = timezone.now().date()
+            else:
+                start_date = datetime(2000, 1, 1).date()
+                end_date = datetime.strptime(date_end, '%Y-%m-%d').date()
+
+            commandes_a_traiter = commandes_a_traiter.filter(
+                date_creation__date__gte=start_date,
+                date_creation__date__lte=end_date
+            )
+        except ValueError:
+            pass
+    elif date_filter:
+        from common.date_utils import parse_date_input
+        try:
+            start_date, end_date = parse_date_input(date_filter)
+            commandes_a_traiter = commandes_a_traiter.filter(
+                date_creation__date__gte=start_date,
+                date_creation__date__lte=end_date
+            )
+        except ValueError:
+            pass
+
+    # Filtre de synchronisation
+    sync_filter = request.GET.get('sync_filter', '')
+    custom_sync_date = request.GET.get('custom_sync_date', '')
+    if sync_filter:
+        commandes_a_traiter = commandes_a_traiter.filter(origine='SYNC')
+        if sync_filter == 'last_minute':
+            commandes_a_traiter = commandes_a_traiter.filter(last_sync_date__gte=timezone.now() - timedelta(minutes=1))
+        elif sync_filter == 'last_hour':
+            commandes_a_traiter = commandes_a_traiter.filter(last_sync_date__gte=timezone.now() - timedelta(hours=1))
+        elif sync_filter == 'today':
+            commandes_a_traiter = commandes_a_traiter.filter(last_sync_date__date=timezone.now().date())
+        elif sync_filter == 'last_24_hours':
+            commandes_a_traiter = commandes_a_traiter.filter(last_sync_date__gte=timezone.now() - timedelta(hours=24))
+        elif sync_filter == 'last_7_days':
+            commandes_a_traiter = commandes_a_traiter.filter(last_sync_date__gte=timezone.now() - timedelta(days=7))
+        elif sync_filter == 'custom_date' and custom_sync_date:
+            try:
+                filter_date = datetime.strptime(custom_sync_date, '%Y-%m-%d').date()
+                commandes_a_traiter = commandes_a_traiter.filter(last_sync_date__date=filter_date)
+            except ValueError:
+                pass
+
+    # Gestion du tri/ordre
+    order_by = request.GET.get('order_by', '')
+    if order_by:
+        allowed_order_fields = [
+            'date_creation', '-date_creation',
+            'date_cmd', '-date_cmd',
+            'total_cmd', '-total_cmd',
+            'client__nom', '-client__nom',
+            'id_yz', '-id_yz'
+        ]
+        if order_by in allowed_order_fields:
+            commandes_a_traiter = commandes_a_traiter.order_by(order_by)
+        else:
+            commandes_a_traiter = commandes_a_traiter.order_by('-date_cmd')
+
     # Paramètres de pagination flexible
     items_per_page = request.GET.get('items_per_page', 10)
     start_range = request.GET.get('start_range')
@@ -1584,6 +1695,10 @@ def commandes_a_traiter(request):
     context = {
         'page_obj': page_obj,
         'search_query': search_query,
+        'date_filter': date_filter,
+        'sync_filter': sync_filter,
+        'custom_sync_date': custom_sync_date,
+        'order_by': order_by,
         'total_a_traiter': total_a_traiter,
         'total_montant': total_montant,
         'commandes_doublons': commandes_doublons,

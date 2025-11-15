@@ -1,18 +1,23 @@
 """
 Utilitaires spécifiques au module commande.
 
-Ce module importe les fonctions génériques depuis common.date_utils
+Ce module importe les fonctions génériques depuis common
 et fournit des wrappers spécifiques pour le modèle Commande.
 """
 
 from django.db.models import QuerySet
 
 from common.date_utils import search_by_date, try_parse_date, parse_date_input
+from common.filter_utils import apply_all_filters, get_filter_context
 from .models import Commande
 
 # Réexporter les fonctions génériques pour la rétrocompatibilité
 _try_parse_date = try_parse_date
 _parse_date_input = parse_date_input
+
+# Réexporter les fonctions de filtrage depuis common
+apply_commande_filters = lambda qs, req: apply_all_filters(qs, req)
+get_filter_context = get_filter_context  # Direct export
 
 
 def search_commandes_by_date(date_input: str, field: str = 'date_creation') -> QuerySet:
