@@ -17,7 +17,7 @@
         const customDateRange = document.getElementById('customDateRange');
         const filterForm = document.querySelector('form[method="get"]');
 
-        // Gestion du filtre de date personnalisé
+        // Gestion du filtre de date de création personnalisé
         if (dateFilterSelect && customDateRange) {
             dateFilterSelect.addEventListener('change', function() {
                 if (this.value === 'custom') {
@@ -33,17 +33,36 @@
             });
         }
 
+        // Gestion du filtre de date de commande personnalisé
+        const dateCmdFilterSelect = document.getElementById('dateCmdFilterSelect');
+        const customDateCmdRange = document.getElementById('customDateCmdRange');
+
+        if (dateCmdFilterSelect && customDateCmdRange) {
+            dateCmdFilterSelect.addEventListener('change', function() {
+                if (this.value === 'custom') {
+                    customDateCmdRange.classList.remove('hidden');
+                    // Ne pas soumettre le formulaire, attendre que l'utilisateur sélectionne les dates
+                } else {
+                    customDateCmdRange.classList.add('hidden');
+                    // Soumettre le formulaire pour appliquer ou réinitialiser le filtre
+                    if (filterForm) {
+                        filterForm.submit();
+                    }
+                }
+            });
+        }
+
         // Gestion du filtre de synchronisation personnalisé
         const syncFilter = document.getElementById('syncFilter');
-        const customSyncDate = document.getElementById('customSyncDate');
+        const customSyncRange = document.getElementById('customSyncRange');
 
-        if (syncFilter && customSyncDate) {
+        if (syncFilter && customSyncRange) {
             syncFilter.addEventListener('change', function() {
-                if (this.value === 'custom_date') {
-                    customSyncDate.classList.remove('hidden');
-                    // Ne pas soumettre, attendre la sélection de date
+                if (this.value === 'custom') {
+                    customSyncRange.classList.remove('hidden');
+                    // Ne pas soumettre, attendre la sélection des dates
                 } else {
-                    customSyncDate.classList.add('hidden');
+                    customSyncRange.classList.add('hidden');
                     // Soumettre le formulaire pour appliquer le filtre
                     if (filterForm) {
                         filterForm.submit();
@@ -52,7 +71,7 @@
             });
         }
 
-        // Soumettre le formulaire quand l'utilisateur change les dates personnalisées
+        // Soumettre le formulaire quand l'utilisateur change les dates de création personnalisées
         const dateStartInput = document.querySelector('input[name="date_start"]');
         const dateEndInput = document.querySelector('input[name="date_end"]');
 
@@ -72,10 +91,41 @@
             });
         }
 
-        // Soumettre le formulaire quand l'utilisateur change la date de sync personnalisée
-        if (customSyncDate && filterForm) {
-            customSyncDate.addEventListener('change', function() {
-                if (this.value) {
+        // Soumettre le formulaire quand l'utilisateur change les dates de commande personnalisées
+        const dateCmdStartInput = document.querySelector('input[name="date_cmd_start"]');
+        const dateCmdEndInput = document.querySelector('input[name="date_cmd_end"]');
+
+        if (dateCmdStartInput && dateCmdEndInput && filterForm) {
+            dateCmdStartInput.addEventListener('change', function() {
+                // Si les deux dates sont remplies, soumettre
+                if (this.value && dateCmdEndInput.value) {
+                    filterForm.submit();
+                }
+            });
+
+            dateCmdEndInput.addEventListener('change', function() {
+                // Si les deux dates sont remplies, soumettre
+                if (this.value && dateCmdStartInput.value) {
+                    filterForm.submit();
+                }
+            });
+        }
+
+        // Soumettre le formulaire quand l'utilisateur change les dates de sync personnalisées
+        const syncDateStartInput = document.querySelector('input[name="sync_date_start"]');
+        const syncDateEndInput = document.querySelector('input[name="sync_date_end"]');
+
+        if (syncDateStartInput && syncDateEndInput && filterForm) {
+            syncDateStartInput.addEventListener('change', function() {
+                // Si les deux dates sont remplies, soumettre
+                if (this.value && syncDateEndInput.value) {
+                    filterForm.submit();
+                }
+            });
+
+            syncDateEndInput.addEventListener('change', function() {
+                // Si les deux dates sont remplies, soumettre
+                if (this.value && syncDateStartInput.value) {
                     filterForm.submit();
                 }
             });

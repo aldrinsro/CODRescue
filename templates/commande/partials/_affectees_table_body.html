@@ -9,11 +9,16 @@
         <div class="text-gray-500">{{ commande.client.numero_tel|default:"-" }}</div>
     </td>
     <td class="px-4 py-3 text-sm text-gray-500 border-r border-b border-gray-200">
+        {% if commande.ville %}{{ commande.ville.nom }}{% else %}-{% endif %}
+    </td>
+    <td class="px-4 py-3 text-sm text-gray-500 border-r border-b border-gray-200">
         {{ commande.date_cmd|date:"d/m/Y" }}
     </td>
     <td class="px-4 py-3 text-sm text-gray-500 border-r border-b border-gray-200">
-        {% if commande.ville %}{{ commande.ville.nom }}{% else %}-{% endif %}
+        <div class="font-medium text-gray-700">{{ commande.date_creation|date:"d/m/Y" }}</div>
+        <div class="text-xs text-gray-400">{{ commande.date_creation|date:"H:i:s" }}</div>
     </td>
+    
     <td class="px-4 py-3 text-sm font-medium text-gray-900 border-r border-b border-gray-200">
         {{ commande.total_cmd|floatformat:2 }} DH
     </td>

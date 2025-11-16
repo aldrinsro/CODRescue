@@ -84,7 +84,8 @@ def apply_sync_filter(queryset: QuerySet, request,
         >>> queryset = apply_sync_filter(Article.objects.all(), request, 'date_sync', 'type')
     """
     sync_filter = request.GET.get('sync_filter', '')
-    custom_sync_date = request.GET.get('custom_sync_date', '')
+    sync_date_start = request.GET.get('sync_date_start', '')
+    sync_date_end = request.GET.get('sync_date_end', '')
 
     if not sync_filter:
         return queryset
@@ -92,7 +93,31 @@ def apply_sync_filter(queryset: QuerySet, request,
     # Filtrer uniquement les éléments synchronisés
     queryset = queryset.filter(**{origin_field: 'SYNC'})
 
-    if sync_filter == 'last_minute':
+    # Intervalle personnalisé prioritaire
+    if sync_date_start or sync_date_end:
+        try:
+            if sync_date_start and sync_date_end:
+                start_date = datetime.strptime(sync_date_start, '%Y-%m-%d')
+                end_date = datetime.strptime(sync_date_end, '%Y-%m-%d')
+                if start_date > end_date:
+                    start_date, end_date = end_date, start_date
+                # Ajouter 23:59:59 à la date de fin pour inclure toute la journée
+                end_date = end_date.replace(hour=23, minute=59, second=59)
+            elif sync_date_start:
+                start_date = datetime.strptime(sync_date_start, '%Y-%m-%d')
+                end_date = timezone.now()
+            else:
+                start_date = datetime(2000, 1, 1)
+                end_date = datetime.strptime(sync_date_end, '%Y-%m-%d')
+                end_date = end_date.replace(hour=23, minute=59, second=59)
+
+            queryset = queryset.filter(**{
+                f'{sync_date_field}__gte': start_date,
+                f'{sync_date_field}__lte': end_date
+            })
+        except ValueError:
+            pass
+    elif sync_filter == 'last_minute':
         queryset = queryset.filter(**{
             f'{sync_date_field}__gte': timezone.now() - timedelta(minutes=1)
         })
@@ -112,11 +137,56 @@ def apply_sync_filter(queryset: QuerySet, request,
         queryset = queryset.filter(**{
             f'{sync_date_field}__gte': timezone.now() - timedelta(days=7)
         })
-    elif sync_filter == 'custom_date' and custom_sync_date:
+
+    return queryset
+
+
+def apply_date_cmd_filter(queryset: QuerySet, request, field: str = 'date_cmd') -> QuerySet:
+    """Applique un filtre de date de commande à un QuerySet.
+
+    Args:
+        queryset: QuerySet Django à filtrer
+        request: Objet HttpRequest contenant les paramètres GET
+        field: Nom du champ de date de commande à filtrer (défaut: 'date_cmd')
+
+    Returns:
+        QuerySet filtré par date de commande
+
+    Examples:
+        >>> queryset = apply_date_cmd_filter(Commande.objects.all(), request)
+    """
+    date_cmd_filter = request.GET.get('date_cmd_filter', '')
+    date_cmd_start = request.GET.get('date_cmd_start', '')
+    date_cmd_end = request.GET.get('date_cmd_end', '')
+
+    # Intervalle personnalisé prioritaire
+    if date_cmd_start or date_cmd_end:
         try:
-            filter_date = datetime.strptime(custom_sync_date, '%Y-%m-%d').date()
+            if date_cmd_start and date_cmd_end:
+                start_date = datetime.strptime(date_cmd_start, '%Y-%m-%d').date()
+                end_date = datetime.strptime(date_cmd_end, '%Y-%m-%d').date()
+                if start_date > end_date:
+                    start_date, end_date = end_date, start_date
+            elif date_cmd_start:
+                start_date = datetime.strptime(date_cmd_start, '%Y-%m-%d').date()
+                end_date = timezone.now().date()
+            else:
+                start_date = datetime(2000, 1, 1).date()
+                end_date = datetime.strptime(date_cmd_end, '%Y-%m-%d').date()
+
             queryset = queryset.filter(**{
-                f'{sync_date_field}__date': filter_date
+                f'{field}__gte': start_date,
+                f'{field}__lte': end_date
+            })
+        except ValueError:
+            pass
+    elif date_cmd_filter:
+        # Filtre prédéfini (aujourd'hui, cette semaine, etc.)
+        try:
+            start_date, end_date = parse_date_input(date_cmd_filter)
+            queryset = queryset.filter(**{
+                f'{field}__gte': start_date,
+                f'{field}__lte': end_date
             })
         except ValueError:
             pass
@@ -165,17 +235,19 @@ def apply_order_filter(queryset: QuerySet, request,
 
 def apply_all_filters(queryset: QuerySet, request,
                      date_field: str = 'date_creation',
+                     date_cmd_field: str = 'date_cmd',
                      sync_date_field: str = 'last_sync_date',
                      origin_field: str = 'origine',
                      allowed_order_fields: list = None) -> QuerySet:
-    """Applique tous les filtres standards (date, sync, order) à un QuerySet.
+    """Applique tous les filtres standards (date, date_cmd, sync, order) à un QuerySet.
 
-    Cette fonction combine les 3 filtres en un seul appel pour plus de simplicité.
+    Cette fonction combine les 4 filtres en un seul appel pour plus de simplicité.
 
     Args:
         queryset: QuerySet Django à filtrer
         request: Objet HttpRequest contenant les paramètres GET
-        date_field: Nom du champ de date pour le filtre de date
+        date_field: Nom du champ de date pour le filtre de date de création
+        date_cmd_field: Nom du champ de date pour le filtre de date de commande
         sync_date_field: Nom du champ de date de synchronisation
         origin_field: Nom du champ indiquant l'origine
         allowed_order_fields: Liste des champs autorisés pour le tri
@@ -189,6 +261,7 @@ def apply_all_filters(queryset: QuerySet, request,
         >>> commandes = apply_all_filters(commandes, request)
     """
     queryset = apply_date_filter(queryset, request, date_field)
+    queryset = apply_date_cmd_filter(queryset, request, date_cmd_field)
     queryset = apply_sync_filter(queryset, request, sync_date_field, origin_field)
     queryset = apply_order_filter(queryset, request, allowed_order_fields)
     return queryset
@@ -207,8 +280,8 @@ def get_filter_context(request) -> dict:
         >>> context.update(get_filter_context(request))
     """
     return {
-        'date_filter': request.GET.get('date_filter', ''),
-        'sync_filter': request.GET.get('sync_filter', ''),
-        'custom_sync_date': request.GET.get('custom_sync_date', ''),
-        'order_by': request.GET.get('order_by', ''),
+        'date_filter': str(request.GET.get('date_filter', '')),
+        'date_cmd_filter': str(request.GET.get('date_cmd_filter', '')),
+        'sync_filter': str(request.GET.get('sync_filter', '')),
+        'order_by': str(request.GET.get('order_by', '')),
     }

@@ -133,6 +133,7 @@ def liste_commandes(request):
     from django.core.paginator import Paginator
     from django.db.models import Q, Count, Sum
     from commande.models import Commande, EtatCommande
+    from common.filter_utils import apply_all_filters, get_filter_context
     
     try:
         # Récupérer le profil opérateur de l'utilisateur connecté
@@ -165,7 +166,10 @@ def liste_commandes(request):
             Q(ville__nom__icontains=search_query) |
             Q(adresse__icontains=search_query)
         )
-    
+
+    # Appliquer les filtres (date, synchronisation, tri)
+    commandes_list = apply_all_filters(commandes_list, request)
+
     # Statistiques pour l'affichage des onglets/badges
     stats = {
         'en_attente': Commande.objects.filter(
@@ -237,7 +241,8 @@ def liste_commandes(request):
         'current_tab_display_name': current_tab_display_name,
         'dates_report': dates_report,
     }
-    
+    context.update(get_filter_context(request))
+
     return render(request, 'operatConfirme/liste_commande.html', context)
 
 @login_required
@@ -881,6 +886,9 @@ def confirmation(request):
     from commande.models import Commande, EtatCommande, EnumEtatCmd
     from django.http import JsonResponse
     from django.utils import timezone
+    from django.core.paginator import Paginator
+    from django.db.models import Q
+    from common.filter_utils import apply_all_filters, get_filter_context
     
     try:
         # Récupérer l'opérateur
@@ -907,12 +915,36 @@ def confirmation(request):
     ).prefetch_related(
         'paniers__article', 'etats__enum_etat'
     ).distinct().order_by('-date_cmd', '-date_creation')
-    
+
+    # Recherche
+    search_query = request.GET.get('search', '').strip()
+    if search_query:
+        commandes_a_confirmer = commandes_a_confirmer.filter(
+            Q(id_yz__icontains=search_query) |
+            Q(num_cmd__icontains=search_query) |
+            Q(client__nom__icontains=search_query) |
+            Q(client__prenom__icontains=search_query) |
+            Q(client__numero_tel__icontains=search_query) |
+            Q(ville__nom__icontains=search_query) |
+            Q(adresse__icontains=search_query)
+        )
+
+    # Appliquer les filtres (date, synchronisation, tri)
+    commandes_a_confirmer = apply_all_filters(commandes_a_confirmer, request)
+
+    # Pagination
+    paginator = Paginator(commandes_a_confirmer, 15)  # 15 commandes par page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
     context = {
         'operateur': operateur,
         'commandes_a_confirmer': commandes_a_confirmer,
+        'page_obj': page_obj,
+        'search_query': search_query,
     }
-    
+    context.update(get_filter_context(request))
+
     return render(request, 'operatConfirme/confirmation.html', context)
 
 @login_required
