@@ -341,7 +341,7 @@
             
             <!-- Grille des actions SAV -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <button onclick="openSavModal('Livrée', {{ commande.id }})" class="sav-action-card bg-green-50 hover:bg-green-100 border-2 border-green-200 hover:border-green-300 rounded-lg p-4 transition-all duration-200">
+                <button onclick="ouvrirModalLivree(currentCommandeId, currentCommandeIdYz)" class="sav-action-card bg-green-50 hover:bg-green-100 border-2 border-green-200 hover:border-green-300 rounded-lg p-4 transition-all duration-200">
                     <div class="flex flex-col items-center">
                         <i class="fas fa-check-circle text-3xl text-green-500 mb-2"></i>
                         <span class="font-semibold text-green-800">Livrée</span>
@@ -357,11 +357,11 @@
                         <span class="text-xs text-red-600 mt-1">Retourner la commande</span>
                     </div>
                 </button>
-                <button onclick="openSavModal('Reportée', {{ commande.id }})" class="sav-action-card bg-orange-50 hover:bg-orange-100 border-2 border-orange-200 hover:border-orange-300 rounded-lg p-4 transition-all duration-200">
+                <button onclick="ouvrirModalReporte(currentCommandeId, currentCommandeIdYz)" class="sav-action-card bg-orange-50 hover:bg-orange-100 border-2 border-orange-200 hover:border-orange-300 rounded-lg p-4 transition-all duration-200">
                     <div class="flex flex-col items-center">
-                        <i class="fas fa-times-circle text-3xl text-orange-500 mb-2"></i>
-                        <span class="font-semibold text-orange-500-800">Reportée (SAV)</span>
-                        <span class="text-xs text-orange-600 mt-1">Reportée </span>
+                        <i class="fas fa-calendar-alt text-3xl text-orange-500 mb-2"></i>
+                        <span class="font-semibold text-orange-800">Reportée (SAV)</span>
+                        <span class="text-xs text-orange-600 mt-1">Reporter la livraison</span>
                     </div>
                 </button>
             </div>
@@ -743,6 +743,12 @@ document.addEventListener('keydown', function(e) {
 
 // ================== FIN GESTION MODALE SAV ==================
 </script>
+
+<!-- Inclusion de la modale de livraison -->
+{% include 'operatLogistic/partials/modal_Livree.html' %}
+
+<!-- Inclusion de la modale de report -->
+{% include 'operatLogistic/partials/modal_reporte.html' %}
 
 <!-- Inclusion de la modale de retour complet -->
 {% include 'operatLogistic/partials/_modal_retour_complet.html' %}

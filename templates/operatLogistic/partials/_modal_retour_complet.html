@@ -1,5 +1,3 @@
-{% load static %}
-
 <!-- Modale de Retour Complet -->
 <div id="retourCompletModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
     <div class="relative top-20 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white">
@@ -63,10 +61,8 @@
                         </optgroup>
 
                         <optgroup label="Annulations" class="optgroup-annulations">
-                            <option value="Commande annulée par le client">Commande annulée par le client</option>
-                            <option value="Paiement refusé ou problème bancaire">Paiement refusé ou problème bancaire</option>
-                            <option value="Délai de livraison dépassé">Délai de livraison dépassé</option>
-                            <option value="Stock insuffisant après confirmation">Stock insuffisant après confirmation</option>
+                            <option value="Annulé au téléphone"> Annulé au téléphone </option>
+                            <option value="Annulé sur place"> Annulé sur place </option>
                         </optgroup>
 
                         <optgroup label="Autres motifs" class="optgroup-autres">
@@ -78,21 +74,6 @@
                     </select>
                     <p class="text-xs text-gray-500 mt-1">
                         Cette raison sera enregistrée avec tous les articles retournés
-                    </p>
-                </div>
-
-                <div class="mb-4">
-                    <label for="commentaireComplementaireRetour" class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-comment mr-1"></i>
-                        Commentaire complémentaire (optionnel)
-                    </label>
-                    <textarea id="commentaireComplementaireRetour"
-                              name="commentaire_complementaire"
-                              rows="3"
-                              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                              placeholder="Ajoutez des détails supplémentaires si nécessaire..."></textarea>
-                    <p class="text-xs text-gray-500 mt-1">
-                        Ce commentaire sera ajouté à la raison principale
                     </p>
                 </div>
 

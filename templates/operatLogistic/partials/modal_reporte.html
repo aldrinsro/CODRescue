@@ -1,0 +1,281 @@
+<!-- Modale Commande Reportée -->
+<div id="reporteModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-20 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg leading-6 font-medium text-gray-900 flex items-center">
+                    <i class="fas fa-calendar-alt mr-2 text-orange-600"></i>
+                    <span id="reporteModalTitle">Reporter la livraison - Commande</span>
+                </h3>
+                <button onclick="fermerModalReporte()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <form id="reporteForm" action="" method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="nouvel_etat" value="Reportée">
+                <div class="mb-4">
+                    <div class="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4">
+                        <div class="flex items-center mb-2">
+                            <i class="fas fa-info-circle text-orange-600 mr-2"></i>
+                            <span class="font-semibold text-orange-800">Information</span>
+                        </div>
+                        <p class="text-orange-700 text-sm">
+                            Cette action va reporter la livraison de la commande.
+                            Veuillez indiquer la nouvelle date de livraison et ajouter un commentaire.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Champ date de report -->
+                <div class="mb-4">
+                    <label for="date_report_modal" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-calendar-alt mr-1 text-orange-600"></i>
+                        Nouvelle date de livraison <span class="text-red-500">*</span>
+                    </label>
+                    <div class="bg-orange-50 p-3 rounded-lg">
+                        <input type="date"
+                               name="date_report"
+                               id="date_report_modal"
+                               class="w-full p-2 border border-orange-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                               required>
+                        <p class="mt-2 text-xs text-gray-600">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            Cette date sera appliquée à tous les articles de la commande
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Commentaire -->
+                <div class="mb-4">
+                    <label for="commentaire_reporte" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-comment mr-1"></i>
+                        Raison du report <span class="text-red-500">*</span>
+                    </label>
+                    <select name="commentaire"
+                            id="commentaire_reporte"
+                            class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                            required>
+                        <option value="">Sélectionner une raison...</option>
+                        <option value="Client non joignable">Client non joignable</option>
+                        <option value="Client absent au moment de la livraison">Client absent au moment de la livraison</option>
+                        <option value="Adresse de livraison incorrecte">Adresse de livraison incorrecte</option>
+                        <option value="Client en voyage">Client en voyage</option>
+                        <option value="Demande de report du client">Demande de report du client</option>
+                        <option value="Problème logistique">Problème logistique</option>
+                        <option value="Conditions météorologiques">Conditions météorologiques</option>
+                        <option value="Autre motif - voir détails">Autre motif - voir détails</option>
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1">
+                        Ce commentaire sera enregistré avec la date de report
+                    </p>
+                </div>
+
+                <!-- Champ de commentaire personnalisé (masqué par défaut) -->
+                <div id="commentairePersonnaliseReporte" class="mb-4 hidden">
+                    <label for="commentaireCustomReporte" class="block text-sm font-medium text-gray-700 mb-2">
+                        Commentaire personnalisé
+                    </label>
+                    <textarea name="commentaireCustom"
+                              id="commentaireCustomReporte"
+                              rows="3"
+                              class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                              placeholder="Décrivez la raison du report..."></textarea>
+                </div>
+                <!-- Boutons d'action -->
+                <div class="flex items-center justify-end space-x-3 pt-4 border-t border-gray-200">
+                    <button type="button"
+                            onclick="fermerModalReporte()"
+                            class="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors">
+                        <i class="fas fa-times mr-2"></i>Annuler
+                    </button>
+                    <button type="button"
+                            id="confirmReporteBtn"
+                            onclick="soumettreFormulaireReporte()"
+                            class="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-colors">
+                        <i class="fas fa-calendar-alt mr-2"></i>Confirmer le Report
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Fonction pour ouvrir le modal de report
+function ouvrirModalReporte(commandeId, commandeIdYz) {
+    console.log('DEBUG: ouvrirModalReporte appelée avec:', { commandeId, commandeIdYz });
+
+    const modal = document.getElementById('reporteModal');
+    if (!modal) {
+        console.error('Modal reporteModal non trouvé');
+        return;
+    }
+
+    // Mettre à jour le titre avec le numéro de commande
+    const modalTitle = document.getElementById('reporteModalTitle');
+    if (modalTitle && commandeIdYz) {
+        modalTitle.textContent = `Reporter la livraison - Commande ${commandeIdYz}`;
+    }
+
+    // Définir la date de demain par défaut
+    const dateInput = document.getElementById('date_report_modal');
+    if (dateInput) {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        dateInput.value = tomorrow.toISOString().split('T')[0];
+        // Définir la date minimale à demain
+        dateInput.min = tomorrow.toISOString().split('T')[0];
+    }
+
+    // Réinitialiser le formulaire
+    const form = document.getElementById('reporteForm');
+    if (form) {
+        // Mettre à jour l'URL d'action si on a un commandeId
+        if (commandeId) {
+            form.action = `/operateur-logistique/commande/${commandeId}/changer-etat-sav/`;
+        }
+    }
+
+    // Réinitialiser le select de commentaire
+    const commentaireSelect = document.getElementById('commentaire_reporte');
+    if (commentaireSelect) {
+        commentaireSelect.value = '';
+    }
+
+    // Masquer le champ de commentaire personnalisé
+    const commentairePersonnalise = document.getElementById('commentairePersonnaliseReporte');
+    if (commentairePersonnalise) {
+        commentairePersonnalise.classList.add('hidden');
+    }
+
+    // Afficher le modal
+    modal.classList.remove('hidden');
+    console.log('Modal de report ouvert');
+}
+
+// Fonction pour fermer le modal de report
+function fermerModalReporte() {
+    const modal = document.getElementById('reporteModal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+
+    // Réinitialiser le formulaire
+    const form = document.getElementById('reporteForm');
+    if (form) {
+        form.reset();
+    }
+
+    // Masquer le champ de commentaire personnalisé
+    const commentairePersonnalise = document.getElementById('commentairePersonnaliseReporte');
+    if (commentairePersonnalise) {
+        commentairePersonnalise.classList.add('hidden');
+    }
+}
+
+// Fonction pour soumettre le formulaire de report
+function soumettreFormulaireReporte() {
+    const form = document.getElementById('reporteForm');
+    if (!form) {
+        alert('Erreur: Formulaire non trouvé');
+        return;
+    }
+
+    // Validation
+    const dateReport = document.getElementById('date_report_modal').value;
+    const commentaire = document.getElementById('commentaire_reporte').value;
+
+    if (!dateReport) {
+        alert('La nouvelle date de livraison est obligatoire');
+        return;
+    }
+
+    if (!commentaire) {
+        alert('La raison du report est obligatoire');
+        return;
+    }
+
+    // Vérifier que la date n'est pas dans le passé
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const selectedDate = new Date(dateReport);
+    if (selectedDate < today) {
+        alert('La date de report ne peut pas être dans le passé');
+        return;
+    }
+
+    // Si "Autre motif" est sélectionné, vérifier le commentaire personnalisé
+    if (commentaire === 'Autre motif - voir détails') {
+        const commentaireCustom = document.getElementById('commentaireCustomReporte');
+        if (!commentaireCustom || !commentaireCustom.value.trim()) {
+            alert('Le commentaire personnalisé est obligatoire pour "Autre motif"');
+            return;
+        }
+    }
+
+    // Afficher un indicateur de chargement
+    const confirmBtn = document.getElementById('confirmReporteBtn');
+    if (confirmBtn) {
+        confirmBtn.disabled = true;
+        confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Traitement...';
+    }
+
+    // Soumettre le formulaire via fetch
+    const formData = new FormData(form);
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    fetch(form.action, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken,
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(`Succès: ${data.message}`);
+            fermerModalReporte();
+            // Recharger la page pour voir les changements
+            window.location.reload();
+        } else {
+            alert(`Erreur: ${data.error || 'Erreur inconnue'}`);
+        }
+    })
+    .catch(error => {
+        console.error('Erreur lors de la soumission:', error);
+        alert(`Une erreur est survenue: ${error.message}`);
+    })
+    .finally(() => {
+        // Restaurer le bouton
+        if (confirmBtn) {
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = '<i class="fas fa-calendar-alt mr-2"></i>Confirmer le Report';
+        }
+    });
+}
+
+// Gérer l'affichage du champ de commentaire personnalisé
+document.addEventListener('DOMContentLoaded', function() {
+    const commentaireSelect = document.getElementById('commentaire_reporte');
+    const commentairePersonnalise = document.getElementById('commentairePersonnaliseReporte');
+
+    if (commentaireSelect && commentairePersonnalise) {
+        commentaireSelect.addEventListener('change', function() {
+            if (this.value === 'Autre motif - voir détails') {
+                commentairePersonnalise.classList.remove('hidden');
+            } else {
+                commentairePersonnalise.classList.add('hidden');
+            }
+        });
+    }
+});
+
+// Exposer les fonctions globalement
+window.ouvrirModalReporte = ouvrirModalReporte;
+window.fermerModalReporte = fermerModalReporte;
+window.soumettreFormulaireReporte = soumettreFormulaireReporte;
+</script>
