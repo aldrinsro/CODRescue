@@ -1,6 +1,7 @@
 {% extends 'composant_generale/operatLogistic/base.html' %}
 
 {% load static %}
+{% load remise_filters %}
 
 
 
@@ -654,7 +655,35 @@
 
             </div>
 
+            <!-- Opérateur de Confirmation -->
+            {% if operateur_confirmation %}
+            <div class="bg-cyan-50 p-4 rounded-lg border border-cyan-200">
 
+                <label class="block text-sm font-semibold mb-2 text-cyan-600">
+                    <i class="fas fa-user-check mr-2"></i>Confirmé par :
+                </label>
+
+                <p class="text-lg font-medium text-cyan-800">
+                    <i class="fas fa-user mr-2"></i>
+                    {{ operateur_confirmation.prenom }} {{ operateur_confirmation.nom }}
+                </p>
+
+                {% if operateur_confirmation.mail %}
+                <p class="text-sm text-cyan-600 mt-1">
+                    <i class="fas fa-envelope mr-1"></i>
+                    {{ operateur_confirmation.mail }}
+                </p>
+                {% endif %}
+
+                {% if etat_confirmee %}
+                <p class="text-xs text-cyan-500 mt-2">
+                    <i class="fas fa-calendar-check mr-1"></i>
+                    Le {{ etat_confirmee.date_debut|date:"d/m/Y à H:i" }}
+                </p>
+                {% endif %}
+
+            </div>
+            {% endif %}
 
             <!-- Adresse de livraison -->
 
@@ -3397,6 +3426,7 @@ document.addEventListener('DOMContentLoaded', function() {
 window.currentPaniersData = [
 
     {% for panier in commande.paniers.all %}
+    {% with prix_info=panier|get_prix_effectif_panier %}
 
     {
 
@@ -3410,9 +3440,9 @@ window.currentPaniersData = [
 
         prix_unitaire: "{{ panier.article.prix_unitaire|stringformat:"%.2f" }}",
 
-        prix_actuel: "{{ panier.prix_actuel_pour_affichage|default:panier.article.prix_unitaire|stringformat:"%.2f" }}",
+        prix_actuel: "{{ prix_info.prix_unitaire|stringformat:"%.2f" }}",
 
-        sous_total: "{{ panier.sous_total|stringformat:"%.2f" }}",
+        sous_total: "{{ prix_info.sous_total|stringformat:"%.2f" }}",
 
         reference: "{{ panier.article.reference|default:''|escapejs }}",
 
@@ -3421,6 +3451,7 @@ window.currentPaniersData = [
         is_upsell: {{ panier.article.isUpsell|yesno:"true,false" }}
 
     }{% if not forloop.last %},{% endif %}
+    {% endwith %}
 
     {% endfor %}
 

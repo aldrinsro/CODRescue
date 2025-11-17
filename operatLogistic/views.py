@@ -320,9 +320,21 @@ def detail_commande(request, commande_id):
 
             panier.save(update_fields=['type_prix_gele'])
 
+    # Récupérer l'opérateur de confirmation (celui qui a confirmé la commande)
+    operateur_confirmation = None
+    etat_confirmee = None
+    etat_confirmee = commande.etats.filter(
+        enum_etat__libelle__icontains='Confirmée'
+    ).order_by('date_debut').first()
+
+    if etat_confirmee and etat_confirmee.operateur:
+        operateur_confirmation = etat_confirmee.operateur
+
     context = {
         'commande'   : commande,
         'page_title' : f'Détail Commande {commande.id_yz}',
+        'operateur_confirmation': operateur_confirmation,
+        'etat_confirmee': etat_confirmee,
     }
     return render(request, 'operatLogistic/detail_commande.html', context)
 
@@ -654,24 +666,17 @@ def ajouter_article(request, commande_id):
             variante.qte_disponible -= quantite
             variante.save()
         
-        # Calculer le prix selon le compteur de la commande
-        prix_unitaire = article.prix_unitaire
-        if commande.compteur > 0:
-            if commande.compteur == 1 and article.prix_upsell_1:
-                prix_unitaire = article.prix_upsell_1
-            elif commande.compteur == 2 and article.prix_upsell_2:
-                prix_unitaire = article.prix_upsell_2
-            elif commande.compteur == 3 and article.prix_upsell_3:
-                prix_unitaire = article.prix_upsell_3
-            elif commande.compteur >= 4 and article.prix_upsell_4:
-                prix_unitaire = article.prix_upsell_4
-        
+        # Calculer le prix selon le compteur de la commande (utiliser get_prix_upsell_avec_compteur)
+        from commande.templatetags.commande_filters import get_prix_upsell_avec_compteur
+        prix_unitaire = get_prix_upsell_avec_compteur(article, commande.compteur)
+
         # Créer le panier avec la variante
         panier = Panier.objects.create(
             commande=commande,
             article=article,
             variante=variante,
             quantite=quantite,
+            prix_panier=float(prix_unitaire),  # Enregistrer le prix_panier
             sous_total=float(prix_unitaire * quantite)
         )
             
@@ -742,9 +747,17 @@ def modifier_quantite_article(request, commande_id):
                     'error': f'Article {panier.article.nom} sans variante définie. Impossible de gérer le stock.'
                 })
         
-        # Mettre à jour le panier
+        # Mettre à jour le panier (utiliser prix_panier existant ou recalculer avec compteur)
         panier.quantite = nouvelle_quantite
-        panier.sous_total = float(panier.article.prix_unitaire * nouvelle_quantite)
+        # Si prix_panier existe, l'utiliser; sinon recalculer avec le compteur
+        if panier.prix_panier:
+            prix_utilise = panier.prix_panier
+        else:
+            from commande.templatetags.commande_filters import get_prix_upsell_avec_compteur
+            prix_utilise = get_prix_upsell_avec_compteur(panier.article, commande.compteur)
+            panier.prix_panier = float(prix_utilise)
+
+        panier.sous_total = float(prix_utilise * nouvelle_quantite)
         panier.save()
         
         # Recalculer le total de la commande
@@ -896,9 +909,10 @@ def livraison_partielle(request, commande_id):
                     # Mettre à jour le panier avec seulement la quantité livrée
                     if quantite_livree > 0:
                         panier.quantite = quantite_livree
+                        panier.prix_panier = prix_unitaire_actuel  # Mettre à jour prix_panier avec le prix effectif
                         panier.sous_total = prix_unitaire_actuel * quantite_livree
-                        panier.save()
-                        print(f"✅ Panier {panier.id} mis à jour - Quantité livrée: {quantite_livree}, Sous-total: {panier.sous_total}")
+                        panier.save(update_fields=['quantite', 'prix_panier', 'sous_total'])
+                        print(f"✅ Panier {panier.id} mis à jour - Quantité livrée: {quantite_livree}, Prix panier: {panier.prix_panier}, Sous-total: {panier.sous_total}")
                     else:
                         # Aucun article livré, supprimer le panier
                         print(f"🗑️ Panier {panier.id} supprimé - Aucun article livré")
@@ -989,30 +1003,25 @@ def livraison_partielle(request, commande_id):
             if ancien_compteur != commande.compteur:
                 print("DEBUG: Recalcul des prix car compteur a changé")
                 for panier in commande.paniers.all():
-                    # Calculer le nouveau prix selon le compteur
-                    prix_unitaire = panier.article.prix_unitaire
-                    if commande.compteur > 0 and panier.article.isUpsell:
-                        if commande.compteur == 1 and panier.article.prix_upsell_1:
-                            prix_unitaire = panier.article.prix_upsell_1
-                        elif commande.compteur == 2 and panier.article.prix_upsell_2:
-                            prix_unitaire = panier.article.prix_upsell_2
-                        elif commande.compteur == 3 and panier.article.prix_upsell_3:
-                            prix_unitaire = panier.article.prix_upsell_3
-                        elif commande.compteur >= 4 and panier.article.prix_upsell_4:
-                            prix_unitaire = panier.article.prix_upsell_4
-                    
-                    # Mettre à jour le prix_actuel de l'article ET le sous-total du panier
+                    # Calculer le nouveau prix selon le compteur (comme dans modifier_commande)
+                    from commande.templatetags.commande_filters import get_prix_upsell_avec_compteur
+                    prix_unitaire = get_prix_upsell_avec_compteur(panier.article, commande.compteur)
+
+                    # Mettre à jour le prix_actuel de l'article, le prix_panier ET le sous-total du panier
                     ancien_prix_actuel = panier.article.prix_actuel
+                    ancien_prix_panier = panier.prix_panier
                     ancien_sous_total = panier.sous_total
-                    
+
                     panier.article.prix_actuel = prix_unitaire
                     panier.article.save(update_fields=['prix_actuel'])
-                    
-                    panier.sous_total = prix_unitaire * panier.quantite
-                    panier.save()
-                    
+
+                    panier.prix_panier = float(prix_unitaire)  # Mettre à jour prix_panier
+                    panier.sous_total = float(prix_unitaire * panier.quantite)
+                    panier.save(update_fields=['prix_panier', 'sous_total'])
+
                     print(f"DEBUG: Article {panier.article.nom}")
                     print(f"  - Prix actuel: {ancien_prix_actuel} → {prix_unitaire}")
+                    print(f"  - Prix panier: {ancien_prix_panier} → {panier.prix_panier}")
                     print(f"  - Sous-total: {ancien_sous_total} → {panier.sous_total}")
             
             # 7. Recalculer le total de la commande originale avec frais de livraison
@@ -1105,7 +1114,6 @@ def livraison_partielle(request, commande_id):
             
             return JsonResponse({
                 'success': True,
-                'message': f'Livraison partielle effectuée avec succès',
                 'articles_livres': len(articles_livres),
                 'articles_retournes': len(recap_articles_retournes),
                 'recap_articles_retournes': recap_articles_retournes,
@@ -1278,7 +1286,7 @@ def api_panier_commande(request, commande_id):
                     'reference': getattr(panier.article, 'reference', '') or '',
                     'quantite': panier.quantite or 0,
                     'prix_unitaire': f"{float(panier.article.prix_unitaire or 0):.2f}",
-                    'prix_panier': f"{float(panier.prix_panier or panier.article.prix_unitaire or 0):.2f}",
+                    'prix_panier': f"{prix_actuel:.2f}",  # Utiliser le prix calculé avec le compteur
                     'prix_actuel': f"{prix_actuel:.2f}",
                     'sous_total': f"{float(panier.sous_total or 0):.2f}",
                     'sous_total_remise': f"{float(panier.sous_total_remise or 0):.2f}" if panier.sous_total_remise else "0.00",
