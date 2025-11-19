@@ -574,15 +574,10 @@
             <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
 
                 <label class="block text-sm font-semibold mb-2 text-orange-600">Ville Client (origine) :</label>
-
                 <p class="text-lg font-medium text-orange-800">
-
                     <i class="fas fa-home mr-2"></i>
-
                     {{ commande.ville_init|default:"Non spécifiée" }}
-
                 </p>
-
             </div>
 
 
@@ -620,91 +615,33 @@
             <!-- Frais de livraison -->
 
             <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
-
                 <label class="block text-sm font-semibold mb-2 text-purple-600 flex items-center">
-
-                    
-
-                    Frais de livraison :
-
-                  
-
+                    Frais de livraison :            
                 </label>
-
                 {% if commande.frais_livraison %}
-
                 <p class="text-lg font-medium text-purple-800">
-
                     <i class="fas fa-truck mr-2"></i>
-
                     {{ commande.ville.frais_livraison|default:0|floatformat:2 }} DH
-
                 </p>
-
                 {% else %}
-
                 <p class="text-lg font-medium text-purple-800">
-
                     <i class="fas fa-truck mr-2"></i>
-
                     Non inclus dans cette commande 
-
                 </p>
-
                 {% endif %}
-
             </div>
-
-            <!-- Opérateur de Confirmation -->
-            {% if operateur_confirmation %}
-            <div class="bg-cyan-50 p-4 rounded-lg border border-cyan-200">
-
-                <label class="block text-sm font-semibold mb-2 text-cyan-600">
-                    <i class="fas fa-user-check mr-2"></i>Confirmé par :
-                </label>
-
-                <p class="text-lg font-medium text-cyan-800">
-                    <i class="fas fa-user mr-2"></i>
-                    {{ operateur_confirmation.prenom }} {{ operateur_confirmation.nom }}
-                </p>
-
-                {% if operateur_confirmation.mail %}
-                <p class="text-sm text-cyan-600 mt-1">
-                    <i class="fas fa-envelope mr-1"></i>
-                    {{ operateur_confirmation.mail }}
-                </p>
-                {% endif %}
-
-                {% if etat_confirmee %}
-                <p class="text-xs text-cyan-500 mt-2">
-                    <i class="fas fa-calendar-check mr-1"></i>
-                    Le {{ etat_confirmee.date_debut|date:"d/m/Y à H:i" }}
-                </p>
-                {% endif %}
-
-            </div>
-            {% endif %}
 
             <!-- Adresse de livraison -->
 
             <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 col-span-1 md:col-span-2 lg:col-span-3">
-
                 <label class="block text-sm font-semibold mb-2 text-blue-600">
-
                     <i class="fas fa-map-marked-alt mr-2"></i>Adresse de livraison complète :
-
                 </label>
-
                 <p class="text-lg font-medium text-blue-800">
-
                     {{ commande.adresse|default:"Adresse non renseignée" }}
-
                 </p>
-
             </div>
-
         </div>
-
     </div>
 
 
@@ -727,7 +664,7 @@
 
              <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
 
-                 <label class="block text-sm font-semibold mb-2 text-gray-600">N¬∞ Commande :</label>
+                 <label class="block text-sm font-semibold mb-2 text-gray-600">Nº Commande :</label>
 
                  <p class="text-lg font-bold text-gray-800">
 
@@ -741,20 +678,29 @@
 
              
 
-             <!-- N¬∞ Externe -->
+             <!-- N Externe -->
 
              <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
 
-                 <label class="block text-sm font-semibold mb-2 text-gray-600">N¬∞ Externe :</label>
-
+                 <label class="block text-sm font-semibold mb-2 text-gray-600"> 
+                    Confirmation faite par :</label>
                  <p class="text-lg font-medium text-gray-800">
 
-                     <i class="fas fa-hashtag mr-2" style="color: var(--logistic-primary);"></i>
-
-                     {{ commande.num_cmd|default:"-" }}
+                     <!-- Opérateur de Confirmation -->
+            {% if operateur_confirmation %}
+                <p class="text-lg font-medium text-cyan-800">
+                    <i class="fas fa-user-check mr-2"></i>
+                    {{ operateur_confirmation.prenom }} {{ operateur_confirmation.nom }}
+                </p>
+                {% if etat_confirmee %}
+                <p class="text-xs text-cyan-500 mt-2">
+                    <i class="fas fa-calendar-check mr-1"></i>
+                    Le {{ etat_confirmee.date_debut|date:"d/m/Y à H:i" }}
+                </p>
+                {% endif %}
+            {% endif %}
 
                  </p>
-
              </div>
 
              
