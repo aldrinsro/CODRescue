@@ -122,6 +122,16 @@ class Operateur(models.Model):
     def commandes_count(self):
         """Retourne le nombre de commandes actuellement affectées à cet opérateur"""
         from commande.models import EtatCommande
+
+        # Pour les opérateurs de préparation, compter les états de préparation
+        if self.type_operateur == 'PREPARATION':
+            return EtatCommande.objects.filter(
+                operateur=self,
+                enum_etat__libelle__in=['Collecté','Emballé', 'En préparation'],
+                date_fin__isnull=True
+            ).count()
+
+        # Pour les autres opérateurs (confirmation, etc.)
         return EtatCommande.objects.filter(
             operateur=self,
             enum_etat__libelle__in=['Affectée','En cours de confirmation','Report de confirmation'],

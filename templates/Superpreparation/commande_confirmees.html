@@ -322,8 +322,6 @@
                         <div class="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center mb-3">
                             <i class="fas fa-user text-white text-lg"></i>
                         </div>
-                        <!-- Email de l'opérateur -->
-                        <h4 class="font-semibold text-gray-900 text-sm mb-1">{{ operateur.mail }}</h4>
                         <!-- Nom -->
                         <p class="text-xs text-gray-500 mb-2">{{ operateur.nom_complet }}</p>
                         <!-- Badge du nombre de commandes -->
@@ -339,16 +337,6 @@
                     <p>Aucun opérateur de préparation disponible</p>
                 </div>
                 {% endfor %}
-            </div>
-            
-            <!-- Commentaire optionnel -->
-            <div class="mb-4">
-                <label for="commentaireAffectation" class="block text-sm font-medium text-gray-700 mb-2">
-                    Commentaire (optionnel)
-                </label>
-                <textarea id="commentaireAffectation" rows="3" 
-                          class="theme-input w-full p-3 rounded-lg focus:ring-2 focus:ring-offset-2 transition-all" 
-                          placeholder="Ajoutez un commentaire pour l'affectation..."></textarea>
             </div>
         </div>
         
@@ -420,7 +408,6 @@
             card.classList.remove('border-green-500', 'bg-green-100', 'ring-2', 'ring-green-500');
             card.classList.add('border-gray-200');
         });
-        document.getElementById('commentaireAffectation').value = '';
         document.getElementById('affectationModal').classList.remove('hidden');
     }
 
@@ -481,21 +468,19 @@
 
     function proceedAffectation() {
         const operateurId = selectedOperateurId;
-        const commentaire = document.getElementById('commentaireAffectation').value;
-        
+
         if (!operateurId) {
             showErrorModal('Veuillez sélectionner un opérateur.');
             return;
         }
-        
+
         const button = event.target;
         button.disabled = true;
         button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Affectation...';
 
         let url = `/commande/affecter-preparation-multiple/`;
-        let body = JSON.stringify({ 
-            operateur_id: operateurId, 
-            commentaire: commentaire,
+        let body = JSON.stringify({
+            operateur_id: operateurId,
             commande_ids: bulkAffect ? getSelectedCommandes() : [commandeToAffect]
         });
         
