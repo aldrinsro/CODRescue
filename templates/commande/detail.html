@@ -584,6 +584,68 @@
         {% endif %}
     </div>
 
+    <!-- Section 5: Cycle de Vie de la Commande (uniquement pour les commandes livrées) -->
+    {% if cycle_vie %}
+    <div class="bg-white rounded-xl shadow-lg border p-6 md:p-8 mb-6" style="border-color: var(--admin-accent-color);">
+        <h2 class="text-2xl font-bold flex items-center mb-6" style="color: var(--admin-color);">
+            <i class="fas fa-clock mr-2"></i>Cycle de Vie de la Commande
+            <span class="ml-3 px-3 py-1 text-sm font-medium rounded-full bg-green-100 text-green-800">
+                {{ cycle_vie.etat_livraison }}
+            </span>
+        </h2>
+
+        <!-- Résumé du cycle -->
+        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 mb-6 border border-blue-200">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="text-center">
+                    <i class="fas fa-calendar-plus text-3xl text-blue-600 mb-2"></i>
+                    <p class="text-sm text-gray-600 mb-1">Date de commande</p>
+                    <p class="text-lg font-bold text-gray-900">{{ cycle_vie.date_cmd|date:"d/m/Y" }}</p>
+                </div>
+                <div class="text-center">
+                    <i class="fas fa-shipping-fast text-3xl text-green-600 mb-2"></i>
+                    <p class="text-sm text-gray-600 mb-1">Date de livraison</p>
+                    <p class="text-lg font-bold text-gray-900">{{ cycle_vie.date_livraison|date:"d/m/Y H:i" }}</p>
+                    {% if cycle_vie.utilise_date_livraison_commande %}
+                    <span class="inline-flex items-center px-2 py-1 mt-2 bg-blue-100 text-blue-700 rounded-full text-xs font-medium" title="Date de livraison enregistrée dans la commande">
+                        <i class="fas fa-database mr-1"></i>Date commande
+                    </span>
+                    {% else %}
+                    <span class="inline-flex items-center px-2 py-1 mt-2 bg-purple-100 text-purple-700 rounded-full text-xs font-medium" title="Date de début de l'état de livraison">
+                        <i class="fas fa-exchange-alt mr-1"></i>Date état
+                    </span>
+                    {% endif %}
+                </div>
+                <div class="text-center">
+                    <i class="fas fa-hourglass-half text-3xl text-orange-600 mb-2"></i>
+                    <p class="text-sm text-gray-600 mb-1">Durée totale</p>
+                    <p class="text-2xl font-bold text-orange-600">{{ cycle_vie.duree_totale_str }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistiques -->
+        <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+            <p class="text-sm text-gray-600 flex items-center mb-2">
+                <i class="fas fa-info-circle mr-2 text-blue-500"></i>
+                Cette commande a traversé <strong class="mx-1">{{ cycle_vie.nb_etats }} état{{ cycle_vie.nb_etats|pluralize }}</strong>
+                avant d'être livrée, pour une durée totale de <strong class="ml-1">{{ cycle_vie.duree_totale_str }}</strong>.
+            </p>
+            {% if cycle_vie.utilise_date_livraison_commande %}
+            <p class="text-xs text-blue-600 flex items-center mt-2 ml-6">
+                <i class="fas fa-check-circle mr-2"></i>
+                Le calcul utilise la date de livraison enregistrée dans la commande.
+            </p>
+            {% else %}
+            <p class="text-xs text-purple-600 flex items-center mt-2 ml-6">
+                <i class="fas fa-check-circle mr-2"></i>
+                Le calcul utilise la date de début de l'état de livraison.
+            </p>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Actions -->
      
     <div class="bg-white rounded-xl shadow-lg border p-6 md:p-8" style="border-color: var(--admin-accent-color);">

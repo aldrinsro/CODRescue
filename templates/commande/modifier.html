@@ -456,44 +456,81 @@
 {% include 'composant_generale/modal_ajout_articles.html' %}
 {% include 'composant_generale/modal_confirmation_suppression.html' with modal_id='confirmDeleteModal' %}
 
-<!-- Modal Remise -->
-<div id="modalRemiseCommande" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-    <div class="bg-white rounded-lg shadow-xl max-w-md w-full m-4">
-        <div class="flex items-center justify-between p-4 border-b border-gray-200">
-            <h3 class="text-lg font-semibold text-gray-900">
-                <i class="fas fa-tag text-green-500 mr-2"></i>Appliquer une remise
-            </h3>
-            <button type="button" onclick="fermerModalRemiseCommande()" class="text-gray-400 hover:text-gray-600">
+<!-- Modale pour appliquer une remise -->
+<div id="remiseModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 items-center justify-center z-50" style="backdrop-filter: blur(8px); display: none;">
+    <div class="bg-white rounded-xl p-6 w-full max-w-lg mx-4 shadow-2xl">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
+            <div class="flex items-center">
+                <i class="fas fa-tag text-green-500 mr-3"></i>
+                Appliquer une remise
+            </div>
+            <span class="text-gray-500 hover:text-gray-700 cursor-pointer transition-colors" onclick="fermerModalRemise()">
                 <i class="fas fa-times text-xl"></i>
-            </button>
+            </span>
+        </h3>
+
+        <div class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div class="text-sm text-gray-700">
+                <strong>Article:</strong> <span id="remiseArticleNom">-</span>
+            </div>
+            <div class="text-sm text-gray-700 mt-1">
+                <strong>Sous-total actuel:</strong> <span id="remiseSousTotalActuel">0.00</span> DH
+            </div>
         </div>
-        <div class="p-4">
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Type de remise</label>
-                <select id="typeRemiseCommande" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500" onchange="calculerAperçuRemiseCommande()">
+
+        <input type="hidden" id="remisePanierId" value="">
+
+        <div class="space-y-4">
+            <!-- Type de remise -->
+            <div>
+                <label for="typeRemise" class="block text-sm font-medium text-gray-700 mb-2">
+                    Type de remise
+                </label>
+                <select id="typeRemise" disabled onchange="calculerApercu()"
+                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
                     <option value="POURCENTAGE">Pourcentage (%)</option>
-                    <option value="MONTANT_FIXE">Montant fixe (DH)</option>
                 </select>
             </div>
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Valeur de la remise</label>
-                <input type="number" id="valeurRemiseCommande" min="0" step="0.01" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500" placeholder="Entrez la valeur" oninput="calculerAperçuRemiseCommande()">
+
+            <!-- Valeur de la remise -->
+            <div>
+                <label for="valeurRemise" class="block text-sm font-medium text-gray-700 mb-2">
+                    Valeur de la remise
+                </label>
+                <input type="number" id="valeurRemise" step="0.01" min="0.01" placeholder="Ex: 10"
+                       oninput="calculerApercu()"
+                       class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
             </div>
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Raison (optionnel)</label>
-                <textarea id="raisonRemiseCommande" rows="2" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500" placeholder="Motif de la remise"></textarea>
+
+            <!-- Raison de la remise (optionnel) -->
+            <div>
+                <label for="raisonRemise" class="block text-sm font-medium text-gray-700 mb-2">
+                    Raison de la remise (optionnel)
+                </label>
+                <select id="raisonRemise" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                    <option value="">-- Sélectionnez une raison --</option>
+                    <option value="Client fidèle">Client fidèle</option>
+                    <option value="Produit endommagé">Produit endommagé</option>
+                    <option value="Erreur de préparation">Erreur de préparation</option>
+                    <option value="Geste commercial">Geste commercial</option>
+                    <option value="Retard de livraison">Retard de livraison</option>
+                </select>
             </div>
-            <div id="aperçuRemiseCommande" class="mb-4 p-3 bg-gray-50 rounded-lg hidden">
-                <div class="text-sm text-gray-600 mb-1">Aperçu:</div>
-                <div class="font-semibold text-gray-900" id="aperçuTexteCommande"></div>
+
+            <!-- Aperçu de la remise -->
+            <div id="remisePreview" style="display: none;">
+                <!-- Le contenu sera généré dynamiquement par JavaScript -->
             </div>
         </div>
-        <div class="flex justify-end gap-3 p-4 border-t border-gray-200">
-            <button type="button" onclick="fermerModalRemiseCommande()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">
-                Annuler
+
+        <div class="flex justify-end space-x-3 mt-6">
+            <button type="button" onclick="fermerModalRemise()"
+                    class="px-4 py-2 rounded-lg font-medium transition-all bg-gray-100 hover:bg-gray-200 text-gray-700">
+                <i class="fas fa-times mr-1"></i>Annuler
             </button>
-            <button type="button" onclick="appliquerRemiseCommande()" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors">
-                <i class="fas fa-check mr-2"></i>Appliquer
+            <button type="button" onclick="appliquerRemise()"
+                    class="px-4 py-2 rounded-lg font-medium transition-all bg-green-600 hover:bg-green-700 text-white">
+                <i class="fas fa-check mr-2"></i>Appliquer la remise
             </button>
         </div>
     </div>
@@ -848,8 +885,6 @@
 
     // ==================== FONCTIONS POUR GESTION DES ARTICLES ====================
 
-    let panierIdRemiseEnCours = null;
-
     // Modifier la quantité d'un article dans le panier
     function modifierQuantiteCommande(panierId, delta) {
         const quantiteInput = document.getElementById(`quantite-${panierId}`);
@@ -881,9 +916,39 @@
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                // Mettre à jour le sous-total
+                // Mettre à jour le sous-total de l'article modifié
                 const sousTotal = document.getElementById(`sous-total-${panierId}`);
                 if (sousTotal) sousTotal.textContent = `${data.nouveau_sous_total.toFixed(2)} DH`;
+
+                // Mettre à jour le prix unitaire effectif si disponible
+                if (data.prix_unitaire_effectif !== undefined) {
+                    const prixUnitaire = document.getElementById(`prix-unitaire-${panierId}`);
+                    if (prixUnitaire) {
+                        prixUnitaire.textContent = `${data.prix_unitaire_effectif.toFixed(2)} DH`;
+                        console.log(`💰 Prix unitaire mis à jour pour article ${panierId}: ${data.prix_unitaire_effectif.toFixed(2)} DH`);
+                    }
+                }
+
+                // Mettre à jour TOUS les articles upsell si le compteur a changé
+                if (data.articles_upsell_mis_a_jour && data.articles_upsell_mis_a_jour.length > 0) {
+                    console.log(`🔄 Mise à jour de ${data.articles_upsell_mis_a_jour.length} article(s) upsell (compteur=${data.compteur})`);
+
+                    data.articles_upsell_mis_a_jour.forEach(article => {
+                        // Mettre à jour le prix unitaire
+                        const prixUnitaireEl = document.getElementById(`prix-unitaire-${article.panier_id}`);
+                        if (prixUnitaireEl) {
+                            prixUnitaireEl.textContent = `${article.prix_unitaire_effectif.toFixed(2)} DH`;
+                        }
+
+                        // Mettre à jour le sous-total
+                        const sousTotalEl = document.getElementById(`sous-total-${article.panier_id}`);
+                        if (sousTotalEl) {
+                            sousTotalEl.textContent = `${article.sous_total.toFixed(2)} DH`;
+                        }
+
+                        console.log(`✅ Article ${article.panier_id} mis à jour: ${article.prix_unitaire_effectif.toFixed(2)} DH`);
+                    });
+                }
 
                 // Mettre à jour le total de la commande
                 const totalDisplay = document.getElementById('totalDisplay');
@@ -934,99 +999,204 @@
     }
 
     // Ouvrir le modal de remise
-    function ouvrirModalRemiseCommande(panierId) {
-        panierIdRemiseEnCours = panierId;
-        document.getElementById('typeRemiseCommande').value = 'POURCENTAGE';
-        document.getElementById('valeurRemiseCommande').value = '';
-        document.getElementById('raisonRemiseCommande').value = '';
-        document.getElementById('aperçuRemiseCommande').classList.add('hidden');
-        document.getElementById('modalRemiseCommande').classList.remove('hidden');
+    /**
+     * Ouvre le modal de remise pour un panier spécifique
+     */
+    function ouvrirModalRemise(panierId) {
+        const modal = document.getElementById('remiseModal');
+        const panierIdInput = document.getElementById('remisePanierId');
+        const typeRemiseSelect = document.getElementById('typeRemise');
+        const valeurRemiseInput = document.getElementById('valeurRemise');
+        const raisonRemiseInput = document.getElementById('raisonRemise');
+        const previewContainer = document.getElementById('remisePreview');
+
+        // Réinitialiser le formulaire
+        panierIdInput.value = panierId;
+        typeRemiseSelect.value = 'POURCENTAGE';
+        valeurRemiseInput.value = '';
+        raisonRemiseInput.value = '';
+        previewContainer.style.display = 'none';
+
+        // Trouver les informations du panier
+        const panierCard = document.querySelector(`[data-article-id="${panierId}"]`);
+        if (panierCard) {
+            const articleData = JSON.parse(panierCard.getAttribute('data-article'));
+            const articleNom = articleData.nom || 'Article inconnu';
+            document.getElementById('remiseArticleNom').textContent = articleNom;
+
+            // Récupérer le sous-total actuel
+            const sousTotalElement = document.getElementById(`sous-total-${panierId}`);
+            if (sousTotalElement) {
+                const sousTotalText = sousTotalElement.textContent.replace(/[^\d.,]/g, '').replace(',', '.');
+                document.getElementById('remiseSousTotalActuel').textContent = parseFloat(sousTotalText).toFixed(2);
+            }
+        }
+
+        // Afficher le modal
+        modal.style.display = 'flex';
     }
 
-    // Fermer le modal de remise
-    function fermerModalRemiseCommande() {
-        document.getElementById('modalRemiseCommande').classList.add('hidden');
-        panierIdRemiseEnCours = null;
+    /**
+     * Ferme le modal de remise
+     */
+    function fermerModalRemise() {
+        const modal = document.getElementById('remiseModal');
+        modal.style.display = 'none';
     }
 
-    // Calculer l'aperçu de la remise
-    function calculerAperçuRemiseCommande() {
-        const type = document.getElementById('typeRemiseCommande').value;
-        const valeur = parseFloat(document.getElementById('valeurRemiseCommande').value);
+    /**
+     * Calcule et affiche un aperçu de la remise en temps réel
+     */
+    function calculerApercu() {
+        const panierId = document.getElementById('remisePanierId').value;
+        const typeRemise = document.getElementById('typeRemise').value;
+        const valeurRemise = document.getElementById('valeurRemise').value;
+        const previewContainer = document.getElementById('remisePreview');
 
-        if (!panierIdRemiseEnCours || isNaN(valeur) || valeur <= 0) {
-            document.getElementById('aperçuRemiseCommande').classList.add('hidden');
+        // Vérifier que la valeur est saisie
+        if (!valeurRemise || parseFloat(valeurRemise) <= 0) {
+            previewContainer.style.display = 'none';
             return;
         }
 
-        fetch(`/commande/api/calculer-remise-preview/${panierIdRemiseEnCours}/?type_remise=${type}&valeur_remise=${valeur}`)
+        // Construire l'URL avec les paramètres (adapter pour l'app commande)
+        const url = `/commande/api/calculer-remise-preview/${panierId}/?type_remise=${typeRemise}&valeur_remise=${valeurRemise}`;
+
+        // Afficher un indicateur de chargement
+        previewContainer.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Calcul en cours...</div>';
+        previewContainer.style.display = 'block';
+
+        // Appeler l'API de preview
+        fetch(url, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+            }
+        })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                const aperçu = document.getElementById('aperçuRemiseCommande');
-                const texte = document.getElementById('aperçuTexteCommande');
+                // Afficher l'aperçu détaillé
+                previewContainer.innerHTML = `
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
+                        <h4 class="font-semibold text-blue-800 flex items-center">
+                            <i class="fas fa-calculator mr-2"></i>Aperçu de la remise
+                        </h4>
+                        <div class="grid grid-cols-2 gap-2 text-sm">
+                            <div class="text-gray-600">Sous-total actuel:</div>
+                            <div class="font-medium text-right">${data.data.sous_total_actuel.toFixed(2)} DH</div>
 
-                let message = `Sous-total actuel: ${data.data.sous_total_actuel.toFixed(2)} DH<br>`;
-                message += `Montant remise: -${data.data.montant_remise_calcule.toFixed(2)} DH<br>`;
-                message += `<strong>Nouveau sous-total: ${data.data.sous_total_apres_remise.toFixed(2)} DH</strong>`;
+                            <div class="text-red-600 font-medium">Montant remise:</div>
+                            <div class="font-bold text-red-600 text-right">- ${data.data.montant_remise_calcule.toFixed(2)} DH</div>
 
-                texte.innerHTML = message;
-                aperçu.classList.remove('hidden');
+                            <div class="text-gray-600">Pourcentage:</div>
+                            <div class="font-medium text-right">${data.data.pourcentage_reduction.toFixed(2)} %</div>
+
+                            <div class="text-green-600 font-bold text-lg pt-2 border-t border-blue-200">Nouveau sous-total:</div>
+                            <div class="font-bold text-green-600 text-lg text-right pt-2 border-t border-blue-200">${data.data.sous_total_apres_remise.toFixed(2)} DH</div>
+                        </div>
+                    </div>
+                `;
+                previewContainer.style.display = 'block';
+            } else {
+                previewContainer.innerHTML = `
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700 text-sm">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>${data.error}
+                    </div>
+                `;
+                previewContainer.style.display = 'block';
             }
         })
-        .catch(error => console.error('Erreur:', error));
+        .catch(error => {
+            console.error('Erreur lors du calcul de l\'aperçu:', error);
+            previewContainer.innerHTML = `
+                <div class="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700 text-sm">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>Erreur de connexion
+                </div>
+            `;
+            previewContainer.style.display = 'block';
+        });
     }
 
-    // Appliquer la remise
-    function appliquerRemiseCommande() {
-        if (!panierIdRemiseEnCours) return;
+    /**
+     * Applique la remise sur le panier
+     */
+    function appliquerRemise() {
+        const panierId = document.getElementById('remisePanierId').value;
+        const typeRemise = document.getElementById('typeRemise').value;
+        const valeurRemise = document.getElementById('valeurRemise').value;
+        const raisonRemise = document.getElementById('raisonRemise').value;
+        const btnAppliquer = document.querySelector('#remiseModal button[onclick="appliquerRemise()"]');
 
-        const type = document.getElementById('typeRemiseCommande').value;
-        const valeur = parseFloat(document.getElementById('valeurRemiseCommande').value);
-        const raison = document.getElementById('raisonRemiseCommande').value;
-
-        if (isNaN(valeur) || valeur <= 0) {
-            showToast('Veuillez entrer une valeur valide', 'warning');
+        // Validation
+        if (!valeurRemise || parseFloat(valeurRemise) <= 0) {
+            showToast('Veuillez saisir une valeur de remise valide', 'error');
             return;
         }
 
-        fetch(`/commande/api/appliquer-remise/${panierIdRemiseEnCours}/`, {
+        // Désactiver le bouton pendant le traitement
+        btnAppliquer.disabled = true;
+        btnAppliquer.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Application...';
+
+        // Préparer les données
+        const formData = {
+            type_remise: typeRemise,
+            valeur_remise: parseFloat(valeurRemise),
+            raison_remise: raisonRemise
+        };
+
+        // Récupérer le CSRF token
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        // Appeler l'API (adapter pour l'app commande)
+        fetch(`/commande/api/appliquer-remise/${panierId}/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                'X-CSRFToken': csrfToken,
+                'X-Requested-With': 'XMLHttpRequest',
             },
-            body: JSON.stringify({
-                type_remise: type,
-                valeur_remise: valeur,
-                raison_remise: raison
-            })
+            body: JSON.stringify(formData)
         })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
                 showToast(data.message, 'success');
-                fermerModalRemiseCommande();
+                fermerModalRemise();
                 setTimeout(() => location.reload(), 500);
             } else {
-                showToast('Erreur: ' + data.error, 'error');
+                showToast(data.error || 'Erreur lors de l\'application de la remise', 'error');
             }
         })
         .catch(error => {
             console.error('Erreur:', error);
-            showToast('Une erreur est survenue', 'error');
+            showToast('Erreur de connexion', 'error');
+        })
+        .finally(() => {
+            // Réactiver le bouton
+            btnAppliquer.disabled = false;
+            btnAppliquer.innerHTML = '<i class="fas fa-check mr-2"></i>Appliquer la remise';
         });
     }
 
-    // Retirer une remise
-    function retirerRemiseCommande(panierId) {
-        if (!confirm('Voulez-vous vraiment retirer cette remise ?')) return;
+    /**
+     * Retire une remise appliquée sur un panier
+     */
+    function retirerRemise(panierId) {
+        if (!confirm('Êtes-vous sûr de vouloir retirer cette remise ?')) {
+            return;
+        }
 
+        // Récupérer le CSRF token
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        // Appeler l'API (adapter pour l'app commande)
         fetch(`/commande/api/retirer-remise/${panierId}/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                'X-CSRFToken': csrfToken,
+                'X-Requested-With': 'XMLHttpRequest',
             }
         })
         .then(response => response.json())
@@ -1035,12 +1205,12 @@
                 showToast(data.message, 'success');
                 setTimeout(() => location.reload(), 500);
             } else {
-                showToast('Erreur: ' + data.error, 'error');
+                showToast(data.error || 'Erreur lors du retrait de la remise', 'error');
             }
         })
         .catch(error => {
             console.error('Erreur:', error);
-            showToast('Une erreur est survenue', 'error');
+            showToast('Erreur de connexion', 'error');
         });
     }
 

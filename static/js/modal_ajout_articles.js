@@ -8,6 +8,7 @@ console.log('🚀 Fichier modal_ajout_articles.js chargé avec succès');
 // Variables globales pour la gestion des articles
 let articleCounter = 0;
 let articlesDisponibles = [];
+let articlesAffiches = []; // Articles actuellement affichés (peut être filtré)
 let ligneSelectionnee = null;
 
 // Variables globales pour le modal des variantes
@@ -63,9 +64,9 @@ function fermerModalAjouterArticle(event) {
         event.preventDefault();
         event.stopPropagation();
     }
-    
+
     console.log('🎯 Fermeture du modal ajout article');
-    
+
     const modal = document.getElementById('articleModal');
     if (modal) {
         modal.classList.add('hidden');
@@ -74,10 +75,11 @@ function fermerModalAjouterArticle(event) {
         modal.style.opacity = '0';
         console.log('✅ Modal fermé');
     }
-    
+
     // Réinitialiser les variables
     ligneSelectionnee = null;
     articlesDisponibles = [];
+    articlesAffiches = [];
 }
 
 /**
@@ -117,7 +119,10 @@ function chargerArticlesDisponibles() {
  */
 function afficherArticles(articles) {
     console.log('📋 Affichage de', articles.length, 'articles');
-    
+
+    // Stocker les articles affichés pour référence lors de la sélection
+    articlesAffiches = articles;
+
     const tbody = document.getElementById('articlesTableBody');
     if (!tbody) {
         console.error('❌ Corps du tableau non trouvé');
@@ -143,15 +148,15 @@ function afficherArticles(articles) {
         // Pour l'instant, on assume que tous les articles peuvent avoir des variantes
         // L'endpoint gérera le cas où il n'y en a pas
         const hasVariantes = true; // article.has_variantes || false;
-        
+
         // Calculer le stock total (somme des stocks de toutes les variantes)
         const stockTotal = article.stock_total || article.qte_disponible || 0;
         const stockInfo = getStockInfo(stockTotal);
         const prix = article.prix_unitaire || 0;
-        
-        // Log pour déboguer le stock
-        console.log(`📊 Article ${article.nom}: stock_total=${article.stock_total}, qte_disponible=${article.qte_disponible}, stockTotal=${stockTotal}`);
-        
+
+        // Log détaillé pour déboguer
+        console.log(`📊 Article[${index}]: ID=${article.id}, Nom=${article.nom}, Stock=${stockTotal}`);
+
         // Générer les badges
         let badges = '';
         if (article.has_promo_active) badges += '<span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 mr-1">🔥 PROMO</span>';
@@ -160,12 +165,12 @@ function afficherArticles(articles) {
         if (article.isUpsell) badges += '<span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 mr-1">⬆️ UPSELL</span>';
         
         html += `
-            <tr class="hover:bg-gray-50 cursor-pointer" onclick="selectionnerArticle(${index})">
+            <tr class="hover:bg-gray-50 cursor-pointer" onclick="selectionnerArticle(${index})" data-article-id="${article.id}">
                 <td class="px-2 py-3">
                     <div class="flex items-center space-x-3">
                         <div class="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 border border-gray-200 shadow-sm flex-shrink-0">
-                            ${article.image_url ? 
-                                `<img src="${article.image_url}" alt="Image de ${article.nom}" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" onload="this.nextElementSibling.style.display='none';">` : 
+                            ${article.image_url ?
+                                `<img src="${article.image_url}" alt="Image de ${article.nom}" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" onload="this.nextElementSibling.style.display='none';">` :
                                 ''
                             }
                             <div class="w-full h-full flex items-center justify-center text-gray-400 ${article.image_url ? 'hidden' : ''}">
@@ -188,7 +193,9 @@ function afficherArticles(articles) {
                     </span>
                 </td>
                 <td class="px-1 py-3 text-center">
-                    <button onclick="event.preventDefault(); event.stopPropagation(); ${hasVariantes ? `ouvrirModalVariantesParIndex(${index})` : `ajouterArticleAuPanierParIndex(${index})`}" 
+                    <button data-article-id="${article.id}"
+                            data-article-nom="${article.nom}"
+                            onclick="event.preventDefault(); event.stopPropagation(); console.log('🔘 Clic bouton - Article ID:', ${article.id}, 'Nom:', '${article.nom}'); ${hasVariantes ? `ouvrirModalVariantesParId(${article.id})` : `ajouterArticleAuPanierParId(${article.id})`}"
                             class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${hasVariantes ? 'bg-purple-100 text-purple-700 hover:bg-purple-200' : 'bg-green-100 text-green-700 hover:bg-green-200'}">
                         ${hasVariantes ? '🎨 Variantes' : '➕ Ajouter'}
                     </button>
@@ -219,7 +226,7 @@ function getStockInfo(stock) {
  */
 function selectionnerArticle(index) {
     console.log('🎯 Sélection de l\'article:', index);
-    
+
     // Désélectionner la ligne précédente
     if (ligneSelectionnee !== null) {
         const previousRow = document.querySelector(`#articlesTableBody tr:nth-child(${ligneSelectionnee + 1})`);
@@ -228,14 +235,17 @@ function selectionnerArticle(index) {
             previousRow.classList.add('hover:bg-gray-50');
         }
     }
-    
+
     // Sélectionner la nouvelle ligne
     const currentRow = document.querySelector(`#articlesTableBody tr:nth-child(${index + 1})`);
     if (currentRow) {
         currentRow.classList.add('bg-blue-50', 'border-blue-200');
         currentRow.classList.remove('hover:bg-gray-50');
         ligneSelectionnee = index;
-        console.log('✅ Article sélectionné:', articlesDisponibles[index].nom);
+        // Utiliser articlesAffiches pour tenir compte des filtres/recherches
+        if (articlesAffiches && articlesAffiches[index]) {
+            console.log('✅ Article sélectionné:', articlesAffiches[index].nom);
+        }
     }
 }
 
@@ -365,12 +375,15 @@ function supprimerArticleDuPanier(button) {
     const articleCard = button.closest('.bg-white.border');
     if (articleCard) {
         articleCard.remove();
-        
+
+        // Recalculer les prix upsells après suppression
+        recalculerPrixUpsells();
+
         // Recalculer le total
         if (typeof calculerTotal === 'function') {
             calculerTotal();
         }
-        
+
         console.log('✅ Article supprimé du panier');
     }
 }
@@ -378,48 +391,93 @@ function supprimerArticleDuPanier(button) {
 // ================== FONCTIONS DU MODAL DES VARIANTES ==================
 
 /**
- * Fonction pour ouvrir le modal de sélection des variantes par index
+ * Fonction pour ouvrir le modal de sélection des variantes par ID
  */
-function ouvrirModalVariantesParIndex(index) {
+function ouvrirModalVariantesParId(articleId) {
     // Empêcher la soumission du formulaire
     if (event) {
         event.preventDefault();
         event.stopPropagation();
     }
-    
-    console.log('🎯 Ouverture modal variantes par index:', index);
-    
-    if (!articlesDisponibles || index >= articlesDisponibles.length) {
-        console.error('❌ Index d\'article invalide:', index);
+
+    console.log('🎯 Ouverture modal variantes par ID:', articleId, 'Type:', typeof articleId);
+    console.log('🔍 Articles disponibles:', articlesDisponibles.length);
+    console.log('🔍 Premiers IDs des articles disponibles:', articlesDisponibles.slice(0, 5).map(a => ({ id: a.id, nom: a.nom, type: typeof a.id })));
+
+    // Chercher l'article dans articlesDisponibles par son ID
+    // Convertir les IDs en nombres pour assurer la comparaison
+    const article = articlesDisponibles.find(a => parseInt(a.id) === parseInt(articleId));
+
+    if (!article) {
+        console.error('❌ Article non trouvé avec l\'ID:', articleId);
+        console.error('❌ IDs disponibles:', articlesDisponibles.map(a => a.id));
+        showNotification('❌ Erreur: article introuvable (ID: ' + articleId + ')', 'error');
         return;
     }
-    
-    const article = articlesDisponibles[index];
-    console.log('📋 Article sélectionné:', article);
-    console.log('🔍 Article a des variantes:', article.has_variantes);
-    console.log('🆔 ID de l\'article:', article.id);
-    
+
+    console.log('✅ Article trouvé:', article);
+    console.log('📋 Détails article:', {
+        id: article.id,
+        nom: article.nom,
+        reference: article.reference,
+        has_variantes: article.has_variantes
+    });
+    console.log('🆔 ID de l\'article qui sera envoyé au serveur:', article.id);
+
     ouvrirModalVariantes(article, 1);
 }
 
 /**
- * Fonction pour ajouter un article au panier par index
+ * Fonction pour ajouter un article au panier par ID
  */
-function ajouterArticleAuPanierParIndex(index) {
+function ajouterArticleAuPanierParId(articleId) {
     // Empêcher la soumission du formulaire
     if (event) {
         event.preventDefault();
         event.stopPropagation();
     }
-    
-    console.log('🎯 Ajout article au panier par index:', index);
-    
-    if (!articlesDisponibles || index >= articlesDisponibles.length) {
+
+    console.log('🎯 Ajout article au panier par ID:', articleId);
+
+    // Chercher l'article dans articlesDisponibles par son ID
+    const article = articlesDisponibles.find(a => a.id === articleId);
+
+    if (!article) {
+        console.error('❌ Article non trouvé avec l\'ID:', articleId);
+        showNotification('❌ Erreur: article introuvable', 'error');
+        return;
+    }
+
+    ajouterArticleAuPanier(article, 1);
+}
+
+/**
+ * Fonction pour ouvrir le modal de sélection des variantes par index (LEGACY - conservé pour compatibilité)
+ */
+function ouvrirModalVariantesParIndex(index) {
+    console.warn('⚠️ ouvrirModalVariantesParIndex est obsolète, utilisez ouvrirModalVariantesParId');
+
+    if (!articlesAffiches || index >= articlesAffiches.length) {
         console.error('❌ Index d\'article invalide:', index);
         return;
     }
-    
-    const article = articlesDisponibles[index];
+
+    const article = articlesAffiches[index];
+    ouvrirModalVariantes(article, 1);
+}
+
+/**
+ * Fonction pour ajouter un article au panier par index (LEGACY - conservé pour compatibilité)
+ */
+function ajouterArticleAuPanierParIndex(index) {
+    console.warn('⚠️ ajouterArticleAuPanierParIndex est obsolète, utilisez ajouterArticleAuPanierParId');
+
+    if (!articlesAffiches || index >= articlesAffiches.length) {
+        console.error('❌ Index d\'article invalide:', index);
+        return;
+    }
+
+    const article = articlesAffiches[index];
     ajouterArticleAuPanier(article, 1);
 }
 
@@ -477,17 +535,18 @@ function ouvrirModalVariantes(articleData, quantite = 1) {
  * Fonction pour charger les variantes d'un article via AJAX
  */
 function chargerVariantesArticle(articleId) {
-    console.log('📡 Chargement des variantes pour l\'article:', articleId);
-    
+    console.log('📡 Chargement des variantes pour l\'article ID:', articleId, 'Type:', typeof articleId);
+    console.log('🔍 Article sélectionné actuellement:', articleSelectionne);
+
     // Masquer les informations des variantes sélectionnées
     const selectedVariantsInfo = document.getElementById('selectedVariantsInfo');
     const clearSelectionBtn = document.getElementById('clearSelectionBtn');
     const addSelectedVariantsBtn = document.getElementById('addSelectedVariantsBtn');
-    
+
     if (selectedVariantsInfo) selectedVariantsInfo.classList.add('hidden');
     if (clearSelectionBtn) clearSelectionBtn.classList.add('hidden');
     if (addSelectedVariantsBtn) addSelectedVariantsBtn.classList.add('hidden');
-    
+
     // Afficher le loading
     const variantsTableContainer = document.getElementById('variantsTableContainer');
     if (variantsTableContainer) {
@@ -498,7 +557,7 @@ function chargerVariantesArticle(articleId) {
             </div>
         `;
     }
-    
+
     // Récupérer le token CSRF
     const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
     if (!csrfToken) {
@@ -506,10 +565,15 @@ function chargerVariantesArticle(articleId) {
         afficherErreurVariantes('Token CSRF manquant');
         return;
     }
-    
+
     // URL pour récupérer les variantes
     const url = `/operateur-confirme/get-article-variants/${articleId}/`;
     console.log('🌐 URL de l\'appel AJAX:', url);
+    console.log('🌐 Article dont on cherche les variantes:', {
+        id: articleId,
+        nom: articleSelectionne?.nom,
+        reference: articleSelectionne?.reference
+    });
     
     // Appel AJAX
     fetch(url, {
@@ -528,8 +592,21 @@ function chargerVariantesArticle(articleId) {
         return response.json();
     })
     .then(data => {
-        console.log('📊 Variantes reçues:', data);
+        console.log('📊 Réponse complète du serveur:', data);
+        console.log('📊 Article retourné par le serveur:', data.article);
+        console.log('📊 Nombre de variantes reçues:', data.variants?.length);
+        console.log('📊 Première variante:', data.variants?.[0]);
+
         if (data.success && data.variants) {
+            // Vérifier que l'article retourné correspond bien à celui demandé
+            if (articleSelectionne && data.article && parseInt(data.article.id) !== parseInt(articleSelectionne.id)) {
+                console.error('⚠️ ATTENTION: L\'article retourné ne correspond pas à l\'article sélectionné !');
+                console.error('⚠️ Article sélectionné:', articleSelectionne.id, articleSelectionne.nom);
+                console.error('⚠️ Article retourné:', data.article.id, data.article.nom);
+            } else {
+                console.log('✅ Vérification OK: l\'article retourné correspond bien à l\'article sélectionné');
+            }
+
             afficherVariantes(data.variants);
         } else {
             throw new Error(data.error || 'Erreur inconnue');
@@ -933,12 +1010,32 @@ function ajouterVarianteAuPanierConfirmation(articleData, variante, quantiteInit
             if (incrementerQuantiteVarianteExistante(varianteExistante)) {
                 console.log('✅ Quantité de la variante mise à jour');
                 showNotification(`✅ Quantité mise à jour pour ${articleData.nom} (${variante.couleur} - ${variante.pointure})`, 'success');
+                // Recalculer les prix upsells après modification de quantité
+                recalculerPrixUpsells();
                 return;
             } else {
                 showNotification(`⚠️ Impossible de mettre à jour la quantité pour ${articleData.nom} (${variante.couleur} - ${variante.pointure})`, 'warning');
                 return;
             }
         }
+
+        // Calculer le compteur AVANT d'ajouter le nouvel article
+        const compteurAvant = calculerCompteurUpsell();
+        console.log(`📊 Compteur avant ajout: ${compteurAvant}`);
+
+        // Calculer le compteur APRÈS l'ajout (si c'est un article upsell)
+        const estUpsell = articleData.isUpsell === true || articleData.isUpsell === 'true';
+        const compteurApres = estUpsell ? compteurAvant + quantiteInitiale : compteurAvant;
+        console.log(`📊 Compteur après ajout: ${compteurApres}, Article est upsell: ${estUpsell}`);
+
+        // Déterminer le prix selon le compteur
+        const prixInfo = getPrixSelonCompteur(articleData, compteurApres);
+        console.log(`💰 Prix déterminé: ${prixInfo.prix} DH (${prixInfo.libelle})`);
+
+        // Utiliser le prix de la variante si disponible, sinon utiliser le prix calculé
+        const prix = variante.prix_actuel || prixInfo.prix;
+        const quantite = quantiteInitiale;
+        const sousTotal = (prix * quantite).toFixed(2);
 
         // Créer un ID unique pour cette variante
         const varianteId = `variante-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -950,10 +1047,30 @@ function ajouterVarianteAuPanierConfirmation(articleData, variante, quantiteInit
         articleCard.setAttribute('data-article-id', articleData.id);
         articleCard.setAttribute('data-variante-id', variante.id);
 
-        // Calculer le sous-total
-        const prix = variante.prix_actuel || variante.prix_unitaire || 0;
-        const quantite = quantiteInitiale;
-        const sousTotal = (prix * quantite).toFixed(2);
+        // Stocker toutes les données de l'article pour le recalcul ultérieur
+        const articleDataComplet = {
+            id: articleData.id,
+            nom: articleData.nom,
+            reference: articleData.reference,
+            prix_unitaire: articleData.prix_unitaire,
+            prix_actuel: articleData.prix_actuel,
+            prix_upsell_1: articleData.prix_upsell_1 || 0,
+            prix_upsell_2: articleData.prix_upsell_2 || 0,
+            prix_upsell_3: articleData.prix_upsell_3 || 0,
+            prix_upsell_4: articleData.prix_upsell_4 || 0,
+            prix_remise_1: articleData.prix_remise_1 || 0,
+            prix_remise_2: articleData.prix_remise_2 || 0,
+            prix_remise_3: articleData.prix_remise_3 || 0,
+            prix_remise_4: articleData.prix_remise_4 || 0,
+            isUpsell: articleData.isUpsell,
+            phase: articleData.phase,
+            has_promo_active: articleData.has_promo_active,
+            variante_id: variante.id,
+            couleur: variante.couleur,
+            pointure: variante.pointure
+        };
+
+        articleCard.setAttribute('data-article', JSON.stringify(articleDataComplet));
 
         // Générer les badges
         let badges = '';
@@ -1023,6 +1140,10 @@ function ajouterVarianteAuPanierConfirmation(articleData, variante, quantiteInit
             console.log('🔄 Ajout de la carte au conteneur...');
             articlesContainer.appendChild(articleCard);
             console.log('✅ Carte ajoutée au conteneur');
+
+            // Recalculer les prix upsells de TOUS les articles si nécessaire
+            console.log('🔄 Recalcul des prix upsells...');
+            recalculerPrixUpsells();
 
             // Recalculer le total
             console.log('🔄 Vérification de la fonction calculerTotal...');
@@ -1131,16 +1252,16 @@ function genererChampsCachesPanier(formElement = null) {
  */
 function mettreAJourQuantiteVariante(varianteId, nouvelleQuantite) {
     console.log('🔄 Mise à jour quantité variante:', varianteId, 'nouvelle quantité:', nouvelleQuantite);
-    
+
     const articleCard = document.getElementById(varianteId);
     if (!articleCard) {
         console.error('❌ Carte d\'article non trouvée:', varianteId);
         return;
     }
-    
+
     const quantite = parseInt(nouvelleQuantite) || 1;
     console.log('📊 Quantité parsée:', quantite);
-    
+
     // Trouver le prix dans la structure HTML actuelle
     const prixText = articleCard.querySelector('.text-xs.sm\\:text-sm.text-gray-600, .text-green-600');
     if (prixText) {
@@ -1149,9 +1270,9 @@ function mettreAJourQuantiteVariante(varianteId, nouvelleQuantite) {
         if (prixMatch) {
             const prix = parseFloat(prixMatch[1]);
             const sousTotal = prix * quantite;
-            
+
             console.log('💰 Calcul:', prix, 'x', quantite, '=', formaterMontant(sousTotal));
-            
+
             // Mettre à jour l'affichage du sous-total
             const sousTotalElement = articleCard.querySelector('.text-lg.font-bold');
             if (sousTotalElement) {
@@ -1160,7 +1281,10 @@ function mettreAJourQuantiteVariante(varianteId, nouvelleQuantite) {
             } else {
                 console.error('❌ Élément sous-total non trouvé');
             }
-            
+
+            // Recalculer les prix upsells après modification de quantité
+            recalculerPrixUpsells();
+
             // Recalculer le total
             if (typeof calculerTotal === 'function') {
                 calculerTotal();
@@ -1366,6 +1490,198 @@ function afficherErreurArticles(message) {
             </tr>
         `;
     }
+}
+
+// ================== GESTION DES PRIX UPSELLS ==================
+
+/**
+ * Calcule le compteur d'articles upsell dans le panier
+ * Le compteur représente le nombre total d'unités d'articles upsell
+ */
+function calculerCompteurUpsell() {
+    const articlesContainer = document.getElementById('articles-container');
+    if (!articlesContainer) {
+        return 0;
+    }
+
+    let totalUpsell = 0;
+    const articles = articlesContainer.querySelectorAll('[data-article-id]');
+
+    articles.forEach(article => {
+        try {
+            const articleDataStr = article.getAttribute('data-article');
+            if (!articleDataStr) return;
+
+            const articleData = JSON.parse(articleDataStr);
+
+            // Vérifier si l'article est un upsell
+            if (articleData.isUpsell === true || articleData.isUpsell === 'true') {
+                // Récupérer la quantité
+                const quantiteInput = article.querySelector('input[type="number"]');
+                const quantite = quantiteInput ? parseInt(quantiteInput.value) || 1 : 1;
+
+                totalUpsell += quantite;
+                console.log(`📊 Article upsell: ${articleData.nom}, Qté: ${quantite}, Total actuel: ${totalUpsell}`);
+            }
+        } catch (error) {
+            console.error('❌ Erreur lors du calcul du compteur pour un article:', error);
+        }
+    });
+
+    console.log(`🎯 Compteur upsell total: ${totalUpsell}`);
+    return totalUpsell;
+}
+
+/**
+ * Détermine le prix applicable selon l'article et le compteur upsell
+ * Respecte les priorités: Promotion > Liquidation > Test > Upsell > Normal
+ */
+function getPrixSelonCompteur(articleData, compteur) {
+    console.log(`💰 Calcul prix pour: ${articleData.nom}, Compteur: ${compteur}, isUpsell: ${articleData.isUpsell}`);
+
+    // PRIORITÉ 1: Promotion active
+    if (articleData.has_promo_active === true || articleData.has_promo_active === 'true') {
+        console.log('🔥 Prix promotion appliqué');
+        return {
+            prix: articleData.prix_actuel || articleData.prix_unitaire,
+            libelle: 'Prix promotion',
+            couleur: 'text-red-600',
+            type: 'promotion'
+        };
+    }
+
+    // PRIORITÉ 2: Phase liquidation
+    if (articleData.phase === 'LIQUIDATION') {
+        console.log('🏷️ Prix liquidation appliqué');
+        return {
+            prix: articleData.Prix_liquidation || articleData.prix_actuel || articleData.prix_unitaire,
+            libelle: 'Prix liquidation',
+            couleur: 'text-orange-600',
+            type: 'liquidation'
+        };
+    }
+
+    // PRIORITÉ 3: Phase test
+    if (articleData.phase === 'EN_TEST') {
+        console.log('🧪 Prix test appliqué');
+        return {
+            prix: articleData.prix_actuel || articleData.prix_unitaire,
+            libelle: 'Prix test',
+            couleur: 'text-blue-600',
+            type: 'test'
+        };
+    }
+
+    // PRIORITÉ 4: Article upsell avec compteur
+    if ((articleData.isUpsell === true || articleData.isUpsell === 'true') && compteur > 0) {
+        let prixUpsell = null;
+        let niveau = 0;
+
+        if (compteur === 1 && articleData.prix_upsell_1 && articleData.prix_upsell_1 > 0) {
+            prixUpsell = articleData.prix_upsell_1;
+            niveau = 1;
+        } else if (compteur === 2 && articleData.prix_upsell_2 && articleData.prix_upsell_2 > 0) {
+            prixUpsell = articleData.prix_upsell_2;
+            niveau = 2;
+        } else if (compteur === 3 && articleData.prix_upsell_3 && articleData.prix_upsell_3 > 0) {
+            prixUpsell = articleData.prix_upsell_3;
+            niveau = 3;
+        } else if (compteur >= 4 && articleData.prix_upsell_4 && articleData.prix_upsell_4 > 0) {
+            prixUpsell = articleData.prix_upsell_4;
+            niveau = 4;
+        }
+
+        if (prixUpsell) {
+            const libelle = niveau >= 4 ? 'Prix Gros' : `Prix upsell niveau ${niveau}`;
+            console.log(`⬆️ ${libelle} appliqué: ${prixUpsell} DH`);
+            return {
+                prix: prixUpsell,
+                libelle: libelle,
+                couleur: 'text-green-600',
+                type: `upsell_niveau_${niveau}`
+            };
+        }
+    }
+
+    // PRIORITÉ 5: Prix normal par défaut
+    console.log('📌 Prix normal appliqué');
+    return {
+        prix: articleData.prix_actuel || articleData.prix_unitaire,
+        libelle: 'Prix normal',
+        couleur: 'text-gray-600',
+        type: 'normal'
+    };
+}
+
+/**
+ * Recalcule tous les prix upsells dans le panier
+ * À appeler après chaque ajout/suppression/modification d'article upsell
+ */
+function recalculerPrixUpsells() {
+    console.log('🔄 Recalcul de tous les prix upsells...');
+
+    const articlesContainer = document.getElementById('articles-container');
+    if (!articlesContainer) {
+        console.warn('⚠️ Conteneur articles-container non trouvé');
+        return;
+    }
+
+    // Calculer le nouveau compteur
+    const compteur = calculerCompteurUpsell();
+    console.log(`📊 Nouveau compteur: ${compteur}`);
+
+    // Parcourir tous les articles du panier
+    const articles = articlesContainer.querySelectorAll('[data-article-id]');
+
+    articles.forEach(articleCard => {
+        try {
+            const articleDataStr = articleCard.getAttribute('data-article');
+            if (!articleDataStr) return;
+
+            const articleData = JSON.parse(articleDataStr);
+
+            // Calculer le nouveau prix selon le compteur
+            const prixInfo = getPrixSelonCompteur(articleData, compteur);
+
+            // Récupérer la quantité actuelle
+            const quantiteInput = articleCard.querySelector('input[type="number"]');
+            const quantite = quantiteInput ? parseInt(quantiteInput.value) || 1 : 1;
+
+            // Calculer le nouveau sous-total
+            const nouveauSousTotal = prixInfo.prix * quantite;
+
+            // Mettre à jour l'affichage du prix unitaire (si présent)
+            const prixUnitaireElement = articleCard.querySelector('.prix-unitaire-display');
+            if (prixUnitaireElement) {
+                prixUnitaireElement.textContent = `${formaterMontant(prixInfo.prix)} DH`;
+                prixUnitaireElement.className = `prix-unitaire-display font-medium ${prixInfo.couleur}`;
+            }
+
+            // Mettre à jour le libellé du prix (si présent)
+            const libelleElement = articleCard.querySelector('.prix-libelle');
+            if (libelleElement) {
+                libelleElement.textContent = prixInfo.libelle;
+                libelleElement.className = `prix-libelle text-xs ${prixInfo.couleur} mt-1`;
+            }
+
+            // Mettre à jour le sous-total
+            const sousTotalElement = articleCard.querySelector('.text-lg.font-bold');
+            if (sousTotalElement) {
+                sousTotalElement.textContent = `${formaterMontant(nouveauSousTotal)} DH`;
+                console.log(`✅ Mis à jour: ${articleData.nom} - ${prixInfo.libelle} - ${formaterMontant(nouveauSousTotal)} DH`);
+            }
+
+        } catch (error) {
+            console.error('❌ Erreur lors du recalcul du prix pour un article:', error);
+        }
+    });
+
+    // Recalculer le total de la commande
+    if (typeof calculerTotal === 'function') {
+        calculerTotal();
+    }
+
+    console.log('✅ Recalcul terminé');
 }
 
 // ================== FONCTIONS UTILITAIRES ==================

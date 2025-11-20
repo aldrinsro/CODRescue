@@ -299,16 +299,93 @@ def liste_commandes(request):
 
 @login_required
 def detail_commande(request, pk):
+    from datetime import timedelta
+
     commande = get_object_or_404(Commande, pk=pk)
     paniers = Panier.objects.filter(commande=commande)
     historique_etats = commande.historique_etats.all()
     etats_non_modifiables = ["Livrée", "Livrée Partiellement", "Retournée"]
 
+    # Calculer le cycle de vie pour les commandes livrées
+    cycle_vie = None
+    etat_actuel = commande.etat_actuel
+
+    if etat_actuel and etat_actuel.enum_etat.libelle in ["Livrée", "Livrée Partiellement"]:
+        # Trouver l'état de livraison
+        etat_livraison = historique_etats.filter(
+            enum_etat__libelle__in=["Livrée", "Livrée Partiellement"]
+        ).first()
+
+        if etat_livraison:
+            # Déterminer la date de livraison à utiliser :
+            # Si Date_livraison existe et n'est pas null, on l'utilise
+            # Sinon on utilise la date_debut de l'état de livraison
+            date_livraison_effective = commande.Date_livraison if commande.Date_livraison else etat_livraison.date_debut
+
+            if date_livraison_effective:
+                # Calculer la durée totale depuis la date de commande jusqu'à la livraison
+                # Convertir date_cmd (DateField) en datetime pour le calcul
+                date_cmd_datetime = datetime.combine(commande.date_cmd, datetime.min.time())
+                if timezone.is_naive(date_cmd_datetime):
+                    date_cmd_datetime = timezone.make_aware(date_cmd_datetime)
+                duree_totale = date_livraison_effective - date_cmd_datetime
+
+                # Calculer les durées par état
+                etats_durees = []
+                total_secondes = 0
+
+                for etat in historique_etats.order_by('date_debut'):
+                    if etat.date_debut <= date_livraison_effective:
+                        # Calculer la durée de l'état
+                        if etat.date_fin:
+                            duree_etat = etat.date_fin - etat.date_debut
+                        else:
+                            # Pour l'état en cours (sans date_fin), calculer jusqu'à maintenant
+                            duree_etat = timezone.now() - etat.date_debut
+
+                        # Si l'état est l'état de livraison, calculer jusqu'à date_debut (pas date_fin)
+                        if etat == etat_livraison:
+                            duree_etat = timedelta(0)  # Pas de durée pour l'état final dans le cycle
+
+                        if duree_etat and duree_etat.total_seconds() > 0:
+                            total_secondes += duree_etat.total_seconds()
+
+                            # Convertir en jours, heures, minutes
+                            jours = duree_etat.days
+                            heures, reste = divmod(duree_etat.seconds, 3600)
+                            minutes = reste // 60
+
+                            etats_durees.append({
+                                'etat': etat.enum_etat.libelle,
+                                'date_debut': etat.date_debut,
+                                'date_fin': etat.date_fin,
+                                'duree': duree_etat,
+                                'duree_str': f"{jours}j {heures}h {minutes}min" if jours > 0 else f"{heures}h {minutes}min",
+                                'couleur': etat.enum_etat.couleur
+                            })
+
+                # Convertir la durée totale
+                jours_total = duree_totale.days
+                heures_total, reste_total = divmod(duree_totale.seconds, 3600)
+                minutes_total = reste_total // 60
+
+                cycle_vie = {
+                    'duree_totale': duree_totale,
+                    'duree_totale_str': f"{jours_total} jour{'s' if jours_total > 1 else ''} {heures_total}h {minutes_total}min",
+                    'date_cmd': commande.date_cmd,
+                    'date_livraison': date_livraison_effective,
+                    'etats': etats_durees,
+                    'nb_etats': len(etats_durees),
+                    'etat_livraison': etat_livraison.enum_etat.libelle,
+                    'utilise_date_livraison_commande': commande.Date_livraison is not None  # Indicateur pour le template
+                }
+
     context = {
         'commande': commande,
         'paniers': paniers,
         'historique_etats': historique_etats,
-        'etats_non_modifiables': etats_non_modifiables 
+        'etats_non_modifiables': etats_non_modifiables,
+        'cycle_vie': cycle_vie
     }
     return render(request, 'commande/detail.html', context)
 
@@ -483,13 +560,25 @@ def creer_commande(request):
             'nom': str(article.nom or ''),
             'reference': str(article.reference or ''),
             'prix_unitaire': float(article.prix_unitaire) if article.prix_unitaire else 0.0,
+            'prix_actuel': float(article.prix_actuel) if article.prix_actuel else float(article.prix_unitaire) if article.prix_unitaire else 0.0,
             'qte_disponible': int(article.get_total_qte_disponible()),
+            'stock_total': int(article.get_total_qte_disponible()),  # Alias pour compatibilité
             'couleur': str(article.couleur or ''),
             'pointure': str(article.pointure or ''),
             'categorie': str(article.categorie) if hasattr(article, 'categorie') and article.categorie else '',
             'phase': str(article.phase or ''),
             'has_promo_active': bool(article.has_promo_active),
             'isUpsell': bool(article.isUpsell),
+            # Prix upsells
+            'prix_upsell_1': float(article.prix_upsell_1) if hasattr(article, 'prix_upsell_1') and article.prix_upsell_1 else 0.0,
+            'prix_upsell_2': float(article.prix_upsell_2) if hasattr(article, 'prix_upsell_2') and article.prix_upsell_2 else 0.0,
+            'prix_upsell_3': float(article.prix_upsell_3) if hasattr(article, 'prix_upsell_3') and article.prix_upsell_3 else 0.0,
+            'prix_upsell_4': float(article.prix_upsell_4) if hasattr(article, 'prix_upsell_4') and article.prix_upsell_4 else 0.0,
+            # Prix remises
+            'prix_remise_1': float(article.prix_remise_1) if hasattr(article, 'prix_remise_1') and article.prix_remise_1 else 0.0,
+            'prix_remise_2': float(article.prix_remise_2) if hasattr(article, 'prix_remise_2') and article.prix_remise_2 else 0.0,
+            'prix_remise_3': float(article.prix_remise_3) if hasattr(article, 'prix_remise_3') and article.prix_remise_3 else 0.0,
+            'prix_remise_4': float(article.prix_remise_4) if hasattr(article, 'prix_remise_4') and article.prix_remise_4 else 0.0,
             'image_url': image_url
         })
     
@@ -680,6 +769,7 @@ def modifier_commande(request, pk):
             'nom': str(article.nom or ''),
             'reference': str(article.reference or ''),
             'prix_unitaire': float(article.prix_unitaire) if article.prix_unitaire else 0.0,
+            'prix_actuel': float(article.prix_actuel) if article.prix_actuel else float(article.prix_unitaire) if article.prix_unitaire else 0.0,
             'qte_disponible': int(article.get_total_qte_disponible()),
             'stock_total': int(article.get_total_qte_disponible()),  # Alias pour compatibilité
             'couleur': str(article.couleur or ''),
@@ -688,6 +778,16 @@ def modifier_commande(request, pk):
             'phase': str(article.phase or ''),
             'has_promo_active': bool(article.has_promo_active),
             'isUpsell': bool(article.isUpsell),
+            # Prix upsells
+            'prix_upsell_1': float(article.prix_upsell_1) if hasattr(article, 'prix_upsell_1') and article.prix_upsell_1 else 0.0,
+            'prix_upsell_2': float(article.prix_upsell_2) if hasattr(article, 'prix_upsell_2') and article.prix_upsell_2 else 0.0,
+            'prix_upsell_3': float(article.prix_upsell_3) if hasattr(article, 'prix_upsell_3') and article.prix_upsell_3 else 0.0,
+            'prix_upsell_4': float(article.prix_upsell_4) if hasattr(article, 'prix_upsell_4') and article.prix_upsell_4 else 0.0,
+            # Prix remises
+            'prix_remise_1': float(article.prix_remise_1) if hasattr(article, 'prix_remise_1') and article.prix_remise_1 else 0.0,
+            'prix_remise_2': float(article.prix_remise_2) if hasattr(article, 'prix_remise_2') and article.prix_remise_2 else 0.0,
+            'prix_remise_3': float(article.prix_remise_3) if hasattr(article, 'prix_remise_3') and article.prix_remise_3 else 0.0,
+            'prix_remise_4': float(article.prix_remise_4) if hasattr(article, 'prix_remise_4') and article.prix_remise_4 else 0.0,
             'image_url': image_url
         })
 
@@ -3791,9 +3891,10 @@ def rechercher_client_telephone(request):
 @login_required
 @require_http_methods(["POST"])
 def api_modifier_quantite_panier_commande(request, panier_id):
-    """API pour modifier la quantité d'un article dans le panier"""
+    """API pour modifier la quantité d'un article dans le panier avec gestion des upsells"""
     import json
     from decimal import Decimal
+    from commande.templatetags.remise_filters import calculer_prix_unitaire_effectif
 
     try:
         # Récupérer le panier
@@ -3810,55 +3911,55 @@ def api_modifier_quantite_panier_commande(request, panier_id):
                 'error': 'La quantité doit être au moins 1'
             }, status=400)
 
-        # Vérifier le stock disponible
-        if panier.variante:
-            stock_disponible = panier.variante.qte_disponible + panier.quantite  # Restaurer le stock actuel
-            if stock_disponible < nouvelle_quantite:
-                return JsonResponse({
-                    'success': False,
-                    'error': f'Stock insuffisant. Disponible: {stock_disponible}'
-                }, status=400)
-        else:
-            stock_disponible = panier.article.qte_disponible + panier.quantite
-            if stock_disponible < nouvelle_quantite:
-                return JsonResponse({
-                    'success': False,
-                    'error': f'Stock insuffisant. Disponible: {stock_disponible}'
-                }, status=400)
+        # Sauvegarder si c'était un article upsell
+        etait_upsell = panier.article.isUpsell
 
-        # Restaurer le stock
-        if panier.variante:
-            panier.variante.qte_disponible += panier.quantite
-            panier.variante.save()
-        else:
-            panier.article.qte_disponible += panier.quantite
-            panier.article.save()
-
-        # Mettre à jour la quantité
+        # Mettre à jour la quantité SANS toucher au stock
+        # Le stock est géré uniquement lors de l'ajout/suppression d'articles
         panier.quantite = nouvelle_quantite
-
-        # Recalculer le sous-total (convertir prix_panier en Decimal si c'est un float)
-        prix_panier_decimal = Decimal(str(panier.prix_panier)) if isinstance(panier.prix_panier, float) else panier.prix_panier
-        panier.sous_total = prix_panier_decimal * Decimal(str(nouvelle_quantite))
         panier.save()
 
-        # Décrémenter le nouveau stock
-        if panier.variante:
-            panier.variante.qte_disponible -= nouvelle_quantite
-            panier.variante.save()
+        # Recalculer le compteur upsell si nécessaire
+        if etait_upsell:
+            from operatConfirme.views import _recalculer_compteur_upsell
+            _recalculer_compteur_upsell(commande)
+            # Rafraîchir le panier pour avoir les données à jour
+            panier.refresh_from_db()
+            commande.refresh_from_db()
         else:
-            panier.article.qte_disponible -= nouvelle_quantite
-            panier.article.save()
+            # Recalculer le sous-total pour les articles non-upsell
+            prix_unitaire_effectif = calculer_prix_unitaire_effectif(panier)
+            panier.sous_total = float(prix_unitaire_effectif * Decimal(str(nouvelle_quantite)))
+            panier.save()
 
         # Recalculer le total de la commande
         commande.recalculer_total_avec_frais()
 
-        return JsonResponse({
+        # Calculer le prix unitaire effectif pour la réponse
+        prix_unitaire_effectif = calculer_prix_unitaire_effectif(panier)
+
+        # Préparer la liste des prix mis à jour pour tous les articles upsell
+        articles_upsell_mis_a_jour = []
+        if etait_upsell:
+            for p in commande.paniers.filter(article__isUpsell=True):
+                prix_effectif = calculer_prix_unitaire_effectif(p)
+                articles_upsell_mis_a_jour.append({
+                    'panier_id': p.id,
+                    'prix_unitaire_effectif': float(prix_effectif),
+                    'sous_total': float(p.sous_total)
+                })
+
+        response_data = {
             'success': True,
             'message': 'Quantité mise à jour avec succès',
             'nouveau_sous_total': float(panier.sous_total),
-            'nouveau_total_commande': float(commande.total_cmd)
-        })
+            'nouveau_total_commande': float(commande.total_cmd),
+            'prix_unitaire_effectif': float(prix_unitaire_effectif),
+            'compteur': commande.compteur if etait_upsell else None,
+            'articles_upsell_mis_a_jour': articles_upsell_mis_a_jour if etait_upsell else []
+        }
+
+        return JsonResponse(response_data)
 
     except Panier.DoesNotExist:
         return JsonResponse({
