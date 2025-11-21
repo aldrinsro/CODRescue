@@ -40,6 +40,40 @@ Filtres de dates avec expressions naturelles (aujourd'hui, cette semaine, etc.)
 
 ---
 
+### 3. 📦 Filtres de Commandes (NOUVEAU)
+
+**Fichier:** `commande-filters.html`
+
+Système de filtres complet pour les pages de gestion de commandes avec recherche intelligente et filtres avancés.
+
+**Utilisation:**
+
+```django
+{% include 'common/commande-filters.html' %}
+<script src="{% static 'js/common/commande-filters.js' %}"></script>
+```
+
+**Vue Python:**
+
+```python
+from common.filter_utils import apply_commande_filters
+commandes = apply_commande_filters(commandes, request)
+```
+
+**Documentation complète:** `common/README_COMMANDE_FILTERS.md`
+
+**Caractéristiques:**
+- ✅ Recherche globale intelligente
+- ✅ Filtres par client, téléphone, email
+- ✅ Filtres de localisation (ville, région, adresse)
+- ✅ Filtres de dates (commande, confirmation, préparation, livraison)
+- ✅ Filtres de montant (min/max)
+- ✅ Filtres par état et opérateur
+- ✅ Filtrage côté serveur pour les performances
+- ✅ URL persistante
+
+---
+
 ## 🚀 Quick Start
 
 ### Installation

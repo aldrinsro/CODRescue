@@ -285,3 +285,172 @@ def get_filter_context(request) -> dict:
         'sync_filter': str(request.GET.get('sync_filter', '')),
         'order_by': str(request.GET.get('order_by', '')),
     }
+
+
+def apply_commande_filters(queryset: QuerySet, request) -> QuerySet:
+    """Applique les filtres de commandes avancés à un QuerySet.
+
+    Cette fonction gère tous les filtres du composant commande-filters.html :
+    - Recherche globale (N° commande, client, téléphone, email)
+    - Filtres spécifiques (ville, région, adresse, dates, montant, état, opérateur)
+
+    Args:
+        queryset: QuerySet de Commande à filtrer
+        request: Objet HttpRequest contenant les paramètres GET
+
+    Returns:
+        QuerySet filtré
+
+    Examples:
+        >>> from common.filter_utils import apply_commande_filters
+        >>> commandes = Commande.objects.all()
+        >>> commandes = apply_commande_filters(commandes, request)
+    """
+    from django.db.models import Q
+
+    # Recherche globale (smartSearch)
+    search_query = request.GET.get('search', '').strip()
+    if search_query:
+        queryset = queryset.filter(
+            Q(id_yz__icontains=search_query) |
+            Q(num_cmd__icontains=search_query) |
+            Q(client__nom__icontains=search_query) |
+            Q(client__prenom__icontains=search_query) |
+            Q(client__tel__icontains=search_query) |
+            Q(client__email__icontains=search_query)
+        )
+
+    # Filtre par N° Commande (id_yz)
+    filter_id_yz = request.GET.get('filter_id_yz', '').strip()
+    if filter_id_yz:
+        queryset = queryset.filter(id_yz__icontains=filter_id_yz)
+
+    # Filtre par N° Externe (num_cmd)
+    filter_num_cmd = request.GET.get('filter_num_cmd', '').strip()
+    if filter_num_cmd:
+        queryset = queryset.filter(num_cmd__icontains=filter_num_cmd)
+
+    # Filtre par Client
+    filter_client = request.GET.get('filter_client', '').strip()
+    if filter_client:
+        queryset = queryset.filter(
+            Q(client__nom__icontains=filter_client) |
+            Q(client__prenom__icontains=filter_client)
+        )
+
+    # Filtre par Téléphone
+    filter_phone = request.GET.get('filter_phone', '').strip()
+    if filter_phone:
+        queryset = queryset.filter(client__tel__icontains=filter_phone)
+
+    # Filtre par Email
+    filter_email = request.GET.get('filter_email', '').strip()
+    if filter_email:
+        queryset = queryset.filter(client__email__icontains=filter_email)
+
+    # Filtre par Ville Client
+    filter_ville_client = request.GET.get('filter_ville_client', '').strip()
+    if filter_ville_client:
+        queryset = queryset.filter(ville__nom__icontains=filter_ville_client)
+
+    # Filtre par Ville & Région
+    filter_ville_region = request.GET.get('filter_ville_region', '').strip()
+    if filter_ville_region:
+        queryset = queryset.filter(
+            Q(ville__nom__icontains=filter_ville_region) |
+            Q(ville__region__nom__icontains=filter_ville_region)
+        )
+
+    # Filtre par Adresse
+    filter_adresse = request.GET.get('filter_adresse', '').strip()
+    if filter_adresse:
+        queryset = queryset.filter(client__adresse__icontains=filter_adresse)
+
+    # Filtres par Date
+    filter_date_commande = request.GET.get('filter_date_commande', '').strip()
+    if filter_date_commande:
+        try:
+            date = datetime.strptime(filter_date_commande, '%Y-%m-%d').date()
+            queryset = queryset.filter(date_cmd=date)
+        except ValueError:
+            pass
+
+    filter_date_confirmation = request.GET.get('filter_date_confirmation', '').strip()
+    if filter_date_confirmation:
+        try:
+            date = datetime.strptime(filter_date_confirmation, '%Y-%m-%d').date()
+            queryset = queryset.filter(
+                etats__enum_etat__libelle='Confirmée',
+                etats__date_debut__date=date
+            ).distinct()
+        except ValueError:
+            pass
+
+    filter_date_affectation = request.GET.get('filter_date_affectation', '').strip()
+    if filter_date_affectation:
+        try:
+            date = datetime.strptime(filter_date_affectation, '%Y-%m-%d').date()
+            queryset = queryset.filter(
+                etats__enum_etat__libelle__in=['À imprimer', 'En préparation'],
+                etats__date_debut__date=date
+            ).distinct()
+        except ValueError:
+            pass
+
+    filter_date_preparation = request.GET.get('filter_date_preparation', '').strip()
+    if filter_date_preparation:
+        try:
+            date = datetime.strptime(filter_date_preparation, '%Y-%m-%d').date()
+            queryset = queryset.filter(
+                etats__enum_etat__libelle='En préparation',
+                etats__date_debut__date=date
+            ).distinct()
+        except ValueError:
+            pass
+
+    filter_date_livraison = request.GET.get('filter_date_livraison', '').strip()
+    if filter_date_livraison:
+        try:
+            date = datetime.strptime(filter_date_livraison, '%Y-%m-%d').date()
+            queryset = queryset.filter(
+                etats__enum_etat__libelle='En livraison',
+                etats__date_debut__date=date
+            ).distinct()
+        except ValueError:
+            pass
+
+    # Filtres par Montant
+    filter_total_min = request.GET.get('filter_total_min', '').strip()
+    if filter_total_min:
+        try:
+            total_min = float(filter_total_min)
+            queryset = queryset.filter(total_cmd__gte=total_min)
+        except ValueError:
+            pass
+
+    filter_total_max = request.GET.get('filter_total_max', '').strip()
+    if filter_total_max:
+        try:
+            total_max = float(filter_total_max)
+            queryset = queryset.filter(total_cmd__lte=total_max)
+        except ValueError:
+            pass
+
+    # Filtre par État
+    filter_etat = request.GET.get('filter_etat', '').strip()
+    if filter_etat:
+        queryset = queryset.filter(
+            etats__enum_etat__libelle__icontains=filter_etat,
+            etats__date_fin__isnull=True
+        ).distinct()
+
+    # Filtre par Opérateur
+    filter_operateur = request.GET.get('filter_operateur', '').strip()
+    if filter_operateur:
+        queryset = queryset.filter(
+            Q(etats__operateur__nom__icontains=filter_operateur) |
+            Q(etats__operateur__prenom__icontains=filter_operateur),
+            etats__date_fin__isnull=True
+        ).distinct()
+
+    return queryset

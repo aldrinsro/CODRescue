@@ -127,7 +127,7 @@ class Operateur(models.Model):
         if self.type_operateur == 'PREPARATION':
             return EtatCommande.objects.filter(
                 operateur=self,
-                enum_etat__libelle__in=['Collecté','Emballé', 'En préparation'],
+                enum_etat__libelle__in=['Collectée','Emballée', 'En préparation'],
                 date_fin__isnull=True
             ).count()
 
