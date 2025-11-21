@@ -141,6 +141,81 @@
     </div>
 </div>
 
+<!-- Répartition des commandes mises en distribution -->
+<div class="mt-8">
+    <div class="bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:shadow-xl border border-gray-100">
+        <div class="flex items-center justify-between mb-6">
+            <h3 class="text-xl font-bold text-gray-800 flex items-center">
+                <i class="fas fa-chart-pie text-indigo-500 mr-3"></i>
+                Répartition des Commandes Après Distribution
+            </h3>
+            <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 text-white px-3 py-1 rounded-full text-sm font-semibold">
+                Total: {{ distribution_total }} commandes traitées
+            </div>
+        </div>
+
+        {% if distribution_total > 0 %}
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Graphique en camembert -->
+            <div class="chart-container" style="position: relative; height: 350px; width: 100%;">
+                <canvas id="distributionRepartitionChart"></canvas>
+            </div>
+
+            <!-- Légende avec statistiques détaillées -->
+            <div class="flex flex-col justify-center space-y-3">
+                <div class="bg-gradient-to-r from-green-50 to-green-100 rounded-lg p-4 border border-green-200 hover:shadow-md transition-all duration-300">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="w-4 h-4 rounded-full bg-green-500 mr-3"></div>
+                            <span class="font-semibold text-gray-800">Livrée</span>
+                        </div>
+                        <span class="text-2xl font-bold text-green-600" id="livrees-count">0</span>
+                    </div>
+                </div>
+
+                <div class="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200 hover:shadow-md transition-all duration-300">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="w-4 h-4 rounded-full bg-blue-500 mr-3"></div>
+                            <span class="font-semibold text-gray-800">Livrée Partiellement</span>
+                        </div>
+                        <span class="text-2xl font-bold text-blue-600" id="livrees-part-count">0</span>
+                    </div>
+                </div>
+
+                <div class="bg-gradient-to-r from-red-50 to-red-100 rounded-lg p-4 border border-red-200 hover:shadow-md transition-all duration-300">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="w-4 h-4 rounded-full bg-red-500 mr-3"></div>
+                            <span class="font-semibold text-gray-800">Retournée</span>
+                        </div>
+                        <span class="text-2xl font-bold text-red-600" id="retournees-count">0</span>
+                    </div>
+                </div>
+
+                <div class="bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg p-4 border border-orange-200 hover:shadow-md transition-all duration-300">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="w-4 h-4 rounded-full bg-orange-500 mr-3"></div>
+                            <span class="font-semibold text-gray-800">Reportée</span>
+                        </div>
+                        <span class="text-2xl font-bold text-orange-600" id="reportees-count">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="text-center py-12">
+            <div class="mb-6">
+                <i class="fas fa-inbox text-6xl text-gray-300"></i>
+            </div>
+            <h4 class="text-lg font-semibold text-gray-600 mb-2">Aucune commande traitée après distribution</h4>
+            <p class="text-gray-500 text-sm">Les statistiques apparaîtront dès que des commandes auront quitté l'état "Mise en distribution"</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
 <!-- Performance logistique (style original avec gradient) -->
 <div class="mt-8 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 border border-green-100">
     <div class="flex items-center justify-between mb-6">
@@ -269,10 +344,114 @@
         data: villesData,
         count: villesLabels.length
     });
+
+    // Données pour le graphique de répartition des distributions
+    const distributionLabels = {{ distribution_labels_json|safe }};
+    const distributionData = {{ distribution_data_json|safe }};
+    const distributionColors = {{ distribution_colors_json|safe }};
+
+    console.log('📊 Données graphique répartition distribution chargées:', {
+        labels: distributionLabels,
+        data: distributionData,
+        colors: distributionColors
+    });
 </script>
 
 <!-- Charger le script personnalisé Chart.js -->
 <script src="{% static 'js/OperteurSAV/KPI/Chart.js' %}"></script>
+
+<!-- Script pour le graphique en camembert de répartition -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Créer le graphique de répartition des distributions
+    const ctxDistribution = document.getElementById('distributionRepartitionChart');
+
+    if (ctxDistribution && distributionData && distributionData.length > 0) {
+        new Chart(ctxDistribution, {
+            type: 'pie',
+            data: {
+                labels: distributionLabels,
+                datasets: [{
+                    label: 'Nombre de commandes',
+                    data: distributionData,
+                    backgroundColor: distributionColors,
+                    borderColor: '#ffffff',
+                    borderWidth: 2,
+                    hoverOffset: 15
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: false // On utilise notre propre légende personnalisée
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#ffffff',
+                        bodyColor: '#ffffff',
+                        borderColor: '#ffffff',
+                        borderWidth: 1,
+                        padding: 12,
+                        displayColors: true,
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                return `${label}: ${value} (${percentage}%)`;
+                            }
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Statut Après Distribution',
+                        font: {
+                            size: 16,
+                            weight: 'bold'
+                        },
+                        padding: {
+                            top: 10,
+                            bottom: 20
+                        }
+                    }
+                },
+                animation: {
+                    animateRotate: true,
+                    animateScale: true,
+                    duration: 1500,
+                    easing: 'easeInOutQuart'
+                }
+            }
+        });
+
+        // Mettre à jour les compteurs dans la légende
+        // Extraire les valeurs du backend via le script Python
+        const dataMap = {};
+        distributionLabels.forEach((label, index) => {
+            dataMap[label] = distributionData[index];
+        });
+
+        // Mettre à jour les compteurs
+        if (dataMap['Livrée']) {
+            document.getElementById('livrees-count').textContent = dataMap['Livrée'];
+        }
+        if (dataMap['Livrée Partiellement']) {
+            document.getElementById('livrees-part-count').textContent = dataMap['Livrée Partiellement'];
+        }
+        if (dataMap['Retournée']) {
+            document.getElementById('retournees-count').textContent = dataMap['Retournée'];
+        }
+        if (dataMap['Reportée']) {
+            document.getElementById('reportees-count').textContent = dataMap['Reportée'];
+        }
+
+        console.log('✅ Graphique de répartition des distributions créé avec succès');
+    }
+});
+</script>
 <!-- JavaScript pour les animations et interactions de la page home (style original) -->
 <script>
 // Namespace pour éviter les conflits

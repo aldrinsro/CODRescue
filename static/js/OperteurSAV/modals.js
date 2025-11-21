@@ -846,20 +846,30 @@ function genererArticlesHTML(paniers, commande) {
  */
 function initialiserModalLivraisonPartielle() {
     console.log('🔧 DEBUG: initialiserModalLivraisonPartielle appelée');
-    
+
+    // Initialiser la date de livraison avec la date d'aujourd'hui
+    const dateLivraisonInput = document.getElementById('dateLivraisonPartielle');
+    if (dateLivraisonInput) {
+        const today = new Date();
+        const formattedDate = today.toISOString().split('T')[0];
+        dateLivraisonInput.value = formattedDate;
+        dateLivraisonInput.max = formattedDate; // Empêcher de sélectionner une date future
+        console.log('✅ Date de livraison initialisée à:', formattedDate);
+    }
+
     // Réinitialiser tous les checkboxes à "coché" par défaut
     document.querySelectorAll('.article-livrer-checkbox').forEach(checkbox => {
         checkbox.checked = true;
     });
-    
+
     // Réinitialiser toutes les quantités à la quantité maximale
     document.querySelectorAll('.quantite-livrer-input').forEach(input => {
-        const maxQuantite = parseInt(input.dataset.panierId ? 
-            document.querySelector(`[data-panier-id="${input.dataset.panierId}"]`).dataset.quantiteMax : 
+        const maxQuantite = parseInt(input.dataset.panierId ?
+            document.querySelector(`[data-panier-id="${input.dataset.panierId}"]`).dataset.quantiteMax :
             input.max);
         input.value = maxQuantite;
     });
-    
+
     // Mettre à jour l'affichage initial
     mettreAJourSectionArticlesRenvoyes([]);
     mettreAJourResumeLivraisonPartielle();

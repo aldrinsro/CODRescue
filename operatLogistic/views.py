@@ -12,6 +12,7 @@ import json
 from parametre.models import Operateur
 from commande.models  import Commande, Envoi, EnumEtatCmd, EtatCommande
 from article.models   import Article
+from .views_kpi import get_distribution_repartition_stats
 
 
 
@@ -83,6 +84,9 @@ def dashboard(request):
     villes_labels_json = json.dumps(villes_labels)
     villes_data_json = json.dumps(villes_data)
 
+    # Récupérer les statistiques de répartition des commandes mises en distribution
+    distribution_stats = get_distribution_repartition_stats()
+
     context = {
         'operateur'        : operateur,
         'commandes_distribution': commandes_distribution,
@@ -92,6 +96,11 @@ def dashboard(request):
         'villes_labels_json': villes_labels_json,
         'villes_data_json': villes_data_json,
         'page_title': 'Tableau de Bord Logistique',
+        # Données pour le graphique de répartition des distributions
+        'distribution_labels_json': distribution_stats['labels_json'],
+        'distribution_data_json': distribution_stats['data_json'],
+        'distribution_colors_json': distribution_stats['colors_json'],
+        'distribution_total': distribution_stats['total'],
     }
     return render(request, 'composant_generale/operatLogistic/home.html', context)
 
@@ -702,7 +711,8 @@ def livraison_partielle(request, commande_id):
         articles_livres_raw = request.POST.get('articles_livres', '[]')
         articles_renvoyes_raw = request.POST.get('articles_renvoyes', '[]')
         commentaire = request.POST.get('commentaire', '').strip()
-        
+        date_livraison_str = request.POST.get('date_livraison', '').strip()
+
         print(f"🔧 DEBUG JSON: articles_livres_raw = '{articles_livres_raw}'")
         print(f"🔧 DEBUG JSON: articles_renvoyes_raw = '{articles_renvoyes_raw}'")
         
@@ -731,7 +741,20 @@ def livraison_partielle(request, commande_id):
         
         if not commentaire:
             return JsonResponse({'success': False, 'error': 'Un commentaire est obligatoire pour expliquer la livraison partielle.'})
-        
+
+        if not date_livraison_str:
+            return JsonResponse({'success': False, 'error': 'La date de livraison est obligatoire.'})
+
+        # Convertir la date de livraison
+        try:
+            from datetime import datetime
+            date_livraison = datetime.strptime(date_livraison_str, '%Y-%m-%d')
+            # Vérifier que la date n'est pas dans le futur
+            if date_livraison.date() > timezone.now().date():
+                return JsonResponse({'success': False, 'error': 'La date de livraison ne peut pas être dans le futur.'})
+        except ValueError:
+            return JsonResponse({'success': False, 'error': 'Format de date invalide.'})
+
         if not articles_livres:
             return JsonResponse({'success': False, 'error': 'Aucun article à livrer spécifié.'})
 
@@ -749,7 +772,7 @@ def livraison_partielle(request, commande_id):
             
             # 3. Créer le nouvel état avec le commentaire
             commentaire_etat = f"{commentaire}"
-                
+
             EtatCommande.objects.create(
                 commande=commande,
                 enum_etat=etat_livree_partiellement,
@@ -757,7 +780,12 @@ def livraison_partielle(request, commande_id):
                 date_debut=timezone.now(),
                 commentaire=commentaire_etat
             )
-            
+
+            # Enregistrer la date de livraison partielle dans la commande
+            commande.Date_livraison = date_livraison
+            commande.save(update_fields=['Date_livraison'])
+            print(f"✅ Date de livraison partielle enregistrée: {date_livraison}")
+
             # 4. NOUVELLE LOGIQUE: Stocker les articles retournés en base de données
             from commande.models import ArticleRetourne
             articles_retournes_crees = []
