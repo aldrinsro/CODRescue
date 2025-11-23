@@ -2380,6 +2380,91 @@ def _handle_create_operation(request, commande, operateur):
         })
 
 
+def _handle_delete_operation(request, commande, operateur):
+    """
+    Gère la suppression d'une opération via AJAX.
+
+    Args:
+        request: L'objet HttpRequest contenant les données POST
+        commande: L'instance de la commande à modifier
+        operateur: L'opérateur effectuant l'action
+
+    Returns:
+        JsonResponse avec le statut de l'opération
+    """
+    from commande.models import Operation
+    import logging
+
+    logger = logging.getLogger(__name__)
+
+    # ========== 1. RÉCUPÉRATION ET VALIDATION DES DONNÉES ==========
+    operation_id = request.POST.get('operation_id')
+
+    print(f"🗑️ Suppression opération {operation_id} pour commande {commande.id}")
+
+    if not operation_id:
+        print(f"❌ Données manquantes - operation_id: '{operation_id}'")
+        return JsonResponse({
+            'success': False,
+            'error': 'ID opération requis'
+        })
+
+    try:
+        # ========== 2. RÉCUPÉRATION DE L'OPÉRATION ==========
+        try:
+            operation = Operation.objects.get(
+                id=operation_id,
+                commande=commande
+            )
+            print(f"✅ Opération {operation_id} trouvée: {operation.type_operation}")
+        except Operation.DoesNotExist:
+            print(f"❌ Opération {operation_id} introuvable pour commande {commande.id}")
+            return JsonResponse({
+                'success': False,
+                'error': 'Opération introuvable'
+            })
+
+        # ========== 3. SAUVEGARDE DES INFORMATIONS AVANT SUPPRESSION ==========
+        operation_info = {
+            'id': operation.id,
+            'type_operation': operation.type_operation,
+            'conclusion': operation.conclusion,
+            'date_operation': operation.date_operation.strftime('%d/%m/%Y %H:%M')
+        }
+
+        print(f"📋 Informations de l'opération à supprimer:")
+        print(f"   - Type: {operation_info['type_operation']}")
+        print(f"   - Conclusion: {operation_info['conclusion']}")
+        print(f"   - Date: {operation_info['date_operation']}")
+
+        # ========== 4. SUPPRESSION DE L'OPÉRATION ==========
+        operation.delete()
+        print(f"✅ Opération {operation_id} supprimée avec succès")
+
+        # ========== 5. VÉRIFICATION POST-SUPPRESSION ==========
+        operations_restantes = Operation.objects.filter(commande=commande)
+        print(f"📊 {operations_restantes.count()} opération(s) restante(s) pour cette commande")
+
+        # ========== 6. RÉPONSE JSON ==========
+        return JsonResponse({
+            'success': True,
+            'message': f'Opération {operation_info["type_operation"]} supprimée avec succès',
+            'operation_deleted': operation_info,
+            'debug_info': {
+                'total_operations_restantes': operations_restantes.count(),
+            }
+        })
+
+    except Exception as e:
+        print(f"❌ Erreur suppression opération: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur serveur: {str(e)}'
+        })
+
+
 def _handle_save_livraison(request, commande, operateur):
     """
     Gère la sauvegarde des informations de livraison via AJAX.
@@ -2552,7 +2637,7 @@ def modifier_commande(request, commande_id):
             if is_ajax and not action:
                 return JsonResponse({'success': False, 'error': 'Action non spécifiée'})
             
-            if is_ajax and action not in ['add_article', 'update_ville', 'toggle_frais_livraison', 'remove_article', 'update_article_complet', 'save_livraison', 'update_quantity', 'delete_panier', 'save_client_info', 'update_operation', 'create_operation']:
+            if is_ajax and action not in ['add_article', 'update_ville', 'toggle_frais_livraison', 'remove_article', 'update_article_complet', 'save_livraison', 'update_quantity', 'delete_panier', 'save_client_info', 'update_operation', 'create_operation', 'delete_operation']:
                 return JsonResponse({'success': False, 'error': f'Action non reconnue: {action}'})
             
             # ================ ACTIONS AJAX INDIVIDUELLES ================
@@ -2580,7 +2665,11 @@ def modifier_commande(request, commande_id):
             elif action == 'create_operation':
                 # Déléguer à la fonction spécialisée
                 return _handle_create_operation(request, commande, operateur)
-            
+
+            elif action == 'delete_operation':
+                # Déléguer à la fonction spécialisée
+                return _handle_delete_operation(request, commande, operateur)
+
             elif action == 'save_livraison':
                 # Déléguer à la fonction spécialisée
                 return _handle_save_livraison(request, commande, operateur)

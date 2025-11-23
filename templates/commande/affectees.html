@@ -116,6 +116,11 @@
             <h2 class="text-2xl font-bold" style="color: var(--admin-color);">
                 <i class="fas fa-list mr-2"></i>Commandes Affectées
             </h2>
+            <div class="flex gap-3">
+                <button id="bulkReaffectationBtn" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-sm opacity-50 cursor-not-allowed" disabled>
+                    <i class="fas fa-exchange-alt mr-2"></i> Réaffecter sélection (<span id="selectedCount">0</span>)
+                </button>
+            </div>
         </div>
         
         {% if page_obj %}
@@ -123,6 +128,9 @@
             <table class="min-w-full divide-y divide-gray-200 border border-gray-200" style="border-collapse: collapse;">
                 <thead class="bg-gray-50" style="background-color: var(--admin-color);">
                     <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider border-r border-b border-gray-200">
+                            <input type="checkbox" id="selectAllCommandes" class="form-checkbox h-4 w-4 text-purple-600 rounded focus:ring-purple-500" />
+                        </th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider border-r border-b border-gray-200">N° Commande</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider border-r border-b border-gray-200">Client</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider border-r border-b border-gray-200">Ville</th>
@@ -279,6 +287,9 @@
         </div>
     </div>
 </div>
+
+<!-- Include du modal de réaffectation -->
+{% include 'commande/modal/Reaffectation_commande.html' %}
 
 <!-- Include du modal du panier -->
 {% include 'commande/partials/panier.html' %}
@@ -521,6 +532,9 @@ async function loadAffecteesData(params = {}) {
             // Ré-attacher les event listeners
             attachPaginationListeners();
 
+            // Réinitialiser les checkboxes
+            initializeCheckboxes();
+
         } catch (domError) {
             throw new Error('Erreur lors de la mise à jour de l\'interface: ' + domError.message);
         }
@@ -625,12 +639,86 @@ function handlePaginationClick(e) {
 
 // Fonctions viewCart et buildCartHTML sont définies dans le fichier panier.html inclus
 
+// Variables globales pour la réaffectation
+let currentReaffectationCommandeId = null;
+let currentReaffectationOperateurActuelId = null;
+let selectedNouvelOperateurId = null;
+let selectedCommandesIds = []; // Pour la réaffectation multiple
+let isBulkReaffectation = false; // Flag pour savoir si c'est une réaffectation multiple
+
 // Fonctions pour les actions
 function desaffecterCommande(commandeId, commandeIdYz) {
     currentCommandeId = commandeId;
     document.getElementById('desaffectationCommandeId').textContent = commandeIdYz;
     document.getElementById('desaffectationReason').value = '';
     document.getElementById('desaffectationModal').classList.remove('hidden');
+}
+
+function reaffecterCommande(commandeId, commandeIdYz, operateurActuelNom, operateurActuelId) {
+    // Marquer comme réaffectation simple
+    isBulkReaffectation = false;
+    currentReaffectationCommandeId = commandeId;
+    currentReaffectationOperateurActuelId = operateurActuelId;
+    selectedNouvelOperateurId = null;
+
+    // Mettre à jour les informations affichées
+    document.getElementById('reaffectationCommandeId').textContent = commandeIdYz;
+    document.getElementById('reaffectationOperateurActuel').textContent = operateurActuelNom || 'Non défini';
+    document.getElementById('reaffectationMotif').value = '';
+
+    // Réinitialiser la sélection des opérateurs
+    document.querySelectorAll('.operateur-card-reaffect').forEach(card => {
+        card.classList.remove('border-purple-500', 'bg-purple-100', 'ring-2', 'ring-purple-500');
+        card.classList.add('border-gray-200');
+
+        // Désactiver l'opérateur actuel
+        const cardOperateurId = parseInt(card.getAttribute('data-operateur-id'));
+        if (cardOperateurId === operateurActuelId) {
+            card.classList.add('opacity-50', 'cursor-not-allowed', 'bg-gray-100');
+            card.onclick = null;
+            const badge = document.createElement('span');
+            badge.className = 'text-xs text-gray-500 ml-2';
+            badge.textContent = '(Opérateur actuel)';
+            const nomElement = card.querySelector('p.font-semibold');
+            if (nomElement && !nomElement.querySelector('span')) {
+                nomElement.appendChild(badge);
+            }
+        }
+    });
+
+    // Désactiver le bouton de confirmation
+    document.getElementById('confirmReaffectationBtn').disabled = true;
+    document.getElementById('confirmReaffectationBtn').classList.add('opacity-50', 'cursor-not-allowed');
+
+    // Afficher le modal
+    document.getElementById('reaffectationModal').classList.remove('hidden');
+}
+
+function selectNouvelOperateur(cardElement, operateurId, operateurNom) {
+    // Vérifier que ce n'est pas l'opérateur actuel
+    if (operateurId === currentReaffectationOperateurActuelId) {
+        return;
+    }
+
+    // Désélectionner toutes les cartes
+    document.querySelectorAll('.operateur-card-reaffect').forEach(card => {
+        if (!card.classList.contains('opacity-50')) {
+            card.classList.remove('border-purple-500', 'bg-purple-100', 'ring-2', 'ring-purple-500');
+            card.classList.add('border-gray-200');
+        }
+    });
+
+    // Sélectionner la carte cliquée
+    cardElement.classList.remove('border-gray-200');
+    cardElement.classList.add('border-purple-500', 'bg-purple-100', 'ring-2', 'ring-purple-500');
+
+    // Stocker l'ID de l'opérateur sélectionné
+    selectedNouvelOperateurId = operateurId;
+
+    // Activer le bouton de confirmation
+    const confirmBtn = document.getElementById('confirmReaffectationBtn');
+    confirmBtn.disabled = false;
+    confirmBtn.classList.remove('opacity-50', 'cursor-not-allowed');
 }
 
 // Gestion des modals
@@ -666,18 +754,228 @@ document.getElementById('cancelDesaffectationBtn').addEventListener('click', fun
     document.getElementById('desaffectationModal').classList.add('hidden');
 });
 
+// Gestion de la réaffectation (simple et multiple)
+document.getElementById('confirmReaffectationBtn').addEventListener('click', function() {
+    const motif = document.getElementById('reaffectationMotif').value.trim();
+
+    if (!selectedNouvelOperateurId) {
+        showErrorMessage('Veuillez sélectionner un opérateur', 'warning');
+        return;
+    }
+
+    // Désactiver le bouton pour éviter les doubles clics
+    this.disabled = true;
+    this.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Traitement...';
+
+    // Déterminer l'URL et les données selon le type de réaffectation
+    let url, bodyData;
+
+    if (isBulkReaffectation) {
+        // Réaffectation multiple
+        url = '/commande/reaffecter-multiple/';
+        bodyData = {
+            commande_ids: selectedCommandesIds,
+            operateur_id: selectedNouvelOperateurId,
+            motif: motif
+        };
+    } else {
+        // Réaffectation simple
+        url = `/commande/reaffecter/${currentReaffectationCommandeId}/`;
+        bodyData = {
+            operateur_id: selectedNouvelOperateurId,
+            motif: motif
+        };
+    }
+
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(bodyData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('reaffectationModal').classList.add('hidden');
+            // Afficher un message de succès
+            showErrorMessage(data.message, 'success');
+            // Recharger la page après 1 seconde
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showErrorMessage('Erreur: ' + data.message, 'error');
+            // Réactiver le bouton
+            this.disabled = false;
+            this.innerHTML = '<i class="fas fa-check mr-2"></i>Confirmer la réaffectation';
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showErrorMessage('Erreur lors de la réaffectation', 'error');
+        // Réactiver le bouton
+        this.disabled = false;
+        this.innerHTML = '<i class="fas fa-check mr-2"></i>Confirmer la réaffectation';
+    });
+});
+
+document.getElementById('cancelReaffectationBtn').addEventListener('click', function() {
+    document.getElementById('reaffectationModal').classList.add('hidden');
+});
+
+document.getElementById('closeReaffectationModal').addEventListener('click', function() {
+    document.getElementById('reaffectationModal').classList.add('hidden');
+});
+
+// Fonction pour afficher un message de succès
+function showSuccessMessage(message) {
+    const successContainer = document.createElement('div');
+    successContainer.className = `fixed top-4 right-4 z-50 max-w-md p-4 rounded-lg shadow-lg transform transition-all duration-300 translate-x-full bg-green-100 border-green-500 text-green-700`;
+    successContainer.innerHTML = `
+        <div class="flex items-center">
+            <i class="fas fa-check-circle mr-3 text-green-500"></i>
+            <div>
+                <h4 class="font-bold">Succès</h4>
+                <p class="text-sm">${message}</p>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(successContainer);
+
+    // Animation d'entrée
+    setTimeout(() => {
+        successContainer.classList.remove('translate-x-full');
+    }, 100);
+
+    // Suppression automatique
+    setTimeout(() => {
+        successContainer.classList.add('translate-x-full');
+        setTimeout(() => {
+            document.body.removeChild(successContainer);
+        }, 300);
+    }, 3000);
+}
+
+// Modifier showErrorMessage pour supporter le type 'success'
+const originalShowErrorMessage = showErrorMessage;
+showErrorMessage = function(message, type = 'error') {
+    if (type === 'success') {
+        showSuccessMessage(message);
+    } else {
+        originalShowErrorMessage(message, type);
+    }
+};
+
 // Fermer les modals en cliquant à l'extérieur
 window.addEventListener('click', function(event) {
     const cartModal = document.getElementById('cartModal');
     const desaffectationModal = document.getElementById('desaffectationModal');
-    
+    const reaffectationModal = document.getElementById('reaffectationModal');
+
     if (event.target === cartModal) {
         cartModal.classList.add('hidden');
     }
     if (event.target === desaffectationModal) {
         desaffectationModal.classList.add('hidden');
     }
+    if (event.target === reaffectationModal) {
+        reaffectationModal.classList.add('hidden');
+    }
 });
+
+// Fonction pour initialiser les checkboxes
+function initializeCheckboxes() {
+    const selectAllCheckbox = document.getElementById('selectAllCommandes');
+    const commandeCheckboxes = document.querySelectorAll('.commande-checkbox');
+
+    // Réinitialiser
+    if (selectAllCheckbox) {
+        selectAllCheckbox.checked = false;
+    }
+    commandeCheckboxes.forEach(checkbox => {
+        checkbox.checked = false;
+    });
+
+    // Event listener pour "Tout sélectionner"
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            commandeCheckboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            updateBulkButtons();
+        });
+    }
+
+    // Event listeners pour chaque checkbox
+    commandeCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateBulkButtons);
+    });
+
+    updateBulkButtons();
+}
+
+// Fonction pour mettre à jour les boutons d'action groupée
+function updateBulkButtons() {
+    const checkedBoxes = document.querySelectorAll('.commande-checkbox:checked');
+    const checkedCount = checkedBoxes.length;
+    const bulkReaffectationBtn = document.getElementById('bulkReaffectationBtn');
+    const selectedCountSpan = document.getElementById('selectedCount');
+
+    if (selectedCountSpan) {
+        selectedCountSpan.textContent = checkedCount;
+    }
+
+    if (bulkReaffectationBtn) {
+        if (checkedCount > 0) {
+            bulkReaffectationBtn.disabled = false;
+            bulkReaffectationBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        } else {
+            bulkReaffectationBtn.disabled = true;
+            bulkReaffectationBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+    }
+}
+
+// Fonction pour ouvrir le modal de réaffectation multiple
+function openBulkReaffectationModal() {
+    const checkedBoxes = document.querySelectorAll('.commande-checkbox:checked');
+    selectedCommandesIds = Array.from(checkedBoxes).map(cb => cb.value);
+
+    if (selectedCommandesIds.length === 0) {
+        showErrorMessage('Veuillez sélectionner au moins une commande', 'warning');
+        return;
+    }
+
+    // Marquer comme réaffectation multiple
+    isBulkReaffectation = true;
+    currentReaffectationOperateurActuelId = null;
+    selectedNouvelOperateurId = null;
+
+    // Mettre à jour les informations affichées
+    document.getElementById('reaffectationCommandeId').textContent = `${selectedCommandesIds.length} commande(s) sélectionnée(s)`;
+    document.getElementById('reaffectationOperateurActuel').textContent = 'Multiples opérateurs';
+    document.getElementById('reaffectationMotif').value = '';
+
+    // Réinitialiser la sélection des opérateurs
+    document.querySelectorAll('.operateur-card-reaffect').forEach(card => {
+        card.classList.remove('border-purple-500', 'bg-purple-100', 'ring-2', 'ring-purple-500', 'opacity-50', 'cursor-not-allowed', 'bg-gray-100');
+        card.classList.add('border-gray-200');
+
+        // Supprimer le badge (Opérateur actuel) s'il existe
+        const badge = card.querySelector('span.text-xs.text-gray-500');
+        if (badge && badge.textContent.includes('Opérateur actuel')) {
+            badge.remove();
+        }
+    });
+
+    // Désactiver le bouton de confirmation
+    document.getElementById('confirmReaffectationBtn').disabled = true;
+    document.getElementById('confirmReaffectationBtn').classList.add('opacity-50', 'cursor-not-allowed');
+
+    // Afficher le modal
+    document.getElementById('reaffectationModal').classList.remove('hidden');
+}
 
 // Initialisation des contrôles de pagination flexible
 document.addEventListener('DOMContentLoaded', function() {
@@ -804,6 +1102,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initialiser les event listeners de pagination au chargement
     attachPaginationListeners();
+
+    // Initialiser les checkboxes
+    initializeCheckboxes();
+
+    // Event listener pour le bouton de réaffectation multiple
+    const bulkReaffectationBtn = document.getElementById('bulkReaffectationBtn');
+    if (bulkReaffectationBtn) {
+        bulkReaffectationBtn.addEventListener('click', openBulkReaffectationModal);
+    }
 });
 </script>
 {% endblock %}

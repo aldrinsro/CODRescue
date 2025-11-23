@@ -317,19 +317,26 @@ function mettreAJourTableauOperations() {
                 <i class="fas fa-clock mr-1"></i>${operation.date}
             </td>
             <td class="px-4 py-3 text-sm">
-                                <div class="flex items-center justify-center">
-                        <button type="button" onclick="ouvrirModaleCommentaireTableau('${operation.id}', '${operation.nom}')" 
-                                class="px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded-lg transition-colors flex items-center">
-                            <i class="fas fa-edit mr-1"></i>
-                            Modifier
-                        </button>
-                </div>
                 ${operation.commentaire ? `
-                    <div class="mt-1 text-xs text-gray-600 italic flex items-center">
+                    <div class="text-xs text-gray-600 italic flex items-center">
                         <i class="fas fa-check-circle text-green-500 mr-1"></i>
                         "${operation.commentaire.length > 50 ? operation.commentaire.substring(0, 50) + '...' : operation.commentaire}"
                     </div>
-                ` : '<div class="mt-1 text-xs text-red-500 flex items-center"><i class="fas fa-exclamation-circle mr-1"></i>Commentaire requis</div>'}
+                ` : '<div class="text-xs text-red-500 flex items-center"><i class="fas fa-exclamation-circle mr-1"></i>Commentaire requis</div>'}
+            </td>
+            <td class="px-4 py-3 text-sm">
+                <div class="flex items-center justify-center gap-2">
+                    <button type="button" onclick="ouvrirModaleCommentaireTableau('${operation.id}', '${operation.nom.replace(/'/g, "\\'")}')"
+                            class="px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded-lg transition-colors flex items-center">
+                        <i class="fas fa-edit mr-1"></i>
+                        Modifier
+                    </button>
+                    <button type="button" onclick="supprimerOperation('${operation.id}', '${operation.nom.replace(/'/g, "\\'")}', ${operation.fromDatabase ? 'true' : 'false'})"
+                            class="px-3 py-2 bg-red-500 hover:bg-red-600 text-white text-xs rounded-lg transition-colors flex items-center">
+                        <i class="fas fa-trash mr-1"></i>
+                        Supprimer
+                    </button>
+                </div>
             </td>
         </tr>
         `;
@@ -409,6 +416,132 @@ function saveComment() {
     
     closeCommentModal();
 }
+
+// Fonction pour supprimer une opération
+function supprimerOperation(operationId, nomOperation, fromDatabase) {
+    console.log(`🗑️ Demande de suppression de l'opération: ${operationId} (${nomOperation})`);
+    console.log(`📊 Provenant de la base: ${fromDatabase}`);
+
+    // Demander confirmation
+    const confirmation = confirm(`Êtes-vous sûr de vouloir supprimer l'opération suivante ?\n\n${nomOperation} (${operationId})\n\nCette action est irréversible.`);
+
+    if (!confirmation) {
+        console.log('❌ Suppression annulée par l\'utilisateur');
+        return;
+    }
+
+    // Si l'opération provient de la base de données, la supprimer en base
+    if (fromDatabase) {
+        console.log('🔄 Suppression d\'une opération existante en base de données...');
+        supprimerOperationEnBase(operationId, nomOperation);
+    } else {
+        // Sinon, la supprimer seulement du tableau local
+        console.log('🔄 Suppression d\'une opération locale (non encore sauvegardée)...');
+        supprimerOperationLocale(operationId, nomOperation);
+    }
+}
+
+// Fonction pour supprimer une opération locale (non encore en base de données)
+function supprimerOperationLocale(operationId, nomOperation) {
+    console.log(`🗑️ Suppression locale de l'opération: ${operationId}`);
+
+    // Trouver l'index de l'opération dans le tableau
+    const index = operationsTable.findIndex(op => op.id === operationId);
+
+    if (index === -1) {
+        console.error(`❌ Opération ${operationId} introuvable dans le tableau`);
+        showNotification('❌ Erreur: Opération introuvable', 'error');
+        return;
+    }
+
+    // Supprimer l'opération du tableau
+    operationsTable.splice(index, 1);
+    console.log(`✅ Opération ${operationId} supprimée du tableau local`);
+
+    // Mettre à jour l'affichage
+    mettreAJourTableauOperations();
+
+    showNotification(`✅ Opération "${nomOperation}" supprimée`, 'success');
+}
+
+// Fonction pour supprimer une opération en base de données
+function supprimerOperationEnBase(operationId, nomOperation) {
+    console.log(`🗑️ DEBUG: Suppression en base de l'opération ${operationId}...`);
+
+    // Extraire l'ID numérique de l'opération (ex: "DB-51" -> "51")
+    const operationDbId = operationId.replace('DB-', '');
+    console.log(`🔢 DEBUG: ID numérique extrait: ${operationDbId}`);
+
+    const formData = new FormData();
+
+    // Ajouter le token CSRF
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (csrfToken) {
+        formData.append('csrfmiddlewaretoken', csrfToken.value);
+        console.log(`🔐 DEBUG: Token CSRF ajouté`);
+    } else {
+        console.error('❌ DEBUG: Token CSRF introuvable !');
+        showNotification('❌ Erreur: Token CSRF introuvable', 'error');
+        return;
+    }
+
+    // Ajouter l'action pour supprimer une opération
+    formData.append('action', 'delete_operation');
+    formData.append('operation_id', operationDbId);
+    formData.append('commande_id', getCommandeId());
+
+    // Debug des données envoyées
+    console.log('📦 DEBUG: Données envoyées pour suppression:');
+    for (let [key, value] of formData.entries()) {
+        console.log(`   - ${key}: ${value}`);
+    }
+
+    // Envoyer via AJAX
+    const commandeId = getCommandeId();
+    fetch(`/operateur-confirme/commandes/${commandeId}/modifier/`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        }
+    })
+    .then(response => {
+        console.log(`🌐 DEBUG: Réponse suppression reçue, status: ${response.status}`);
+        return response.json();
+    })
+    .then(data => {
+        console.log('📬 DEBUG: Données de réponse suppression:', data);
+
+        if (data.success) {
+            console.log('✅ DEBUG: Opération supprimée en base de données avec succès');
+
+            // Supprimer l'opération du tableau local
+            const index = operationsTable.findIndex(op => op.id === operationId);
+            if (index !== -1) {
+                operationsTable.splice(index, 1);
+                console.log(`✅ Opération ${operationId} supprimée du tableau local`);
+            }
+
+            // Mettre à jour l'affichage
+            mettreAJourTableauOperations();
+
+            showNotification(`✅ Opération "${nomOperation}" supprimée de la base de données`, 'success');
+
+            // Recharger les opérations depuis la base pour synchroniser
+            setTimeout(() => {
+                rechargerOperationsDepuisBase();
+            }, 500);
+        } else {
+            console.error('❌ DEBUG: Erreur lors de la suppression:', data.error);
+            showNotification('❌ Erreur lors de la suppression: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('❌ DEBUG: Erreur de connexion lors de la suppression:', error);
+        showNotification('❌ Erreur de connexion lors de la suppression', 'error');
+    });
+}
+
 // Fonction pour sauvegarder immédiatement une opération existante en base de données
 function sauvegarderOperationExistante(operation, nouveauCommentaire) {
     console.log(`🔄 DEBUG: Sauvegarde immédiate de l'opération ${operation.id} en base de données...`);

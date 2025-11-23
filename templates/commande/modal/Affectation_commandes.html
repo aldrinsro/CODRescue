@@ -1,0 +1,46 @@
+<!-- Modal d'affectation -->
+<div id="affectationModal" class="fixed inset-0 flex items-center justify-center z-50 hidden" style="background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(8px);">
+    <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div class="p-6 border-b">
+            <div class="flex justify-between items-center">
+                <h3 class="text-2xl font-bold text-gray-800">Affecter la commande</h3>
+                <button id="closeAffectationModal" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+            <p class="text-gray-600 mt-2">Commande: <span id="affectationCommandeId" class="font-semibold"></span></p>
+        </div>
+        <div class="p-6">
+            <!-- Information sur le type d'opérateur -->
+            <div class="mb-6">
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div class="flex items-center">
+                        <i class="fas fa-info-circle text-blue-500 mr-2"></i>
+                        <span class="text-sm font-medium text-blue-800">
+                            Affectation aux opérateurs de confirmation uniquement
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Liste des opérateurs -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-3">Sélectionner un opérateur</label>
+                <div id="operateursList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Les cartes d'opérateurs seront chargées ici -->
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex justify-end gap-4">
+                <button id="cancelAffectationBtn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-3 px-6 rounded-lg transition duration-300">
+                    Annuler
+                </button>
+                <button id="confirmAffectationBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 opacity-50 cursor-not-allowed" disabled>
+                    Affecter
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+

@@ -1204,12 +1204,19 @@ def commandes_affectees(request):
             'montant': stat['montant']
         }
     
+    # Récupérer uniquement les opérateurs de confirmation actifs pour la réaffectation
+    operateurs = Operateur.objects.filter(
+        type_operateur='CONFIRMATION',
+        actif=True
+    ).order_by('nom', 'prenom')
+
     context = {
         'page_obj': page_obj,
         'search_query': search_query,
         'total_affectees': total_affectees,
         'total_montant': total_montant,
         'operateurs_stats': operateurs_dict,
+        'operateurs': operateurs,
         'items_per_page': items_per_page,
         'start_range': start_range,
         'end_range': end_range,
@@ -2013,6 +2020,158 @@ def desaffecter_commande_unique(request, commande_id):
             'message': f'Commande {commande.id_yz} désaffectée avec succès'
         })
         
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)})
+
+@require_POST
+@login_required
+def reaffecter_commande(request, commande_id):
+    """Réaffecter une commande à un autre opérateur"""
+    import json
+
+    try:
+        # Parse le JSON depuis la requête
+        if request.content_type == 'application/json':
+            data = json.loads(request.body)
+            nouvel_operateur_id = data.get('operateur_id')
+            motif = data.get('motif', '')
+        else:
+            nouvel_operateur_id = request.POST.get('operateur_id')
+            motif = request.POST.get('motif', '')
+
+        # Validation des paramètres
+        if not nouvel_operateur_id:
+            return JsonResponse({'success': False, 'message': 'Opérateur requis'})
+
+        # Récupérer la commande et le nouvel opérateur
+        commande = get_object_or_404(Commande, id=commande_id)
+        nouvel_operateur = get_object_or_404(Operateur, id=nouvel_operateur_id)
+
+        # Vérifier si la commande a un état actuel
+        etat_actuel = commande.etat_actuel
+        if not etat_actuel or not etat_actuel.operateur:
+            return JsonResponse({'success': False, 'message': 'Cette commande n\'est pas actuellement affectée'})
+
+        # Récupérer l'ancien opérateur et l'état actuel pour le conserver
+        ancien_operateur = etat_actuel.operateur
+        enum_etat_actuel = etat_actuel.enum_etat  # Conserver l'état actuel
+
+        # Vérifier si on essaie de réaffecter au même opérateur
+        if ancien_operateur.id == nouvel_operateur.id:
+            return JsonResponse({'success': False, 'message': 'La commande est déjà affectée à cet opérateur'})
+
+        # Terminer l'état actuel
+        etat_actuel.terminer_etat(request.user.operateur if hasattr(request.user, 'operateur') else None)
+
+        # Créer le nouvel état avec le MÊME état mais le NOUVEL opérateur
+        from .models import EtatCommande
+        commentaire_base = f"Commande réaffectée de {ancien_operateur.get_full_name()} à {nouvel_operateur.get_full_name()}"
+        if motif:
+            commentaire_complet = f"{commentaire_base}\nMotif: {motif}"
+        else:
+            commentaire_complet = commentaire_base
+
+        EtatCommande.objects.create(
+            commande=commande,
+            enum_etat=enum_etat_actuel,  # Conserver le même état
+            operateur=nouvel_operateur,
+            commentaire=commentaire_complet
+        )
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Commande {commande.id_yz} réaffectée avec succès à {nouvel_operateur.get_full_name()}'
+        })
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)})
+
+@require_POST
+@login_required
+def reaffecter_commandes_multiple(request):
+    """Réaffecter plusieurs commandes à un opérateur"""
+    import json
+
+    try:
+        # Parse le JSON depuis la requête
+        if request.content_type == 'application/json':
+            data = json.loads(request.body)
+            commande_ids = data.get('commande_ids', [])
+            nouvel_operateur_id = data.get('operateur_id')
+            motif = data.get('motif', '')
+        else:
+            commande_ids = request.POST.getlist('commande_ids[]')
+            nouvel_operateur_id = request.POST.get('operateur_id')
+            motif = request.POST.get('motif', '')
+
+        # Validation des paramètres
+        if not commande_ids or not nouvel_operateur_id:
+            return JsonResponse({'success': False, 'message': 'Commandes et opérateur requis'})
+
+        # Récupérer le nouvel opérateur
+        nouvel_operateur = get_object_or_404(Operateur, id=nouvel_operateur_id)
+
+        # Vérifier que c'est un opérateur de confirmation
+        if nouvel_operateur.type_operateur != 'CONFIRMATION':
+            return JsonResponse({'success': False, 'message': 'Seuls les opérateurs de confirmation peuvent recevoir des affectations'})
+
+        commandes_reaffectees = 0
+        commandes_ignorees = 0
+
+        for commande_id in commande_ids:
+            try:
+                commande = Commande.objects.get(id=commande_id)
+
+                # Vérifier si la commande a un état actuel
+                etat_actuel = commande.etat_actuel
+                if not etat_actuel or not etat_actuel.operateur:
+                    commandes_ignorees += 1
+                    continue
+
+                # Récupérer l'ancien opérateur et l'état actuel
+                ancien_operateur = etat_actuel.operateur
+                enum_etat_actuel = etat_actuel.enum_etat  # Conserver l'état actuel
+
+                # Vérifier si on essaie de réaffecter au même opérateur
+                if ancien_operateur.id == nouvel_operateur.id:
+                    commandes_ignorees += 1
+                    continue
+
+                # Terminer l'état actuel
+                etat_actuel.terminer_etat(request.user.operateur if hasattr(request.user, 'operateur') else None)
+
+                # Créer le nouvel état avec le MÊME état mais le NOUVEL opérateur
+                from .models import EtatCommande
+                commentaire_base = f"Réaffectation de {ancien_operateur.get_full_name()} à {nouvel_operateur.get_full_name()}"
+                if motif:
+                    commentaire_complet = f"{commentaire_base}\nMotif: {motif}"
+                else:
+                    commentaire_complet = commentaire_base
+
+                EtatCommande.objects.create(
+                    commande=commande,
+                    enum_etat=enum_etat_actuel,  # Conserver le même état
+                    operateur=nouvel_operateur,
+                    commentaire=commentaire_complet
+                )
+
+                commandes_reaffectees += 1
+
+            except Commande.DoesNotExist:
+                continue
+
+        # Préparer le message de retour
+        message = f'{commandes_reaffectees} commande(s) réaffectée(s) à {nouvel_operateur.get_full_name()}'
+        if commandes_ignorees > 0:
+            message += f' ({commandes_ignorees} ignorée(s))'
+
+        return JsonResponse({
+            'success': True,
+            'message': message,
+            'commandes_reaffectees': commandes_reaffectees,
+            'commandes_ignorees': commandes_ignorees
+        })
+
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)})
 
