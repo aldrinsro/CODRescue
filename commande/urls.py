@@ -12,9 +12,7 @@ urlpatterns = [
 
     path('etats/', views.gestion_etats, name='gestion_etats'),
     # URLs CRUD pour la gestion des états
-    path('etats/ajouter/', views.ajouter_etat, name='ajouter_etat'),
-    path('etats/modifier/<int:etat_id>/', views.modifier_etat, name='modifier_etat'),
-    path('etats/supprimer/<int:etat_id>/', views.supprimer_etat, name='supprimer_etat'),
+
     path('etats/couleur/<int:etat_id>/', views.changer_couleur_etat, name='changer_couleur_etat'),
     path('etats/monter/<int:etat_id>/', views.monter_etat, name='monter_etat'),
     path('etats/descendre/<int:etat_id>/', views.descendre_etat, name='descendre_etat'),

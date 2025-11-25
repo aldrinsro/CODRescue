@@ -47,18 +47,13 @@
     </td>
     <td class="px-4 py-4 whitespace-nowrap text-center text-sm font-medium">
         <div class="flex justify-center space-x-2">
-            <button onclick="openEditStateModal({{ etat.id }}, '{{ etat.libelle|escapejs }}', '{{ etat.couleur }}', {{ etat.ordre }})" class="text-blue-500 hover:text-blue-700 transition-colors" title="Modifier">
-                <i class="fas fa-edit"></i>
-            </button>
             <button onclick="moveStateUp({{ etat.id }})" class="text-green-500 hover:text-green-700 transition-colors" title="Monter">
                 <i class="fas fa-arrow-up"></i>
             </button>
             <button onclick="moveStateDown({{ etat.id }})" class="text-orange-500 hover:text-orange-700 transition-colors" title="Descendre">
                 <i class="fas fa-arrow-down"></i>
             </button>
-            <button onclick="confirmDeleteState({{ etat.id }}, '{{ etat.libelle|escapejs }}')" class="text-red-500 hover:text-red-700 transition-colors" title="Supprimer">
-                <i class="fas fa-trash-can"></i>
-            </button>
+           
         </div>
     </td>
 </tr>

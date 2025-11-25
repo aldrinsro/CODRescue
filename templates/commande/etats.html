@@ -104,9 +104,7 @@
             <h2 class="text-2xl font-bold" style="color: var(--admin-color);">
                 <i class="fas fa-list-ol mr-2"></i>États Définis
             </h2>
-            <button onclick="openAddStateModal()" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-sm">
-                <i class="fas fa-plus mr-2"></i>Nouvel État
-            </button>
+         
         </div>
         
         <div class="overflow-x-auto">
@@ -298,33 +296,7 @@
 let currentStateId = null;
 let currentColorStateId = null;
 
-// Gestion du modal d'ajout/modification
-function openAddStateModal() {
-    document.getElementById('modalTitle').textContent = 'Nouvel État';
-    document.getElementById('submitText').textContent = 'Créer';
-    document.getElementById('stateForm').reset();
-    document.getElementById('stateColor').value = '#3B82F6';
-    document.getElementById('stateColorText').value = '#3B82F6';
-    document.getElementById('stateOrdre').value = {{ etats_definis|length|add:1 }};
-    currentStateId = null;
-    document.getElementById('stateModal').classList.remove('hidden');
-}
 
-function openEditStateModal(id, libelle, couleur, ordre) {
-    document.getElementById('modalTitle').textContent = 'Modifier l\'État';
-    document.getElementById('submitText').textContent = 'Modifier';
-    document.getElementById('stateLibelle').value = libelle;
-    document.getElementById('stateColor').value = couleur;
-    document.getElementById('stateColorText').value = couleur;
-    document.getElementById('stateOrdre').value = ordre;
-    currentStateId = id;
-    document.getElementById('stateModal').classList.remove('hidden');
-}
-
-function closeStateModal() {
-    document.getElementById('stateModal').classList.add('hidden');
-    currentStateId = null;
-}
 
 // Gestion du modal de couleur
 function openColorPicker(stateId, currentColor) {
@@ -385,11 +357,6 @@ document.getElementById('stateForm').addEventListener('submit', function(e) {
         alert('Une erreur est survenue');
     });
 });
-
-// Fonctions d'action
-function confirmDeleteState(stateId, libelle) {
-    showCustomConfirmModal(`/commande/etats/supprimer/${stateId}/`, `l'état "${libelle}"`);
-}
 
 function moveStateUp(stateId) {
     fetch(`/commande/etats/monter/${stateId}/`, {
