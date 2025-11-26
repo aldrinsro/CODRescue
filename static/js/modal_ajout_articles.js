@@ -1054,14 +1054,11 @@ function ajouterVarianteAuPanierConfirmation(articleData, variante, quantiteInit
             reference: articleData.reference,
             prix_unitaire: articleData.prix_unitaire,
             prix_actuel: articleData.prix_actuel,
-            prix_upsell_1: articleData.prix_upsell_1 || 0,
             prix_upsell_2: articleData.prix_upsell_2 || 0,
             prix_upsell_3: articleData.prix_upsell_3 || 0,
             prix_upsell_4: articleData.prix_upsell_4 || 0,
-            prix_remise_1: articleData.prix_remise_1 || 0,
-            prix_remise_2: articleData.prix_remise_2 || 0,
-            prix_remise_3: articleData.prix_remise_3 || 0,
-            prix_remise_4: articleData.prix_remise_4 || 0,
+            prix_gros: articleData.prix_gros || 0,
+            Prix_liquidation: articleData.Prix_liquidation || 0,
             isUpsell: articleData.isUpsell,
             phase: articleData.phase,
             has_promo_active: articleData.has_promo_active,
@@ -1577,22 +1574,22 @@ function getPrixSelonCompteur(articleData, compteur) {
         let prixUpsell = null;
         let niveau = 0;
 
-        if (compteur === 1 && articleData.prix_upsell_1 && articleData.prix_upsell_1 > 0) {
-            prixUpsell = articleData.prix_upsell_1;
-            niveau = 1;
-        } else if (compteur === 2 && articleData.prix_upsell_2 && articleData.prix_upsell_2 > 0) {
+        if (compteur === 1 && articleData.prix_upsell_2 && articleData.prix_upsell_2 > 0) {
             prixUpsell = articleData.prix_upsell_2;
-            niveau = 2;
-        } else if (compteur === 3 && articleData.prix_upsell_3 && articleData.prix_upsell_3 > 0) {
+            niveau = 2;  // Niveau 2 car utilise prix_upsell_2
+        } else if (compteur === 2 && articleData.prix_upsell_3 && articleData.prix_upsell_3 > 0) {
             prixUpsell = articleData.prix_upsell_3;
-            niveau = 3;
-        } else if (compteur >= 4 && articleData.prix_upsell_4 && articleData.prix_upsell_4 > 0) {
+            niveau = 3;  // Niveau 3 car utilise prix_upsell_3
+        } else if (compteur === 3 && articleData.prix_upsell_4 && articleData.prix_upsell_4 > 0) {
             prixUpsell = articleData.prix_upsell_4;
-            niveau = 4;
+            niveau = 4;  // Niveau 4 car utilise prix_upsell_4
+        } else if (compteur >= 4 && articleData.prix_gros && articleData.prix_gros > 0) {
+            prixUpsell = articleData.prix_gros;
+            niveau = 5;  // Niveau 5 pour Prix Gros
         }
 
         if (prixUpsell) {
-            const libelle = niveau >= 4 ? 'Prix Gros' : `Prix upsell niveau ${niveau}`;
+            const libelle = niveau >= 5 ? 'Prix Gros' : `Prix upsell ${niveau}`;
             console.log(`⬆️ ${libelle} appliqué: ${prixUpsell} DH`);
             return {
                 prix: prixUpsell,

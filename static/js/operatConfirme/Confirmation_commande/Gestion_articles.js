@@ -112,7 +112,8 @@ function afficherPrixUpsellDynamiques(compteurActuel) {
             if (compteurActuel >= 4) {
                 libelle = 'Prix Gros';
             } else {
-                libelle = `Prix upsell niveau ${compteurActuel}`;
+                // Ajuster le niveau affiché : compteur 1 → Niveau 2, compteur 2 → Niveau 3, compteur 3 → Niveau 4
+                libelle = `Prix upsell ${compteurActuel + 1}`;
             }
             couleurClasse = 'text-green-600';
         } else {
@@ -174,18 +175,18 @@ function getPrixUpsellSelonCompteur(article, compteur) {
     if (compteur === 0) {
         // 0-1 articles upsell → prix normal
         return article.prix_actuel || article.prix_unitaire || 0;
-    } else if (compteur === 1 && article.prix_upsell_1) {
-        // 2 articles upsell → prix upsell 1
-        return article.prix_upsell_1;
-    } else if (compteur === 2 && article.prix_upsell_2) {
-        // 3 articles upsell → prix upsell 2
+    } else if (compteur === 1 && article.prix_upsell_2) {
+        // 2 articles upsell → prix upsell 2
         return article.prix_upsell_2;
-    } else if (compteur === 3 && article.prix_upsell_3) {
-        // 4 articles upsell → prix upsell 3
+    } else if (compteur === 2 && article.prix_upsell_3) {
+        // 3 articles upsell → prix upsell 3
         return article.prix_upsell_3;
-    } else if (compteur >= 4 && article.prix_upsell_4) {
-        // 5+ articles upsell → prix upsell 4
+    } else if (compteur === 3 && article.prix_upsell_4) {
+        // 4 articles upsell → prix upsell 4
         return article.prix_upsell_4;
+    } else if (compteur >= 4 && article.prix_gros) {
+        // 5+ articles upsell → prix gros
+        return article.prix_gros;
     } else {
         // Si pas de prix upsell défini pour ce niveau, utiliser le prix actuel
         return article.prix_actuel || article.prix_unitaire || 0;
@@ -2263,7 +2264,7 @@ function parseArticleData(dataArticleAttr, panierId) {
         }
         
         // Convertir les prix en nombres si nécessaire
-        const prixFields = ['prix_actuel', 'prix_unitaire', 'prix_upsell_1', 'prix_upsell_2', 'prix_upsell_3', 'prix_upsell_4'];
+        const prixFields = ['prix_actuel', 'prix_unitaire', 'prix_upsell_2', 'prix_upsell_3', 'prix_upsell_4', 'prix_gros', 'Prix_liquidation'];
         prixFields.forEach(field => {
             if (articleData[field] !== undefined && articleData[field] !== null) {
                 articleData[field] = parseFloat(articleData[field]) || 0;

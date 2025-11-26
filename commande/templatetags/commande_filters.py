@@ -93,18 +93,18 @@ def get_prix_upsell(article, quantite):
     # Pour les articles upsell, retourner directement le prix upsell correspondant
     if quantite == 1:
         return article.prix_actuel if article.prix_actuel is not None else article.prix_unitaire
-    elif quantite == 2 and article.prix_upsell_1:
-        # Prix upsell 1 remplace le prix actuel
-        return article.prix_upsell_1
-    elif quantite == 3 and article.prix_upsell_2:
+    elif quantite == 2 and article.prix_upsell_2:
         # Prix upsell 2 remplace le prix actuel
         return article.prix_upsell_2
-    elif quantite == 4 and article.prix_upsell_3:
+    elif quantite == 3 and article.prix_upsell_3:
         # Prix upsell 3 remplace le prix actuel
         return article.prix_upsell_3
-    elif quantite > 4 and article.prix_upsell_4:
+    elif quantite == 4 and article.prix_upsell_4:
         # Prix upsell 4 remplace le prix actuel
         return article.prix_upsell_4
+    elif quantite > 4 and article.prix_gros:
+        # Prix gros remplace le prix actuel
+        return article.prix_gros
     else:
         # Si pas de prix upsell défini, utiliser le prix actuel
         return article.prix_actuel if article.prix_actuel is not None else article.prix_unitaire
@@ -133,18 +133,18 @@ def get_prix_upsell_avec_compteur(article, compteur):
     if compteur == 0:
         # 0-1 articles upsell → prix normal
         return article.prix_actuel if article.prix_actuel is not None else article.prix_unitaire
-    elif compteur == 1 and article.prix_upsell_1:
-        # 2 articles upsell → prix upsell 1
-        return article.prix_upsell_1
-    elif compteur == 2 and article.prix_upsell_2:
-        # 3 articles upsell → prix upsell 2
+    elif compteur == 1 and article.prix_upsell_2:
+        # 2 articles upsell → prix upsell 2
         return article.prix_upsell_2
-    elif compteur == 3 and article.prix_upsell_3:
-        # 4 articles upsell → prix upsell 3
+    elif compteur == 2 and article.prix_upsell_3:
+        # 3 articles upsell → prix upsell 3
         return article.prix_upsell_3
-    elif compteur >= 4 and article.prix_upsell_4:
-        # 5+ articles upsell → prix upsell 4
+    elif compteur == 3 and article.prix_upsell_4:
+        # 4 articles upsell → prix upsell 4
         return article.prix_upsell_4
+    elif compteur >= 4 and article.prix_gros:
+        # 5+ articles upsell → prix gros
+        return article.prix_gros
     else:
         # Si pas de prix upsell défini pour ce niveau, utiliser le prix actuel
         return article.prix_actuel if article.prix_actuel is not None else article.prix_unitaire
@@ -157,15 +157,15 @@ def get_prix_upsell_supplement(article, quantite):
     """
     if not article.isUpsell or quantite <= 1:
         return 0
-    
-    if quantite == 2 and article.prix_upsell_1:
-        return article.prix_upsell_1
-    elif quantite == 3 and article.prix_upsell_2:
+
+    if quantite == 2 and article.prix_upsell_2:
         return article.prix_upsell_2
-    elif quantite == 4 and article.prix_upsell_3:
+    elif quantite == 3 and article.prix_upsell_3:
         return article.prix_upsell_3
-    elif quantite > 4 and article.prix_upsell_4:
+    elif quantite == 4 and article.prix_upsell_4:
         return article.prix_upsell_4
+    elif quantite > 4 and article.prix_gros:
+        return article.prix_gros
     else:
         # Si pas de prix upsell défini, pas de supplément
         return 0
@@ -269,7 +269,11 @@ def get_prix_avec_phase_info(article, compteur=None):
         libelle = "Prix test"
         couleur_classe = "text-blue-600"
     elif compteur is not None and compteur > 0 and article.isUpsell:
-        libelle = f"Prix upsell niveau {compteur}"
+        # Ajuster le niveau affiché : compteur 1 → 2, compteur 2 → 3, compteur 3 → 4, compteur >= 4 → Prix Gros
+        if compteur >= 4:
+            libelle = "Prix Gros"
+        else:
+            libelle = f"Prix upsell {compteur + 1}"
         couleur_classe = "text-green-600"
     else:
         libelle = "Prix normal"
@@ -341,36 +345,10 @@ def get_type_remise_appliquee(panier):
         prix_article_decimal = Decimal(str(prix_article)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
         return abs(prix_article_decimal - prix_effectif) <= tolerance
     
-    # Vérifier chaque type de remise
-    if prix_match(article.prix_remise_1, prix_unitaire_effectif):
-        return {
-            'type': 'prix_remise_1',
-            'libelle': 'Prix remise 1',
-            'couleur': 'text-purple-600',
-            'icone': 'fas fa-percent'
-        }
-    elif prix_match(article.prix_remise_2, prix_unitaire_effectif):
-        return {
-            'type': 'prix_remise_2', 
-            'libelle': 'Prix remise 2',
-            'couleur': 'text-purple-600',
-            'icone': 'fas fa-percent'
-        }
-    elif prix_match(article.prix_remise_3, prix_unitaire_effectif):
-        return {
-            'type': 'prix_remise_3',
-            'libelle': 'Prix remise 3', 
-            'couleur': 'text-purple-600',
-            'icone': 'fas fa-percent'
-        }
-    elif prix_match(article.prix_remise_4, prix_unitaire_effectif):
-        return {
-            'type': 'prix_remise_4',
-            'libelle': 'Prix remise 4',
-            'couleur': 'text-purple-600', 
-            'icone': 'fas fa-percent'
-        }
-    elif prix_match(article.Prix_liquidation, prix_unitaire_effectif):
+    # NOTE: Les champs prix_remise ont été supprimés du modèle Article
+    # Seule la vérification du prix de liquidation est conservée
+
+    if prix_match(article.Prix_liquidation, prix_unitaire_effectif):
         return {
             'type': 'Prix_liquidation',
             'libelle': 'Prix liquidation',

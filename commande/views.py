@@ -570,15 +570,12 @@ def creer_commande(request):
             'has_promo_active': bool(article.has_promo_active),
             'isUpsell': bool(article.isUpsell),
             # Prix upsells
-            'prix_upsell_1': float(article.prix_upsell_1) if hasattr(article, 'prix_upsell_1') and article.prix_upsell_1 else 0.0,
             'prix_upsell_2': float(article.prix_upsell_2) if hasattr(article, 'prix_upsell_2') and article.prix_upsell_2 else 0.0,
             'prix_upsell_3': float(article.prix_upsell_3) if hasattr(article, 'prix_upsell_3') and article.prix_upsell_3 else 0.0,
             'prix_upsell_4': float(article.prix_upsell_4) if hasattr(article, 'prix_upsell_4') and article.prix_upsell_4 else 0.0,
-            # Prix remises
-            'prix_remise_1': float(article.prix_remise_1) if hasattr(article, 'prix_remise_1') and article.prix_remise_1 else 0.0,
-            'prix_remise_2': float(article.prix_remise_2) if hasattr(article, 'prix_remise_2') and article.prix_remise_2 else 0.0,
-            'prix_remise_3': float(article.prix_remise_3) if hasattr(article, 'prix_remise_3') and article.prix_remise_3 else 0.0,
-            'prix_remise_4': float(article.prix_remise_4) if hasattr(article, 'prix_remise_4') and article.prix_remise_4 else 0.0,
+            'prix_gros': float(article.prix_gros) if hasattr(article, 'prix_gros') and article.prix_gros else 0.0,
+            # Prix de liquidation
+            'Prix_liquidation': float(article.Prix_liquidation) if hasattr(article, 'Prix_liquidation') and article.Prix_liquidation else 0.0,
             'image_url': image_url
         })
     
@@ -779,15 +776,12 @@ def modifier_commande(request, pk):
             'has_promo_active': bool(article.has_promo_active),
             'isUpsell': bool(article.isUpsell),
             # Prix upsells
-            'prix_upsell_1': float(article.prix_upsell_1) if hasattr(article, 'prix_upsell_1') and article.prix_upsell_1 else 0.0,
             'prix_upsell_2': float(article.prix_upsell_2) if hasattr(article, 'prix_upsell_2') and article.prix_upsell_2 else 0.0,
             'prix_upsell_3': float(article.prix_upsell_3) if hasattr(article, 'prix_upsell_3') and article.prix_upsell_3 else 0.0,
             'prix_upsell_4': float(article.prix_upsell_4) if hasattr(article, 'prix_upsell_4') and article.prix_upsell_4 else 0.0,
-            # Prix remises
-            'prix_remise_1': float(article.prix_remise_1) if hasattr(article, 'prix_remise_1') and article.prix_remise_1 else 0.0,
-            'prix_remise_2': float(article.prix_remise_2) if hasattr(article, 'prix_remise_2') and article.prix_remise_2 else 0.0,
-            'prix_remise_3': float(article.prix_remise_3) if hasattr(article, 'prix_remise_3') and article.prix_remise_3 else 0.0,
-            'prix_remise_4': float(article.prix_remise_4) if hasattr(article, 'prix_remise_4') and article.prix_remise_4 else 0.0,
+            'prix_gros': float(article.prix_gros) if hasattr(article, 'prix_gros') and article.prix_gros else 0.0,
+            # Prix de liquidation
+            'Prix_liquidation': float(article.Prix_liquidation) if hasattr(article, 'Prix_liquidation') and article.Prix_liquidation else 0.0,
             'image_url': image_url
         })
 
@@ -4500,7 +4494,7 @@ def api_ajouter_article_commande(request, commande_id):
             print(f"➕ Article ajouté: {article.nom}, type_prix_gele={type_prix}, prix={prix_panier}")
 
         # Recalculer le compteur upsell si c'est un article upsell
-        if article.isUpsell and hasattr(article, 'prix_upsell_1') and article.prix_upsell_1 is not None:
+        if article.isUpsell:
             _recalculer_compteur_upsell(commande)
 
         # Recalculer le total de la commande

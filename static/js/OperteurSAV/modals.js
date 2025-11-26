@@ -1104,8 +1104,8 @@ function mettreAJourSectionArticlesRenvoyes(articlesRenvoyes = []) {
                     <div class="mt-2 text-xs text-orange-600 bg-orange-100 px-2 py-1 rounded-md">
                         <i class="fas fa-info-circle mr-1"></i>
                         Article retourné aux opérateurs de préparation
-                        ${article.is_upsell && article.compteur > 0 ? 
-                            ` • Prix upsell niveau ${article.compteur} appliqué` : ''}
+                        ${article.is_upsell && article.compteur > 0 ?
+                            ` • ${article.compteur >= 4 ? 'Prix Gros' : `Prix upsell ${article.compteur + 1}`} appliqué` : ''}
                     </div>
                 </div>
             </div>`;

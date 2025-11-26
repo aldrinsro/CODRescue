@@ -1914,7 +1914,7 @@ def _handle_add_article(request, commande, operateur):
             print(f"➕ Nouvel article ajouté: ID={article.id}, quantité={quantite}, type_prix_gele={type_prix}")
         
         # ========== 5. RECALCUL DU COMPTEUR UPSELL ==========
-        if article.isUpsell and hasattr(article, 'prix_upsell_1') and article.prix_upsell_1 is not None:
+        if article.isUpsell:
             _recalculer_compteur_upsell(commande)
         
         # ========== 6. RECALCUL DU TOTAL AVEC FRAIS ==========
@@ -2874,10 +2874,10 @@ def modifier_commande(request, commande_id):
             'reference': str(article.reference or ''),
             'prix_actuel': float(article.prix_actuel) if article.prix_actuel else 0.0,
             'prix_unitaire': float(article.prix_unitaire) if article.prix_unitaire else 0.0,
-            'prix_upsell_1': float(article.prix_upsell_1) if article.prix_upsell_1 else 0.0,
             'prix_upsell_2': float(article.prix_upsell_2) if article.prix_upsell_2 else 0.0,
             'prix_upsell_3': float(article.prix_upsell_3) if article.prix_upsell_3 else 0.0,
             'prix_upsell_4': float(article.prix_upsell_4) if article.prix_upsell_4 else 0.0,
+            'prix_gros': float(article.prix_gros) if hasattr(article, 'prix_gros') and article.prix_gros else 0.0,
             'qte_disponible': int(article.get_total_qte_disponible()),
             'couleur': str(article.couleur or ''),
             'pointure': str(article.pointure or ''),
@@ -3003,10 +3003,10 @@ def api_articles_disponibles(request):
                 'categorie': (str(article.categorie) if article.categorie else ''),
                 'prix_unitaire': float(article.prix_unitaire),
                 'prix_actuel': float(article.prix_actuel or article.prix_unitaire),
-                'prix_upsell_1': float(article.prix_upsell_1) if article.prix_upsell_1 else None,
                 'prix_upsell_2': float(article.prix_upsell_2) if article.prix_upsell_2 else None,
                 'prix_upsell_3': float(article.prix_upsell_3) if article.prix_upsell_3 else None,
                 'prix_upsell_4': float(article.prix_upsell_4) if article.prix_upsell_4 else None,
+                'prix_gros': float(article.prix_gros) if hasattr(article, 'prix_gros') and article.prix_gros else None,
                 'qte_disponible': stock,
                 'isUpsell': bool(article.isUpsell),
                 'phase': article.phase,

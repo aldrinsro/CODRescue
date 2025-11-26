@@ -508,10 +508,10 @@ def api_articles(request):
                     'isUpsell': article.isUpsell,
                     'has_promo_active': has_promo_active,
                     # Prix upsell si disponibles
-                    'prix_upsell_1': float(article.prix_upsell_1) if article.prix_upsell_1 else None,
                     'prix_upsell_2': float(article.prix_upsell_2) if article.prix_upsell_2 else None,
                     'prix_upsell_3': float(article.prix_upsell_3) if article.prix_upsell_3 else None,
                     'prix_upsell_4': float(article.prix_upsell_4) if article.prix_upsell_4 else None,
+                    'prix_gros': float(article.prix_gros) if hasattr(article, 'prix_gros') and article.prix_gros else None,
                 }
                 articles_data.append(article_data)
         
@@ -980,14 +980,14 @@ def livraison_partielle(request, commande_id):
                     
                     # Appliquer les prix upsell seulement si l'article est éligible et le compteur > 0
                     if commande.compteur > 0 and article.isUpsell:
-                        if commande.compteur == 1 and article.prix_upsell_1:
-                            prix_unitaire = article.prix_upsell_1
-                        elif commande.compteur == 2 and article.prix_upsell_2:
+                        if commande.compteur == 1 and article.prix_upsell_2:
                             prix_unitaire = article.prix_upsell_2
-                        elif commande.compteur == 3 and article.prix_upsell_3:
+                        elif commande.compteur == 2 and article.prix_upsell_3:
                             prix_unitaire = article.prix_upsell_3
-                        elif commande.compteur >= 4 and article.prix_upsell_4:
+                        elif commande.compteur == 3 and article.prix_upsell_4:
                             prix_unitaire = article.prix_upsell_4
+                        elif commande.compteur >= 4 and hasattr(article, 'prix_gros') and article.prix_gros:
+                            prix_unitaire = article.prix_gros
                 except Exception:
                     prix_unitaire = 0.0
                 
@@ -1195,14 +1195,14 @@ def api_panier_commande(request, commande_id):
                 prix_actuel = float(panier.article.prix_unitaire or 0)  # Prix de base par défaut
 
                 if commande.compteur and commande.compteur > 0 and getattr(panier.article, 'isUpsell', False):
-                    if commande.compteur == 1 and getattr(panier.article, 'prix_upsell_1', None):
-                        prix_actuel = float(panier.article.prix_upsell_1)
-                    elif commande.compteur == 2 and getattr(panier.article, 'prix_upsell_2', None):
+                    if commande.compteur == 1 and getattr(panier.article, 'prix_upsell_2', None):
                         prix_actuel = float(panier.article.prix_upsell_2)
-                    elif commande.compteur == 3 and getattr(panier.article, 'prix_upsell_3', None):
+                    elif commande.compteur == 2 and getattr(panier.article, 'prix_upsell_3', None):
                         prix_actuel = float(panier.article.prix_upsell_3)
-                    elif commande.compteur >= 4 and getattr(panier.article, 'prix_upsell_4', None):
+                    elif commande.compteur == 3 and getattr(panier.article, 'prix_upsell_4', None):
                         prix_actuel = float(panier.article.prix_upsell_4)
+                    elif commande.compteur >= 4 and getattr(panier.article, 'prix_gros', None):
+                        prix_actuel = float(panier.article.prix_gros)
 
                 # Préparer les données de base
                 panier_dict = {
