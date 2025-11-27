@@ -1213,19 +1213,178 @@ class ArticleRetourne(models.Model):
         """Vérifie si l'article peut être réintégré en stock"""
         return self.statut_retour == 'en_attente' and self.variante and self.variante.actif
 
-    def reintegrer_stock(self, operateur=None, commentaire=""):
-        """Réintègre l'article en stock"""
-        if self.peut_etre_reintegre():
+    def reintegrer_stock(self, operateur=None, commentaire="", quantite=None):
+        """
+        Réintègre l'article en stock (totalement ou partiellement)
+
+        Args:
+            operateur: Opérateur effectuant la réintégration
+            commentaire: Commentaire optionnel
+            quantite: Quantité spécifique à réintégrer (None = tout)
+
+        Returns:
+            tuple: (success: bool, article_cree: ArticleRetourne ou None)
+        """
+        if not self.peut_etre_reintegre():
+            return (False, None)
+
+        # Déterminer la quantité à réintégrer
+        qte_a_reintegrer = quantite if quantite is not None else self.quantite_retournee
+
+        # Validation
+        if qte_a_reintegrer <= 0 or qte_a_reintegrer > self.quantite_retournee:
+            return (False, None)
+
+        # Cas 1: Réintégration totale
+        if qte_a_reintegrer == self.quantite_retournee:
             # Augmenter la quantité disponible de la variante
             self.variante.qte_disponible += self.quantite_retournee
             self.variante.save(update_fields=['qte_disponible'])
-            
+
             # Mettre à jour le statut
             self.statut_retour = 'reintegre_stock'
             self.date_traitement = timezone.now()
             self.operateur_traitement = operateur
-            self.commentaire_traitement = commentaire or f"Réintégré automatiquement en stock: +{self.quantite_retournee}"
+            self.commentaire_traitement = commentaire or f"Réintégré en stock: +{self.quantite_retournee}"
             self.save()
-            
-            return True
-        return False
+
+            return (True, None)
+
+        # Cas 2: Réintégration partielle
+        else:
+            # Créer un nouvel enregistrement pour la quantité réintégrée
+            article_reintegre = ArticleRetourne.objects.create(
+                commande=self.commande,
+                article=self.article,
+                variante=self.variante,
+                quantite_retournee=qte_a_reintegrer,
+                prix_unitaire_origine=self.prix_unitaire_origine,
+                raison_retour=self.raison_retour,
+                date_retour=self.date_retour,
+                operateur_retour=self.operateur_retour,
+                statut_retour='reintegre_stock',
+                date_traitement=timezone.now(),
+                operateur_traitement=operateur,
+                commentaire_traitement=commentaire or f"Réintégration partielle: +{qte_a_reintegrer} sur {self.quantite_retournee + qte_a_reintegrer}"
+            )
+
+            # Augmenter le stock
+            self.variante.qte_disponible += qte_a_reintegrer
+            self.variante.save(update_fields=['qte_disponible'])
+
+            # Réduire la quantité de l'enregistrement original
+            self.quantite_retournee -= qte_a_reintegrer
+            self.save(update_fields=['quantite_retournee'])
+
+            return (True, article_reintegre)
+
+    def marquer_defectueux(self, operateur=None, commentaire="", quantite=None):
+        """
+        Marque l'article comme défectueux (totalement ou partiellement)
+
+        Args:
+            operateur: Opérateur effectuant le marquage
+            commentaire: Commentaire optionnel
+            quantite: Quantité spécifique à marquer (None = tout)
+
+        Returns:
+            tuple: (success: bool, article_cree: ArticleRetourne ou None)
+        """
+        if self.statut_retour != 'en_attente':
+            return (False, None)
+
+        # Déterminer la quantité à marquer comme défectueuse
+        qte_defectueuse = quantite if quantite is not None else self.quantite_retournee
+
+        # Validation
+        if qte_defectueuse <= 0 or qte_defectueuse > self.quantite_retournee:
+            return (False, None)
+
+        # Cas 1: Marquage total
+        if qte_defectueuse == self.quantite_retournee:
+            self.statut_retour = 'defectueux'
+            self.date_traitement = timezone.now()
+            self.operateur_traitement = operateur
+            self.commentaire_traitement = commentaire or f"Marqué comme défectueux: {self.quantite_retournee} unité(s)"
+            self.save()
+
+            return (True, None)
+
+        # Cas 2: Marquage partiel
+        else:
+            # Créer un nouvel enregistrement pour la quantité défectueuse
+            article_defectueux = ArticleRetourne.objects.create(
+                commande=self.commande,
+                article=self.article,
+                variante=self.variante,
+                quantite_retournee=qte_defectueuse,
+                prix_unitaire_origine=self.prix_unitaire_origine,
+                raison_retour=self.raison_retour,
+                date_retour=self.date_retour,
+                operateur_retour=self.operateur_retour,
+                statut_retour='defectueux',
+                date_traitement=timezone.now(),
+                operateur_traitement=operateur,
+                commentaire_traitement=commentaire or f"Marquage partiel défectueux: {qte_defectueuse} sur {self.quantite_retournee + qte_defectueuse}"
+            )
+
+            # Réduire la quantité de l'enregistrement original
+            self.quantite_retournee -= qte_defectueuse
+            self.save(update_fields=['quantite_retournee'])
+
+            return (True, article_defectueux)
+
+    def traiter(self, statut, operateur=None, commentaire="", quantite=None):
+        """
+        Méthode générique pour traiter l'article retourné
+
+        Args:
+            statut: Le statut cible ('reintegre_stock', 'defectueux', 'traite')
+            operateur: Opérateur effectuant le traitement
+            commentaire: Commentaire optionnel
+            quantite: Quantité spécifique à traiter (None = tout)
+
+        Returns:
+            tuple: (success: bool, article_cree: ArticleRetourne ou None)
+        """
+        if statut == 'reintegre_stock':
+            return self.reintegrer_stock(operateur, commentaire, quantite)
+        elif statut == 'defectueux':
+            return self.marquer_defectueux(operateur, commentaire, quantite)
+        elif statut == 'traite':
+            # Traitement simple sans création de nouvel enregistrement
+            if self.statut_retour != 'en_attente':
+                return (False, None)
+
+            qte_a_traiter = quantite if quantite is not None else self.quantite_retournee
+
+            if qte_a_traiter <= 0 or qte_a_traiter > self.quantite_retournee:
+                return (False, None)
+
+            if qte_a_traiter == self.quantite_retournee:
+                self.statut_retour = 'traite'
+                self.date_traitement = timezone.now()
+                self.operateur_traitement = operateur
+                self.commentaire_traitement = commentaire or "Traité manuellement"
+                self.save()
+                return (True, None)
+            else:
+                article_traite = ArticleRetourne.objects.create(
+                    commande=self.commande,
+                    article=self.article,
+                    variante=self.variante,
+                    quantite_retournee=qte_a_traiter,
+                    prix_unitaire_origine=self.prix_unitaire_origine,
+                    raison_retour=self.raison_retour,
+                    date_retour=self.date_retour,
+                    operateur_retour=self.operateur_retour,
+                    statut_retour='traite',
+                    date_traitement=timezone.now(),
+                    operateur_traitement=operateur,
+                    commentaire_traitement=commentaire or f"Traitement partiel: {qte_a_traiter} sur {self.quantite_retournee + qte_a_traiter}"
+                )
+                self.quantite_retournee -= qte_a_traiter
+                self.save(update_fields=['quantite_retournee'])
+                return (True, article_traite)
+        else:
+            return (False, None)

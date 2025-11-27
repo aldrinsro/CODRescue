@@ -131,7 +131,7 @@ def detail_article_retourne_service(request, retour_id):
 @require_POST
 def traiter_article_retourne_service(request, retour_id):
     """Traiter un article retourné (réintégrer, marquer défectueux, etc.) - Version Superpreparation"""
-    
+
 
     try:
         article_retourne = get_object_or_404(ArticleRetourne, id=retour_id)
@@ -145,6 +145,24 @@ def traiter_article_retourne_service(request, retour_id):
         action = request.POST.get('action')
         commentaire = request.POST.get('commentaire', '').strip()
 
+        # Nouvelle fonctionnalité: récupérer la quantité à traiter (optionnel)
+        quantite_str = request.POST.get('quantite', '').strip()
+        quantite = None
+
+        if quantite_str:
+            try:
+                quantite = int(quantite_str)
+                if quantite <= 0 or quantite > article_retourne.quantite_retournee:
+                    return JsonResponse({
+                        'success': False,
+                        'error': f'Quantité invalide. Doit être entre 1 et {article_retourne.quantite_retournee}.'
+                    })
+            except ValueError:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Quantité invalide (nombre entier requis).'
+                })
+
         # Récupérer l'opérateur de manière sécurisée
         try:
             operateur = request.user.profil_operateur
@@ -157,10 +175,23 @@ def traiter_article_retourne_service(request, retour_id):
 
         if action == 'reintegrer_stock':
             if article_retourne.peut_etre_reintegre():
-                if article_retourne.reintegrer_stock(operateur, commentaire):
+                success, article_cree = article_retourne.reintegrer_stock(operateur, commentaire, quantite)
+
+                if success:
+                    qte_traitee = quantite if quantite else article_retourne.quantite_retournee + (quantite or 0)
+
+                    # Message différent selon traitement total ou partiel
+                    if article_cree:
+                        message = f'Réintégration partielle réussie: +{qte_traitee} en stock. {article_retourne.quantite_retournee} restant(s) en attente.'
+                    else:
+                        message = f'Article réintégré en stock avec succès. +{qte_traitee} en stock.'
+
                     return JsonResponse({
                         'success': True,
-                        'message': f'Article réintégré en stock avec succès. +{article_retourne.quantite_retournee} en stock.',
+                        'message': message,
+                        'partial': article_cree is not None,
+                        'quantite_traitee': qte_traitee,
+                        'quantite_restante': article_retourne.quantite_retournee if article_cree else 0,
                         'redirect': True,
                         'redirect_url': request.META.get('HTTP_REFERER', '/superpreparation/service/articles-retournes/')
                     })
@@ -176,32 +207,58 @@ def traiter_article_retourne_service(request, retour_id):
                 })
 
         elif action == 'marquer_defectueux':
-            article_retourne.statut_retour = 'defectueux'
-            article_retourne.date_traitement = timezone.now()
-            article_retourne.operateur_traitement = operateur
-            article_retourne.commentaire_traitement = commentaire or 'Marqué comme défectueux'
-            article_retourne.save()
+            success, article_cree = article_retourne.marquer_defectueux(operateur, commentaire, quantite)
 
-            return JsonResponse({
-                'success': True,
-                'message': 'Article marqué comme défectueux.',
-                'redirect': True,
-                'redirect_url': request.META.get('HTTP_REFERER', '/superpreparation/service/articles-retournes/')
-            })
+            if success:
+                qte_traitee = quantite if quantite else article_retourne.quantite_retournee + (quantite or 0)
+
+                # Message différent selon traitement total ou partiel
+                if article_cree:
+                    message = f'Marquage partiel réussi: {qte_traitee} marqué(s) comme défectueux. {article_retourne.quantite_retournee} restant(s) en attente.'
+                else:
+                    message = f'Article marqué comme défectueux: {qte_traitee} unité(s).'
+
+                return JsonResponse({
+                    'success': True,
+                    'message': message,
+                    'partial': article_cree is not None,
+                    'quantite_traitee': qte_traitee,
+                    'quantite_restante': article_retourne.quantite_retournee if article_cree else 0,
+                    'redirect': True,
+                    'redirect_url': request.META.get('HTTP_REFERER', '/superpreparation/service/articles-retournes/')
+                })
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Erreur lors du marquage comme défectueux.'
+                })
 
         elif action == 'marquer_traite':
-            article_retourne.statut_retour = 'traite'
-            article_retourne.date_traitement = timezone.now()
-            article_retourne.operateur_traitement = operateur
-            article_retourne.commentaire_traitement = commentaire or 'Traité manuellement'
-            article_retourne.save()
+            success, article_cree = article_retourne.traiter('traite', operateur, commentaire, quantite)
 
-            return JsonResponse({
-                'success': True,
-                'message': 'Article marqué comme traité.',
-                'redirect': True,
-                'redirect_url': request.META.get('HTTP_REFERER', '/superpreparation/service/articles-retournes/')
-            })
+            if success:
+                qte_traitee = quantite if quantite else article_retourne.quantite_retournee + (quantite or 0)
+
+                # Message différent selon traitement total ou partiel
+                if article_cree:
+                    message = f'Traitement partiel réussi: {qte_traitee} traité(s). {article_retourne.quantite_retournee} restant(s) en attente.'
+                else:
+                    message = f'Article marqué comme traité: {qte_traitee} unité(s).'
+
+                return JsonResponse({
+                    'success': True,
+                    'message': message,
+                    'partial': article_cree is not None,
+                    'quantite_traitee': qte_traitee,
+                    'quantite_restante': article_retourne.quantite_retournee if article_cree else 0,
+                    'redirect': True,
+                    'redirect_url': request.META.get('HTTP_REFERER', '/superpreparation/service/articles-retournes/')
+                })
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Erreur lors du traitement.'
+                })
 
         else:
             return JsonResponse({
