@@ -2395,26 +2395,33 @@ function sontFraisLivraisonActives() {
 
 // Fonction pour mettre à jour l'affichage des frais de livraison dans le résumé
 function mettreAJourAffichageFraisResume() {
-    const fraisResumeElement = document.querySelector('#frais-display.font-medium.text-gray-800');
-    const fraisResumeContainer = fraisResumeElement ? fraisResumeElement.closest('.flex.justify-between.items-center') : null;
-    
+    const fraisActifsDiv = document.getElementById('frais-livraison-actifs');
+    const fraisInactifsDiv = document.getElementById('frais-livraison-inactifs');
+    const fraisDisplayResumeElement = document.getElementById('frais-display-resume');
+
     if (sontFraisLivraisonActives()) {
-        // Afficher la section des frais de livraison
-        if (fraisResumeContainer) {
-            fraisResumeContainer.style.display = 'flex';
+        // Afficher la section avec le montant des frais
+        if (fraisActifsDiv) {
+            fraisActifsDiv.style.display = 'flex';
         }
-        
+        if (fraisInactifsDiv) {
+            fraisInactifsDiv.style.display = 'none';
+        }
+
         // Mettre à jour le montant
         const fraisElement = document.getElementById('frais-display');
-        if (fraisElement && fraisResumeElement) {
+        if (fraisElement && fraisDisplayResumeElement) {
             const fraisText = fraisElement.value.replace(' DH', '').replace(',', '.');
             const fraisMontant = parseFloat(fraisText) || 0;
-            fraisResumeElement.textContent = `${fraisMontant.toFixed(2)} DH`;
+            fraisDisplayResumeElement.textContent = `${fraisMontant.toFixed(2)} DH`;
         }
     } else {
-        // Masquer la section des frais de livraison
-        if (fraisResumeContainer) {
-            fraisResumeContainer.style.display = 'none';
+        // Afficher la section "Non inclus"
+        if (fraisActifsDiv) {
+            fraisActifsDiv.style.display = 'none';
+        }
+        if (fraisInactifsDiv) {
+            fraisInactifsDiv.style.display = 'flex';
         }
     }
 }
@@ -2461,26 +2468,39 @@ function mettreAJourTotalCommande() {
 
     // Mettre à jour l'affichage des frais dans le résumé
     mettreAJourAffichageFraisResume();
-    
+
+    // Mettre à jour le sous-total du panier (sans frais)
+    const sousTotalPanierElement = document.getElementById('sous-total-panier');
+    if (sousTotalPanierElement) {
+        sousTotalPanierElement.textContent = `${sousTotal.toFixed(2)} DH`;
+    }
+
+    // Mettre à jour les frais de livraison dans le résumé
+    const fraisDisplayResumeElement = document.getElementById('frais-display-resume');
+    if (fraisDisplayResumeElement && sontFraisLivraisonActives()) {
+        fraisDisplayResumeElement.textContent = `${fraisLivraison.toFixed(2)} DH`;
+    }
+
+    // Mettre à jour le total final de la commande
     const totalElement = document.getElementById('total-commande');
     if (totalElement) {
         const ancienTotal = totalElement.textContent;
         totalElement.textContent = `${totalFinal.toFixed(2)} DH`;
-     
+
     }
     const totalElementHautPage = document.getElementById('total_commande_haut_page');
     if (totalElementHautPage) {
         const ancienTotal = totalElementHautPage.textContent;
         totalElementHautPage.textContent = `${totalFinal.toFixed(2)} DH`;
-       
+
     }
-    
+
     // Mettre à jour le sous-total des articles dans le détail si l'élément existe
     const sousTotalElement = document.getElementById('sous-total-articles');
     if (sousTotalElement) {
         const ancienSousTotal = sousTotalElement.textContent;
         sousTotalElement.textContent = `${sousTotal.toFixed(2)} DH`;
-       
+
     }
     
 }

@@ -426,9 +426,8 @@
                                 </span>
                             </div>
 
-                            <!-- Frais de livraison -->
-                            {% if commande.frais_livraison %}
-                            <div class="flex justify-between items-center">
+                            <!-- Frais de livraison - Section dynamique -->
+                            <div id="frais-livraison-actifs" class="flex justify-between items-center" style="display: {% if commande.frais_livraison %}flex{% else %}none{% endif %};">
                                 <span class="text-gray-600">
                                     <i class="fas fa-shipping-fast mr-2"></i>Frais de livraison:
                                 </span>
@@ -436,8 +435,7 @@
                                     {{ commande.montant_frais_livraison|floatformat:2 }} DH
                                 </span>
                             </div>
-                            {% else %}
-                            <div class="flex justify-between items-center">
+                            <div id="frais-livraison-inactifs" class="flex justify-between items-center" style="display: {% if not commande.frais_livraison %}flex{% else %}none{% endif %};">
                                 <span class="text-gray-500 text-sm italic">
                                     <i class="fas fa-shipping-fast mr-2"></i>Frais de livraison:
                                 </span>
@@ -445,7 +443,6 @@
                                     Non inclus
                                 </span>
                             </div>
-                            {% endif %}
 
                             <hr class="border-gray-300">
                         </div>
@@ -626,11 +623,11 @@
         </div>
         
         <div class="flex justify-end space-x-3">
-            <button onclick="closeCommentModal()" 
+            <button type="button" onclick="closeCommentModal()"
                     class="px-4 py-2 rounded-lg font-medium transition-all bg-gray-100 hover:bg-gray-200 text-gray-700">
-                <i class="fas fa-times mr-1"></i>Annuler
+                <i class="fas fa-times mr-1"></i>Fermer
             </button>
-            <button onclick="saveComment()" 
+            <button type="button" onclick="saveComment()"
                     class="px-4 py-2 rounded-lg font-medium transition-all bg-blue-600 hover:bg-blue-700 text-white">
                 <i class="fas fa-save mr-1"></i>Enregistrer
             </button>

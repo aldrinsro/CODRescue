@@ -97,6 +97,52 @@ function closeCommentModal() {
     }
 }
 
+// Fonction pour annuler et supprimer l'opération en cours depuis la modale
+function annulerEtSupprimerOperation() {
+    console.log('🗑️ Annulation et suppression de l\'opération en cours...');
+
+    // Récupérer l'ID de l'opération en cours
+    const operationId = currentOperationType;
+    const nomOperation = currentOperationName;
+
+    if (!operationId) {
+        console.error('❌ Aucune opération en cours à supprimer');
+        showNotification('❌ Erreur: Aucune opération sélectionnée', 'error');
+        closeCommentModal();
+        return;
+    }
+
+    // Trouver l'opération dans le tableau
+    const operation = operationsTable.find(op => op.id === operationId);
+
+    if (!operation) {
+        console.error(`❌ Opération ${operationId} introuvable dans le tableau`);
+        showNotification('❌ Erreur: Opération introuvable', 'error');
+        closeCommentModal();
+        return;
+    }
+
+    // Demander confirmation
+    const confirmation = confirm(`Êtes-vous sûr de vouloir supprimer cette opération ?\n\n${nomOperation} (${operationId})\n\nCette action est irréversible.`);
+
+    if (!confirmation) {
+        console.log('❌ Suppression annulée par l\'utilisateur');
+        return;
+    }
+
+    // Fermer d'abord la modale
+    closeCommentModal();
+
+    // Supprimer l'opération selon son origine
+    if (operation.fromDatabase) {
+        console.log('🔄 Suppression d\'une opération existante en base de données...');
+        supprimerOperationEnBase(operationId, nomOperation);
+    } else {
+        console.log('🔄 Suppression d\'une opération locale (non encore sauvegardée)...');
+        supprimerOperationLocale(operationId, nomOperation);
+    }
+}
+
 // Fonction pour sauvegarder le commentaire
 function saveComment() {
     const select = document.getElementById('commentSelect');
