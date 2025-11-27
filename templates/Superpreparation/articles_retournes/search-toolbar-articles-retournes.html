@@ -1,0 +1,694 @@
+{% load static %}
+
+<!-- Barre de recherche intelligente pour les articles retournés -->
+<div class="bg-white rounded-xl shadow-lg border p-6 mb-8 preparation-card" style="border-color: var(--preparation-border-accent);">
+
+    <!-- Description et barre de recherche principale -->
+    <div class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div class="flex-1">
+            <p class="text-gray-700 mb-2">
+                <i class="fas fa-search mr-2 text-blue-600"></i>
+                Recherchez par <strong>N° commande</strong>, <strong>N° modèle</strong>, <strong>article</strong>, <strong>client</strong>, <strong>téléphone</strong>, <strong>couleur</strong>, etc.
+            </p>
+            <!-- Badge de résultats beaucoup plus visible -->
+            <div id="searchResults" class="hidden mt-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-lg shadow-md animate-fadeIn">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center animate-pulse">
+                            <i class="fas fa-search text-lg"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-600 uppercase font-semibold tracking-wide">Résultats de recherche</p>
+                            <p class="text-2xl font-bold text-blue-700">
+                                <span id="resultCount">0</span> article(s)
+                            </p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xs text-gray-500 mb-1">Terme recherché :</p>
+                        <p class="text-sm font-semibold text-gray-800" id="searchTermDisplay">-</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Barre de recherche principale -->
+        <div class="flex gap-2 items-center flex-wrap">
+            <div class="relative">
+                <input type="text" id="smartSearch"
+                       placeholder="Ex: 212268, Modèle 1234, Nike, Dupont, 0612..."
+                       class="block w-80 px-4 py-2 pl-10 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                       autocomplete="off">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <i class="fas fa-search text-gray-400"></i>
+                </div>
+            </div>
+            <button onclick="clearSmartSearch()" class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors">
+                <i class="fas fa-times mr-1"></i>
+                Effacer
+            </button>
+            <button onclick="toggleAdvancedSearch()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                <i class="fas fa-filter mr-1"></i>
+                Filtres avancés
+            </button>
+        </div>
+    </div>
+
+    <!-- Filtres avancés (cachés par défaut) -->
+    <div id="advancedSearch" class="hidden bg-gradient-to-br from-gray-50 to-blue-50 rounded-lg p-6 border-2 border-blue-100">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+
+            <!-- Articles & Variantes -->
+            <div class="space-y-4">
+                <h4 class="font-semibold text-gray-800 border-b-2 border-blue-300 pb-2">
+                    <i class="fas fa-tshirt mr-2 text-blue-600"></i>
+                    Articles & Variantes
+                </h4>
+
+                <div>
+                    <label for="filterArticleNom" class="block text-sm font-medium text-gray-700 mb-1">
+                        <i class="fas fa-tag mr-1 text-gray-500"></i>
+                        Nom de l'article
+                    </label>
+                    <input type="text" id="filterArticleNom" placeholder="Ex: Nike Air Max"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                </div>
+
+                <div>
+                    <label for="filterArticleModele" class="block text-sm font-medium text-gray-700 mb-1">
+                        <i class="fas fa-barcode mr-1 text-gray-500"></i>
+                        N° Modèle
+                    </label>
+                    <input type="text" id="filterArticleModele" placeholder="Ex: 1234, 5678"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                </div>
+
+                <div>
+                    <label for="filterCouleur" class="block text-sm font-medium text-gray-700 mb-1">
+                        <i class="fas fa-palette mr-1 text-gray-500"></i>
+                        Couleur
+                    </label>
+                    <input type="text" id="filterCouleur" placeholder="Ex: Noir, Blanc"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                </div>
+
+                <div>
+                    <label for="filterPointure" class="block text-sm font-medium text-gray-700 mb-1">
+                        <i class="fas fa-ruler mr-1 text-gray-500"></i>
+                        Pointure/Taille
+                    </label>
+                    <input type="text" id="filterPointure" placeholder="Ex: 42, L, XL"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                </div>
+            </div>
+
+            <!-- Commande & Client -->
+            <div class="space-y-4">
+                <h4 class="font-semibold text-gray-800 border-b-2 border-green-300 pb-2">
+                    <i class="fas fa-user-tag mr-2 text-green-600"></i>
+                    Commande & Client
+                </h4>
+
+                <div>
+                    <label for="filterCommandeId" class="block text-sm font-medium text-gray-700 mb-1">
+                        <i class="fas fa-shopping-cart mr-1 text-gray-500"></i>
+                        N° Commande
+                    </label>
+                    <input type="text" id="filterCommandeId" placeholder="Ex: 212268"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                </div>
+
+                <div>
+                    <label for="filterNumCmd" class="block text-sm font-medium text-gray-700 mb-1">
+                        <i class="fas fa-hashtag mr-1 text-gray-500"></i>
+                        N° Externe
+                    </label>
+                    <input type="text" id="filterNumCmd" placeholder="Ex: YCN-000290"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                </div>
+
+                <div>
+                    <label for="filterClient" class="block text-sm font-medium text-gray-700 mb-1">
+                        <i class="fas fa-user mr-1 text-gray-500"></i>
+                        Client
+                    </label>
+                    <input type="text" id="filterClient" placeholder="Nom du client"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                </div>
+
+                <div>
+                    <label for="filterPhone" class="block text-sm font-medium text-gray-700 mb-1">
+                        <i class="fas fa-phone mr-1 text-gray-500"></i>
+                        Téléphone
+                    </label>
+                    <input type="text" id="filterPhone" placeholder="Ex: 0612345678"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                </div>
+            </div>
+
+            <!-- Dates de Retour -->
+            <div class="space-y-4">
+                <h4 class="font-semibold text-gray-800 border-b-2 border-purple-300 pb-2">
+                    <i class="fas fa-calendar-alt mr-2 text-purple-600"></i>
+                    Dates de Retour
+                </h4>
+
+                <div>
+                    <label for="filterDateRetourDebut" class="block text-sm font-medium text-gray-700 mb-1">
+                        <i class="fas fa-calendar-day mr-1 text-gray-500"></i>
+                        Date de début
+                    </label>
+                    <input type="date" id="filterDateRetourDebut"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                </div>
+
+                <div>
+                    <label for="filterDateRetourFin" class="block text-sm font-medium text-gray-700 mb-1">
+                        <i class="fas fa-calendar-check mr-1 text-gray-500"></i>
+                        Date de fin
+                    </label>
+                    <input type="date" id="filterDateRetourFin"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                </div>
+
+                <div>
+                    <label for="filterRaisonRetour" class="block text-sm font-medium text-gray-700 mb-1">
+                        <i class="fas fa-comment-dots mr-1 text-gray-500"></i>
+                        Raison du retour
+                    </label>
+                    <input type="text" id="filterRaisonRetour" placeholder="Ex: Article défectueux"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                </div>
+
+                <div>
+                    <label for="filterDateTraitementDebut" class="block text-sm font-medium text-gray-700 mb-1">
+                        <i class="fas fa-calendar-plus mr-1 text-gray-500"></i>
+                        Date traitement (début)
+                    </label>
+                    <input type="date" id="filterDateTraitementDebut"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                </div>
+            </div>
+
+            <!-- Prix, Quantité & Opérateur -->
+            <div class="space-y-4">
+                <h4 class="font-semibold text-gray-800 border-b-2 border-orange-300 pb-2">
+                    <i class="fas fa-chart-line mr-2 text-orange-600"></i>
+                    Prix, Quantité & Opérateur
+                </h4>
+
+                <div>
+                    <label for="filterPrixMin" class="block text-sm font-medium text-gray-700 mb-1">
+                        <i class="fas fa-dollar-sign mr-1 text-gray-500"></i>
+                        Prix Min (DH)
+                    </label>
+                    <input type="number" id="filterPrixMin" placeholder="Ex: 100" min="0" step="0.01"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                </div>
+
+                <div>
+                    <label for="filterPrixMax" class="block text-sm font-medium text-gray-700 mb-1">
+                        <i class="fas fa-dollar-sign mr-1 text-gray-500"></i>
+                        Prix Max (DH)
+                    </label>
+                    <input type="number" id="filterPrixMax" placeholder="Ex: 1000" min="0" step="0.01"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                </div>
+
+                <div>
+                    <label for="filterQuantiteMin" class="block text-sm font-medium text-gray-700 mb-1">
+                        <i class="fas fa-boxes mr-1 text-gray-500"></i>
+                        Quantité Min
+                    </label>
+                    <input type="number" id="filterQuantiteMin" placeholder="Ex: 1" min="1"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                </div>
+
+                <div>
+                    <label for="filterQuantiteMax" class="block text-sm font-medium text-gray-700 mb-1">
+                        <i class="fas fa-boxes mr-1 text-gray-500"></i>
+                        Quantité Max
+                    </label>
+                    <input type="number" id="filterQuantiteMax" placeholder="Ex: 10" min="1"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                </div>
+
+                <div>
+                    <label for="filterOperateur" class="block text-sm font-medium text-gray-700 mb-1">
+                        <i class="fas fa-user-tie mr-1 text-gray-500"></i>
+                        Opérateur de traitement
+                    </label>
+                    <input type="text" id="filterOperateur" placeholder="Nom de l'opérateur"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                </div>
+            </div>
+        </div>
+
+        <!-- Boutons d'action -->
+        <div class="flex justify-between items-center mt-6 pt-4 border-t-2 border-gray-200">
+            <!-- Compteur de filtres actifs -->
+            <div id="activeFiltersCount" class="text-sm text-gray-600 hidden">
+                <i class="fas fa-filter text-blue-600 mr-1"></i>
+                <span id="activeFiltersNumber" class="font-bold text-blue-600">0</span> filtre(s) actif(s)
+            </div>
+
+            <div class="flex gap-3 ml-auto">
+                <button onclick="clearFilters()" class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors">
+                    <i class="fas fa-eraser mr-2"></i>
+                    Effacer tout
+                </button>
+                <button onclick="applyFilters()" class="px-5 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-sm font-medium rounded-md shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all transform hover:scale-105">
+                    <i class="fas fa-check mr-2"></i>
+                    Appliquer les filtres
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript pour gérer les filtres -->
+<script>
+// Toggle des filtres avancés
+function toggleAdvancedSearch() {
+    const advancedSearch = document.getElementById('advancedSearch');
+    if (advancedSearch) {
+        advancedSearch.classList.toggle('hidden');
+    }
+}
+
+// Fonction pour effectuer une recherche côté serveur
+function performServerSearch(searchTerm) {
+    console.log('🌐 Recherche backend avec:', searchTerm);
+
+    // Construire l'URL avec le paramètre de recherche
+    const url = new URL(window.location.href);
+    url.searchParams.set('search', searchTerm);
+
+    // Rediriger vers l'URL avec le paramètre de recherche
+    window.location.href = url.toString();
+}
+
+// Appliquer les filtres (RECHERCHE BACKEND)
+function applyFilters() {
+    console.log('📊 Application des filtres avancés (backend)...');
+
+    // Construire l'URL avec tous les paramètres de filtre
+    const url = new URL(window.location.href);
+
+    // Effacer les anciens paramètres de recherche
+    url.searchParams.delete('search');
+    url.searchParams.delete('article_nom');
+    url.searchParams.delete('article_modele');
+    url.searchParams.delete('couleur');
+    url.searchParams.delete('pointure');
+    url.searchParams.delete('commande_id');
+    url.searchParams.delete('num_cmd');
+    url.searchParams.delete('client');
+    url.searchParams.delete('phone');
+    url.searchParams.delete('date_retour_debut');
+    url.searchParams.delete('date_retour_fin');
+    url.searchParams.delete('raison_retour');
+    url.searchParams.delete('prix_min');
+    url.searchParams.delete('prix_max');
+    url.searchParams.delete('quantite_min');
+    url.searchParams.delete('quantite_max');
+    url.searchParams.delete('operateur');
+
+    // Récupérer et ajouter les nouveaux paramètres
+    const filters = {
+        article_nom: document.getElementById('filterArticleNom')?.value.trim(),
+        article_modele: document.getElementById('filterArticleModele')?.value.trim(),
+        couleur: document.getElementById('filterCouleur')?.value.trim(),
+        pointure: document.getElementById('filterPointure')?.value.trim(),
+        commande_id: document.getElementById('filterCommandeId')?.value.trim(),
+        num_cmd: document.getElementById('filterNumCmd')?.value.trim(),
+        client: document.getElementById('filterClient')?.value.trim(),
+        phone: document.getElementById('filterPhone')?.value.trim(),
+        date_retour_debut: document.getElementById('filterDateRetourDebut')?.value,
+        date_retour_fin: document.getElementById('filterDateRetourFin')?.value,
+        raison_retour: document.getElementById('filterRaisonRetour')?.value.trim(),
+        date_traitement_debut: document.getElementById('filterDateTraitementDebut')?.value,
+        prix_min: document.getElementById('filterPrixMin')?.value,
+        prix_max: document.getElementById('filterPrixMax')?.value,
+        quantite_min: document.getElementById('filterQuantiteMin')?.value,
+        quantite_max: document.getElementById('filterQuantiteMax')?.value,
+        operateur: document.getElementById('filterOperateur')?.value.trim()
+    };
+
+    // Ajouter uniquement les filtres non vides
+    let activeFiltersCount = 0;
+    Object.keys(filters).forEach(key => {
+        const value = filters[key];
+        if (value) {
+            url.searchParams.set(key, value);
+            activeFiltersCount++;
+        }
+    });
+
+    console.log(`🔍 ${activeFiltersCount} filtre(s) actif(s)`);
+    console.log('📡 URL de recherche:', url.toString());
+
+    // Rediriger vers l'URL avec les paramètres de filtres
+    window.location.href = url.toString();
+}
+
+// Effacer tous les filtres (BACKEND)
+function clearFilters() {
+    console.log('🧹 Effacement de tous les filtres (backend)...');
+
+    // Construire une URL sans paramètres de recherche
+    const url = new URL(window.location.href);
+
+    // Supprimer tous les paramètres de recherche
+    url.searchParams.delete('search');
+    url.searchParams.delete('article_nom');
+    url.searchParams.delete('article_modele');
+    url.searchParams.delete('couleur');
+    url.searchParams.delete('pointure');
+    url.searchParams.delete('commande_id');
+    url.searchParams.delete('num_cmd');
+    url.searchParams.delete('client');
+    url.searchParams.delete('phone');
+    url.searchParams.delete('date_retour_debut');
+    url.searchParams.delete('date_retour_fin');
+    url.searchParams.delete('raison_retour');
+    url.searchParams.delete('date_traitement_debut');
+    url.searchParams.delete('prix_min');
+    url.searchParams.delete('prix_max');
+    url.searchParams.delete('quantite_min');
+    url.searchParams.delete('quantite_max');
+    url.searchParams.delete('operateur');
+    url.searchParams.delete('statut');
+
+    console.log('✅ Redirection vers:', url.toString());
+
+    // Rediriger vers l'URL sans paramètres
+    window.location.href = url.toString();
+}
+
+// Effacer la recherche simple (BACKEND)
+function clearSmartSearch() {
+    console.log('🧹 Effacement de la recherche simple (backend)...');
+
+    // Vider le champ de recherche
+    const smartSearch = document.getElementById('smartSearch');
+    if (smartSearch) {
+        smartSearch.value = '';
+    }
+
+    // Effacer tous les filtres
+    clearFilters();
+}
+
+// ===== RECHERCHE INTELLIGENTE POUR ARTICLES RETOURNÉS =====
+(function() {
+    'use strict';
+
+    console.log('🔍 Initialisation du module de recherche pour articles retournés...');
+
+    /**
+     * Fonction de recherche intelligente
+     */
+    function rechercherArticles(searchTerm) {
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('🔍 RECHERCHE EN COURS');
+        console.log('Terme recherché:', searchTerm);
+
+        const lignes = document.querySelectorAll('.article-retourne-row');
+        console.log('📊 Nombre total de lignes:', lignes.length);
+
+        if (searchTerm.length === 0) {
+            console.log('⚠️ Terme de recherche vide - réinitialisation');
+            // Réinitialiser si vide
+            lignes.forEach(ligne => {
+                ligne.removeAttribute('data-search-hidden');
+                ligne.classList.remove('search-match-highlight');
+            });
+
+            // Cacher les résultats et l'indicateur
+            const searchResults = document.getElementById('searchResults');
+            if (searchResults) {
+                searchResults.classList.add('hidden');
+            }
+
+            const searchIndicator = document.getElementById('searchIndicator');
+            if (searchIndicator) {
+                searchIndicator.classList.remove('show');
+            }
+
+            // Réappliquer le filtre d'onglet
+            if (typeof window.ongletActuel !== 'undefined' && window.ongletActuel) {
+                if (typeof window.filtrerTableauParStatut === 'function') {
+                    window.filtrerTableauParStatut(window.ongletActuel);
+                }
+            }
+            return;
+        }
+
+        let visibleCount = 0;
+        const term = searchTerm.toLowerCase();
+
+        lignes.forEach((ligne, index) => {
+            // Récupérer TOUS les attributs data
+            const data = {
+                id: (ligne.dataset.id || ''),
+                articleNom: (ligne.dataset.articleNom || ''),
+                articleRef: (ligne.dataset.articleRef || ''),
+                articleModele: (ligne.dataset.articleModele || ''),
+                commandeIdYz: (ligne.dataset.commandeIdYz || ''),
+                numCmd: (ligne.dataset.numCmd || ''),
+                client: (ligne.dataset.client || ''),
+                clientPhone: (ligne.dataset.clientPhone || ''),
+                clientEmail: (ligne.dataset.clientEmail || ''),
+                couleur: (ligne.dataset.couleur || ''),
+                pointure: (ligne.dataset.pointure || ''),
+                raisonRetour: (ligne.dataset.raisonRetour || ''),
+                operateurTraitement: (ligne.dataset.operateurTraitement || '')
+            };
+
+            // Créer un texte de recherche avec tous les champs
+            const searchableText = Object.values(data).join(' ').toLowerCase();
+
+            // Rechercher dans le texte combiné
+            const match = searchableText.includes(term);
+
+            if (match) {
+                ligne.removeAttribute('data-search-hidden');
+                ligne.classList.add('search-match-highlight');
+                visibleCount++;
+
+                // Afficher les 3 premiers résultats pour debug
+                if (visibleCount <= 3) {
+                    console.log(`✅ Ligne ${index + 1} correspond:`, {
+                        'ID Article': data.id,
+                        'Article': data.articleNom,
+                        'N° Modèle': data.articleModele,
+                        'Référence': data.articleRef,
+                        'N° Commande': data.commandeIdYz,
+                        'N° Externe': data.numCmd,
+                        'Client': data.client,
+                        'Téléphone': data.clientPhone
+                    });
+                }
+            } else {
+                ligne.setAttribute('data-search-hidden', 'true');
+                ligne.classList.remove('search-match-highlight');
+            }
+        });
+
+        console.log(`📊 Résultats: ${visibleCount}/${lignes.length} lignes visibles`);
+
+        // Réappliquer le filtre d'onglet
+        if (typeof window.ongletActuel !== 'undefined' && window.ongletActuel) {
+            if (typeof window.filtrerTableauParStatut === 'function') {
+                window.filtrerTableauParStatut(window.ongletActuel);
+            }
+        }
+
+        // Afficher le nombre de résultats avec le terme de recherche
+        const searchResults = document.getElementById('searchResults');
+        const resultCount = document.getElementById('resultCount');
+        const searchTermDisplay = document.getElementById('searchTermDisplay');
+
+        if (searchResults && resultCount) {
+            resultCount.textContent = visibleCount;
+            searchResults.classList.remove('hidden');
+        }
+
+        if (searchTermDisplay) {
+            searchTermDisplay.textContent = `"${searchTerm}"`;
+        }
+
+        // Afficher l'indicateur sticky de recherche
+        const searchIndicator = document.getElementById('searchIndicator');
+        const searchIndicatorText = document.getElementById('searchIndicatorText');
+        const searchIndicatorCount = document.getElementById('searchIndicatorCount');
+
+        if (searchIndicator && searchIndicatorText && searchIndicatorCount) {
+            searchIndicatorText.textContent = searchTerm.length > 20 ? searchTerm.substring(0, 20) + '...' : searchTerm;
+            searchIndicatorCount.textContent = visibleCount;
+            searchIndicator.classList.add('show');
+        }
+
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    }
+
+    /**
+     * Restaurer les valeurs des filtres depuis l'URL
+     */
+    function restaurerFiltresDepuisURL() {
+        const urlParams = new URLSearchParams(window.location.search);
+
+        // Restaurer la recherche simple
+        const searchQuery = urlParams.get('search');
+        if (searchQuery) {
+            const smartSearchInput = document.getElementById('smartSearch');
+            if (smartSearchInput) {
+                smartSearchInput.value = searchQuery;
+            }
+        }
+
+        // Restaurer les filtres avancés
+        const filterMapping = {
+            'article_nom': 'filterArticleNom',
+            'article_modele': 'filterArticleModele',
+            'couleur': 'filterCouleur',
+            'pointure': 'filterPointure',
+            'commande_id': 'filterCommandeId',
+            'num_cmd': 'filterNumCmd',
+            'client': 'filterClient',
+            'phone': 'filterPhone',
+            'date_retour_debut': 'filterDateRetourDebut',
+            'date_retour_fin': 'filterDateRetourFin',
+            'raison_retour': 'filterRaisonRetour',
+            'date_traitement_debut': 'filterDateTraitementDebut',
+            'prix_min': 'filterPrixMin',
+            'prix_max': 'filterPrixMax',
+            'quantite_min': 'filterQuantiteMin',
+            'quantite_max': 'filterQuantiteMax',
+            'operateur': 'filterOperateur'
+        };
+
+        let activeFiltersCount = 0;
+        Object.keys(filterMapping).forEach(paramName => {
+            const paramValue = urlParams.get(paramName);
+            const inputId = filterMapping[paramName];
+            const inputElement = document.getElementById(inputId);
+
+            if (paramValue && inputElement) {
+                inputElement.value = paramValue;
+                activeFiltersCount++;
+            }
+        });
+
+        // Afficher le compteur de filtres actifs si nécessaire
+        if (activeFiltersCount > 0) {
+            const activeFiltersCountDiv = document.getElementById('activeFiltersCount');
+            const activeFiltersNumber = document.getElementById('activeFiltersNumber');
+            if (activeFiltersCountDiv && activeFiltersNumber) {
+                activeFiltersCountDiv.classList.remove('hidden');
+                activeFiltersNumber.textContent = activeFiltersCount;
+            }
+        }
+
+        console.log(`✅ ${activeFiltersCount} filtre(s) restauré(s) depuis l'URL`);
+    }
+
+    /**
+     * Initialisation au chargement du DOM
+     */
+    function initRecherche() {
+        const smartSearchInput = document.getElementById('smartSearch');
+
+        if (!smartSearchInput) {
+            console.error('❌ Élément #smartSearch non trouvé !');
+            return;
+        }
+
+        console.log('✅ Élément #smartSearch trouvé, ajout du listener...');
+
+        // Restaurer les filtres depuis l'URL au chargement
+        restaurerFiltresDepuisURL();
+
+        // Afficher les champs cherchables
+        const lignes = document.querySelectorAll('.article-retourne-row');
+        if (lignes.length > 0) {
+            console.log('📋 Champs de recherche disponibles:');
+            console.log('  • ID Article (data-id)');
+            console.log('  • Nom Article (data-article-nom)');
+            console.log('  • N° Modèle ⭐ (data-article-modele)');
+            console.log('  • Référence (data-article-ref)');
+            console.log('  • N° Commande ⭐ (data-commande-id-yz)');
+            console.log('  • N° Externe (data-num-cmd)');
+            console.log('  • Client (data-client)');
+            console.log('  • Téléphone (data-client-phone)');
+            console.log('  • Email (data-client-email)');
+            console.log('  • Couleur (data-couleur)');
+            console.log('  • Pointure (data-pointure)');
+            console.log('  • Raison retour (data-raison-retour)');
+            console.log('  • Opérateur (data-operateur-traitement)');
+            console.log(`📊 Total: ${lignes.length} article(s) retourné(s)`);
+
+            // Afficher un exemple de données
+            if (lignes[0]) {
+                console.log('📦 Exemple de données (première ligne):', {
+                    'ID': lignes[0].dataset.id,
+                    'Article': lignes[0].dataset.articleNom,
+                    'N° Modèle': lignes[0].dataset.articleModele,
+                    'Référence': lignes[0].dataset.articleRef,
+                    'N° Commande': lignes[0].dataset.commandeIdYz,
+                    'Client': lignes[0].dataset.client
+                });
+            }
+        }
+
+        // Recherche backend avec debounce
+        let searchTimeout;
+        smartSearchInput.addEventListener('input', function(e) {
+            const searchTerm = e.target.value.trim();
+
+            // Debounce de 800ms pour la recherche backend (éviter trop de rechargements)
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                if (searchTerm.length > 0) {
+                    console.log('⏰ Déclenchement de la recherche backend après debounce');
+                    performServerSearch(searchTerm);
+                } else {
+                    // Si vide, effacer la recherche
+                    clearSmartSearch();
+                }
+            }, 800);
+        });
+
+        // Recherche immédiate sur Entrée
+        smartSearchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                clearTimeout(searchTimeout);
+                const searchTerm = e.target.value.trim();
+                console.log('🔍 Recherche backend immédiate (Entrée)');
+                if (searchTerm.length > 0) {
+                    performServerSearch(searchTerm);
+                } else {
+                    clearSmartSearch();
+                }
+            }
+        });
+
+        console.log('✅ Event listeners ajoutés avec succès');
+    }
+
+    // Initialiser quand le DOM est prêt
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initRecherche);
+    } else {
+        // DOM déjà chargé
+        initRecherche();
+    }
+
+    // Exposer la fonction globalement pour les tests
+    window.rechercherArticlesRetournes = rechercherArticles;
+
+    console.log('✅ Module de recherche articles retournés chargé');
+})();
+</script>

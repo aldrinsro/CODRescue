@@ -30,16 +30,132 @@ def liste_articles_retournes_service(request):
         'commande__etats__operateur'
     ).order_by('-date_retour')
 
-   
-    # Filtre par recherche
-    search_query = request.GET.get('search', '')
+
+    # === RECHERCHE INTELLIGENTE COMPLÈTE ===
+    # Recherche simple (barre de recherche principale)
+    search_query = request.GET.get('search', '').strip()
+
+    # Filtres avancés individuels
+    filter_article_nom = request.GET.get('article_nom', '').strip()
+    filter_article_modele = request.GET.get('article_modele', '').strip()
+    filter_couleur = request.GET.get('couleur', '').strip()
+    filter_pointure = request.GET.get('pointure', '').strip()
+    filter_commande_id = request.GET.get('commande_id', '').strip()
+    filter_num_cmd = request.GET.get('num_cmd', '').strip()
+    filter_client = request.GET.get('client', '').strip()
+    filter_phone = request.GET.get('phone', '').strip()
+    filter_date_retour_debut = request.GET.get('date_retour_debut', '').strip()
+    filter_date_retour_fin = request.GET.get('date_retour_fin', '').strip()
+    filter_raison_retour = request.GET.get('raison_retour', '').strip()
+    filter_prix_min = request.GET.get('prix_min', '').strip()
+    filter_prix_max = request.GET.get('prix_max', '').strip()
+    filter_quantite_min = request.GET.get('quantite_min', '').strip()
+    filter_quantite_max = request.GET.get('quantite_max', '').strip()
+    filter_operateur = request.GET.get('operateur', '').strip()
+    filter_statut = request.GET.get('statut', '').strip()
+
+    # Application de la recherche simple (recherche dans tous les champs)
     if search_query:
         articles_retournes = articles_retournes.filter(
+            Q(id__icontains=search_query) |
             Q(commande__id_yz__icontains=search_query) |
+            Q(commande__num_cmd__icontains=search_query) |
             Q(article__nom__icontains=search_query) |
+            Q(article__reference__icontains=search_query) |
+            Q(article__modele__icontains=search_query) |
             Q(commande__client__nom__icontains=search_query) |
-            Q(commande__client__prenom__icontains=search_query)
+            Q(commande__client__prenom__icontains=search_query) |
+            Q(commande__client__numero_tel__icontains=search_query) |
+            Q(commande__client__email__icontains=search_query) |
+            Q(variante__couleur__nom__icontains=search_query) |
+            Q(variante__pointure__pointure__icontains=search_query) |
+            Q(raison_retour__icontains=search_query) |
+            Q(operateur_traitement__nom__icontains=search_query) |
+            Q(operateur_traitement__prenom__icontains=search_query)
         )
+
+    # Application des filtres avancés
+    if filter_article_nom:
+        articles_retournes = articles_retournes.filter(article__nom__icontains=filter_article_nom)
+
+    if filter_article_modele:
+        articles_retournes = articles_retournes.filter(article__modele__icontains=filter_article_modele)
+
+    if filter_couleur:
+        articles_retournes = articles_retournes.filter(variante__couleur__nom__icontains=filter_couleur)
+
+    if filter_pointure:
+        articles_retournes = articles_retournes.filter(variante__pointure__pointure__icontains=filter_pointure)
+
+    if filter_commande_id:
+        articles_retournes = articles_retournes.filter(commande__id_yz__icontains=filter_commande_id)
+
+    if filter_num_cmd:
+        articles_retournes = articles_retournes.filter(commande__num_cmd__icontains=filter_num_cmd)
+
+    if filter_client:
+        articles_retournes = articles_retournes.filter(
+            Q(commande__client__nom__icontains=filter_client) |
+            Q(commande__client__prenom__icontains=filter_client)
+        )
+
+    if filter_phone:
+        articles_retournes = articles_retournes.filter(commande__client__numero_tel__icontains=filter_phone)
+
+    if filter_date_retour_debut:
+        articles_retournes = articles_retournes.filter(date_retour__date__gte=filter_date_retour_debut)
+
+    if filter_date_retour_fin:
+        articles_retournes = articles_retournes.filter(date_retour__date__lte=filter_date_retour_fin)
+
+    if filter_raison_retour:
+        articles_retournes = articles_retournes.filter(raison_retour__icontains=filter_raison_retour)
+
+    if filter_prix_min:
+        try:
+            articles_retournes = articles_retournes.filter(prix_unitaire_origine__gte=float(filter_prix_min))
+        except ValueError:
+            pass
+
+    if filter_prix_max:
+        try:
+            articles_retournes = articles_retournes.filter(prix_unitaire_origine__lte=float(filter_prix_max))
+        except ValueError:
+            pass
+
+    if filter_quantite_min:
+        try:
+            articles_retournes = articles_retournes.filter(quantite_retournee__gte=int(filter_quantite_min))
+        except ValueError:
+            pass
+
+    if filter_quantite_max:
+        try:
+            articles_retournes = articles_retournes.filter(quantite_retournee__lte=int(filter_quantite_max))
+        except ValueError:
+            pass
+
+    if filter_operateur:
+        articles_retournes = articles_retournes.filter(
+            Q(operateur_traitement__nom__icontains=filter_operateur) |
+            Q(operateur_traitement__prenom__icontains=filter_operateur)
+        )
+
+    if filter_statut:
+        # Mapping des statuts affichés vers les valeurs en base
+        statut_mapping = {
+            'en_attente': 'en_attente',
+            'en attente': 'en_attente',
+            'reintegre': 'reintegre_stock',
+            'reintegre_stock': 'reintegre_stock',
+            'réintégré': 'reintegre_stock',
+            'defectueux': 'defectueux',
+            'défectueux': 'defectueux',
+            'traite': 'traite',
+            'traité': 'traite'
+        }
+        statut_recherche = statut_mapping.get(filter_statut.lower(), filter_statut)
+        articles_retournes = articles_retournes.filter(statut_retour=statut_recherche)
 
     # Statistiques pour le tableau de bord
     stats = {

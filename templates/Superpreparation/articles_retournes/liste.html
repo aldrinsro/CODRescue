@@ -678,6 +678,48 @@
         display: flex;
     }
 
+    /* Indicateur de recherche actif */
+    .search-active-indicator {
+        position: fixed;
+        top: 140px;
+        right: 20px;
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        color: white;
+        padding: 12px 20px;
+        border-radius: 24px;
+        font-size: 0.875rem;
+        box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+        z-index: 1000;
+        display: none;
+        animation: slideInRight 0.3s ease-out;
+        max-width: 320px;
+    }
+
+    .search-active-indicator.show {
+        display: block;
+    }
+
+    /* Highlight des lignes correspondant à la recherche */
+    .search-match-highlight {
+        background: linear-gradient(90deg, rgba(59, 130, 246, 0.08) 0%, rgba(147, 197, 253, 0.12) 100%) !important;
+        border-left: 4px solid #3b82f6 !important;
+        animation: highlightPulse 1.5s ease-in-out;
+    }
+
+    @keyframes highlightPulse {
+        0%, 100% {
+            box-shadow: 0 0 0 rgba(59, 130, 246, 0);
+        }
+        50% {
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+        }
+    }
+
+    .search-match-highlight:hover {
+        background: linear-gradient(90deg, rgba(59, 130, 246, 0.15) 0%, rgba(147, 197, 253, 0.2) 100%) !important;
+        transform: translateX(4px);
+    }
+
     @keyframes slideInRight {
         from {
             transform: translateX(100%);
@@ -729,6 +771,23 @@
     <div class="filter-active-indicator" id="filterIndicator">
         <i class="fas fa-filter"></i>
         <span id="filterIndicatorText">Filtre: En attente</span>
+    </div>
+
+    <!-- Indicateur de recherche actif -->
+    <div class="search-active-indicator" id="searchIndicator">
+        <div class="flex items-center gap-3">
+            <div class="bg-white bg-opacity-20 rounded-full p-2">
+                <i class="fas fa-search text-lg"></i>
+            </div>
+            <div>
+                <p class="text-xs opacity-90">Recherche active</p>
+                <p class="font-bold text-sm" id="searchIndicatorText">-</p>
+            </div>
+            <div class="bg-white bg-opacity-30 px-3 py-1 rounded-full">
+                <span class="font-bold text-lg" id="searchIndicatorCount">0</span>
+                <span class="text-xs ml-1">résultat(s)</span>
+            </div>
+        </div>
     </div>
 
     <!-- En-tête de la page -->
@@ -805,10 +864,10 @@
         </div>
     </div>
 
-   
 
-    <!-- Barre de recherche intelligente -->
-{% include 'Superpreparation/includes/smart-search-toolbar.html' %}
+
+    <!-- Barre de recherche intelligente pour articles retournés -->
+{% include 'Superpreparation/articles_retournes/search-toolbar-articles-retournes.html' %}
 
     <!-- Onglets de filtrage -->
     <div class="mb-6">
@@ -1111,14 +1170,8 @@ document.addEventListener('DOMContentLoaded', function() {
 {{ block.super }}
 <!-- Script de pagination intelligente -->
 <script src="{% static 'js/Superpreparation/smart-pagination.js' %}"></script>
-<!-- Script de recherche intelligente -->
-<script src="{% static 'js/Superpreparation/Suivi_des_Commandes/suivi-commandes-smart-search.js' %}"></script>
+<!-- Script de recherche intelligente pour articles retournés intégré dans le template search-toolbar-articles-retournes.html -->
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    if (typeof initSuiviCommandesSearch === 'function') {
-        initSuiviCommandesSearch('livrees_partiellement');
-    }
-});
 
 // === GESTION DES ARTICLES RETOURNÉS ===
 //
