@@ -68,7 +68,8 @@ urlpatterns = [
     path('commande/<int:commande_id>/prix-upsell/', views.api_prix_upsell_articles, name='api_prix_upsell_articles'),
     path('commande/<int:commande_id>/diagnostiquer-compteur/', views_articles.diagnostiquer_compteur, name='diagnostiquer_compteur'),
     path('api/article/<int:article_id>/variantes/', views.get_article_variants, name='get_article_variants'),
-    
+    path('commande/<int:commande_id>/ajouter-variantes-ajax/', views.ajouter_variantes_ajax, name='ajouter_variantes_ajax'),
+
 
 
 

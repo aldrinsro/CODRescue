@@ -325,10 +325,15 @@ def confirmer_commande_ajax(request, commande_id):
             except Exception as e:
                 print(f"⚠️ DEBUG: Erreur lors de la sauvegarde des infos de livraison: {str(e)}")
             
-            # Vérifier le stock et décrémenter les articles
-            articles_decrémentes = []
+            # ========================================
+            # PHASE 1 : VÉRIFICATION DES STOCKS
+            # Vérifier TOUS les stocks AVANT toute décrémentation
+            # ========================================
             stock_insuffisant = []
-            
+            paniers_valides = []  # Stocke les infos des paniers à décrémenter
+
+            print(f"🔍 DEBUG: PHASE 1 - Vérification des stocks pour tous les articles")
+
             for panier in commande.paniers.all():
                 article = panier.article
                 variante = panier.variante
@@ -365,10 +370,10 @@ def confirmer_commande_ajax(request, commande_id):
                     stock_disponible = article.qte_disponible
                     nom_article = article.nom
                     print(f"📦 DEBUG: Article {nom_article} (ID:{article.id})")
-                
+
                 print(f"   - Stock actuel: {stock_disponible}")
                 print(f"   - Quantité commandée: {quantite_commandee}")
-                
+
                 # Vérifier si le stock est suffisant
                 if stock_disponible < quantite_commandee:
                     stock_insuffisant.append({
@@ -378,49 +383,73 @@ def confirmer_commande_ajax(request, commande_id):
                     })
                     print(f"❌ DEBUG: Stock insuffisant pour {nom_article}")
                 else:
-                    # Décrémentation directe et simple du stock
-                    ancien_stock = stock_disponible
-
-                    # Décrémenter directement le stock sur la variante ou l'article
-                    if variante:
-                        # Décrémenter sur la variante
-                        variante.qte_disponible = max(0, variante.qte_disponible - quantite_commandee)
-                        variante.save()
-                        nouveau_stock = variante.qte_disponible
-                        print(f"✅ DEBUG: Stock variante mis à jour: {ancien_stock} → {nouveau_stock}")
-                    else:
-                        # Décrémenter sur l'article principal
-                        article.qte_disponible = max(0, article.qte_disponible - quantite_commandee)
-                        article.save()
-                        nouveau_stock = article.qte_disponible
-                        print(f"✅ DEBUG: Stock article mis à jour: {ancien_stock} → {nouveau_stock}")
-
-                    articles_decrémentes.append({
-                        'article': nom_article,
-                        'ancien_stock': ancien_stock,
-                        'nouveau_stock': nouveau_stock,
-                        'quantite_decrémententée': quantite_commandee
+                    # Stocker les informations pour la décrémentation ultérieure
+                    paniers_valides.append({
+                        'panier': panier,
+                        'article': article,
+                        'variante': variante,
+                        'nom_article': nom_article,
+                        'quantite': quantite_commandee,
+                        'stock_actuel': stock_disponible
                     })
-                    
-                    print(f"✅ DEBUG: Stock mis à jour pour {nom_article}")
-                    print(f"   - Ancien stock: {ancien_stock}")
-                    print(f"   - Nouveau stock: {nouveau_stock}")
-            
-            # Si il y a des problèmes de stock, annuler la transaction
+                    print(f"✅ DEBUG: Stock suffisant pour {nom_article}")
+
+            # Si UN SEUL article manque de stock, ANNULER sans décrémenter quoi que ce soit
             if stock_insuffisant:
                 error_msg = f"Stock insuffisant pour : "
                 for item in stock_insuffisant:
                     error_msg += f"\n• {item['article']}: Stock={item['stock_actuel']}, Demandé={item['quantite_demandee']}"
-                
-                print(f"❌ DEBUG: Confirmation annulée - problèmes de stock")
+
+                print(f"❌ DEBUG: Confirmation annulée - problèmes de stock détectés")
+                print(f"⚠️ IMPORTANT: AUCUN article n'a été décrémenté (logique tout ou rien)")
                 for item in stock_insuffisant:
                     print(f"   - {item['article']}: {item['stock_actuel']}/{item['quantite_demandee']}")
-                
+
                 return JsonResponse({
-                    'success': False, 
+                    'success': False,
                     'message': error_msg,
                     'stock_insuffisant': stock_insuffisant
                 })
+
+            # ========================================
+            # PHASE 2 : DÉCRÉMENTATION DES STOCKS
+            # Tous les stocks sont suffisants, on peut décrémenter en toute sécurité
+            # ========================================
+            articles_decrémentes = []
+
+            print(f"✅ DEBUG: PHASE 2 - Tous les stocks sont suffisants, début de la décrémentation")
+
+            for item in paniers_valides:
+                article = item['article']
+                variante = item['variante']
+                nom_article = item['nom_article']
+                quantite_commandee = item['quantite']
+                ancien_stock = item['stock_actuel']
+
+                # Décrémenter directement le stock sur la variante ou l'article
+                if variante:
+                    # Décrémenter sur la variante
+                    variante.qte_disponible = max(0, variante.qte_disponible - quantite_commandee)
+                    variante.save()
+                    nouveau_stock = variante.qte_disponible
+                    print(f"✅ DEBUG: Stock variante mis à jour: {ancien_stock} → {nouveau_stock}")
+                else:
+                    # Décrémenter sur l'article principal
+                    article.qte_disponible = max(0, article.qte_disponible - quantite_commandee)
+                    article.save()
+                    nouveau_stock = article.qte_disponible
+                    print(f"✅ DEBUG: Stock article mis à jour: {ancien_stock} → {nouveau_stock}")
+
+                articles_decrémentes.append({
+                    'article': nom_article,
+                    'ancien_stock': ancien_stock,
+                    'nouveau_stock': nouveau_stock,
+                    'quantite_decrémententée': quantite_commandee
+                })
+
+                print(f"✅ DEBUG: Stock mis à jour pour {nom_article}")
+                print(f"   - Ancien stock: {ancien_stock}")
+                print(f"   - Nouveau stock: {nouveau_stock}")
             
             # Déterminer l'état suivant: toujours "Confirmée"
             enum_suivant = EnumEtatCmd.objects.get(libelle='Confirmée')

@@ -4,6 +4,7 @@
  */
 
 console.log('🚀 Fichier modal_ajout_articles.js chargé avec succès');
+console.log('🔍 DEBUG: Début du chargement de modal_ajout_articles.js');
 
 // Variables globales pour la gestion des articles
 let articleCounter = 0;
@@ -16,12 +17,32 @@ let articleSelectionne = null;
 let quantiteInitiale = 1;
 let variantesSelectionnees = new Map(); // Map pour stocker les variantes sélectionnées
 
+// ================== FONCTIONS UTILITAIRES ==================
+
+/**
+ * Fonction pour récupérer un cookie par son nom (utile pour CSRF token)
+ */
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
 // ================== FONCTIONS PRINCIPALES DU MODAL ==================
 
 /**
  * Fonction pour ouvrir le modal d'ajout d'articles
  */
-function ouvrirModalAjouterArticle(event) {
+window.ouvrirModalAjouterArticle = function(event) {
     // Empêcher la soumission du formulaire
     if (event) {
         event.preventDefault();
@@ -53,12 +74,12 @@ function ouvrirModalAjouterArticle(event) {
         console.error('❌ Erreur lors du chargement des articles:', error);
         // Le modal reste ouvert même si le chargement échoue
     }
-}
+};
 
 /**
  * Fonction pour fermer le modal d'ajout d'articles
  */
-function fermerModalAjouterArticle(event) {
+window.fermerModalAjouterArticle = function(event) {
     // Empêcher la soumission du formulaire
     if (event) {
         event.preventDefault();
@@ -80,48 +101,82 @@ function fermerModalAjouterArticle(event) {
     ligneSelectionnee = null;
     articlesDisponibles = [];
     articlesAffiches = [];
-}
+};
+
+console.log('✅ DEBUG: window.ouvrirModalAjouterArticle définie dans modal_ajout_articles.js:', typeof window.ouvrirModalAjouterArticle);
+console.log('✅ DEBUG: window.fermerModalAjouterArticle définie dans modal_ajout_articles.js:', typeof window.fermerModalAjouterArticle);
 
 /**
- * Fonction pour charger les articles disponibles depuis le JSON
+ * Fonction utilitaire pour afficher le spinner
  */
-function chargerArticlesDisponibles() {
-    console.log('📡 Chargement des articles disponibles');
-    
-    try {
-        // Récupérer les données JSON des articles
-        const articlesScript = document.getElementById('articles-data');
-        if (!articlesScript) {
-            console.error('❌ Script des articles non trouvé');
-            afficherErreurArticles('Données des articles non disponibles');
-            return;
-        }
-        
-        const articlesData = JSON.parse(articlesScript.textContent);
-        console.log('📊 Articles reçus:', articlesData.length);
-        
-        if (Array.isArray(articlesData) && articlesData.length > 0) {
-            articlesDisponibles = articlesData;
-            afficherArticles(articlesData);
-            mettreAJourCompteurs();
-        } else {
-            console.warn('⚠️ Aucun article disponible');
-            afficherErreurArticles('Aucun article disponible');
-        }
-    } catch (error) {
-        console.error('❌ Erreur lors du chargement des articles:', error);
-        afficherErreurArticles('Erreur lors du chargement des articles');
+function afficherSpinner() {
+    const spinner = document.getElementById('articlesSpinner');
+    if (spinner) {
+        spinner.style.display = 'table-row';
     }
 }
 
 /**
+ * Fonction utilitaire pour cacher le spinner
+ */
+function cacherSpinner() {
+    const spinner = document.getElementById('articlesSpinner');
+    if (spinner) {
+        spinner.style.display = 'none';
+    }
+}
+
+/**
+ * Fonction pour charger les articles disponibles depuis le JSON
+ * NOTE: Cette fonction peut être surchargée par la page qui l'utilise si elle veut utiliser AJAX
+ */
+window.chargerArticlesDisponibles = window.chargerArticlesDisponibles || function() {
+    console.log('📡 Chargement des articles disponibles (version JSON inline)');
+
+    // Afficher le spinner pendant le chargement
+    afficherSpinner();
+
+    try {
+        // Récupérer les données JSON des articles
+        const articlesScript = document.getElementById('articles-data');
+        if (!articlesScript) {
+            console.error('❌ Script des articles non trouvé (attendu <script id="articles-data">)');
+            console.warn('⚠️ Si vous utilisez AJAX, définissez window.chargerArticlesDisponibles AVANT de charger ce fichier');
+            cacherSpinner();
+            afficherErreurArticles('Données des articles non disponibles');
+            return;
+        }
+
+        const articlesData = JSON.parse(articlesScript.textContent);
+        console.log('📊 Articles reçus:', articlesData.length);
+
+        if (Array.isArray(articlesData) && articlesData.length > 0) {
+            articlesDisponibles = articlesData;
+            afficherArticles(articlesData);
+            mettreAJourCompteurs();
+            cacherSpinner();
+        } else {
+            console.warn('⚠️ Aucun article disponible');
+            cacherSpinner();
+            afficherErreurArticles('Aucun article disponible');
+        }
+    } catch (error) {
+        console.error('❌ Erreur lors du chargement des articles:', error);
+        cacherSpinner();
+        afficherErreurArticles('Erreur lors du chargement des articles');
+    }
+};
+
+/**
  * Fonction pour afficher les articles dans le tableau
  */
-function afficherArticles(articles) {
+window.afficherArticles = function(articles) {
     console.log('📋 Affichage de', articles.length, 'articles');
 
     // Stocker les articles affichés pour référence lors de la sélection
     articlesAffiches = articles;
+    articlesDisponibles = articles;  // ✅ Stocker aussi dans articlesDisponibles pour ouvrirModalVariantesParId
+    window.articlesDisponibles = articles;  // ✅ Et aussi dans window pour être accessible globalement
 
     const tbody = document.getElementById('articlesTableBody');
     if (!tbody) {
@@ -130,7 +185,11 @@ function afficherArticles(articles) {
     }
     
     if (articles.length === 0) {
-        tbody.innerHTML = `
+        // Sauvegarder le spinner
+        const spinner = document.getElementById('articlesSpinner');
+        const spinnerHTML = spinner ? spinner.outerHTML : '';
+
+        tbody.innerHTML = spinnerHTML + `
             <tr>
                 <td colspan="4" class="px-4 py-8 text-center text-gray-500">
                     <div class="flex flex-col items-center">
@@ -203,8 +262,13 @@ function afficherArticles(articles) {
             </tr>
         `;
     });
-    
-    tbody.innerHTML = html;
+
+    // Sauvegarder le spinner avant de vider le tbody
+    const spinner = document.getElementById('articlesSpinner');
+    const spinnerHTML = spinner ? spinner.outerHTML : '';
+
+    // Insérer le spinner en premier, puis les articles
+    tbody.innerHTML = spinnerHTML + html;
     console.log('✅ Articles affichés dans le tableau');
 }
 
@@ -224,7 +288,7 @@ function getStockInfo(stock) {
 /**
  * Fonction pour sélectionner un article dans le tableau
  */
-function selectionnerArticle(index) {
+window.selectionnerArticle = function(index) {
     console.log('🎯 Sélection de l\'article:', index);
 
     // Désélectionner la ligne précédente
@@ -247,7 +311,7 @@ function selectionnerArticle(index) {
             console.log('✅ Article sélectionné:', articlesAffiches[index].nom);
         }
     }
-}
+};
 
 /**
  * Fonction pour ajouter un article au panier (sans variantes)
@@ -344,7 +408,7 @@ function ajouterArticleAuPanier(articleData, quantiteInitiale = 1) {
 /**
  * Fonction pour mettre à jour la quantité d'un article
  */
-function mettreAJourQuantiteArticle(articleId, nouvelleQuantite) {
+window.mettreAJourQuantiteArticle = function(articleId, nouvelleQuantite) {
     const articleCard = document.getElementById(articleId);
     if (!articleCard) return;
     
@@ -366,12 +430,12 @@ function mettreAJourQuantiteArticle(articleId, nouvelleQuantite) {
             calculerTotal();
         }
     }
-}
+};
 
 /**
  * Fonction pour supprimer un article du panier
  */
-function supprimerArticleDuPanier(button) {
+window.supprimerArticleDuPanier = function(button) {
     const articleCard = button.closest('.bg-white.border');
     if (articleCard) {
         articleCard.remove();
@@ -386,14 +450,14 @@ function supprimerArticleDuPanier(button) {
 
         console.log('✅ Article supprimé du panier');
     }
-}
+};
 
 // ================== FONCTIONS DU MODAL DES VARIANTES ==================
 
 /**
  * Fonction pour ouvrir le modal de sélection des variantes par ID
  */
-function ouvrirModalVariantesParId(articleId) {
+window.ouvrirModalVariantesParId = function(articleId) {
     // Empêcher la soumission du formulaire
     if (event) {
         event.preventDefault();
@@ -401,16 +465,20 @@ function ouvrirModalVariantesParId(articleId) {
     }
 
     console.log('🎯 Ouverture modal variantes par ID:', articleId, 'Type:', typeof articleId);
-    console.log('🔍 Articles disponibles:', articlesDisponibles.length);
-    console.log('🔍 Premiers IDs des articles disponibles:', articlesDisponibles.slice(0, 5).map(a => ({ id: a.id, nom: a.nom, type: typeof a.id })));
 
-    // Chercher l'article dans articlesDisponibles par son ID
+    // ✅ Utiliser window.articlesDisponibles au lieu de la variable locale
+    const articlesSource = window.articlesDisponibles || articlesDisponibles || [];
+    console.log('🔍 Articles disponibles:', articlesSource.length);
+    console.log('🔍 Premiers IDs des articles disponibles:', articlesSource.slice(0, 5).map(a => ({ id: a.id, nom: a.nom, type: typeof a.id })));
+
+    // Chercher l'article dans articlesSource par son ID
     // Convertir les IDs en nombres pour assurer la comparaison
-    const article = articlesDisponibles.find(a => parseInt(a.id) === parseInt(articleId));
+    const article = articlesSource.find(a => parseInt(a.id) === parseInt(articleId));
 
     if (!article) {
         console.error('❌ Article non trouvé avec l\'ID:', articleId);
-        console.error('❌ IDs disponibles:', articlesDisponibles.map(a => a.id));
+        console.error('❌ IDs disponibles:', articlesSource.map(a => a.id));
+        console.error('❌ window.articlesDisponibles:', window.articlesDisponibles);
         showNotification('❌ Erreur: article introuvable (ID: ' + articleId + ')', 'error');
         return;
     }
@@ -425,12 +493,12 @@ function ouvrirModalVariantesParId(articleId) {
     console.log('🆔 ID de l\'article qui sera envoyé au serveur:', article.id);
 
     ouvrirModalVariantes(article, 1);
-}
+};
 
 /**
  * Fonction pour ajouter un article au panier par ID
  */
-function ajouterArticleAuPanierParId(articleId) {
+window.ajouterArticleAuPanierParId = function(articleId) {
     // Empêcher la soumission du formulaire
     if (event) {
         event.preventDefault();
@@ -439,8 +507,9 @@ function ajouterArticleAuPanierParId(articleId) {
 
     console.log('🎯 Ajout article au panier par ID:', articleId);
 
-    // Chercher l'article dans articlesDisponibles par son ID
-    const article = articlesDisponibles.find(a => a.id === articleId);
+    // ✅ Utiliser window.articlesDisponibles au lieu de la variable locale
+    const articlesSource = window.articlesDisponibles || articlesDisponibles || [];
+    const article = articlesSource.find(a => a.id === articleId);
 
     if (!article) {
         console.error('❌ Article non trouvé avec l\'ID:', articleId);
@@ -449,7 +518,7 @@ function ajouterArticleAuPanierParId(articleId) {
     }
 
     ajouterArticleAuPanier(article, 1);
-}
+};
 
 /**
  * Fonction pour ouvrir le modal de sélection des variantes par index (LEGACY - conservé pour compatibilité)
@@ -567,7 +636,9 @@ function chargerVariantesArticle(articleId) {
     }
 
     // URL pour récupérer les variantes
-    const url = `/operateur-confirme/get-article-variants/${articleId}/`;
+    // Utiliser window.API_GET_VARIANTS_URL si défini, sinon fallback sur operatConfirme
+    const baseUrl = window.API_GET_VARIANTS_URL || `/operateur-confirme/get-article-variants/{id}/`;
+    const url = baseUrl.replace('{id}', articleId);
     console.log('🌐 URL de l\'appel AJAX:', url);
     console.log('🌐 Article dont on cherche les variantes:', {
         id: articleId,
@@ -708,7 +779,7 @@ function afficherVariantes(variantes) {
 /**
  * Fonction pour gérer la sélection d'une variante
  */
-function gererSelectionVariante(checkbox, varianteId) {
+window.gererSelectionVariante = function(checkbox, varianteId) {
     const varianteData = JSON.parse(checkbox.dataset.variante);
     
     if (checkbox.checked) {
@@ -720,7 +791,7 @@ function gererSelectionVariante(checkbox, varianteId) {
     }
     
     mettreAJourAffichageVariantesSelectionnees();
-}
+};
 
 /**
  * Fonction pour mettre à jour l'affichage des variantes sélectionnées
@@ -769,7 +840,7 @@ function mettreAJourAffichageVariantesSelectionnees() {
 /**
  * Fonction pour retirer une variante de la sélection
  */
-function retirerVarianteSelectionnee(varianteId) {
+window.retirerVarianteSelectionnee = function(varianteId) {
     variantesSelectionnees.delete(varianteId);
     mettreAJourAffichageVariantesSelectionnees();
     
@@ -780,12 +851,12 @@ function retirerVarianteSelectionnee(varianteId) {
     }
     
     showNotification('✅ Variante retirée de la sélection', 'success');
-}
+};
 
 /**
  * Fonction pour fermer le modal des variantes
  */
-function fermerModalVariantes(event) {
+window.fermerModalVariantes = function(event) {
     // Empêcher la soumission du formulaire
     if (event) {
         event.preventDefault();
@@ -807,7 +878,7 @@ function fermerModalVariantes(event) {
     articleSelectionne = null;
     quantiteInitiale = 1;
     variantesSelectionnees.clear();
-}
+};
 
 /**
  * Fonction pour afficher une erreur dans le modal des variantes
@@ -827,7 +898,7 @@ function afficherErreurVariantes(message) {
 /**
  * Fonction pour effacer la sélection des variantes
  */
-function effacerSelectionVariantes(event) {
+window.effacerSelectionVariantes = function(event) {
     // Empêcher la soumission du formulaire
     if (event) {
         event.preventDefault();
@@ -841,22 +912,22 @@ function effacerSelectionVariantes(event) {
     variantesSelectionnees.clear();
     mettreAJourAffichageVariantesSelectionnees();
     showNotification('✅ Sélection des variantes effacée', 'success');
-}
+};
 
 /**
  * Fonction pour ajouter les variantes sélectionnées au panier
  */
-function ajouterVariantesSelectionnees(event) {
+window.ajouterVariantesSelectionnees = function(event) {
     // Empêcher la soumission du formulaire
     if (event) {
         event.preventDefault();
         event.stopPropagation();
     }
-    
+
     console.log('📦 Ajout des variantes sélectionnées au panier:', variantesSelectionnees.size);
     console.log('🔍 Article sélectionné:', articleSelectionne);
     console.log('🔍 Variantes sélectionnées:', variantesSelectionnees);
-    
+
     // Vérifier l'état du modal avant l'ajout
     const modal = document.getElementById('variantModal');
     console.log('🔍 État du modal avant ajout:', {
@@ -864,66 +935,145 @@ function ajouterVariantesSelectionnees(event) {
         hidden: modal ? modal.classList.contains('hidden') : 'N/A',
         display: modal ? modal.style.display : 'N/A'
     });
-    
+
     if (variantesSelectionnees.size === 0) {
         showNotification('⚠️ Aucune variante sélectionnée', 'warning');
         return;
     }
-    
+
     if (!articleSelectionne) {
         console.error('❌ Aucun article sélectionné');
         showNotification('❌ Erreur: aucun article sélectionné', 'error');
         return;
     }
-    
-    let ajoutees = 0;
-    let erreurs = 0;
-    
-    try {
-        variantesSelectionnees.forEach((variante, id) => {
-            try {
-                console.log('🔄 Ajout de la variante:', variante);
-                ajouterVarianteAuPanier(articleSelectionne, variante, 1);
-                ajoutees++;
-                console.log('✅ Variante ajoutée avec succès');
-            } catch (error) {
-                console.error('❌ Erreur lors de l\'ajout de la variante:', error);
-                console.error('❌ Stack trace:', error.stack);
-                erreurs++;
-            }
+
+    // Collecter toutes les variantes sélectionnées avec leurs quantités
+    const variantesData = [];
+    variantesSelectionnees.forEach((variante, id) => {
+        variantesData.push({
+            article_id: articleSelectionne.id,
+            variante_id: variante.id,
+            quantite: 1, // Quantité par défaut
+            pointure: variante.pointure,
+            couleur: variante.couleur
         });
-        
-        // Afficher le résultat
-        if (ajoutees > 0) {
-            showNotification(`✅ ${ajoutees} variante(s) ajoutée(s) au panier`, 'success');
+    });
+
+    console.log('🔄 Envoi des variantes au serveur:', variantesData);
+
+    // Vérifier que commandeId existe (défini dans le template)
+    if (typeof window.commandeId === 'undefined') {
+        console.error('❌ commandeId non défini');
+        showNotification('❌ Erreur: ID de commande introuvable', 'error');
+        return;
+    }
+
+    // Récupérer le CSRF token depuis le champ caché du formulaire (méthode la plus fiable)
+    let csrfToken = null;
+    const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (csrfInput) {
+        csrfToken = csrfInput.value;
+        console.log('🔐 CSRF Token récupéré depuis le formulaire: Présent ✅');
+    } else {
+        // Fallback: essayer depuis les cookies
+        csrfToken = getCookie('yz_csrf_token');
+        console.log('🔐 CSRF Token récupéré depuis les cookies:', csrfToken ? 'Présent ✅' : 'ABSENT ❌');
+    }
+
+    if (!csrfToken) {
+        console.error('❌ CSRF token introuvable');
+        showNotification('❌ Erreur: Token de sécurité introuvable. Rechargez la page.', 'error');
+        return;
+    }
+
+    // Envoyer toutes les variantes au serveur en une seule requête
+    fetch(`/Superpreparation/commande/${window.commandeId}/ajouter-variantes-ajax/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken,
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+            variantes: variantesData
+        })
+    })
+    .then(response => {
+        console.log('📡 Réponse reçue:', response.status, response.statusText);
+
+        // Vérifier si la réponse est OK
+        if (!response.ok) {
+            console.error(`❌ Erreur HTTP: ${response.status} ${response.statusText}`);
+            // Essayer de lire le corps de la réponse pour plus d'infos
+            return response.text().then(text => {
+                console.error('❌ Corps de la réponse:', text.substring(0, 500));
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            });
         }
-        
-        if (erreurs > 0) {
-            showNotification(`⚠️ ${erreurs} variante(s) n'ont pas pu être ajoutées`, 'warning');
-        }
-        
-        // Ne fermer les modals que si au moins une variante a été ajoutée avec succès
-        if (ajoutees > 0) {
-            console.log('🎯 Variantes ajoutées avec succès, fermeture des modals');
+
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            console.log('✅ Variantes ajoutées avec succès:', data);
+
+            // Remplacer le contenu du conteneur des articles avec le HTML retourné
+            const articlesContainer = document.getElementById('articles-container');
+            if (articlesContainer && data.html) {
+                articlesContainer.innerHTML = data.html;
+                console.log('✅ HTML des articles mis à jour');
+            }
+
+            // Utiliser la fonction globale mettreAJourTousLesTotaux si disponible
+            if (typeof window.mettreAJourTousLesTotaux === 'function') {
+                console.log('🔄 Appel de mettreAJourTousLesTotaux avec:', {
+                    total_commande: data.total_cmd,
+                    sous_total_articles: data.sous_total_articles,
+                    articles_count: data.articles_count,
+                    compteur: data.compteur,
+                    frais_livraison: data.frais_livraison
+                });
+
+                window.mettreAJourTousLesTotaux({
+                    total_commande: data.total_cmd,
+                    sous_total_articles: data.sous_total_articles || data.total_cmd,
+                    articles_count: data.articles_count,
+                    compteur: data.compteur,
+                    frais_livraison: data.frais_livraison
+                });
+            } else {
+                // Fallback: mise à jour simple du total
+                console.warn('⚠️ mettreAJourTousLesTotaux non disponible, mise à jour simple');
+                if (data.total_cmd) {
+                    const totalElement = document.getElementById('total-commande');
+                    if (totalElement) {
+                        totalElement.textContent = `${parseFloat(data.total_cmd).toFixed(2)} DH`;
+                    }
+                }
+            }
+
+            // Afficher notification de succès
+            const count = data.articles_count || variantesData.length;
+            showNotification(`✅ ${count} variante(s) ajoutée(s) au panier avec succès !`, 'success');
+
+            // Fermer les modals
             fermerModalVariantes();
             fermerModalAjouterArticle();
-            showNotification(`✅ ${ajoutees} variante(s) ajoutée(s) au panier avec succès !`, 'success');
+
+            // Réinitialiser les sélections
+            variantesSelectionnees.clear();
+            articleSelectionne = null;
+
         } else {
-            console.log('⚠️ Aucune variante ajoutée, le modal reste ouvert');
-            showNotification('❌ Aucune variante n\'a pu être ajoutée au panier', 'error');
+            console.error('❌ Erreur lors de l\'ajout des variantes:', data.message || data.error);
+            showNotification(`❌ Erreur: ${data.message || data.error || 'Impossible d\'ajouter les variantes'}`, 'error');
         }
-        
-        // Vérifier l'état du modal après l'ajout
-        console.log('🔍 État du modal après ajout:', {
-            exists: !!modal,
-            hidden: modal ? modal.classList.contains('hidden') : 'N/A',
-            display: modal ? modal.style.display : 'N/A'
-        });
-        
-    } catch (error) {
-        console.error('❌ Erreur générale lors de l\'ajout des variantes:', error);
-        showNotification('❌ Erreur lors de l\'ajout des variantes', 'error');
-    }
+    })
+    .catch(error => {
+        console.error('❌ Erreur lors de la requête AJAX:', error);
+        console.error('❌ Détails:', error.message);
+        showNotification(`❌ Erreur: ${error.message || 'Erreur lors de l\'ajout des variantes au panier'}`, 'error');
+    });
 }
 
 /**
@@ -1065,7 +1215,7 @@ function ajouterVarianteAuPanierConfirmation(articleData, variante, quantiteInit
             variante_id: variante.id,
             couleur: variante.couleur,
             pointure: variante.pointure
-        };
+}
 
         articleCard.setAttribute('data-article', JSON.stringify(articleDataComplet));
 
@@ -1169,7 +1319,7 @@ function ajouterVarianteAuPanierConfirmation(articleData, variante, quantiteInit
  * Fonction pour générer les champs cachés du panier avant soumission
  * @param {HTMLFormElement} formElement - Le formulaire cible (optionnel, utilise le premier formulaire par défaut)
  */
-function genererChampsCachesPanier(formElement = null) {
+window.genererChampsCachesPanier = function(formElement = null) {
     console.log('🔧 Génération des champs cachés du panier...');
 
     // Déterminer le formulaire à utiliser
@@ -1247,7 +1397,7 @@ function genererChampsCachesPanier(formElement = null) {
 /**
  * Fonction pour mettre à jour la quantité d'une variante
  */
-function mettreAJourQuantiteVariante(varianteId, nouvelleQuantite) {
+window.mettreAJourQuantiteVariante = function(varianteId, nouvelleQuantite) {
     console.log('🔄 Mise à jour quantité variante:', varianteId, 'nouvelle quantité:', nouvelleQuantite);
 
     const articleCard = document.getElementById(varianteId);
@@ -1296,14 +1446,14 @@ function mettreAJourQuantiteVariante(varianteId, nouvelleQuantite) {
         console.error('❌ Élément prix non trouvé dans la carte');
         console.log('🔍 Structure de la carte:', articleCard.innerHTML);
     }
-}
+};
 
 // ================== FONCTIONS DE RECHERCHE ET FILTRAGE ==================
 
 /**
  * Fonction pour rechercher des articles
  */
-function rechercherArticles(termeRecherche = null) {
+window.rechercherArticles = function(termeRecherche = null) {
     // Empêcher la soumission du formulaire
     if (event) {
         event.preventDefault();
@@ -1337,7 +1487,7 @@ function rechercherArticles(termeRecherche = null) {
     
     console.log('📊 Articles filtrés:', articlesFiltres.length);
     afficherArticles(articlesFiltres);
-}
+};
 
 /**
  * Fonction pour mettre à jour les compteurs des badges de filtrage
@@ -1354,7 +1504,7 @@ function mettreAJourCompteurs() {
         liquidation: articlesDisponibles.filter(article => article.phase === 'LIQUIDATION').length,
         test: articlesDisponibles.filter(article => article.phase === 'EN_TEST').length,
         upsell: articlesDisponibles.filter(article => article.isUpsell).length
-    };
+}
     
     // Mettre à jour les compteurs dans le DOM
     Object.keys(compteurs).forEach(type => {
@@ -1370,7 +1520,7 @@ function mettreAJourCompteurs() {
 /**
  * Fonction pour calculer le total de la commande
  */
-function calculerTotal() {
+window.calculerTotal = function() {
     console.log('🧮 Calcul du total de la commande');
     
     const articlesContainer = document.getElementById('articles-container');
@@ -1438,7 +1588,7 @@ function calculerTotal() {
 /**
  * Fonction pour filtrer les articles par type
  */
-function filtrerArticles(type, event) {
+window.filtrerArticles = function(type, event) {
     // Empêcher la soumission du formulaire
     if (event) {
         event.preventDefault();
@@ -1468,7 +1618,7 @@ function filtrerArticles(type, event) {
     
     console.log('📊 Articles filtrés:', articlesFiltres.length);
     afficherArticles(articlesFiltres);
-}
+};
 
 /**
  * Fonction pour afficher une erreur dans le tableau des articles
@@ -1476,7 +1626,11 @@ function filtrerArticles(type, event) {
 function afficherErreurArticles(message) {
     const tbody = document.getElementById('articlesTableBody');
     if (tbody) {
-        tbody.innerHTML = `
+        // Sauvegarder le spinner
+        const spinner = document.getElementById('articlesSpinner');
+        const spinnerHTML = spinner ? spinner.outerHTML : '';
+
+        tbody.innerHTML = spinnerHTML + `
             <tr>
                 <td colspan="4" class="px-4 py-8 text-center text-red-500">
                     <div class="flex flex-col items-center">
@@ -1544,7 +1698,7 @@ function getPrixSelonCompteur(articleData, compteur) {
             libelle: 'Prix promotion',
             couleur: 'text-red-600',
             type: 'promotion'
-        };
+}
     }
 
     // PRIORITÉ 2: Phase liquidation
@@ -1555,7 +1709,7 @@ function getPrixSelonCompteur(articleData, compteur) {
             libelle: 'Prix liquidation',
             couleur: 'text-orange-600',
             type: 'liquidation'
-        };
+}
     }
 
     // PRIORITÉ 3: Phase test
@@ -1566,7 +1720,7 @@ function getPrixSelonCompteur(articleData, compteur) {
             libelle: 'Prix test',
             couleur: 'text-blue-600',
             type: 'test'
-        };
+}
     }
 
     // PRIORITÉ 4: Article upsell avec compteur
@@ -1596,7 +1750,7 @@ function getPrixSelonCompteur(articleData, compteur) {
                 libelle: libelle,
                 couleur: 'text-green-600',
                 type: `upsell_niveau_${niveau}`
-            };
+}
         }
     }
 
@@ -1607,7 +1761,7 @@ function getPrixSelonCompteur(articleData, compteur) {
         libelle: 'Prix normal',
         couleur: 'text-gray-600',
         type: 'normal'
-    };
+}
 }
 
 /**

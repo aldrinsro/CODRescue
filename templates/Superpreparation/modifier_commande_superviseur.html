@@ -598,8 +598,273 @@
 
     <form method="post" id="modification-form">
         {% csrf_token %}
+
+        <script>
+        // ⚠️ Définir l'URL pour récupérer les variantes (spécifique à Superpreparation)
+        window.API_GET_VARIANTS_URL = "{% url 'Superpreparation:get_article_variants' article_id=0 %}".replace('/0/', '/{id}/');
+        console.log('🔧 API URL pour variantes définie:', window.API_GET_VARIANTS_URL);
+
+        // ⚠️ Définir l'ID de la commande globalement pour l'accès depuis les modals
+        window.commandeId = {{ commande.id }};
+        console.log('🔧 commandeId défini globalement:', window.commandeId);
+
+        // Définition IMMÉDIATE de la fonction avant les boutons
+        window.ouvrirModalAjoutArticle = function(event) {
+            console.log('🎯 ouvrirModalAjoutArticle appelée (définie en haut)');
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            const modal = document.getElementById('articleModal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.style.display = 'flex';
+                modal.style.visibility = 'visible';
+                modal.style.opacity = '1';
+                console.log('✅ Modal ouvert');
+
+                // Charger les articles avec un léger délai pour s'assurer que toutes les fonctions sont chargées
+                setTimeout(function() {
+                    if (typeof window.chargerArticlesDisponibles === 'function') {
+                        console.log('🔄 Appel de window.chargerArticlesDisponibles');
+                        window.chargerArticlesDisponibles('tous');
+                    } else {
+                        console.error('❌ window.chargerArticlesDisponibles non définie');
+                    }
+                }, 100);
+            } else {
+                console.error('❌ Modal articleModal non trouvé');
+            }
+        };
+        console.log('✅ window.ouvrirModalAjoutArticle définie AVANT les boutons');
+
+        // ========== FONCTIONS GLOBALES POUR LA GESTION DES ARTICLES ==========
+        // Définies ici pour être accessibles AVANT le chargement du HTML des articles
+
+        window.supprimerArticle = function(panierId) {
+            if (!confirm('Êtes-vous sûr de vouloir supprimer cet article ?')) {
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('action', 'delete_article');
+            formData.append('panier_id', panierId);
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+            if (csrfToken) formData.append('csrfmiddlewaretoken', csrfToken.value);
+
+            fetch(`{% url 'Superpreparation:modifier_commande_superviseur' commande.id %}`, { method: 'POST', body: formData })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Article supprimé avec succès');
+                        window.location.reload();
+                    } else {
+                        alert('Erreur: ' + (data.error || 'Impossible de supprimer l\'article.'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur suppression:', error);
+                    alert('Erreur lors de la suppression de l\'article');
+                });
+        };
+
+        window.modifierQuantite = function(panierId, delta) {
+            const input = document.getElementById(`quantite-${panierId}`);
+            if (input) {
+                const currentValue = parseInt(input.value) || 0;
+                const newValue = Math.max(1, currentValue + delta);
+                input.value = newValue;
+                window.modifierQuantiteDirecte(panierId, newValue);
+            }
+        };
+
+        window.modifierQuantiteDirecte = function(panierId, nouvelleQuantite) {
+            const quantite = parseInt(nouvelleQuantite);
+
+            if (isNaN(quantite) || quantite < 1) {
+                const input = document.getElementById(`quantite-${panierId}`);
+                if (input) {
+                    input.value = input.getAttribute('data-previous-value') || 1;
+                }
+                alert('La quantité doit être au moins de 1.');
+                return;
+            }
+
+            const input = document.getElementById(`quantite-${panierId}`);
+            if (input) {
+                input.setAttribute('data-previous-value', input.value);
+            }
+
+            const formData = new FormData();
+            formData.append('action', 'modifier_quantite_directe');
+            formData.append('panier_id', panierId);
+            formData.append('nouvelle_quantite', quantite);
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+            if (csrfToken) formData.append('csrfmiddlewaretoken', csrfToken.value);
+
+            fetch(`{% url 'Superpreparation:modifier_commande_superviseur' commande.id %}`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    if (quantite === 0) {
+                        window.location.reload();
+                    } else {
+                        if (data.total_cmd) {
+                            const totalElement = document.getElementById('total-commande');
+                            if (totalElement) {
+                                totalElement.textContent = `${parseFloat(data.total_cmd).toFixed(2)} DH`;
+                            }
+                        }
+                    }
+                } else {
+                    if (input) {
+                        input.value = input.getAttribute('data-previous-value') || 1;
+                    }
+                    alert('Erreur: ' + (data.error || 'Impossible de modifier la quantité.'));
+                }
+            })
+            .catch(error => {
+                if (input) {
+                    input.value = input.getAttribute('data-previous-value') || 1;
+                }
+                console.error('Erreur modification quantité:', error);
+                alert('Erreur lors de la modification de la quantité');
+            });
+        };
+
+        window.ouvrirModalRemise = function(panierId) {
+            const typeRemise = prompt('Type de remise: Tapez "P" pour pourcentage ou "M" pour montant fixe');
+            if (!typeRemise) return;
+
+            const valeurRemise = prompt('Valeur de la remise:');
+            if (!valeurRemise || parseFloat(valeurRemise) <= 0) {
+                alert('Valeur invalide');
+                return;
+            }
+
+            const type = typeRemise.toUpperCase() === 'P' ? 'POURCENTAGE' : 'MONTANT';
+
+            const formData = new FormData();
+            formData.append('action', 'appliquer_remise');
+            formData.append('panier_id', panierId);
+            formData.append('type_remise', type);
+            formData.append('valeur_remise', valeurRemise);
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+            if (csrfToken) formData.append('csrfmiddlewaretoken', csrfToken.value);
+
+            fetch(`{% url 'Superpreparation:modifier_commande_superviseur' commande.id %}`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Remise appliquée avec succès');
+                    window.location.reload();
+                } else {
+                    alert('Erreur: ' + (data.error || 'Impossible d\'appliquer la remise.'));
+                }
+            })
+            .catch(error => {
+                console.error('Erreur application remise:', error);
+                alert('Erreur lors de l\'application de la remise');
+            });
+        };
+
+        window.retirerRemise = function(panierId) {
+            if (!confirm('Êtes-vous sûr de vouloir retirer cette remise ?')) {
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('action', 'retirer_remise');
+            formData.append('panier_id', panierId);
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+            if (csrfToken) formData.append('csrfmiddlewaretoken', csrfToken.value);
+
+            fetch(`{% url 'Superpreparation:modifier_commande_superviseur' commande.id %}`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Remise retirée avec succès');
+                    window.location.reload();
+                } else {
+                    alert('Erreur: ' + (data.error || 'Impossible de retirer la remise.'));
+                }
+            })
+            .catch(error => {
+                console.error('Erreur retrait remise:', error);
+                alert('Erreur lors du retrait de la remise');
+            });
+        };
+
+        // Fonction pour basculer les frais de livraison
+        window.toggleFraisLivraison = function() {
+            console.log('🔄 Toggle frais de livraison');
+
+            const button = document.getElementById('toggle-frais-livraison');
+            if (!button) {
+                console.error('❌ Bouton toggle-frais-livraison introuvable');
+                return;
+            }
+
+            const statusText = document.getElementById('frais-status-text');
+            const currentStatus = statusText ? statusText.textContent.trim() === 'Activés' : false;
+            const nouveauStatut = !currentStatus;
+
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Chargement...';
+
+            const formData = new FormData();
+            formData.append('action', 'toggle_frais_livraison');
+            formData.append('frais_livraison_actif', nouveauStatut.toString());
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+            if (csrfToken) formData.append('csrfmiddlewaretoken', csrfToken.value);
+
+            fetch(window.location.href, {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    if (statusText) {
+                        statusText.textContent = data.nouveau_statut ? 'Activés' : 'Désactivés';
+                    }
+
+                    // Mettre à jour les totaux si la fonction est disponible
+                    if (typeof window.mettreAJourTousLesTotaux === 'function') {
+                        data.frais_livraison_actif = data.nouveau_statut;
+                        window.mettreAJourTousLesTotaux(data);
+                    }
+
+                    alert(data.message || 'Frais de livraison mis à jour');
+                    window.location.reload();
+                } else {
+                    alert('Erreur: ' + (data.error || 'Erreur lors du changement du statut'));
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                alert('Erreur de connexion');
+            })
+            .finally(() => {
+                button.disabled = false;
+            });
+        };
+
+        console.log('✅ Fonctions de gestion des articles définies globalement');
+        </script>
+
         <div class="space-y-6">
-            
+
             <!-- Section Actions Rapides pour les commandes renvoyées -->
             {% if is_commande_renvoyee %}
                 <div class="modification-section rounded-lg p-4 animate-slideInUp">
@@ -607,7 +872,7 @@
                         <h3 class="text-base font-semibold text-blue-800">
                             <i class="fas fa-tools mr-2"></i>Actions Rapides
                         </h3>
-                        <button type="button" onclick="ouvrirModalAjoutArticle()" class="quick-action-btn bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                        <button type="button" onclick="1q()" class="quick-action-btn bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
                             <i class="fas fa-plus mr-2"></i>Ajouter Article
                         </button>
                     </div>
@@ -758,7 +1023,9 @@
                 </div>
 
             <!-- Section des articles avec support des remises -->
-            {% include 'Superpreparation/partials/_articles_section.html' %}
+            <div id="articles-container" class="space-y-3">
+                {% include 'Superpreparation/partials/_articles_section.html' %}
+            </div>
 
 
             <!-- Script pour la gestion des remises - Version Superviseur -->
@@ -1072,32 +1339,115 @@
 
 {% block extra_js %}
 {{ block.super }}
+
+<script>
+// ⚠️ DÉFINIR LA FONCTION AJAX AVANT de charger modal_ajout_articles.js
+// pour que le fichier JS utilise cette version au lieu de sa version JSON inline
+console.log('🔧 Définition de window.chargerArticlesDisponibles (version AJAX)');
+window.chargerArticlesDisponibles = function(filterType = 'tous') {
+    console.log(`🔄 Chargement des articles avec filtre: ${filterType}`);
+    const url = new URL("{% url 'Superpreparation:api_articles_disponibles_prepa' %}", window.location.origin);
+    url.searchParams.set('filter', filterType);
+    console.log(`🌐 URL de l'API: ${url.toString()}`);
+
+    fetch(url)
+        .then(response => {
+            console.log(`📡 Réponse reçue, status: ${response.status}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('📥 Données brutes reçues:', data);
+
+            // Gestion des deux formats possibles
+            let articles = [];
+            if (Array.isArray(data)) {
+                articles = data;
+                console.log(`📦 ${articles.length} article(s) trouvé(s) (format tableau)`);
+            } else if (data.success && data.articles) {
+                articles = data.articles;
+                console.log(`📦 ${articles.length} article(s) trouvé(s) (format objet)`);
+            } else {
+                console.warn('⚠️ Format de données inattendu:', data);
+                return;
+            }
+
+            console.log(`🎯 Articles à afficher:`, articles);
+            window.articlesDisponibles = articles;
+            if (typeof window.afficherArticles === 'function') {
+                window.afficherArticles(articles);
+            } else {
+                console.error('❌ Fonction afficherArticles non trouvée');
+            }
+
+            // Calculer les statistiques
+            if (!data.stats) {
+                const stats = {
+                    'total': articles.length,
+                    'disponible': articles.filter(a => a.qte_disponible > 0).length,
+                    'upsell': articles.filter(a => a.isUpsell).length,
+                    'promo': articles.filter(a => a.has_reduction).length,
+                    'liquidation': articles.filter(a => a.phase === 'LIQUIDATION').length,
+                    'test': articles.filter(a => a.phase === 'EN_TEST').length
+                };
+                if (typeof window.mettreAJourStatistiques === 'function') {
+                    window.mettreAJourStatistiques(stats);
+                }
+            } else {
+                if (typeof window.mettreAJourStatistiques === 'function') {
+                    window.mettreAJourStatistiques(data.stats);
+                }
+            }
+
+            if (typeof window.mettreAJourFiltreActif === 'function') {
+                window.mettreAJourFiltreActif(filterType);
+            }
+        }).catch(error => console.error('Erreur de chargement des articles:', error));
+};
+console.log('✅ window.chargerArticlesDisponibles (AJAX) définie');
+</script>
+
 <script src="{% static 'js/modal_ajout_articles.js' %}"></script>
 
 <script>
 // Fonctions globales pour les `onclick` - définies en dehors du DOMContentLoaded
-    window.ouvrirModalAjoutArticle = function(event) {
-        // Utiliser la version générique si dispo
-        if (typeof window.ouvrirModalAjouterArticle === 'function') {
-            return window.ouvrirModalAjouterArticle(event);
-        }
-        console.log('🔧 Fonction ouvrirModalAjoutArticle appelée');
-        const modal = document.getElementById('articleModal') || document.getElementById('modalAjoutArticle');
-        if (modal) {
-            modal.classList.remove('hidden');
-            // Forcer l'affichage type flex si nécessaire
-            if (modal.style) {
-                modal.style.display = 'flex';
-                modal.style.visibility = 'visible';
-                modal.style.opacity = '1';
+    console.log('🔍 DEBUG: Script inline chargé (extra_js)');
+    console.log('🔍 DEBUG: window.ouvrirModalAjouterArticle existe?', typeof window.ouvrirModalAjouterArticle);
+    console.log('🔍 DEBUG: window.ouvrirModalAjoutArticle existe?', typeof window.ouvrirModalAjoutArticle);
+
+    // NE PAS redéfinir si elle existe déjà (définie en haut du fichier)
+    if (typeof window.ouvrirModalAjoutArticle !== 'function') {
+        console.warn('⚠️ window.ouvrirModalAjoutArticle n\'existe pas, définition de secours');
+        window.ouvrirModalAjoutArticle = function(event) {
+            console.log('🔧 Fonction ouvrirModalAjoutArticle appelée (fallback)');
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
             }
-            if (typeof chargerArticlesDisponibles === 'function') {
-                chargerArticlesDisponibles();
+            // Utiliser la version générique si dispo
+            if (typeof window.ouvrirModalAjouterArticle === 'function') {
+                return window.ouvrirModalAjouterArticle(event);
             }
-        } else {
-            console.error('❌ Modal articleModal/modalAjoutArticle non trouvée');
-        }
-    };
+            const modal = document.getElementById('articleModal') || document.getElementById('modalAjoutArticle');
+            if (modal) {
+                modal.classList.remove('hidden');
+                if (modal.style) {
+                    modal.style.display = 'flex';
+                    modal.style.visibility = 'visible';
+                    modal.style.opacity = '1';
+                }
+                if (typeof chargerArticlesDisponibles === 'function') {
+                    chargerArticlesDisponibles();
+                }
+            } else {
+                console.error('❌ Modal articleModal/modalAjoutArticle non trouvée');
+            }
+        };
+    } else {
+        console.log('✅ window.ouvrirModalAjoutArticle déjà définie, on la garde');
+    }
 
     window.fermerModalAjoutArticle = function(event) {
         // Utiliser la version générique si dispo
@@ -1180,70 +1530,15 @@ window.changeQuantite = function(articleId, delta) {
     }
 };
 
-// Fonction pour charger les articles disponibles
-window.chargerArticlesDisponibles = function(filterType = 'tous') {
-    console.log(`🔄 Chargement des articles avec filtre: ${filterType}`);
-    const url = new URL("{% url 'Superpreparation:api_articles_disponibles_prepa' %}", window.location.origin);
-    url.searchParams.set('filter', filterType);
-    console.log(`🌐 URL de l'API: ${url.toString()}`);
-    
-    fetch(url)
-        .then(response => {
-            console.log(`📡 Réponse reçue, status: ${response.status}`);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            console.log('📥 Données brutes reçues:', data);
-            
-            // Gestion des deux formats possibles (tableau direct ou objet avec propriété articles)
-            let articles = [];
-            if (Array.isArray(data)) {
-                articles = data;
-                console.log(`📦 ${articles.length} article(s) trouvé(s) (format tableau)`);
-            } else if (data.success && data.articles) {
-                articles = data.articles;
-                console.log(`📦 ${articles.length} article(s) trouvé(s) (format objet)`);
-            } else {
-                console.warn('⚠️ Format de données inattendu:', data);
-                console.log('🔍 Propriétés disponibles:', Object.keys(data));
-                return;
-            }
-            
-            console.log(`🎯 Articles à afficher:`, articles);
-            window.articlesDisponibles = articles;
-            if (typeof window.afficherArticles === 'function') {
-                window.afficherArticles(articles);
-            } else {
-                console.error('❌ Fonction afficherArticles non trouvée');
-            }
-            
-            // Calculer les statistiques basiques si pas fournies
-            if (!data.stats) {
-                const stats = {
-                    'total': articles.length,
-                    'disponible': articles.filter(a => a.qte_disponible > 0).length,
-                    'upsell': articles.filter(a => a.isUpsell).length,
-                    'promo': articles.filter(a => a.has_reduction).length,
-                    'liquidation': articles.filter(a => a.phase === 'LIQUIDATION').length,
-                    'test': articles.filter(a => a.phase === 'EN_TEST').length
-                };
-                if (typeof window.mettreAJourStatistiques === 'function') {
-                    window.mettreAJourStatistiques(stats);
-                }
-            } else {
-                if (typeof window.mettreAJourStatistiques === 'function') {
-                    window.mettreAJourStatistiques(data.stats);
-                }
-            }
-            
-            if (typeof window.mettreAJourFiltreActif === 'function') {
-                window.mettreAJourFiltreActif(filterType);
-            }
-        }).catch(error => console.error('Erreur de chargement des articles:', error));
-};
+// ========== FONCTIONS GLOBALES POUR LES ARTICLES DYNAMIQUES ==========
+// ⚠️ NOTE: Ces fonctions sont maintenant définies EN HAUT du fichier (lignes ~644-807)
+// AVANT le chargement du HTML articles-container pour être immédiatement disponibles.
+// Cette section est conservée uniquement comme référence (fonctions commentées ci-dessous).
+
+// ⚠️ NOTE: window.chargerArticlesDisponibles est maintenant définie en HAUT du fichier
+// (ligne ~1113, AVANT le chargement de modal_ajout_articles.js)
+// Ne pas la redéfinir ici pour éviter d'écraser la version AJAX
+console.log('🔍 DEBUG: window.chargerArticlesDisponibles existe déjà?', typeof window.chargerArticlesDisponibles);
 
 document.addEventListener('DOMContentLoaded', function() {
     let commandeId = {{ commande.id }};
@@ -1862,6 +2157,9 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('✅ Tous les totaux mis à jour avec succès');
     }
 
+    // Exposer la fonction globalement pour qu'elle soit accessible depuis les scripts externes
+    window.mettreAJourTousLesTotaux = mettreAJourTousLesTotaux;
+
     // Fonction pour recalculer dynamiquement les prix upsell de tous les articles
     function recalculerPrixUpsellTousArticles(nouveauCompteur) {
         console.log(`🔄 Recalcul des prix upsell avec compteur = ${nouveauCompteur}`);
@@ -2235,6 +2533,120 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     };
 
+    // Fonction pour ouvrir le modal de remise
+    window.ouvrirModalRemise = function(panierId) {
+        console.log('📝 Ouverture modal remise pour panier:', panierId);
+        Swal.fire({
+            title: 'Appliquer une remise',
+            html: `
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Type de remise</label>
+                        <select id="type_remise" class="w-full border border-gray-300 rounded-lg p-2">
+                            <option value="POURCENTAGE">Pourcentage (%)</option>
+                            <option value="MONTANT">Montant fixe (DH)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Valeur de la remise</label>
+                        <input type="number" id="valeur_remise" class="w-full border border-gray-300 rounded-lg p-2" min="0" step="0.01" placeholder="Entrez la valeur">
+                    </div>
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: 'Appliquer',
+            cancelButtonText: 'Annuler',
+            preConfirm: () => {
+                const type = document.getElementById('type_remise').value;
+                const valeur = parseFloat(document.getElementById('valeur_remise').value);
+
+                if (!valeur || valeur <= 0) {
+                    Swal.showValidationMessage('Veuillez entrer une valeur valide');
+                    return false;
+                }
+
+                return { type, valeur };
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const { type, valeur } = result.value;
+                appliquerRemise(panierId, type, valeur);
+            }
+        });
+    };
+
+    // Fonction pour appliquer une remise
+    function appliquerRemise(panierId, typeRemise, valeurRemise) {
+        const formData = new FormData();
+        formData.append('action', 'appliquer_remise');
+        formData.append('panier_id', panierId);
+        formData.append('type_remise', typeRemise);
+        formData.append('valeur_remise', valeurRemise);
+
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (csrfToken) formData.append('csrfmiddlewaretoken', csrfToken.value);
+
+        fetch(`{% url 'Superpreparation:modifier_commande_superviseur' commande.id %}`, {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                showNotificationToast('Remise appliquée avec succès', 'success');
+                // Recharger la page pour voir la remise appliquée
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erreur',
+                    text: data.error || 'Impossible d\'appliquer la remise.'
+                });
+            }
+        })
+        .catch(error => {
+            handleError(error, 'application de remise');
+        });
+    }
+
+    // Fonction pour retirer une remise
+    window.retirerRemise = function(panierId) {
+        ouvrirModalConfirmation('Êtes-vous sûr de vouloir retirer cette remise ?', () => {
+            const formData = new FormData();
+            formData.append('action', 'retirer_remise');
+            formData.append('panier_id', panierId);
+
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+            if (csrfToken) formData.append('csrfmiddlewaretoken', csrfToken.value);
+
+            fetch(`{% url 'Superpreparation:modifier_commande_superviseur' commande.id %}`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showNotificationToast('Remise retirée avec succès', 'success');
+                    // Recharger la page
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Erreur',
+                        text: data.error || 'Impossible de retirer la remise.'
+                    });
+                }
+            })
+            .catch(error => {
+                handleError(error, 'retrait de remise');
+            });
+        });
+    };
+
     // Fonction pour mettre à jour les totaux après modification
     function mettreAJourTotaux(panierId, data) {
         console.log('🔄 Mise à jour des totaux pour panier', panierId, ':', data);
@@ -2603,6 +3015,7 @@ window.ajouterArticleAuPanierDepuisBouton = function(articleId) {
     console.log('✅ ===== FIN ajouterArticleAuPanierDepuisBouton =====');
 };
 
+
 // Fonction pour afficher les articles
 window.afficherArticles = function(articles) {
         const container = document.getElementById('articlesTableBody');
@@ -2743,6 +3156,8 @@ window.afficherArticles = function(articles) {
 
     container.innerHTML = tableHTML;
 };
+
+}
     
     function creerCarteArticle(article, index) {
         const card = document.createElement('div');

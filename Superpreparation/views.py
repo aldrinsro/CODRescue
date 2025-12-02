@@ -1565,7 +1565,7 @@ def modifier_commande_superviseur(request, commande_id):
                         print(f"➕ Nouvel article ajouté: ID={article.id}, variante={variante.id if variante else 'None'}, quantité={quantite}, type_prix_gele={type_prix}")
 
                     # ========== RECALCUL DU COMPTEUR UPSELL ==========
-                    if article.isUpsell and hasattr(article, 'prix_upsell_1') and article.prix_upsell_1 is not None:
+                    if article.isUpsell:
                         _recalculer_compteur_upsell(commande)
 
                     # ========== RECALCUL DU TOTAL AVEC FRAIS ==========
@@ -1880,13 +1880,15 @@ def api_articles_disponibles_prepa(request):
 
                 Q(reference__icontains=search_query) |
 
-                Q(couleur__icontains=search_query) |
+                Q(modele__icontains=search_query) |
 
-                Q(pointure__icontains=search_query) |
+                Q(variantes__couleur__nom__icontains=search_query) |
+
+                Q(variantes__pointure__pointure__icontains=search_query) |
 
                 Q(description__icontains=search_query)
 
-            )
+            ).distinct()
 
         
 
@@ -1926,101 +1928,21 @@ def api_articles_disponibles_prepa(request):
 
             
 
-            # Récupérer toutes les variantes actives (inclet celles en rupture)
+            # Récupérer toutes les variantes actives (inclut celles en rupture)
 
             variantes_actives = article.variantes.filter(actif=True)
 
-            
 
-            # Si pas de variantes, créer une entrée avec les propriétés de compatibilité
 
-            if not variantes_actives.exists():
+            # Tous les articles doivent avoir des variantes
 
-                # Propriétés de compatibilité du modèle Article
-
-                stock = article.qte_disponible
-
-                couleur = article.couleur
-
-                pointure = article.pointure
-
-                
-
-                if stock > 0:
-
-                    articles_data.append({
-
-                        'id': article.id,
-
-                        'nom': article.nom,
-
-                        'reference': article.reference or '',
-
-                        'couleur': couleur or '',
-
-                        'pointure': pointure or '',
-
-                        'description': article.description or '',
-
-                        'prix_unitaire': float(article.prix_unitaire),
-
-                        'prix_actuel': float(article.prix_actuel or article.prix_unitaire),
-
-                        'prix_upsell_1': float(article.prix_upsell_1) if article.prix_upsell_1 else 0.0,
-
-                        'prix_upsell_2': float(article.prix_upsell_2) if article.prix_upsell_2 else 0.0,
-
-                        'prix_upsell_3': float(article.prix_upsell_3) if article.prix_upsell_3 else 0.0,
-
-                        'prix_upsell_4': float(article.prix_upsell_4) if article.prix_upsell_4 else 0.0,
-
-                        'qte_disponible': stock,
-
-                        'isUpsell': bool(article.isUpsell),
-
-                        'phase': article.phase or 'NORMAL',
-
-                        'has_promo_active': article.has_promo_active,
-
-                        'image_url': article.image.url if article.image else article.image_url,
-
-                        'categorie': str(article.categorie) if article.categorie else '',
-
-                        'genre': str(article.genre) if article.genre else '',
-
-                        'modele': article.modele_complet(),
-
-                        'variantes_count': 0,
-
-                        'is_variante': False,
-
-                        'variante_id': None,
-
-                        # Propriétés pour compatibilité avec le template
-
-                        'prix': float(article.prix_actuel or article.prix_unitaire),
-
-                        'prix_original': float(article.prix_unitaire),
-
-                        'has_reduction': article.has_promo_active,
-
-                        'reduction_pourcentage': round(((float(article.prix_unitaire) - float(article.prix_actuel or article.prix_unitaire)) / float(article.prix_unitaire)) * 100, 0) if article.has_promo_active else 0,
-
-                        'article_type': 'normal',
-
-                        'type_icon': 'fas fa-box',
-
-                        'type_color': 'text-gray-600',
-
-                        'display_text': f"{article.nom} - {couleur or ''} - {pointure or ''} ({float(article.prix_actuel or article.prix_unitaire):.2f} DH)"
-
-                    })
-
-            else:
+            if variantes_actives.exists():
 
                 # Préparer la liste complète des variantes pour affichage (y compris rupture)
 
                 variantes_list = []
+
+                total_stock = 0  # Stock total de toutes les variantes
 
                 for v in variantes_actives:
 
@@ -2038,131 +1960,127 @@ def api_articles_disponibles_prepa(request):
 
                     })
 
+                    total_stock += v.qte_disponible
 
 
-                # Créer une entrée pour chaque variante (même celles en rupture)
 
-                for variante in variantes_actives:
+                # ✅ Créer UNE SEULE entrée par article (pas une par variante)
 
-                    # Déterminer le type d'article pour l'affichage
+                # Déterminer le type d'article pour l'affichage
 
-                    article_type = 'normal'
+                article_type = 'normal'
 
-                    type_icon = 'fas fa-box'
+                type_icon = 'fas fa-box'
 
-                    type_color = 'text-gray-600'
+                type_color = 'text-gray-600'
 
-                    
 
-                    if article.isUpsell:
 
-                        article_type = 'upsell'
+                if article.isUpsell:
 
-                        type_icon = 'fas fa-arrow-up'
+                    article_type = 'upsell'
 
-                        type_color = 'text-purple-600'
+                    type_icon = 'fas fa-arrow-up'
 
-                    elif article.phase == 'LIQUIDATION':
+                    type_color = 'text-purple-600'
 
-                        article_type = 'liquidation'
+                elif article.phase == 'LIQUIDATION':
 
-                        type_icon = 'fas fa-money-bill-wave'
+                    article_type = 'liquidation'
 
-                        type_color = 'text-red-600'
+                    type_icon = 'fas fa-money-bill-wave'
 
-                    elif article.phase == 'EN_TEST':
+                    type_color = 'text-red-600'
 
-                        article_type = 'test'
+                elif article.phase == 'EN_TEST':
 
-                        type_icon = 'fas fa-flask'
+                    article_type = 'test'
 
-                        type_color = 'text-yellow-600'
+                    type_icon = 'fas fa-flask'
 
-                    
+                    type_color = 'text-yellow-600'
 
-                    # Vérifier si l'article est en promotion
 
-                    if article.has_promo_active:
 
-                        article_type = 'promo'
+                # Vérifier si l'article est en promotion
 
-                        type_icon = 'fas fa-fire'
+                if article.has_promo_active:
 
-                        type_color = 'text-orange-600'
+                    article_type = 'promo'
 
-                    
+                    type_icon = 'fas fa-fire'
 
-                    articles_data.append({
+                    type_color = 'text-orange-600'
 
-                        'id': article.id,
 
-                        'nom': article.nom,
 
-                        'reference': article.reference or '',
+                # ✅ Une seule entrée pour l'article avec toutes ses variantes
 
-                        'couleur': variante.couleur.nom if variante.couleur else '',
+                articles_data.append({
 
-                        'pointure': variante.pointure.pointure if variante.pointure else '',
+                    'id': article.id,
 
-                        'description': article.description or '',
+                    'nom': article.nom,
 
-                        'prix_unitaire': float(article.prix_unitaire),
+                    'reference': article.reference or '',
 
-                        'prix_actuel': float(article.prix_actuel or article.prix_unitaire),
+                    'description': article.description or '',
 
-                        'prix_upsell_1': float(article.prix_upsell_1) if article.prix_upsell_1 else 0.0,
+                    'prix_unitaire': float(article.prix_unitaire),
 
-                        'prix_upsell_2': float(article.prix_upsell_2) if article.prix_upsell_2 else 0.0,
+                    'prix_actuel': float(article.prix_actuel or article.prix_unitaire),
 
-                        'prix_upsell_3': float(article.prix_upsell_3) if article.prix_upsell_3 else 0.0,
+                    # Note: prix_upsell_2 = niveau 1, prix_upsell_3 = niveau 2, prix_upsell_4 = niveau 3, prix_gros = niveau 4
 
-                        'prix_upsell_4': float(article.prix_upsell_4) if article.prix_upsell_4 else 0.0,
+                    'prix_upsell_1': float(article.prix_upsell_2) if article.prix_upsell_2 else 0.0,
 
-                        'qte_disponible': variante.qte_disponible,
+                    'prix_upsell_2': float(article.prix_upsell_3) if article.prix_upsell_3 else 0.0,
 
-                        'isUpsell': bool(article.isUpsell),
+                    'prix_upsell_3': float(article.prix_upsell_4) if article.prix_upsell_4 else 0.0,
 
-                        'phase': article.phase or 'NORMAL',
+                    'prix_upsell_4': float(article.prix_gros) if article.prix_gros else 0.0,
 
-                        'has_promo_active': article.has_promo_active,
+                    'qte_disponible': total_stock,  # Stock total de toutes les variantes
 
-                        'image_url': article.image.url if article.image else article.image_url,
+                    'isUpsell': bool(article.isUpsell),
 
-                        'categorie': str(article.categorie) if article.categorie else '',
+                    'phase': article.phase or 'NORMAL',
 
-                        'genre': str(article.genre) if article.genre else '',
+                    'has_promo_active': article.has_promo_active,
 
-                        'modele': article.modele_complet(),
+                    'image_url': article.image.url if article.image else article.image_url,
 
-                        'variantes_count': variantes_actives.count(),
+                    'categorie': str(article.categorie) if article.categorie else '',
 
-                        'is_variante': True,
+                    'genre': str(article.genre) if article.genre else '',
 
-                        'variante_id': variante.id,
+                    'modele': article.modele_complet(),
 
-                        'reference_variante': variante.reference_variante,
+                    'variantes_count': variantes_actives.count(),
 
-                        'variantes_all': variantes_list,
+                    'has_variantes': True,  # ✅ Indique qu'il faut charger les variantes au clic
 
-                        # Propriétés pour compatibilité avec le template
+                    'variantes': variantes_list,  # ✅ Liste de toutes les variantes
 
-                        'prix': float(article.prix_actuel or article.prix_unitaire),
+                    # Propriétés pour compatibilité avec le template
 
-                        'prix_original': float(article.prix_unitaire),
+                    'prix': float(article.prix_actuel or article.prix_unitaire),
 
-                        'has_reduction': article.has_promo_active,
+                    'prix_original': float(article.prix_unitaire),
 
-                        'reduction_pourcentage': round(((float(article.prix_unitaire) - float(article.prix_actuel or article.prix_unitaire)) / float(article.prix_unitaire)) * 100, 0) if article.has_promo_active else 0,
+                    'has_reduction': article.has_promo_active,
 
-                        'article_type': article_type,
+                    'reduction_pourcentage': round(((float(article.prix_unitaire) - float(article.prix_actuel or article.prix_unitaire)) / float(article.prix_unitaire)) * 100, 0) if article.has_promo_active else 0,
 
-                        'type_icon': type_icon,
+                    'article_type': article_type,
 
-                        'type_color': type_color,
+                    'type_icon': type_icon,
 
-                        'display_text': f"{article.nom} - {variante.couleur.nom if variante.couleur else ''} - {variante.pointure.pointure if variante.pointure else ''} ({float(article.prix_actuel or article.prix_unitaire):.2f} DH)"
+                    'type_color': type_color,
 
-                    })
+                    'display_text': f"{article.nom} ({variantes_actives.count()} variantes) - {float(article.prix_actuel or article.prix_unitaire):.2f} DH"
+
+                })
 
         
 
@@ -3402,7 +3320,12 @@ def rafraichir_articles_commande_prepa(request, commande_id):
             return JsonResponse({'error': 'Cette commande ne vous est pas affectée.'}, status=403)
         
         # Générer le HTML directement pour éviter les erreurs de template
-        paniers = commande.paniers.select_related('article').all()
+        paniers = commande.paniers.select_related(
+            'article',
+            'variante',
+            'variante__couleur',
+            'variante__pointure'
+        ).all()
         html_rows = []
         
         for panier in paniers:
@@ -3417,13 +3340,14 @@ def rafraichir_articles_commande_prepa(request, commande_id):
                 upsell_badge = f'<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-orange-100 text-orange-700 ml-2"><i class="fas fa-arrow-up mr-1"></i>Upsell</span>'
                 
                 # Déterminer le niveau d'upsell affiché
-                if commande.compteur >= 4 and panier.article.prix_upsell_4 is not None:
+                # Note: prix_upsell_2 = niveau 1, prix_upsell_3 = niveau 2, prix_upsell_4 = niveau 3, prix_gros = niveau 4
+                if commande.compteur >= 4 and panier.article.prix_gros is not None:
                     niveau_upsell = 4
-                elif commande.compteur >= 3 and panier.article.prix_upsell_3 is not None:
+                elif commande.compteur >= 3 and panier.article.prix_upsell_4 is not None:
                     niveau_upsell = 3
-                elif commande.compteur >= 2 and panier.article.prix_upsell_2 is not None:
+                elif commande.compteur >= 2 and panier.article.prix_upsell_3 is not None:
                     niveau_upsell = 2
-                elif commande.compteur >= 1 and panier.article.prix_upsell_1 is not None:
+                elif commande.compteur >= 1 and panier.article.prix_upsell_2 is not None:
                     niveau_upsell = 1
                 else:
                     niveau_upsell = 0
@@ -3634,7 +3558,7 @@ def ajouter_article_commande_prepa(request, commande_id):
                 print(f"[AJOUT VARIANTE] ➕ nouveau panier créé id={panier.id}, article={article.id}, variante={getattr(variante_obj,'id',None)}, quantite={quantite}")
             
             # Recalculer le compteur après ajout (logique de confirmation)
-            if article.isUpsell and hasattr(article, 'prix_upsell_1') and article.prix_upsell_1 is not None:
+            if article.isUpsell:
                 # Compter la quantité totale d'articles upsell (après ajout)
                 total_quantite_upsell = commande.paniers.filter(article__isUpsell=True).aggregate(
                     total=Sum('quantite')
@@ -3726,6 +3650,132 @@ def ajouter_article_commande_prepa(request, commande_id):
         import traceback
         print(f"❌ Traceback: {traceback.format_exc()}")
         return JsonResponse({'error': f'Erreur interne: {str(e)}'}, status=500)
+
+@superviseur_preparation_required
+def ajouter_variantes_ajax(request, commande_id):
+    """
+    Ajouter plusieurs variantes à la commande et retourner le HTML actualisé
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Méthode non autorisée'}, status=405)
+
+    try:
+        import json
+        from django.template.loader import render_to_string
+
+        # Récupérer la commande
+        commande = get_object_or_404(Commande, id=commande_id)
+
+        # Récupérer l'opérateur
+        try:
+            operateur = Operateur.objects.get(user=request.user, actif=True)
+            if operateur.type_operateur not in ['PREPARATION', 'SUPERVISEUR_PREPARATION', 'ADMIN']:
+                return JsonResponse({'success': False, 'error': 'Accès non autorisé'}, status=403)
+        except Operateur.DoesNotExist:
+            operateur = None
+
+        # Parser les données JSON
+        data = json.loads(request.body)
+        variantes = data.get('variantes', [])
+
+        if not variantes:
+            return JsonResponse({'success': False, 'error': 'Aucune variante fournie'}, status=400)
+
+        print(f"📦 Ajout de {len(variantes)} variante(s) à la commande {commande.id_yz}")
+
+        with transaction.atomic():
+            commande = Commande.objects.select_for_update().get(id=commande_id)
+
+            # Ajouter chaque variante
+            for var_data in variantes:
+                article_id = var_data.get('article_id')
+                variante_id = var_data.get('variante_id')
+                quantite = int(var_data.get('quantite', 1))
+
+                if not article_id:
+                    continue
+
+                article = Article.objects.get(id=article_id)
+                variante_obj = None
+
+                if variante_id:
+                    from article.models import VarianteArticle
+                    try:
+                        variante_obj = VarianteArticle.objects.get(id=variante_id, article=article)
+                    except VarianteArticle.DoesNotExist:
+                        print(f"⚠️ Variante {variante_id} introuvable")
+                        continue
+
+                # Créer mouvement de stock
+                creer_mouvement_stock(
+                    article=article,
+                    quantite=quantite,
+                    type_mouvement='sortie',
+                    commande=commande,
+                    operateur=operateur,
+                    commentaire=f'Ajout variante via modal - cmd {commande.id_yz}',
+                    variante=variante_obj
+                )
+
+                # Vérifier si existe déjà dans le panier
+                filtre_panier = {'commande': commande, 'article': article}
+                if hasattr(Panier, 'variante'):
+                    filtre_panier['variante'] = variante_obj
+                panier_existant = Panier.objects.filter(**filtre_panier).first()
+
+                if panier_existant:
+                    panier_existant.quantite += quantite
+                    panier_existant.save()
+                    print(f"✅ Panier {panier_existant.id} mis à jour: quantité={panier_existant.quantite}")
+                else:
+                    create_kwargs = {
+                        'commande': commande,
+                        'article': article,
+                        'quantite': quantite,
+                        'sous_total': 0,
+                    }
+                    if hasattr(Panier, 'variante'):
+                        create_kwargs['variante'] = variante_obj
+                    panier = Panier.objects.create(**create_kwargs)
+                    print(f"✅ Nouveau panier créé: id={panier.id}")
+
+            # Recalculer les totaux
+            commande.recalculer_totaux_upsell()
+            commande.total_cmd = sum(p.sous_total for p in commande.paniers.all())
+            commande.save()
+
+            print(f"✅ Totaux recalculés: total_cmd={commande.total_cmd}, compteur={commande.compteur}")
+
+        # Générer le HTML avec le partiel
+        paniers = commande.paniers.all()
+        html = render_to_string('Superpreparation/partials/_articles_section.html', {
+            'commande': commande,
+            'paniers': paniers,
+        }, request=request)
+
+        # Calculer le sous-total des articles (sans frais de livraison)
+        sous_total_articles = sum(p.sous_total for p in paniers)
+
+        return JsonResponse({
+            'success': True,
+            'html': html,
+            'articles_count': paniers.count(),
+            'total_cmd': float(commande.total_cmd),
+            'sous_total_articles': float(sous_total_articles),
+            'compteur': commande.compteur,
+            'frais_livraison': float(commande.frais_livraison) if hasattr(commande, 'frais_livraison') and commande.frais_livraison else 0.0,
+            'message': f'{len(variantes)} variante(s) ajoutée(s) avec succès'
+        })
+
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Données JSON invalides'}, status=400)
+    except Article.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Article non trouvé'}, status=404)
+    except Exception as e:
+        import traceback
+        print(f"❌ Erreur ajout variantes: {str(e)}")
+        print(traceback.format_exc())
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 @superviseur_preparation_required
 def modifier_quantite_article_prepa(request, commande_id):
@@ -4128,13 +4178,14 @@ def api_prix_upsell_articles(request, commande_id):
                 prix_type = "upsell"
                 
                 # Déterminer le niveau d'upsell affiché
-                if commande.compteur >= 4 and panier.article.prix_upsell_4 is not None:
+                # Note: prix_upsell_2 = niveau 1, prix_upsell_3 = niveau 2, prix_upsell_4 = niveau 3, prix_gros = niveau 4
+                if commande.compteur >= 4 and panier.article.prix_gros is not None:
                     niveau_upsell = 4
-                elif commande.compteur >= 3 and panier.article.prix_upsell_3 is not None:
+                elif commande.compteur >= 3 and panier.article.prix_upsell_4 is not None:
                     niveau_upsell = 3
-                elif commande.compteur >= 2 and panier.article.prix_upsell_2 is not None:
+                elif commande.compteur >= 2 and panier.article.prix_upsell_3 is not None:
                     niveau_upsell = 2
-                elif commande.compteur >= 1 and panier.article.prix_upsell_1 is not None:
+                elif commande.compteur >= 1 and panier.article.prix_upsell_2 is not None:
                     niveau_upsell = 1
                 else:
                     niveau_upsell = 0
