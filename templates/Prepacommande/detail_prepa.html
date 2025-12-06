@@ -347,7 +347,7 @@
                         <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Variante</th>
                         <th scope="col" class="px-4 py-3 text-center text-xs font-medium text-white uppercase tracking-wider">Quantité</th>
                         <th scope="col" class="px-4 py-3 text-right text-xs font-medium text-white uppercase tracking-wider">Prix Unitaire</th>
-                        <th scope="col" class="px-4 py-3 text-right text-xs font-medium text-white uppercase tracking-wider">Total Ligne</th>
+                        <th scope="col" class="px-4 py-3 text-right text-xs font-medium text-white uppercase tracking-wider">Sous Total</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
@@ -405,7 +405,17 @@
                                 {{ panier.prix_unitaire|floatformat:2 }} DH
                             </td>
                             <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-bold">
-                                {{ panier.total_ligne|floatformat:2 }} DH
+                                {% if panier.a_remise %}
+                                    <div class="flex flex-col items-end">
+                                        <span class="text-gray-500 line-through text-xs">{{ panier.sous_total_avant_remise|floatformat:2 }} DH</span>
+                                        <span class="text-green-600 font-bold">{{ panier.total_ligne|floatformat:2 }} DH</span>
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 mt-1">
+                                            <i class="fas fa-tag mr-1"></i>{{ panier.info_remise }}
+                                        </span>
+                                    </div>
+                                {% else %}
+                                    {{ panier.total_ligne|floatformat:2 }} DH
+                                {% endif %}
                             </td>
                         </tr>
                     {% empty %}
@@ -426,13 +436,23 @@
         <!-- Résumé des totaux -->
         {% if paniers %}
         <div class="mt-6 bg-gray-50 rounded-lg p-4 border border-gray-200">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-{% if total_remises > 0 %}4{% else %}3{% endif %} gap-4">
                 <!-- Total des articles -->
                 <div class="text-center">
                     <div class="text-sm font-medium text-gray-600 mb-1">Total Articles</div>
                     <div class="text-lg font-bold text-gray-900">{{ total_articles|floatformat:2 }} DH</div>
                 </div>
-                
+
+                <!-- Total des remises (si applicable) -->
+                {% if total_remises > 0 %}
+                <div class="text-center bg-green-50 rounded-lg p-2">
+                    <div class="text-sm font-medium text-green-700 mb-1 flex items-center justify-center gap-1">
+                        <i class="fas fa-tag"></i> Remises
+                    </div>
+                    <div class="text-lg font-bold text-green-600">-{{ total_remises|floatformat:2 }} DH</div>
+                </div>
+                {% endif %}
+
                 <!-- Frais de livraison -->
                 <div class="text-center">
                     <div class="text-sm font-medium text-gray-600 mb-1">Frais de Livraison</div>
@@ -444,7 +464,7 @@
                         {% endif %}
                     </div>
                 </div>
-                
+
                 <!-- Total commande -->
                 <div class="text-center">
                     <div class="text-sm font-medium text-gray-600 mb-1">Total Commande</div>

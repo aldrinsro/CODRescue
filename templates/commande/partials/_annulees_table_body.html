@@ -17,15 +17,20 @@
         {% endif %}
     </td>
     <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 border-r" style="border-color: var(--admin-light-accent);">
-        {{ commande.date_cmd|date:"d/m/Y" }}
-    </td>
-    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 border-r" style="border-color: var(--admin-light-accent);">
         {% if commande.ville %}
             {{ commande.ville.nom }}
         {% else %}
             {{ commande.ville_init|default:"Non spécifiée" }}
         {% endif %}
     </td>
+    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 border-r" style="border-color: var(--admin-light-accent);">
+        {{ commande.date_cmd|date:"d/m/Y" }}
+    </td>
+    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 border-r" style="border-color: var(--admin-light-accent);">
+        <div class="font-medium text-gray-700">{{ commande.date_creation|date:"d/m/Y" }}</div>
+        <div class="text-xs text-gray-400">{{ commande.date_creation|date:"H:i:s" }}</div>
+    </td>
+ 
     <td class="px-4 py-4 whitespace-nowrap text-sm font-medium text-red-600 border-r" style="border-color: var(--admin-light-accent);">
         {{ commande.total_cmd|floatformat:2 }} DH
     </td>

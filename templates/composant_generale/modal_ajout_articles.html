@@ -77,6 +77,19 @@
                                     </tr>
                                 </thead>
                                 <tbody id="articlesTableBody" class="bg-white divide-y divide-gray-100">
+                                    <!-- Spinner de chargement -->
+                                    <tr id="articlesSpinner" class="articles-spinner" style="display: none;">
+                                        <td colspan="4" class="px-6 py-12">
+                                            <div class="flex flex-col items-center justify-center space-y-4">
+                                                <div class="relative w-16 h-16">
+                                                    <div class="absolute top-0 left-0 w-full h-full border-4 border-blue-200 rounded-full"></div>
+                                                    <div class="absolute top-0 left-0 w-full h-full border-4 border-blue-600 rounded-full border-t-transparent animate-spin"></div>
+                                                </div>
+                                                <p class="text-gray-600 font-medium">Chargement des articles...</p>
+                                                <p class="text-gray-400 text-sm">Veuillez patienter</p>
+                                            </div>
+                                        </td>
+                                    </tr>
                                     <!-- Lignes d'articles rendues dynamiquement -->
                                 </tbody>
                             </table>

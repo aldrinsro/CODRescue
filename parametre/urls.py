@@ -38,8 +38,6 @@ urlpatterns = [
     path('sav/commandes-retournees/', views.sav_commandes_retournees, name='sav_commandes_retournees'),
     path('sav/commandes-reportees/', views.sav_commandes_reportees, name='sav_commandes_reportees'),
     path('sav/livrees-partiellement/', views.sav_livrees_partiellement, name='sav_livrees_partiellement'),
-    path('sav/annulees/', views.sav_annulees_sav, name='sav_annulees'),
-    path('sav/livrees-avec-changement/', views.sav_livrees_avec_changement, name='sav_livrees_avec_changement'),
     path('sav/livrees/', views.sav_livrees, name='sav_livrees'),
     path('sav/creer-nouvelle-commande/<int:commande_id>/', views.sav_creer_nouvelle_commande, name='sav_creer_nouvelle_commande'),
     path('sav/renvoyer-preparation/<int:commande_id>/', views.sav_renvoyer_preparation, name='sav_renvoyer_preparation'),
@@ -49,10 +47,7 @@ urlpatterns = [
     path('export-csv/', views_360.export_all_data_csv, name='export_all_data_csv'),
     path('export-excel/', views_360.export_all_data_excel, name='export_all_data_excel'),
     
-    # URLs Répartition
-    path('repartition/automatique/', views.repartition_automatique, name='repartition_automatique'),
-    path('repartition/details-region/', views.details_region_view, name='details_region'),
-    path('repartition/get-modal-data-ajax/', views.get_modal_data_ajax, name='get_modal_data_ajax'),
+    
     
     # URLs API Temps Réel Vue 360
     path('vue360/api/realtime-data/', views_360.vue_360_realtime_data, name='vue_360_realtime_data'),

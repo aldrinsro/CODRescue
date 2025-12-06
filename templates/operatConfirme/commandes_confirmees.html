@@ -331,25 +331,8 @@
     {% endif %}
 </div>
 
-<!-- Modal de détail du panier -->
-<div id="cartModal" class="fixed inset-0 flex items-center justify-center z-50 hidden" style="background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(8px);">
-    <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <div class="p-6 border-b" style="border-color: #f7d9c4;">
-            <div class="flex justify-between items-center">
-                <h3 class="text-2xl font-bold" style="color: #4B352A;">
-                    <i class="fas fa-shopping-basket mr-2" style="color: #6d4b3b;"></i>
-                    Détails du panier
-                </h3>
-                <button id="closeCartModal" class="text-gray-400 hover:text-gray-600 transition-colors">
-                    <i class="fas fa-times text-2xl"></i>
-                </button>
-            </div>
-        </div>
-        <div id="cartContent" class="p-6">
-            <!-- Contenu du panier sera chargé ici -->
-        </div>
-    </div>
-</div>
+<!-- Include du modal du panier -->
+{% include 'commande/partials/panier.html' %}
 
 {% endblock %}
 
@@ -468,12 +451,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Fermer le modal du panier en cliquant à l'extérieur
-    window.addEventListener('click', function(event) {
-        if (cartModal && event.target === cartModal) {
-            cartModal.classList.add('hidden');
-        }
-    });
+    // Gestionnaires d'événements du modal panier gérés par panier.html inclus
 });
 
 // Fonction pour afficher la notification d'autorisation
@@ -533,121 +511,16 @@ function closeUnauthorizedNotification() {
     }
 }
 
-// Fonction pour construire le HTML du panier
-function buildCartHTML(data) {
-    const commande = data.commande;
-    const articles = data.articles;
-    
-    let html = `
-        <div class="space-y-4">
-            <div class="border rounded-lg p-4" style="background: linear-gradient(135deg, #f7d9c4, #ede0d3); border-color: #6d4b3b;">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h4 class="font-semibold" style="color: #4B352A;">Commande YZ-${commande.id_yz}</h4>
-                        <p class="text-sm" style="color: #6d4b3b;">Client: ${commande.client_nom}</p>
-                    </div>
-                    <div class="text-right">
-                        <div class="text-lg font-bold" style="color: #4B352A;">${commande.total_articles} article${commande.total_articles > 1 ? 's' : ''}</div>
-                        <div class="text-sm" style="color: #6d4b3b;">Total: ${commande.total_montant.toFixed(2)} DH</div>
-                    </div>
-                </div>
-            </div>`;
-    
-    if (articles.length > 0) {
-        html += `
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead style="background: linear-gradient(135deg, #4B352A, #6d4b3b);">
-                        <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Article</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Référence</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Prix unitaire</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Quantité</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Sous-total</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">`;
-        
-        articles.forEach(article => {
-            html += `
-                        <tr class="hover:bg-orange-50 transition-colors">
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm font-medium" style="color: #4B352A;">${article.nom}</div>
-                                ${article.description ? `<div class="text-sm text-gray-500">${article.description}</div>` : ''}
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                ${article.reference}
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" style="color: #4B352A;">
-                                ${article.prix_unitaire.toFixed(2)} DH
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium text-white" style="background: linear-gradient(135deg, #4B352A, #6d4b3b);">
-                                    ${article.quantite}
-                                </span>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-green-600">
-                                ${article.sous_total.toFixed(2)} DH
-                            </td>
-                        </tr>`;
-        });
-        
-        html += `
-                    </tbody>
-                </table>
-            </div>`;
-    } else {
-        html += `
-            <div class="text-center py-8">
-                <i class="fas fa-shopping-basket text-4xl text-gray-400 mb-4"></i>
-                <h3 class="text-lg font-medium text-gray-900 mb-2">Panier vide</h3>
-                <p class="text-gray-500">Cette commande ne contient aucun article.</p>
-            </div>`;
-    }
-    
-    // Utiliser directement le total_final calculé par l'API
-    html += `
-    <div class="rounded-lg p-4 mt-4" style="background: linear-gradient(135deg, #f8f4f0, #fff5f0); border: 1px solid #e5d5c8;">
-        <div class="space-y-2">
-            <div class="flex justify-between">
-                <span class="text-lg font-semibold" style="color: #4B352A;">Total commande:</span>
-                <span class="text-lg font-bold text-green-600">${commande.total_final.toFixed(2)} DH</span>
-            </div>
-        </div>
-    </div>
-</div>`;
+// Fonction wrapper pour viewCart avec URL personnalisée pour operatConfirme
+// La fonction viewCart de base est définie dans le fichier panier.html inclus
+const originalViewCart = typeof viewCart !== 'undefined' ? viewCart : null;
 
-    return html;
-}
-
-// Fonction pour voir le panier
 function viewCart(commandeId) {
-    console.log('Chargement du panier pour la commande:', commandeId);
-    
-    const url = `/operateur-confirme/api/commande/${commandeId}/panier/`;
-    
-    fetch(url)
-        .then(response => {
-            console.log('Statut de :', response.status);
-            if (!response.ok) {
-                throw new Error(`Erreur HTTP: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            console.log('Données reçues:', data);
-            if (data.success) {
-                const html = buildCartHTML(data);
-                document.getElementById('cartContent').innerHTML = html;
-                document.getElementById('cartModal').classList.remove('hidden');
-            } else {
-                alert(data.error || 'Erreur lors du chargement du panier');
-            }
-        })
-        .catch(error => {
-            console.error('Erreur:', error);
-            alert('Erreur lors du chargement du panier: ' + error.message);
-        });
+    const customUrl = `/operateur-confirme/api/commande/${commandeId}/panier/`;
+    // Appeler la fonction du fichier panier.html avec l'URL personnalisée
+    if (originalViewCart) {
+        originalViewCart(commandeId, customUrl);
+    }
 }
 </script>
 {% endblock %} 

@@ -1,5 +1,7 @@
 {% extends 'composant_generale/admin/base.html' %}
 {% load static %}
+{% load commande_filters %}
+{% load remise_filters %}
 
 {% block title %}Modifier Commande - YZ-CMD{% endblock %}
 
@@ -411,37 +413,126 @@
             <h2 class="text-2xl font-bold flex items-center" style="color: var(--admin-color);">
                 <i class="fas fa-shopping-cart mr-2"></i>Gestion du Panier
             </h2>
-            <div class="bg-blue-50 px-4 py-2 rounded-lg border border-blue-200">
-                <span class="text-sm font-medium text-blue-800">Total: </span>
-                <span id="totalDisplay" class="text-lg font-bold text-blue-900">{{ commande.total_cmd|floatformat:2 }} DH</span>
-            </div>
-        </div>
-        
-        <form method="post" id="panierForm" action="{% url 'commande:modifier' commande.pk %}">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="update_panier">
-            {% if from_a_traiter %}
-            <input type="hidden" name="from" value="a_traiter">
-            {% endif %}
-
-            <!-- Articles du Panier -->
-            <div id="cartItemsContainer" class="space-y-4 mb-6">
-                <!-- Les articles seront ajoutés ici par JavaScript -->
-            </div>
-            
-            <div class="flex justify-between items-center">
-            <button type="button" id="addArticleBtn" class="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors shadow-md">
-                <i class="fas fa-plus mr-2"></i> Ajouter un article
-            </button>
-
-                <div class="flex space-x-3">
-                    <input type="number" name="total_cmd" id="total_cmd" step="0.01" min="0" value="{{ commande.total_cmd|floatformat:2 }}" class="w-32 p-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed text-center font-bold" readonly required>
-                    <button type="submit" class="px-6 py-2 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-colors shadow-md">
-                        <i class="fas fa-save mr-2"></i> Mettre à jour le panier
-                    </button>
+            <div class="flex items-center gap-4">
+                <div class="bg-blue-50 px-4 py-2 rounded-lg border border-blue-200">
+                    <span class="text-sm font-medium text-blue-800">Articles: </span>
+                    <span id="articleCount" class="text-lg font-bold text-blue-900">{{ commande.paniers.count }}</span>
+                </div>
+                <div class="bg-emerald-50 px-4 py-2 rounded-lg border border-emerald-200">
+                    <span class="text-sm font-medium text-emerald-800">Total: </span>
+                    <span id="totalDisplay" class="text-lg font-bold text-emerald-900">{{ commande.total_cmd|floatformat:2 }} DH</span>
                 </div>
             </div>
-        </form>
+        </div>
+
+        <!-- Articles du Panier -->
+        <div id="articles-container" class="space-y-4 mb-6">
+            {% include 'commande/partials/_articles_section.html' %}
+        </div>
+
+        <div class="flex justify-between items-center pt-4 border-t border-gray-200">
+            <div class="flex items-center space-x-3">
+                <button type="button" id="addArticleBtn" onclick="ouvrirModalAjouterArticle(event)" class="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors shadow-md">
+                    <i class="fas fa-plus mr-2"></i> Ajouter un article
+                </button>
+
+                <!-- Bouton Enregistrer (masqué par défaut, affiché quand il y a des articles temporaires) -->
+                <button type="button" id="btnEnregistrerArticles" onclick="enregistrerArticlesTemporaires()" class="hidden inline-flex items-center px-6 py-3 bg-green-500 text-white rounded-lg font-bold hover:bg-green-600 transition-colors shadow-lg animate-pulse">
+                    <i class="fas fa-save mr-2"></i> Enregistrer les ajouts (<span id="count-temporaires">0</span>)
+                </button>
+            </div>
+
+            <div class="text-right">
+                <div class="text-sm text-gray-600 mb-1">Total de la commande</div>
+                <div class="text-2xl font-bold text-emerald-600" id="total-commande-display">
+                    {{ commande.total_cmd|floatformat:2 }} DH
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Includes des modaux -->
+{% include 'composant_generale/modal_ajout_articles.html' %}
+{% include 'composant_generale/modal_confirmation_suppression.html' with modal_id='confirmDeleteModal' %}
+
+<!-- Modale pour appliquer une remise -->
+<div id="remiseModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 items-center justify-center z-50" style="backdrop-filter: blur(8px); display: none;">
+    <div class="bg-white rounded-xl p-6 w-full max-w-lg mx-4 shadow-2xl">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
+            <div class="flex items-center">
+                <i class="fas fa-tag text-green-500 mr-3"></i>
+                Appliquer une remise
+            </div>
+            <span class="text-gray-500 hover:text-gray-700 cursor-pointer transition-colors" onclick="fermerModalRemise()">
+                <i class="fas fa-times text-xl"></i>
+            </span>
+        </h3>
+
+        <div class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div class="text-sm text-gray-700">
+                <strong>Article:</strong> <span id="remiseArticleNom">-</span>
+            </div>
+            <div class="text-sm text-gray-700 mt-1">
+                <strong>Sous-total actuel:</strong> <span id="remiseSousTotalActuel">0.00</span> DH
+            </div>
+        </div>
+
+        <input type="hidden" id="remisePanierId" value="">
+
+        <div class="space-y-4">
+            <!-- Type de remise -->
+            <div>
+                <label for="typeRemise" class="block text-sm font-medium text-gray-700 mb-2">
+                    Type de remise
+                </label>
+                <select id="typeRemise" disabled onchange="calculerApercu()"
+                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                    <option value="POURCENTAGE">Pourcentage (%)</option>
+                </select>
+            </div>
+
+            <!-- Valeur de la remise -->
+            <div>
+                <label for="valeurRemise" class="block text-sm font-medium text-gray-700 mb-2">
+                    Valeur de la remise
+                </label>
+                <input type="number" id="valeurRemise" step="0.01" min="0.01" placeholder="Ex: 10"
+                       oninput="calculerApercu()"
+                       class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+            </div>
+
+            <!-- Raison de la remise (optionnel) -->
+            <div>
+                <label for="raisonRemise" class="block text-sm font-medium text-gray-700 mb-2">
+                    Raison de la remise (optionnel)
+                </label>
+                <select id="raisonRemise" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                    <option value="">-- Sélectionnez une raison --</option>
+                    <option value="Client fidèle">Client fidèle</option>
+                    <option value="Produit endommagé">Produit endommagé</option>
+                    <option value="Erreur de préparation">Erreur de préparation</option>
+                    <option value="Geste commercial">Geste commercial</option>
+                    <option value="Retard de livraison">Retard de livraison</option>
+                </select>
+            </div>
+
+            <!-- Aperçu de la remise -->
+            <div id="remisePreview" style="display: none;">
+                <!-- Le contenu sera généré dynamiquement par JavaScript -->
+            </div>
+        </div>
+
+        <div class="flex justify-end space-x-3 mt-6">
+            <button type="button" onclick="fermerModalRemise()"
+                    class="px-4 py-2 rounded-lg font-medium transition-all bg-gray-100 hover:bg-gray-200 text-gray-700">
+                <i class="fas fa-times mr-1"></i>Annuler
+            </button>
+            <button type="button" onclick="appliquerRemise()"
+                    class="px-4 py-2 rounded-lg font-medium transition-all bg-green-600 hover:bg-green-700 text-white">
+                <i class="fas fa-check mr-2"></i>Appliquer la remise
+            </button>
+        </div>
     </div>
 </div>
 
@@ -485,12 +576,18 @@
 }
 </style>
 
-<script type="application/json" id="articles_data">
+<!-- Scripts JSON pour le modal d'ajout d'articles -->
+<script type="application/json" id="articles-data">
     {{ articles_json|safe }}
 </script>
-<script type="application/json" id="paniers_data">
+
+<script type="application/json" id="paniers-data">
     {{ paniers_json|safe }}
 </script>
+
+<!-- Script pour la gestion des modaux d'ajout d'articles -->
+<script src="{% static 'js/modal_ajout_articles.js' %}"></script>
+
 <script>
     // Fonction pour afficher les toasts
     function showToast(message, type = 'info') {
@@ -528,107 +625,10 @@
             {% endfor %}
         {% endif %}
 
-        const addArticleBtn = document.getElementById('addArticleBtn');
-        const cartItemsContainer = document.getElementById('cartItemsContainer');
-        const articles = JSON.parse(document.getElementById('articles_data').textContent);
-        const totalCmdInput = document.getElementById('total_cmd');
+        // Les articles sont maintenant affichés directement via le partial template _articles_section.html
+        // Plus besoin de les charger via JavaScript depuis paniers-data
+        console.log('✅ Articles chargés via le template Django (pas de JS nécessaire)');
 
-        let articleCounter = 0;
-
-        function calculateTotal() {
-            let total = 0;
-            document.querySelectorAll('.sous-total-article').forEach(input => {
-                total += parseFloat(input.value) || 0;
-            });
-            totalCmdInput.value = total.toFixed(2);
-        }
-
-        function addArticleRow(articleData = null) {
-            const div = document.createElement('div');
-            div.classList.add('flex', 'flex-col', 'md:flex-row', 'gap-4', 'bg-gray-50', 'p-4', 'rounded-lg', 'border', 'border-gray-200');
-            div.innerHTML = `
-                <div class="flex-grow">
-                    <label for="article_${articleCounter}" class="block text-sm font-semibold mb-2" style="color: var(--admin-color);">Article:</label>
-                    <select name="article_${articleCounter}" id="article_${articleCounter}" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--admin-accent-color)] focus:border-transparent transition duration-200 article-select" required>
-                        <option value="">Sélectionner un article</option>
-                        ${articles.map(article => `<option value="${article.pk}" data-prix="${article.fields.prix_unitaire}">${article.fields.nom} (${article.fields.reference}) - ${article.fields.prix_unitaire} DH</option>`).join('')}
-                    </select>
-                </div>
-                <div class="w-full md:w-auto">
-                    <label for="quantite_${articleCounter}" class="block text-sm font-semibold mb-2" style="color: var(--admin-color);">Quantité:</label>
-                    <input type="number" name="quantite_${articleCounter}" id="quantite_${articleCounter}" min="1" value="${articleData ? articleData.quantite : 1}" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--admin-accent-color)] focus:border-transparent transition duration-200 quantite-input" required>
-                </div>
-                <div class="w-full md:w-auto">
-                    <label for="sous_total_${articleCounter}" class="block text-sm font-semibold mb-2" style="color: var(--admin-color);">Sous-total (DH):</label>
-                    <input type="number" name="sous_total_${articleCounter}" id="sous_total_${articleCounter}" step="0.01" min="0" class="w-full p-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed sous-total-article" readonly required value="${articleData ? articleData.sous_total : ''}">
-                </div>
-                <div class="flex items-end">
-                    <button type="button" class="remove-article-btn px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors shadow-md">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            `;
-
-            cartItemsContainer.appendChild(div);
-
-            const currentArticleSelect = document.getElementById(`article_${articleCounter}`);
-            const currentQuantiteInput = document.getElementById(`quantite_${articleCounter}`);
-            const currentSousTotalInput = document.getElementById(`sous_total_${articleCounter}`);
-            const removeBtn = div.querySelector('.remove-article-btn');
-
-            if (articleData && articleData.article_pk) {
-                currentArticleSelect.value = articleData.article_pk;
-            }
-
-            const updateSousTotal = () => {
-                const selectedArticleId = currentArticleSelect.value;
-                const quantite = parseFloat(currentQuantiteInput.value);
-                const selectedArticle = articles.find(art => art.pk == selectedArticleId);
-
-                if (selectedArticle && !isNaN(quantite) && quantite > 0) {
-                    const prixUnitaire = parseFloat(selectedArticle.fields.prix_unitaire);
-                    currentSousTotalInput.value = (prixUnitaire * quantite).toFixed(2);
-                } else {
-                    currentSousTotalInput.value = '0.00';
-                }
-                calculateTotal();
-            };
-
-            currentArticleSelect.addEventListener('change', updateSousTotal);
-            currentQuantiteInput.addEventListener('input', updateSousTotal);
-
-            removeBtn.addEventListener('click', () => {
-                div.remove();
-                calculateTotal();
-            });
-
-            // Initial calculation if data is provided (for modification scenario)
-            if (articleData) {
-                updateSousTotal();
-            }
-            
-            articleCounter++;
-        }
-
-        addArticleBtn.addEventListener('click', () => addArticleRow());
-
-        // Handle initial articles if any (for modification view)
-        const initialArticlesDataElement = document.getElementById('paniers_data');
-        if (initialArticlesDataElement) {
-            const initialArticles = JSON.parse(initialArticlesDataElement.textContent);
-            initialArticles.forEach(item => {
-                addArticleRow({
-                    article_pk: item.fields.article, // Access fields directly
-                    quantite: item.fields.quantite,
-                    sous_total: item.fields.sous_total
-                });
-            });
-        }
-        // No else block needed here as for modification, we only add rows if data exists.
-
-        // Initial total calculation
-        calculateTotal();
-        
         // Gestion de l'annulation de commande
         const btnAnnulerCommande = document.getElementById('btnAnnulerCommande');
         if (btnAnnulerCommande) {
@@ -862,16 +862,651 @@
                 totalDisplay.textContent = parseFloat(total).toFixed(2) + ' DH';
             }
         }
-        
-        // Observer les changements du total
+
+        // Observer les changements du total pour mettre à jour l'affichage
         const totalInput = document.getElementById('total_cmd');
         if (totalInput) {
-            const originalCalculateTotal = calculateTotal;
-            calculateTotal = function() {
-                originalCalculateTotal();
+            // Créer un MutationObserver pour surveiller les changements de valeur
+            const observer = new MutationObserver(function() {
                 updateTotalDisplay();
-            };
+            });
+
+            // Surveiller aussi les événements input et change
+            totalInput.addEventListener('input', updateTotalDisplay);
+            totalInput.addEventListener('change', updateTotalDisplay);
         }
+
+        // Formulaire panier non utilisé - les articles sont gérés via API AJAX
+        // Plus besoin de soumission de formulaire pour le panier
+
+        // Initialiser l'affichage du total
+        updateTotalDisplay();
     });
+
+    // ==================== FONCTIONS POUR GESTION DES ARTICLES ====================
+
+    // Modifier la quantité d'un article dans le panier
+    function modifierQuantiteCommande(panierId, delta) {
+        const quantiteInput = document.getElementById(`quantite-${panierId}`);
+        if (!quantiteInput) return;
+
+        let nouvelleQuantite = parseInt(quantiteInput.value) + delta;
+        if (nouvelleQuantite < 1) nouvelleQuantite = 1;
+
+        quantiteInput.value = nouvelleQuantite;
+        modifierQuantiteDirecteCommande(panierId, nouvelleQuantite);
+    }
+
+    // Modifier directement la quantité
+    function modifierQuantiteDirecteCommande(panierId, nouvelleQuantite) {
+        nouvelleQuantite = parseInt(nouvelleQuantite);
+        if (isNaN(nouvelleQuantite) || nouvelleQuantite < 1) {
+            showToast('La quantité doit être au moins 1', 'warning');
+            return;
+        }
+
+        fetch(`/commande/api/modifier-quantite/${panierId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({ quantite: nouvelleQuantite })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Mettre à jour le sous-total de l'article modifié
+                const sousTotal = document.getElementById(`sous-total-${panierId}`);
+                if (sousTotal) sousTotal.textContent = `${data.nouveau_sous_total.toFixed(2)} DH`;
+
+                // Mettre à jour le prix unitaire effectif si disponible
+                if (data.prix_unitaire_effectif !== undefined) {
+                    const prixUnitaire = document.getElementById(`prix-unitaire-${panierId}`);
+                    if (prixUnitaire) {
+                        prixUnitaire.textContent = `${data.prix_unitaire_effectif.toFixed(2)} DH`;
+                        console.log(`💰 Prix unitaire mis à jour pour article ${panierId}: ${data.prix_unitaire_effectif.toFixed(2)} DH`);
+                    }
+                }
+
+                // Mettre à jour TOUS les articles upsell si le compteur a changé
+                if (data.articles_upsell_mis_a_jour && data.articles_upsell_mis_a_jour.length > 0) {
+                    console.log(`🔄 Mise à jour de ${data.articles_upsell_mis_a_jour.length} article(s) upsell (compteur=${data.compteur})`);
+
+                    data.articles_upsell_mis_a_jour.forEach(article => {
+                        // Mettre à jour le prix unitaire
+                        const prixUnitaireEl = document.getElementById(`prix-unitaire-${article.panier_id}`);
+                        if (prixUnitaireEl) {
+                            prixUnitaireEl.textContent = `${article.prix_unitaire_effectif.toFixed(2)} DH`;
+                        }
+
+                        // Mettre à jour le sous-total
+                        const sousTotalEl = document.getElementById(`sous-total-${article.panier_id}`);
+                        if (sousTotalEl) {
+                            sousTotalEl.textContent = `${article.sous_total.toFixed(2)} DH`;
+                        }
+
+                        console.log(`✅ Article ${article.panier_id} mis à jour: ${article.prix_unitaire_effectif.toFixed(2)} DH`);
+                    });
+                }
+
+                // Mettre à jour le total de la commande
+                const totalDisplay = document.getElementById('totalDisplay');
+                if (totalDisplay) totalDisplay.textContent = `${data.nouveau_total_commande.toFixed(2)} DH`;
+
+                const totalCommandeDisplay = document.getElementById('total-commande-display');
+                if (totalCommandeDisplay) totalCommandeDisplay.textContent = `${data.nouveau_total_commande.toFixed(2)} DH`;
+
+                showToast('Quantité mise à jour avec succès', 'success');
+            } else {
+                showToast('Erreur: ' + data.error, 'error');
+                // Restaurer la valeur précédente
+                const quantiteInput = document.getElementById(`quantite-${panierId}`);
+                if (quantiteInput) quantiteInput.value = quantiteInput.dataset.previousValue;
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            showToast('Une erreur est survenue', 'error');
+        });
+    }
+
+    // Supprimer un article du panier
+    function supprimerArticleCommande(panierId) {
+        if (!confirm('Voulez-vous vraiment supprimer cet article du panier ?')) return;
+
+        fetch(`/commande/api/supprimer-article/${panierId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Recharger la page pour afficher les changements
+                showToast('Article supprimé avec succès', 'success');
+                setTimeout(() => location.reload(), 500);
+            } else {
+                showToast('Erreur: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            showToast('Une erreur est survenue', 'error');
+        });
+    }
+
+    // Ouvrir le modal de remise
+    /**
+     * Ouvre le modal de remise pour un panier spécifique
+     */
+    function ouvrirModalRemise(panierId) {
+        const modal = document.getElementById('remiseModal');
+        const panierIdInput = document.getElementById('remisePanierId');
+        const typeRemiseSelect = document.getElementById('typeRemise');
+        const valeurRemiseInput = document.getElementById('valeurRemise');
+        const raisonRemiseInput = document.getElementById('raisonRemise');
+        const previewContainer = document.getElementById('remisePreview');
+
+        // Réinitialiser le formulaire
+        panierIdInput.value = panierId;
+        typeRemiseSelect.value = 'POURCENTAGE';
+        valeurRemiseInput.value = '';
+        raisonRemiseInput.value = '';
+        previewContainer.style.display = 'none';
+
+        // Trouver les informations du panier
+        const panierCard = document.querySelector(`[data-article-id="${panierId}"]`);
+        if (panierCard) {
+            const articleData = JSON.parse(panierCard.getAttribute('data-article'));
+            const articleNom = articleData.nom || 'Article inconnu';
+            document.getElementById('remiseArticleNom').textContent = articleNom;
+
+            // Récupérer le sous-total actuel
+            const sousTotalElement = document.getElementById(`sous-total-${panierId}`);
+            if (sousTotalElement) {
+                const sousTotalText = sousTotalElement.textContent.replace(/[^\d.,]/g, '').replace(',', '.');
+                document.getElementById('remiseSousTotalActuel').textContent = parseFloat(sousTotalText).toFixed(2);
+            }
+        }
+
+        // Afficher le modal
+        modal.style.display = 'flex';
+    }
+
+    /**
+     * Ferme le modal de remise
+     */
+    function fermerModalRemise() {
+        const modal = document.getElementById('remiseModal');
+        modal.style.display = 'none';
+    }
+
+    /**
+     * Calcule et affiche un aperçu de la remise en temps réel
+     */
+    function calculerApercu() {
+        const panierId = document.getElementById('remisePanierId').value;
+        const typeRemise = document.getElementById('typeRemise').value;
+        const valeurRemise = document.getElementById('valeurRemise').value;
+        const previewContainer = document.getElementById('remisePreview');
+
+        // Vérifier que la valeur est saisie
+        if (!valeurRemise || parseFloat(valeurRemise) <= 0) {
+            previewContainer.style.display = 'none';
+            return;
+        }
+
+        // Construire l'URL avec les paramètres (adapter pour l'app commande)
+        const url = `/commande/api/calculer-remise-preview/${panierId}/?type_remise=${typeRemise}&valeur_remise=${valeurRemise}`;
+
+        // Afficher un indicateur de chargement
+        previewContainer.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Calcul en cours...</div>';
+        previewContainer.style.display = 'block';
+
+        // Appeler l'API de preview
+        fetch(url, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Afficher l'aperçu détaillé
+                previewContainer.innerHTML = `
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
+                        <h4 class="font-semibold text-blue-800 flex items-center">
+                            <i class="fas fa-calculator mr-2"></i>Aperçu de la remise
+                        </h4>
+                        <div class="grid grid-cols-2 gap-2 text-sm">
+                            <div class="text-gray-600">Sous-total actuel:</div>
+                            <div class="font-medium text-right">${data.data.sous_total_actuel.toFixed(2)} DH</div>
+
+                            <div class="text-red-600 font-medium">Montant remise:</div>
+                            <div class="font-bold text-red-600 text-right">- ${data.data.montant_remise_calcule.toFixed(2)} DH</div>
+
+                            <div class="text-gray-600">Pourcentage:</div>
+                            <div class="font-medium text-right">${data.data.pourcentage_reduction.toFixed(2)} %</div>
+
+                            <div class="text-green-600 font-bold text-lg pt-2 border-t border-blue-200">Nouveau sous-total:</div>
+                            <div class="font-bold text-green-600 text-lg text-right pt-2 border-t border-blue-200">${data.data.sous_total_apres_remise.toFixed(2)} DH</div>
+                        </div>
+                    </div>
+                `;
+                previewContainer.style.display = 'block';
+            } else {
+                previewContainer.innerHTML = `
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700 text-sm">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>${data.error}
+                    </div>
+                `;
+                previewContainer.style.display = 'block';
+            }
+        })
+        .catch(error => {
+            console.error('Erreur lors du calcul de l\'aperçu:', error);
+            previewContainer.innerHTML = `
+                <div class="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700 text-sm">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>Erreur de connexion
+                </div>
+            `;
+            previewContainer.style.display = 'block';
+        });
+    }
+
+    /**
+     * Applique la remise sur le panier
+     */
+    function appliquerRemise() {
+        const panierId = document.getElementById('remisePanierId').value;
+        const typeRemise = document.getElementById('typeRemise').value;
+        const valeurRemise = document.getElementById('valeurRemise').value;
+        const raisonRemise = document.getElementById('raisonRemise').value;
+        const btnAppliquer = document.querySelector('#remiseModal button[onclick="appliquerRemise()"]');
+
+        // Validation
+        if (!valeurRemise || parseFloat(valeurRemise) <= 0) {
+            showToast('Veuillez saisir une valeur de remise valide', 'error');
+            return;
+        }
+
+        // Désactiver le bouton pendant le traitement
+        btnAppliquer.disabled = true;
+        btnAppliquer.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Application...';
+
+        // Préparer les données
+        const formData = {
+            type_remise: typeRemise,
+            valeur_remise: parseFloat(valeurRemise),
+            raison_remise: raisonRemise
+        };
+
+        // Récupérer le CSRF token
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        // Appeler l'API (adapter pour l'app commande)
+        fetch(`/commande/api/appliquer-remise/${panierId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken,
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(data.message, 'success');
+                fermerModalRemise();
+                setTimeout(() => location.reload(), 500);
+            } else {
+                showToast(data.error || 'Erreur lors de l\'application de la remise', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            showToast('Erreur de connexion', 'error');
+        })
+        .finally(() => {
+            // Réactiver le bouton
+            btnAppliquer.disabled = false;
+            btnAppliquer.innerHTML = '<i class="fas fa-check mr-2"></i>Appliquer la remise';
+        });
+    }
+
+    /**
+     * Retire une remise appliquée sur un panier
+     */
+    function retirerRemise(panierId) {
+        if (!confirm('Êtes-vous sûr de vouloir retirer cette remise ?')) {
+            return;
+        }
+
+        // Récupérer le CSRF token
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        // Appeler l'API (adapter pour l'app commande)
+        fetch(`/commande/api/retirer-remise/${panierId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken,
+                'X-Requested-With': 'XMLHttpRequest',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(data.message, 'success');
+                setTimeout(() => location.reload(), 500);
+            } else {
+                showToast(data.error || 'Erreur lors du retrait de la remise', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            showToast('Erreur de connexion', 'error');
+        });
+    }
+
+    // ==================== GESTION DES ARTICLES TEMPORAIRES ====================
+
+    // Liste pour stocker les articles/variantes ajoutés temporairement
+    let articlesTemporaires = [];
+
+    // Override de la fonction ajouterVarianteAuPanier pour afficher directement dans le partial
+    const ajouterVarianteAuPanierOriginal = window.ajouterVarianteAuPanier;
+    window.ajouterVarianteAuPanier = function(articleData, variante, quantiteInitiale = 1) {
+        console.log('📦 Ajout variante temporaire:', articleData, variante);
+
+        const itemData = {
+            article: articleData,
+            variante: variante,
+            quantite: quantiteInitiale,
+            timestamp: Date.now(),
+            tempId: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+        };
+
+        // Ajouter à la liste temporaire
+        articlesTemporaires.push(itemData);
+
+        // Afficher dans le conteneur avec la structure du partial
+        afficherArticleTemporairePartial(itemData);
+
+        // Mettre à jour le bouton Enregistrer
+        mettreAJourBoutonEnregistrer();
+
+        // Afficher une notification
+        showToast(`✅ Variante ajoutée: ${articleData.nom} - ${variante.couleur || ''} ${variante.pointure || ''}`, 'success');
+
+        // Fermer le modal des variantes
+        if (typeof fermerModalVariantes === 'function') {
+            fermerModalVariantes();
+        }
+    };
+
+    // Override de la fonction ajouterArticleAuPanier pour afficher directement dans le partial
+    const ajouterArticleAuPanierOriginal = window.ajouterArticleAuPanier;
+    window.ajouterArticleAuPanier = function(articleData, quantiteInitiale = 1) {
+        console.log('📦 Ajout article temporaire:', articleData);
+
+        const itemData = {
+            article: articleData,
+            variante: null,
+            quantite: quantiteInitiale,
+            timestamp: Date.now(),
+            tempId: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+        };
+
+        // Ajouter à la liste temporaire
+        articlesTemporaires.push(itemData);
+
+        // Afficher dans le conteneur avec la structure du partial
+        afficherArticleTemporairePartial(itemData);
+
+        // Mettre à jour le bouton Enregistrer
+        mettreAJourBoutonEnregistrer();
+
+        // Afficher une notification
+        showToast(`✅ Article ajouté: ${articleData.nom}`, 'success');
+
+        // Fermer le modal d'ajout
+        if (typeof fermerModalAjouterArticle === 'function') {
+            fermerModalAjouterArticle();
+        }
+    };
+
+    // Fonction pour générer le HTML d'un article temporaire (structure identique au partial)
+    function afficherArticleTemporairePartial(itemData) {
+        const article = itemData.article;
+        const variante = itemData.variante;
+        const quantite = itemData.quantite;
+        const tempId = itemData.tempId;
+
+        const prix = variante ? (variante.prix_unitaire || article.prix_actuel) : article.prix_actuel;
+        const sousTotal = (prix * quantite).toFixed(2);
+
+        // Informations de la variante
+        let varianteBadge = '';
+        let pointureBadge = '';
+        let couleurBadge = '';
+        let stockBadge = '';
+        let reference = article.reference || 'N/A';
+
+        if (variante) {
+            varianteBadge = '<span class="inline-flex items-center px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium ml-2"><i class="fas fa-layer-group mr-1"></i>Variante</span>';
+            reference = variante.reference_variante || article.reference || 'N/A';
+
+            pointureBadge = variante.pointure
+                ? `<span class="inline-flex items-center px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium"><i class="fas fa-ruler-vertical mr-1"></i>${variante.pointure}</span>`
+                : '<span class="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-xs"><i class="fas fa-ruler-vertical mr-1"></i>Taille N/A</span>';
+
+            couleurBadge = variante.couleur
+                ? `<span class="inline-flex items-center px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium"><i class="fas fa-palette mr-1"></i>${variante.couleur}</span>`
+                : '<span class="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-xs"><i class="fas fa-palette mr-1"></i>Couleur N/A</span>';
+
+            stockBadge = `<span class="inline-flex items-center px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium"><i class="fas fa-boxes mr-1"></i>Stock variante: ${variante.stock || 0}</span>`;
+        } else {
+            pointureBadge = '<span class="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-xs"><i class="fas fa-ruler-vertical mr-1"></i>Taille N/A</span>';
+            couleurBadge = article.couleur
+                ? `<span class="inline-flex items-center px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium"><i class="fas fa-palette mr-1"></i>${article.couleur}</span>`
+                : '<span class="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-xs"><i class="fas fa-palette mr-1"></i>Couleur N/A</span>';
+
+            stockBadge = `<span class="inline-flex items-center px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium"><i class="fas fa-boxes mr-1"></i>Stock article: ${article.qte_article || 0}</span>`;
+        }
+
+        const categorieBadge = article.categorie
+            ? `<span class="inline-flex items-center px-2 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-medium"><i class="fas fa-tag mr-1"></i>${article.categorie}</span>`
+            : '<span class="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-xs"><i class="fas fa-tag mr-1"></i>Catégorie N/A</span>';
+
+        const imageUrl = article.image_url || (article.image ? `/media/${article.image}` : '');
+        const imageHtml = imageUrl
+            ? `<img src="${imageUrl}" alt="Image de ${article.nom}" class="w-full h-full object-cover hover:scale-105 transition-transform duration-200" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">`
+            : '';
+
+        const html = `
+            <div class="article-card p-4 bg-orange-50 rounded-lg border-4 border-orange-400 hover:border-orange-500 transition-all shadow-lg relative"
+                 data-temp-id="${tempId}"
+                 data-temporaire="true"
+                 data-article-id="${article.id}"
+                 data-variante-id="${variante ? variante.id : ''}"
+                 data-quantite="${quantite}">
+
+                <!-- Badge "Non enregistré" -->
+                <div class="absolute top-2 right-2 z-10">
+                    <span class="inline-flex items-center px-3 py-1 bg-orange-500 text-white rounded-full text-xs font-bold shadow-md animate-pulse">
+                        <i class="fas fa-clock mr-1"></i>Non enregistré
+                    </span>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <div class="flex-1">
+                        <div class="flex items-center space-x-4">
+                            <div class="flex-shrink-0">
+                                <div class="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 border-2 border-orange-300 shadow-sm">
+                                    ${imageHtml}
+                                    <div class="w-full h-full flex items-center justify-center text-gray-400 ${imageUrl ? 'hidden' : ''}">
+                                        <i class="fas fa-image text-xl"></i>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="min-w-0 flex-1">
+                                <div class="font-semibold text-lg text-emerald-700">
+                                    ${article.nom}
+                                    ${varianteBadge}
+                                </div>
+                                <div class="text-sm text-gray-500">
+                                    <i class="fas fa-hashtag mr-1"></i>Réf: <span class="text-gray-500">${reference}</span>
+                                </div>
+                                <div class="mt-2 flex flex-wrap gap-2">
+                                    ${pointureBadge}
+                                    ${couleurBadge}
+                                    ${categorieBadge}
+                                    ${stockBadge}
+                                </div>
+                            </div>
+
+                            <div class="text-center min-w-0">
+                                <div class="text-sm text-gray-500">Quantité</div>
+                                <div class="font-medium text-lg">${quantite}</div>
+                            </div>
+
+                            <div class="text-center min-w-0">
+                                <div class="text-sm text-gray-500">Prix unitaire</div>
+                                <div class="font-medium text-emerald-600">${prix.toFixed(2)} DH</div>
+                            </div>
+
+                            <div class="text-center min-w-0">
+                                <div class="text-sm text-gray-500">Sous-total</div>
+                                <div class="text-lg font-bold text-emerald-600">${sousTotal} DH</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col space-y-2 ml-4">
+                        <button type="button" onclick="supprimerArticleTemporaire('${tempId}')"
+                                class="px-3 py-2 bg-red-500 hover:bg-red-600 text-white text-sm rounded-lg transition-colors flex items-center justify-center"
+                                title="Supprimer">
+                            <i class="fas fa-trash mr-1"></i>Supprimer
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Ajouter au début du conteneur
+        const container = document.getElementById('articles-container');
+        container.insertAdjacentHTML('afterbegin', html);
+    }
+
+    // Fonction pour supprimer un article temporaire
+    function supprimerArticleTemporaire(tempId) {
+        // Retirer de la liste
+        articlesTemporaires = articlesTemporaires.filter(item => item.tempId !== tempId);
+
+        // Retirer du DOM
+        const element = document.querySelector(`[data-temp-id="${tempId}"]`);
+        if (element) {
+            element.remove();
+        }
+
+        // Mettre à jour le bouton
+        mettreAJourBoutonEnregistrer();
+
+        showToast('Article retiré', 'info');
+    }
+
+    // Fonction pour mettre à jour le bouton Enregistrer
+    function mettreAJourBoutonEnregistrer() {
+        const btn = document.getElementById('btnEnregistrerArticles');
+        const count = document.getElementById('count-temporaires');
+
+        if (articlesTemporaires.length > 0) {
+            btn.classList.remove('hidden');
+            count.textContent = articlesTemporaires.length;
+        } else {
+            btn.classList.add('hidden');
+        }
+    }
+
+    // Fonction pour enregistrer tous les articles temporaires
+    async function enregistrerArticlesTemporaires() {
+        if (articlesTemporaires.length === 0) {
+            showToast('Aucun article à enregistrer', 'warning');
+            return;
+        }
+
+        if (!confirm(`Voulez-vous enregistrer ${articlesTemporaires.length} article(s) ?`)) {
+            return;
+        }
+
+        const commandeId = {{ commande.pk }};
+        let reussis = 0;
+        let erreurs = 0;
+
+        // Afficher un loader
+        const btn = document.getElementById('btnEnregistrerArticles');
+        const originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Enregistrement...';
+
+        // Enregistrer chaque article via l'API
+        for (const item of articlesTemporaires) {
+            try {
+                const formData = new FormData();
+                formData.append('action', 'add_article');
+                formData.append('article_id', item.article.id);
+                formData.append('quantite', item.quantite);
+
+                if (item.variante) {
+                    formData.append('variante_id', item.variante.id);
+                }
+
+                const response = await fetch(`/commande/api/ajouter-article/${commandeId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    reussis++;
+                } else {
+                    console.error('Erreur:', data.error);
+                    erreurs++;
+                }
+            } catch (error) {
+                console.error('Erreur lors de l\'ajout:', error);
+                erreurs++;
+            }
+        }
+
+        // Afficher le résultat
+        if (reussis > 0) {
+            showToast(`✅ ${reussis} article(s) enregistré(s) avec succès`, 'success');
+
+            // Recharger la page pour afficher les articles enregistrés
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        } else {
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+            showToast(`❌ Erreur: Aucun article n'a pu être enregistré`, 'error');
+        }
+
+        if (erreurs > 0) {
+            showToast(`⚠️ ${erreurs} erreur(s) lors de l'enregistrement`, 'warning');
+        }
+    }
 </script>
 {% endblock content %} 

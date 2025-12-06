@@ -28,6 +28,14 @@ def div(value, arg):
         return 0
 
 @register.filter
+def subtract(value, arg):
+    """Soustraction de deux nombres"""
+    try:
+        return float(value) - float(arg)
+    except (ValueError, TypeError):
+        return 0
+
+@register.filter
 def confirmation_operation(commande):
     """Récupère la dernière opération de confirmation pour une commande"""
     operations_confirmation = commande.operations.filter(
@@ -85,18 +93,18 @@ def get_prix_upsell(article, quantite):
     # Pour les articles upsell, retourner directement le prix upsell correspondant
     if quantite == 1:
         return article.prix_actuel if article.prix_actuel is not None else article.prix_unitaire
-    elif quantite == 2 and article.prix_upsell_1:
-        # Prix upsell 1 remplace le prix actuel
-        return article.prix_upsell_1
-    elif quantite == 3 and article.prix_upsell_2:
+    elif quantite == 2 and article.prix_upsell_2:
         # Prix upsell 2 remplace le prix actuel
         return article.prix_upsell_2
-    elif quantite == 4 and article.prix_upsell_3:
+    elif quantite == 3 and article.prix_upsell_3:
         # Prix upsell 3 remplace le prix actuel
         return article.prix_upsell_3
-    elif quantite > 4 and article.prix_upsell_4:
+    elif quantite == 4 and article.prix_upsell_4:
         # Prix upsell 4 remplace le prix actuel
         return article.prix_upsell_4
+    elif quantite > 4 and article.prix_gros:
+        # Prix gros remplace le prix actuel
+        return article.prix_gros
     else:
         # Si pas de prix upsell défini, utiliser le prix actuel
         return article.prix_actuel if article.prix_actuel is not None else article.prix_unitaire
@@ -125,18 +133,18 @@ def get_prix_upsell_avec_compteur(article, compteur):
     if compteur == 0:
         # 0-1 articles upsell → prix normal
         return article.prix_actuel if article.prix_actuel is not None else article.prix_unitaire
-    elif compteur == 1 and article.prix_upsell_1:
-        # 2 articles upsell → prix upsell 1
-        return article.prix_upsell_1
-    elif compteur == 2 and article.prix_upsell_2:
-        # 3 articles upsell → prix upsell 2
+    elif compteur == 1 and article.prix_upsell_2:
+        # 2 articles upsell → prix upsell 2
         return article.prix_upsell_2
-    elif compteur == 3 and article.prix_upsell_3:
-        # 4 articles upsell → prix upsell 3
+    elif compteur == 2 and article.prix_upsell_3:
+        # 3 articles upsell → prix upsell 3
         return article.prix_upsell_3
-    elif compteur >= 4 and article.prix_upsell_4:
-        # 5+ articles upsell → prix upsell 4
+    elif compteur == 3 and article.prix_upsell_4:
+        # 4 articles upsell → prix upsell 4
         return article.prix_upsell_4
+    elif compteur >= 4 and article.prix_gros:
+        # 5+ articles upsell → prix gros
+        return article.prix_gros
     else:
         # Si pas de prix upsell défini pour ce niveau, utiliser le prix actuel
         return article.prix_actuel if article.prix_actuel is not None else article.prix_unitaire
@@ -149,15 +157,15 @@ def get_prix_upsell_supplement(article, quantite):
     """
     if not article.isUpsell or quantite <= 1:
         return 0
-    
-    if quantite == 2 and article.prix_upsell_1:
-        return article.prix_upsell_1
-    elif quantite == 3 and article.prix_upsell_2:
+
+    if quantite == 2 and article.prix_upsell_2:
         return article.prix_upsell_2
-    elif quantite == 4 and article.prix_upsell_3:
+    elif quantite == 3 and article.prix_upsell_3:
         return article.prix_upsell_3
-    elif quantite > 4 and article.prix_upsell_4:
+    elif quantite == 4 and article.prix_upsell_4:
         return article.prix_upsell_4
+    elif quantite > 4 and article.prix_gros:
+        return article.prix_gros
     else:
         # Si pas de prix upsell défini, pas de supplément
         return 0
@@ -171,8 +179,49 @@ def calculer_sous_total_avec_compteur(panier, compteur):
     Seuls les articles avec isUpsell=True utilisent les prix upsell selon le niveau.
     Les autres articles gardent leur prix normal.
     """
-    prix = get_prix_upsell_avec_compteur(panier.article, compteur)
-    return prix * panier.quantite if prix is not None else 0
+    # Si le panier possède un prix unitaire explicite, l'utiliser en priorité
+    try:
+        prix_panier = getattr(panier, 'prix_panier', None)
+    except Exception:
+        prix_panier = None
+
+    if prix_panier is not None and prix_panier != 0:
+        return float(prix_panier) * float(panier.quantite)
+
+    # Sinon, fallback vers la logique upsell basée sur l'article/compteur
+    prix_calcule = get_prix_upsell_avec_compteur(panier.article, compteur)
+    return float(prix_calcule) * float(panier.quantite) if prix_calcule is not None else 0
+
+@register.filter
+def get_prix_unitaire_effectif_panier(panier, compteur=None):
+    """
+    Retourne le prix unitaire effectif d'un panier.
+    Priorité à panier.prix_panier s'il est renseigné, sinon applique la logique upsell.
+    Le paramètre compteur est optionnel (utile pour les articles upsell).
+    """
+    try:
+        prix_panier = getattr(panier, 'prix_panier', None)
+    except Exception:
+        prix_panier = None
+
+    if prix_panier is not None and prix_panier != 0:
+        return float(prix_panier)
+
+    # Fallback: utiliser la logique upsell/standard
+    if compteur is not None:
+        return get_prix_upsell_avec_compteur(panier.article, compteur)
+    else:
+        # Sans compteur, retourner le prix courant de l'article
+        article = panier.article
+        return article.prix_actuel if article.prix_actuel is not None else article.prix_unitaire
+
+@register.filter
+def calculer_prix_panier_avec_upsell(article, compteur):
+    """
+    Calcule le prix_panier en appliquant la logique upsell complète.
+    Utilise le compteur pour déterminer le bon prix upsell.
+    """
+    return get_prix_upsell_avec_compteur(article, compteur)
 
 @register.filter
 def calculer_sous_total_upsell(article, quantite):
@@ -220,7 +269,11 @@ def get_prix_avec_phase_info(article, compteur=None):
         libelle = "Prix test"
         couleur_classe = "text-blue-600"
     elif compteur is not None and compteur > 0 and article.isUpsell:
-        libelle = f"Prix upsell niveau {compteur}"
+        # Ajuster le niveau affiché : compteur 1 → 2, compteur 2 → 3, compteur 3 → 4, compteur >= 4 → Prix Gros
+        if compteur >= 4:
+            libelle = "Prix Gros"
+        else:
+            libelle = f"Prix upsell {compteur + 1}"
         couleur_classe = "text-green-600"
     else:
         libelle = "Prix normal"
@@ -292,36 +345,10 @@ def get_type_remise_appliquee(panier):
         prix_article_decimal = Decimal(str(prix_article)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
         return abs(prix_article_decimal - prix_effectif) <= tolerance
     
-    # Vérifier chaque type de remise
-    if prix_match(article.prix_remise_1, prix_unitaire_effectif):
-        return {
-            'type': 'prix_remise_1',
-            'libelle': 'Prix remise 1',
-            'couleur': 'text-purple-600',
-            'icone': 'fas fa-percent'
-        }
-    elif prix_match(article.prix_remise_2, prix_unitaire_effectif):
-        return {
-            'type': 'prix_remise_2', 
-            'libelle': 'Prix remise 2',
-            'couleur': 'text-purple-600',
-            'icone': 'fas fa-percent'
-        }
-    elif prix_match(article.prix_remise_3, prix_unitaire_effectif):
-        return {
-            'type': 'prix_remise_3',
-            'libelle': 'Prix remise 3', 
-            'couleur': 'text-purple-600',
-            'icone': 'fas fa-percent'
-        }
-    elif prix_match(article.prix_remise_4, prix_unitaire_effectif):
-        return {
-            'type': 'prix_remise_4',
-            'libelle': 'Prix remise 4',
-            'couleur': 'text-purple-600', 
-            'icone': 'fas fa-percent'
-        }
-    elif prix_match(article.Prix_liquidation, prix_unitaire_effectif):
+    # NOTE: Les champs prix_remise ont été supprimés du modèle Article
+    # Seule la vérification du prix de liquidation est conservée
+
+    if prix_match(article.Prix_liquidation, prix_unitaire_effectif):
         return {
             'type': 'Prix_liquidation',
             'libelle': 'Prix liquidation',
@@ -329,22 +356,86 @@ def get_type_remise_appliquee(panier):
             'icone': 'fas fa-fire'
         }
     
-    # Vérifier si c'est vraiment une remise (prix inférieur au prix normal)
-    prix_normal = article.prix_actuel or article.prix_unitaire
-    if prix_normal and prix_unitaire_effectif < Decimal(str(prix_normal)):
-        return {
-            'type': 'personnalise',
-            'libelle': 'Prix remisé', 
-            'couleur': 'text-purple-600',
-            'icone': 'fas fa-percent'
-        }
+   
     
     # Pas de remise détectée
     return None
 
-@register.filter  
+@register.filter
 def est_remise_appliquee(panier):
     """
     Vérifie si une remise a été appliquée sur ce panier
     """
     return get_type_remise_appliquee(panier) is not None
+
+
+@register.filter
+def operation_style(type_operation):
+    """
+    Retourne les classes CSS et l'icône pour un type d'opération
+    Retourne un dictionnaire avec 'bg_class', 'text_class', et 'icon'
+    """
+    styles_map = {
+        'AUCUNE_ACTION': {
+            'bg_class': 'bg-gray-100',
+            'text_class': 'text-gray-800',
+            'icon': 'fas fa-minus'
+        },
+        'APPEL_1': {
+            'bg_class': 'bg-blue-100',
+            'text_class': 'text-blue-800',
+            'icon': 'fas fa-phone'
+        },
+        'APPEL_2': {
+            'bg_class': 'bg-indigo-100',
+            'text_class': 'text-indigo-800',
+            'icon': 'fas fa-phone'
+        },
+        'APPEL_3': {
+            'bg_class': 'bg-purple-100',
+            'text_class': 'text-purple-800',
+            'icon': 'fas fa-phone'
+        },
+        'APPEL_4': {
+            'bg_class': 'bg-pink-100',
+            'text_class': 'text-pink-800',
+            'icon': 'fas fa-phone'
+        },
+        'APPEL_5': {
+            'bg_class': 'bg-red-100',
+            'text_class': 'text-red-800',
+            'icon': 'fas fa-phone'
+        },
+        'APPEL_6': {
+            'bg_class': 'bg-orange-100',
+            'text_class': 'text-orange-800',
+            'icon': 'fas fa-phone'
+        },
+        'APPEL_7': {
+            'bg_class': 'bg-yellow-100',
+            'text_class': 'text-yellow-800',
+            'icon': 'fas fa-phone'
+        },
+        'APPEL_8': {
+            'bg_class': 'bg-red-100',
+            'text_class': 'text-red-800',
+            'icon': 'fas fa-phone-slash'
+        },
+        'ENVOI_SMS': {
+            'bg_class': 'bg-green-100',
+            'text_class': 'text-green-800',
+            'icon': 'fas fa-sms'
+        },
+        'PROPOSITION_ABONNEMENT': {
+            'bg_class': 'bg-teal-100',
+            'text_class': 'text-teal-800',
+            'icon': 'fas fa-gift'
+        },
+    }
+
+    # Retourner le style correspondant ou un style par défaut
+    return styles_map.get(type_operation, {
+        'bg_class': 'bg-gray-100',
+        'text_class': 'text-gray-800',
+        'icon': 'fas fa-cogs'
+    })

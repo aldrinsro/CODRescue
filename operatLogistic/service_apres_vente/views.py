@@ -10,6 +10,8 @@ from datetime import datetime
 import json
 from article.models import Article
 from parametre.models import Operateur
+from common.filter_utils import apply_commande_filters
+from django.core.paginator import Paginator
 
 @login_required
 @require_POST
@@ -150,7 +152,10 @@ def commandes_reportees(request):
         'etats__enum_etat', 'etats__operateur',
         'envois', 'paniers__article'
     ).order_by('-etats__date_debut').distinct()
-    
+
+    # Appliquer les filtres avancés
+    commandes = apply_commande_filters(commandes, request)
+
     # Enrichir les données pour chaque commande
     for commande in commandes:
         # Trouver l'état actuel (Reportée)
@@ -273,7 +278,10 @@ def commandes_livrees_partiellement(request):
         'etats__enum_etat', 'etats__operateur',
         'envois', 'paniers__article'  # Ajouter les paniers et articles
     ).order_by('-etats__date_debut').distinct()
-    
+
+    # Appliquer les filtres avancés
+    commandes = apply_commande_filters(commandes, request)
+
     # Enrichir les données pour chaque commande
     for commande in commandes:
         # Trouver l'état "Livrée Partiellement" le plus récent
@@ -419,7 +427,10 @@ def commandes_retournees(request):
         'etats__enum_etat', 'etats__operateur',
         'envois', 'paniers__article'
     ).order_by('-etats__date_debut').distinct()
-    
+
+    # Appliquer les filtres avancés
+    commandes = apply_commande_filters(commandes, request)
+
     # Enrichir les données pour chaque commande
     for commande in commandes:
         # Trouver l'état actuel
@@ -528,7 +539,10 @@ def commandes_livrees(request):
     
     # Ajouter l'ordre et distinct une seule fois
     base_query = base_query.order_by('-etats__date_debut').distinct()
-    
+
+    # Appliquer les filtres avancés (ville, client, téléphone, etc.)
+    base_query = apply_commande_filters(base_query, request)
+
     # Filtrer selon l'onglet sélectionné
     if current_tab == 'payees':
         commandes = base_query.filter(payement='Payé')
@@ -536,14 +550,32 @@ def commandes_livrees(request):
         commandes = base_query.exclude(payement='Payé')
     else:  # 'toutes'
         commandes = base_query
-    
+
     # Compter les commandes pour chaque onglet (avec le filtre de temps appliqué)
     total_commandes = base_query.count()
     commandes_payees = base_query.filter(payement='Payé').count()
     commandes_non_payees = base_query.exclude(payement='Payé').count()
-    
+
+    # Gestion de la pagination
+    per_page = request.GET.get('per_page', '20')
+    try:
+        per_page = int(per_page)
+        if per_page not in [5, 10, 15, 20, 25, 30, 40, 50]:
+            per_page = 20
+    except (ValueError, TypeError):
+        per_page = 20
+
+    # Créer le paginateur
+    paginator = Paginator(commandes, per_page)
+    page_number = request.GET.get('page', 1)
+
+    try:
+        commandes_page = paginator.get_page(page_number)
+    except:
+        commandes_page = paginator.get_page(1)
+
     # Enrichir les données pour chaque commande - optimisé pour éviter les requêtes N+1
-    commandes_list = list(commandes)  # Évaluer une seule fois
+    commandes_list = list(commandes_page)  # Évaluer une seule fois
     
     for commande in commandes_list:
         # Trouver l'état actuel depuis les données préchargées
@@ -572,13 +604,18 @@ def commandes_livrees(request):
         ]
         commande.articles_renvoyes = []
     
+    # Remplacer les objets de la page avec les données enrichies
+    commandes_page.object_list = commandes_list
+
     # Créer le contexte avec les variables supplémentaires
     context = {
-        'commandes': commandes_list,
+        'commandes': commandes_page,
         'current_tab': current_tab,
         'total_commandes': total_commandes,
         'commandes_payees': commandes_payees,
         'commandes_non_payees': commandes_non_payees,
+        'paginator': paginator,
+        'per_page': per_page,
         # Paramètres de filtre pour le template
         'filter_start_date': start_date,
         'filter_end_date': end_date,

@@ -593,7 +593,7 @@ def creer_article(request):
                 article.image = request.FILES['image']
             
             # Gérer les prix de substitution (upsell)
-            for i in range(1, 5):
+            for i in range(2, 5):
                 prix_upsell_str = request.POST.get(f'prix_upsell_{i}', '').strip().replace(',', '.')
                 if prix_upsell_str:
                     try:
@@ -603,19 +603,18 @@ def creer_article(request):
                     except ValueError:
                         # Ignorer les valeurs non numériques
                         pass
-            
-            # Gérer les prix de remise
-            for i in range(1, 5):
-                prix_remise_str = request.POST.get(f'prix_remise_{i}', '').strip().replace(',', '.')
-                if prix_remise_str:
-                    try:
-                        prix_remise = float(prix_remise_str)
-                        if prix_remise > 0:
-                            setattr(article, f'prix_remise_{i}', prix_remise)
-                    except ValueError:
-                        # Ignorer les valeurs non numériques
-                        pass
-            
+
+            # Gérer le prix gros
+            prix_gros_str = request.POST.get('prix_gros', '').strip().replace(',', '.')
+            if prix_gros_str:
+                try:
+                    prix_gros = float(prix_gros_str)
+                    if prix_gros > 0:
+                        article.prix_gros = prix_gros
+                except ValueError:
+                    # Ignorer les valeurs non numériques
+                    pass
+
             # Gérer le prix de liquidation
             prix_liquidation_str = request.POST.get('Prix_liquidation', '').strip().replace(',', '.')
             if prix_liquidation_str:
@@ -842,12 +841,12 @@ def modifier_article(request, id):
             
             # Gérer les prix de substitution (upsell)
             # Réinitialiser les prix upsell
-            article.prix_upsell_1 = None
             article.prix_upsell_2 = None
             article.prix_upsell_3 = None
             article.prix_upsell_4 = None
-            
-            for i in range(1, 5):
+            article.prix_gros = None
+
+            for i in range(2, 5):
                 prix_upsell_str = request.POST.get(f'prix_upsell_{i}', '').strip().replace(',', '.')
                 if prix_upsell_str:
                     try:
@@ -856,26 +855,19 @@ def modifier_article(request, id):
                             setattr(article, f'prix_upsell_{i}', prix_upsell)
                     except ValueError:
                         # Ignorer les valeurs non numériques
-                        pass      
-            
-            # Gérer les prix de remise
-            # Réinitialiser les prix de remise
-            article.prix_remise_1 = None
-            article.prix_remise_2 = None
-            article.prix_remise_3 = None
-            article.prix_remise_4 = None
-            
-            for i in range(1, 5):
-                prix_remise_str = request.POST.get(f'prix_remise_{i}', '').strip().replace(',', '.')
-                if prix_remise_str:
-                    try:
-                        prix_remise = float(prix_remise_str)
-                        if prix_remise > 0:
-                            setattr(article, f'prix_remise_{i}', prix_remise)
-                    except ValueError:
-                        # Ignorer les valeurs non numériques
                         pass
-            
+
+            # Gérer le prix gros
+            prix_gros_str = request.POST.get('prix_gros', '').strip().replace(',', '.')
+            if prix_gros_str:
+                try:
+                    prix_gros = float(prix_gros_str)
+                    if prix_gros > 0:
+                        article.prix_gros = prix_gros
+                except ValueError:
+                    # Ignorer les valeurs non numériques
+                    pass
+
             # Gérer le prix de liquidation
             prix_liquidation_str = request.POST.get('Prix_liquidation', '').strip().replace(',', '.')
             if prix_liquidation_str:

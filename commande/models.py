@@ -4,7 +4,7 @@ from django.utils import timezone
 from client.models import Client
 from article.models import Article, VarianteArticle
 from parametre.models import Ville, Operateur
-
+from decimal import Decimal
 # Create your models here.
 
 class EnumEtatCmd(models.Model):
@@ -196,14 +196,19 @@ class Commande(models.Model):
     def recalculer_totaux_upsell(self):
         """
         Recalcule automatiquement les totaux de la commande selon le compteur upsell.
-        Tous les articles de la commande prennent le prix upsell correspondant au compteur.
+
+        IMPORTANT: Cette méthode recalcule UNIQUEMENT les sous-totaux.
+        Le prix_panier (prix unitaire historique) reste INCHANGÉ pour préserver l'intégrité.
+
+        Exception: Les articles upsell voient leur prix_panier mis à jour selon le compteur
+        car c'est la logique métier attendue pour les upsells.
         """
         from commande.templatetags.commande_filters import get_prix_upsell_avec_compteur
-        
+
         print(f"🔄 recalculer_totaux_upsell - Compteur actuel: {self.compteur}")
-        
+
         nouveau_total = 0
-        
+
         # Recalculer chaque panier selon le compteur upsell
         for panier in self.paniers.all():
             # Vérifier si une remise a été appliquée sur ce panier
@@ -212,26 +217,32 @@ class Commande(models.Model):
                 print(f"   📦 {panier.article.nom} (REMISE APPLIQUÉE): qté={panier.quantite}, sous_total préservé={panier.sous_total}")
                 nouveau_total += float(panier.sous_total)
             else:
-                # Aucune remise - calculer selon le compteur de la commande
+                # Calculer le prix selon le compteur de la commande
                 prix_unitaire = get_prix_upsell_avec_compteur(panier.article, self.compteur)
                 nouveau_sous_total = prix_unitaire * panier.quantite
-                
+
                 print(f"   📦 {panier.article.nom} (upsell: {panier.article.isUpsell}): qté={panier.quantite}, prix={prix_unitaire}, sous_total={nouveau_sous_total}")
-                
-                # Mettre à jour le sous-total du panier si nécessaire
+
+                # SEULEMENT pour les articles upsell: mettre à jour prix_panier selon le compteur
+                # Pour les articles normaux: le prix_panier reste gelé
                 if panier.sous_total != nouveau_sous_total:
+                    if panier.article.isUpsell:
+                        # Article upsell: mettre à jour prix_panier selon le nouveau compteur
+                        panier.prix_panier = float(prix_unitaire)
+                        print(f"      ⚡ Upsell: prix_panier mis à jour: {panier.prix_panier} DH")
+                    # Dans tous les cas, mettre à jour le sous-total
                     panier.sous_total = float(nouveau_sous_total)
                     panier.save()
-                
+
                 nouveau_total += float(nouveau_sous_total)
-        
+
         # Ajouter les frais de livraison au total SEULEMENT si frais_livraison = True
         if self.frais_livraison:
             frais_livraison = self.ville.frais_livraison if self.ville else 0
             nouveau_total_avec_frais = float(nouveau_total) + float(frais_livraison)
         else:
             nouveau_total_avec_frais = float(nouveau_total)
-        
+
         # Mettre à jour le total de la commande
         if self.total_cmd != nouveau_total_avec_frais:
             self.total_cmd = nouveau_total_avec_frais
@@ -382,6 +393,8 @@ class Commande(models.Model):
                 Commande.objects.filter(id=self.id).update(total_cmd=nouveau_total)
                 print(f"ℹ️  Frais de livraison désactivés - Total recalculé: {nouveau_total}")
 
+
+
     # === Méthodes pour la gestion des articles retournés ===
     
     def get_articles_retournes(self):
@@ -447,7 +460,6 @@ class Panier(models.Model):
         ('remise_2', 'Prix remise 2'),
         ('remise_3', 'Prix remise 3'),
         ('remise_4', 'Prix remise 4'),
-
     ]
 
     CHOIX_TYPE_PRIX = [
@@ -470,7 +482,9 @@ class Panier(models.Model):
     article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name='paniers')
     variante = models.ForeignKey(VarianteArticle, on_delete=models.SET_NULL, null=True, blank=True, related_name='paniers')
     quantite = models.IntegerField()
+    prix_panier = models.FloatField(default=0)
     sous_total = models.FloatField()
+    sous_total_remise = models.FloatField(default=0)
     remise_appliquer = models.BooleanField(default=False)
     type_remise_appliquee = models.CharField(max_length=20, choices=CHOIX_TYPE_REMISE, blank=True, default='')
     type_prix_gele = models.CharField(max_length=30, choices=CHOIX_TYPE_PRIX, blank=True, default='', verbose_name="Type de prix gelé")
@@ -496,7 +510,57 @@ class Panier(models.Model):
                 self.remise_appliquer = False
                 self.type_remise_appliquee = ''
 
+        # INTÉGRITÉ : Le prix_panier est un prix HISTORIQUE GELÉ
+        # Il ne doit être calculé QU'UNE SEULE FOIS lors de la création (pk is None)
+        # Pour préserver l'intégrité, le prix_panier ne change JAMAIS après création
+        # SAUF si force_recalcul_prix=True est explicitement demandé
+
+        is_creation = self.pk is None
+        force_recalcul = kwargs.pop('force_recalcul_prix', False)
+
+        if self.article and (is_creation or force_recalcul) and (self.prix_panier == 0 or not self.prix_panier):
+            prix_calcule = self._calculer_prix_unitaire_base()
+            self.prix_panier = float(prix_calcule)
+            print(f"💾 Prix historique gelé pour {self.article.nom}: {self.prix_panier} DH")
+
+        # Calculer le sous-total si nécessaire
+        if self.prix_panier and self.quantite and (not self.sous_total or self.sous_total == 0):
+            self.sous_total = self.prix_panier * self.quantite
+
         super().save(*args, **kwargs)
+
+    def _calculer_prix_unitaire_base(self):
+        if not self.article:
+            return Decimal('0')
+        
+        if hasattr(self.article, 'has_promo_active') and self.article.has_promo_active:
+            return Decimal(str(self.article.prix_actuel or self.article.prix_unitaire))
+        
+        elif self.article.phase == 'LIQUIDATION':
+            if hasattr(self.article, 'Prix_liquidation') and self.article.Prix_liquidation:
+                return Decimal(str(self.article.Prix_liquidation))
+            else:
+                return Decimal(str(self.article.prix_actuel or self.article.prix_unitaire))
+
+        elif self.article.phase == 'EN_TEST':
+            return Decimal(str(self.article.prix_actuel or self.article.prix_unitaire))
+        
+            # Article upsell avec compteur
+        elif hasattr(self.article, 'isUpsell') and self.article.isUpsell and self.commande.compteur > 0:
+            if self.commande.compteur == 1 and self.article.prix_upsell_1:
+                return Decimal(str(self.article.prix_upsell_1))
+            elif self.commande.compteur == 2 and self.article.prix_upsell_2:
+                return Decimal(str(self.article.prix_upsell_2))
+            elif self.commande.compteur == 3 and self.article.prix_upsell_3:
+                return Decimal(str(self.article.prix_upsell_3))
+            elif self.commande.compteur >= 4 and self.article.prix_upsell_4:
+                return Decimal(str(self.article.prix_upsell_4))
+        
+        
+        # Prix normal par défaut
+        return Decimal(str(self.article.prix_actuel or self.article.prix_unitaire))
+
+
 
     def calculer_et_sauvegarder_prix(self, force_recalcul=False):
         """
@@ -506,8 +570,7 @@ class Panier(models.Model):
         - Des promotions actives
         - De la phase de l'article (liquidation, test, etc.)
 
-        IMPORTANT: Ne recalcule PAS si la commande est confirmée ou dans un état avancé,
-        sauf si force_recalcul=True.
+        Note: La logique de "prix gelé" par état a été retirée, le recalcul est toujours autorisé.
 
         Args:
             force_recalcul: Si True, force le recalcul même pour commandes confirmées (défaut: False)
@@ -531,35 +594,7 @@ class Panier(models.Model):
                 'recalcule': False
             }
 
-        # PROTECTION: Ne PAS recalculer si la commande est confirmée ou dans un état avancé
-        # Les prix sont "gelés" au moment de la confirmation
-        etats_proteges = [
-            'Confirmée',
-            'En préparation',
-            'Préparation en cours',
-            'Préparée',
-            'Mise en distribution',
-            'En cours de livraison',
-            'En livraison',
-            'Livrée',
-            'Livrée Partiellement',
-            'Livrée avec changement',
-            'Retournée',
-            'Reportée'
-        ]
-
-        if not force_recalcul and self.commande.etat_actuel:
-            etat_actuel_libelle = self.commande.etat_actuel.enum_etat.libelle
-            if etat_actuel_libelle in etats_proteges:
-                # Commande confirmée ou avancée - NE PAS RECALCULER
-                prix_unitaire = Decimal(str(self.sous_total)) / Decimal(str(self.quantite))
-                return {
-                    'prix_unitaire': float(prix_unitaire),
-                    'sous_total': float(self.sous_total),
-                    'type_prix': 'prix_gele',
-                    'recalcule': False,
-                    'message': f'Prix gelé - Commande en état "{etat_actuel_libelle}"'
-                }
+        # Logique de prix gelé supprimée: on recalcule même si la commande est dans un état avancé
 
         # 1. Si une remise a été appliquée - NE PAS RECALCULER
         if self.remise_appliquer:
@@ -622,10 +657,9 @@ class Panier(models.Model):
         prix_unitaire = Decimal(str(prix_unitaire))
         sous_total = prix_unitaire * Decimal(str(self.quantite))
 
-        # 4. Sauvegarder dans le panier avec le type de prix gelé
+        # 4. Sauvegarder dans le panier (sans type de prix gelé)
         self.sous_total = float(sous_total)
-        self.type_prix_gele = type_prix  # Sauvegarder le type de prix (liquidation, promotion, etc.)
-        self.save(update_fields=['sous_total', 'remise_appliquer', 'type_remise_appliquee', 'type_prix_gele'])
+        self.save(update_fields=['sous_total', 'remise_appliquer', 'type_remise_appliquee'])
 
         return {
             'prix_unitaire': float(prix_unitaire),
@@ -636,6 +670,189 @@ class Panier(models.Model):
 
     def __str__(self):
         return f"{self.commande.num_cmd} - {self.article.nom} (x{self.quantite})"
+
+
+
+class RemisePanier(models.Model):
+    """
+    Modèle pour gérer les remises personnalisées appliquées sur un panier.
+    La remise s'applique sur le sous-total du panier (prix_panier * quantite).
+    Une seule remise peut être appliquée par panier (OneToOneField).
+    """
+    TYPE_REMISE_CHOICES = [
+        ('POURCENTAGE', 'Pourcentage'),
+        ('MONTANT_FIXE', 'Montant fixe'),
+    ]
+
+    panier = models.OneToOneField(
+        Panier,
+        on_delete=models.CASCADE,
+        related_name='remise_personnalisee',
+        verbose_name="Panier",
+        help_text="Panier auquel cette remise est appliquée"
+    )
+    type_remise = models.CharField(
+        max_length=20,
+        choices=TYPE_REMISE_CHOICES,
+        default='POURCENTAGE',
+        verbose_name="Type de remise"
+    )
+    valeur_remise = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name="Valeur de la remise",
+        help_text="Pourcentage (ex: 10.5 pour 10.5%) ou montant fixe (ex: 50.00 DH)"
+    )
+    montant_applique = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name="Montant déduit",
+        help_text="Montant en DH réellement déduit du sous-total du panier"
+    )
+    raison_remise = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name="Raison de la remise",
+        help_text="Motif ou justification de l'application de cette remise"
+    )
+    date_application = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Date d'application"
+    )
+    operateur = models.ForeignKey(
+        Operateur,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='remises_paniers_appliquees',
+        verbose_name="Opérateur",
+        help_text="Opérateur qui a appliqué cette remise"
+    )
+
+    class Meta:
+        verbose_name = "Remise personnalisée de panier"
+        verbose_name_plural = "Remises personnalisées de paniers"
+        ordering = ['-date_application']
+
+    def __str__(self):
+        if self.type_remise == 'POURCENTAGE':
+            type_str = f"{self.valeur_remise}%"
+        else:
+            type_str = f"{self.valeur_remise} DH"
+        return f"Remise {type_str} sur {self.panier}"
+
+    def calculer_montant_remise(self):
+        """
+        Calcule le montant de la remise à appliquer sur le sous-total du panier.
+
+        IMPORTANT: Utilise le prix effectif actuel (upsells, promo, liquidation)
+        pour calculer le sous-total de base, et non le prix_panier gelé.
+
+        Cela permet d'appliquer un pourcentage de remise sur le prix réel actuel,
+        tenant compte des variations dynamiques (compteur upsell, promotions, etc.).
+
+        Returns:
+            Decimal: Montant de la remise en DH
+        """
+        from decimal import Decimal
+        from commande.templatetags.remise_filters import calculer_prix_unitaire_effectif
+
+        # Calculer le sous-total basé sur le prix effectif actuel
+        prix_unitaire_effectif = calculer_prix_unitaire_effectif(self.panier)
+        quantite = Decimal(str(self.panier.quantite))
+        sous_total_panier = prix_unitaire_effectif * quantite
+
+        if self.type_remise == 'POURCENTAGE':
+            # Remise en pourcentage du sous-total effectif
+            montant = sous_total_panier * (Decimal(str(self.valeur_remise)) / Decimal('100'))
+        else:
+            # Montant fixe
+            montant = Decimal(str(self.valeur_remise))
+
+        # S'assurer que la remise ne dépasse pas le sous-total
+        if montant > sous_total_panier:
+            montant = sous_total_panier
+
+        return montant
+
+    def appliquer_remise(self):
+        """
+        Applique la remise sur le panier en recalculant son sous-total.
+
+        IMPORTANT: Recalcule d'abord le sous-total basé sur le prix effectif actuel
+        (upsells, promo, liquidation) pour avoir une base cohérente avec le prix réel.
+
+        Le nouveau sous-total = sous-total effectif - montant de la remise.
+        Le sous-total effectif est sauvegardé dans panier.sous_total_remise.
+
+        Returns:
+            Decimal: Nouveau sous-total après application de la remise
+        """
+        from decimal import Decimal
+        from commande.templatetags.remise_filters import calculer_prix_unitaire_effectif
+
+        # Calculer le sous-total basé sur le prix effectif actuel
+        prix_unitaire_effectif = calculer_prix_unitaire_effectif(self.panier)
+        quantite = Decimal(str(self.panier.quantite))
+        sous_total_original = prix_unitaire_effectif * quantite
+
+        # Calculer le montant de la remise (utilise déjà calculer_prix_unitaire_effectif en interne)
+        montant_remise = self.calculer_montant_remise()
+        self.montant_applique = float(montant_remise)
+
+        # Calculer le nouveau sous-total
+        nouveau_sous_total = sous_total_original - montant_remise
+
+        # S'assurer que le sous-total ne soit pas négatif
+        if nouveau_sous_total < 0:
+            nouveau_sous_total = Decimal('0')
+
+        # Mettre à jour le panier
+        # IMPORTANT: Sauvegarder le sous-total effectif dans sous_total_remise AVANT de modifier sous_total
+        self.panier.sous_total_remise = float(sous_total_original)
+        self.panier.sous_total = float(nouveau_sous_total)
+        self.panier.remise_appliquer = True
+        self.panier.save(update_fields=['sous_total', 'sous_total_remise', 'remise_appliquer'])
+
+        # Sauvegarder cette remise
+        self.save()
+
+        print(f"✅ Remise appliquée sur {self.panier}: -{montant_remise} DH (sous-total effectif: {sous_total_original} DH → nouveau: {nouveau_sous_total} DH)")
+
+        return nouveau_sous_total
+
+    def retirer_remise(self):
+        """
+        Retire la remise du panier en restaurant le sous-total original depuis panier.sous_total_remise.
+
+        Returns:
+            Decimal: Sous-total restauré (avant remise)
+        """
+        from decimal import Decimal
+
+        # Restaurer le sous-total original depuis le champ sous_total_remise
+        if self.panier.sous_total_remise > 0:
+            sous_total_original = Decimal(str(self.panier.sous_total_remise))
+
+            self.panier.sous_total = float(sous_total_original)
+            self.panier.sous_total_remise = 0  # Réinitialiser le champ
+            self.panier.remise_appliquer = False
+            self.panier.save(update_fields=['sous_total', 'sous_total_remise', 'remise_appliquer'])
+
+            print(f"🔄 Remise retirée de {self.panier}: +{self.montant_applique} DH (sous-total restauré: {sous_total_original} DH)")
+
+            # Supprimer l'objet RemisePanier
+            self.delete()
+
+            return sous_total_original
+
+        return Decimal(str(self.panier.sous_total))
+
+
+
 
 
 class EtatCommande(models.Model):
@@ -694,10 +911,10 @@ class EtatCommande(models.Model):
 class Operation(models.Model):
     TYPE_OPERATION_CHOICES = [
         # Opérations spécifiques de confirmation
-        ('APPEL', 'Appel '),
-        ("Appel Whatsapp", "Appel Whatsapp"),
-        ("Message Whatsapp", "Appel Whatsapp "),
-        ("Vocal Whatsapp", "Vocal Whatsapp "),
+        ('APPEL', 'Appel'),
+        ("Appel Whatsapp", "Appel WhatsApp"),
+        ("Message Whatsapp", "Message WhatsApp"),
+        ("Vocal Whatsapp", "Vocal WhatsApp"),
         ('ENVOI_SMS', 'Envoi de SMS'),
     ]
     Type_Commentaire_CHOICES=[
@@ -996,19 +1213,178 @@ class ArticleRetourne(models.Model):
         """Vérifie si l'article peut être réintégré en stock"""
         return self.statut_retour == 'en_attente' and self.variante and self.variante.actif
 
-    def reintegrer_stock(self, operateur=None, commentaire=""):
-        """Réintègre l'article en stock"""
-        if self.peut_etre_reintegre():
+    def reintegrer_stock(self, operateur=None, commentaire="", quantite=None):
+        """
+        Réintègre l'article en stock (totalement ou partiellement)
+
+        Args:
+            operateur: Opérateur effectuant la réintégration
+            commentaire: Commentaire optionnel
+            quantite: Quantité spécifique à réintégrer (None = tout)
+
+        Returns:
+            tuple: (success: bool, article_cree: ArticleRetourne ou None)
+        """
+        if not self.peut_etre_reintegre():
+            return (False, None)
+
+        # Déterminer la quantité à réintégrer
+        qte_a_reintegrer = quantite if quantite is not None else self.quantite_retournee
+
+        # Validation
+        if qte_a_reintegrer <= 0 or qte_a_reintegrer > self.quantite_retournee:
+            return (False, None)
+
+        # Cas 1: Réintégration totale
+        if qte_a_reintegrer == self.quantite_retournee:
             # Augmenter la quantité disponible de la variante
             self.variante.qte_disponible += self.quantite_retournee
             self.variante.save(update_fields=['qte_disponible'])
-            
+
             # Mettre à jour le statut
             self.statut_retour = 'reintegre_stock'
             self.date_traitement = timezone.now()
             self.operateur_traitement = operateur
-            self.commentaire_traitement = commentaire or f"Réintégré automatiquement en stock: +{self.quantite_retournee}"
+            self.commentaire_traitement = commentaire or f"Réintégré en stock: +{self.quantite_retournee}"
             self.save()
-            
-            return True
-        return False
+
+            return (True, None)
+
+        # Cas 2: Réintégration partielle
+        else:
+            # Créer un nouvel enregistrement pour la quantité réintégrée
+            article_reintegre = ArticleRetourne.objects.create(
+                commande=self.commande,
+                article=self.article,
+                variante=self.variante,
+                quantite_retournee=qte_a_reintegrer,
+                prix_unitaire_origine=self.prix_unitaire_origine,
+                raison_retour=self.raison_retour,
+                date_retour=self.date_retour,
+                operateur_retour=self.operateur_retour,
+                statut_retour='reintegre_stock',
+                date_traitement=timezone.now(),
+                operateur_traitement=operateur,
+                commentaire_traitement=commentaire or f"Réintégration partielle: +{qte_a_reintegrer} sur {self.quantite_retournee + qte_a_reintegrer}"
+            )
+
+            # Augmenter le stock
+            self.variante.qte_disponible += qte_a_reintegrer
+            self.variante.save(update_fields=['qte_disponible'])
+
+            # Réduire la quantité de l'enregistrement original
+            self.quantite_retournee -= qte_a_reintegrer
+            self.save(update_fields=['quantite_retournee'])
+
+            return (True, article_reintegre)
+
+    def marquer_defectueux(self, operateur=None, commentaire="", quantite=None):
+        """
+        Marque l'article comme défectueux (totalement ou partiellement)
+
+        Args:
+            operateur: Opérateur effectuant le marquage
+            commentaire: Commentaire optionnel
+            quantite: Quantité spécifique à marquer (None = tout)
+
+        Returns:
+            tuple: (success: bool, article_cree: ArticleRetourne ou None)
+        """
+        if self.statut_retour != 'en_attente':
+            return (False, None)
+
+        # Déterminer la quantité à marquer comme défectueuse
+        qte_defectueuse = quantite if quantite is not None else self.quantite_retournee
+
+        # Validation
+        if qte_defectueuse <= 0 or qte_defectueuse > self.quantite_retournee:
+            return (False, None)
+
+        # Cas 1: Marquage total
+        if qte_defectueuse == self.quantite_retournee:
+            self.statut_retour = 'defectueux'
+            self.date_traitement = timezone.now()
+            self.operateur_traitement = operateur
+            self.commentaire_traitement = commentaire or f"Marqué comme défectueux: {self.quantite_retournee} unité(s)"
+            self.save()
+
+            return (True, None)
+
+        # Cas 2: Marquage partiel
+        else:
+            # Créer un nouvel enregistrement pour la quantité défectueuse
+            article_defectueux = ArticleRetourne.objects.create(
+                commande=self.commande,
+                article=self.article,
+                variante=self.variante,
+                quantite_retournee=qte_defectueuse,
+                prix_unitaire_origine=self.prix_unitaire_origine,
+                raison_retour=self.raison_retour,
+                date_retour=self.date_retour,
+                operateur_retour=self.operateur_retour,
+                statut_retour='defectueux',
+                date_traitement=timezone.now(),
+                operateur_traitement=operateur,
+                commentaire_traitement=commentaire or f"Marquage partiel défectueux: {qte_defectueuse} sur {self.quantite_retournee + qte_defectueuse}"
+            )
+
+            # Réduire la quantité de l'enregistrement original
+            self.quantite_retournee -= qte_defectueuse
+            self.save(update_fields=['quantite_retournee'])
+
+            return (True, article_defectueux)
+
+    def traiter(self, statut, operateur=None, commentaire="", quantite=None):
+        """
+        Méthode générique pour traiter l'article retourné
+
+        Args:
+            statut: Le statut cible ('reintegre_stock', 'defectueux', 'traite')
+            operateur: Opérateur effectuant le traitement
+            commentaire: Commentaire optionnel
+            quantite: Quantité spécifique à traiter (None = tout)
+
+        Returns:
+            tuple: (success: bool, article_cree: ArticleRetourne ou None)
+        """
+        if statut == 'reintegre_stock':
+            return self.reintegrer_stock(operateur, commentaire, quantite)
+        elif statut == 'defectueux':
+            return self.marquer_defectueux(operateur, commentaire, quantite)
+        elif statut == 'traite':
+            # Traitement simple sans création de nouvel enregistrement
+            if self.statut_retour != 'en_attente':
+                return (False, None)
+
+            qte_a_traiter = quantite if quantite is not None else self.quantite_retournee
+
+            if qte_a_traiter <= 0 or qte_a_traiter > self.quantite_retournee:
+                return (False, None)
+
+            if qte_a_traiter == self.quantite_retournee:
+                self.statut_retour = 'traite'
+                self.date_traitement = timezone.now()
+                self.operateur_traitement = operateur
+                self.commentaire_traitement = commentaire or "Traité manuellement"
+                self.save()
+                return (True, None)
+            else:
+                article_traite = ArticleRetourne.objects.create(
+                    commande=self.commande,
+                    article=self.article,
+                    variante=self.variante,
+                    quantite_retournee=qte_a_traiter,
+                    prix_unitaire_origine=self.prix_unitaire_origine,
+                    raison_retour=self.raison_retour,
+                    date_retour=self.date_retour,
+                    operateur_retour=self.operateur_retour,
+                    statut_retour='traite',
+                    date_traitement=timezone.now(),
+                    operateur_traitement=operateur,
+                    commentaire_traitement=commentaire or f"Traitement partiel: {qte_a_traiter} sur {self.quantite_retournee + qte_a_traiter}"
+                )
+                self.quantite_retournee -= qte_a_traiter
+                self.save(update_fields=['quantite_retournee'])
+                return (True, article_traite)
+        else:
+            return (False, None)

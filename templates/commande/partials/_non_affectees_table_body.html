@@ -8,13 +8,7 @@
             {{ commande.id_yz }}
         </div>
     </td>
-    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-600">
-        {% if commande.num_cmd != commande.id_yz|stringformat:"s" %}
-            {{ commande.num_cmd }}
-        {% else %}
-            <span class="text-gray-400 italic">Auto</span>
-        {% endif %}
-    </td>
+
     <td class="px-4 py-4 whitespace-nowrap">
         <div class="text-sm font-medium text-gray-900">
             {% if commande.client.nom or commande.client.prenom %}
@@ -42,8 +36,12 @@
     </td>
     <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
         {{ commande.date_cmd|date:"d/m/Y" }}
-        <div class="text-xs text-gray-400">{{ commande.date_creation|date:"H:i" }}</div>
     </td>
+    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+        <div class="font-medium text-gray-700">{{ commande.date_creation|date:"d/m/Y" }}</div>
+        <div class="text-xs text-gray-400">{{ commande.date_creation|date:"H:i:s" }}</div>
+    </td>
+   
     <td class="px-4 py-4 whitespace-nowrap text-sm font-medium" style="color: var(--admin-color);">
         {{ commande.total_cmd|floatformat:2 }} DH
     </td>

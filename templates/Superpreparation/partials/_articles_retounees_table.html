@@ -3,10 +3,22 @@
                         <tr class="table-row article-retourne-row"
                             data-id="{{ article_retourne.id }}"
                             data-commande-id-yz="{{ article_retourne.commande.id_yz }}"
+                            data-num-cmd="{{ article_retourne.commande.num_cmd|default:'' }}"
                             data-article-nom="{{ article_retourne.article.nom }}"
+                            data-article-ref="{{ article_retourne.article.reference|default:'' }}"
+                            data-article-modele="{{ article_retourne.article.modele|default:'' }}"
                             data-client="{{ article_retourne.commande.client.prenom }} {{ article_retourne.commande.client.nom }}"
+                            data-client-phone="{{ article_retourne.commande.client.numero_tel|default:'' }}"
+                            data-client-email="{{ article_retourne.commande.client.email|default:'' }}"
+                            data-couleur="{{ article_retourne.variante.couleur.nom|default:'' }}"
+                            data-pointure="{{ article_retourne.variante.pointure.pointure|default:'' }}"
                             data-statut="{{ article_retourne.statut_retour }}"
-                            data-date-retour="{{ article_retourne.date_retour|date:'d/m/Y' }}">
+                            data-quantite="{{ article_retourne.quantite_retournee }}"
+                            data-prix="{{ article_retourne.prix_unitaire_origine }}"
+                            data-raison-retour="{{ article_retourne.raison_retour|default:'' }}"
+                            data-date-retour="{{ article_retourne.date_retour|date:'Y-m-d' }}"
+                            data-date-traitement="{{ article_retourne.date_traitement|date:'Y-m-d'|default:'' }}"
+                            data-operateur-traitement="{{ article_retourne.operateur_traitement.prenom|default:'' }} {{ article_retourne.operateur_traitement.nom|default:'' }}">
 
                             <!-- Colonne Articles & Variantes -->
                             <td class="table-cell whitespace-nowrap">

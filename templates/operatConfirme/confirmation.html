@@ -104,6 +104,7 @@
 {% block extra_js %}
 <script src="{% static 'js/operatConfirme/smart-search.js' %}"></script>
 <script src="{% static 'js/operatConfirme/smart-pagination.js' %}"></script>
+<script src="{% static 'js/commande_filters.js' %}"></script>
 {% endblock %}
 
 {% block content %}
@@ -164,39 +165,57 @@
 
     <!-- Barre de recherche et boutons de basculement d'affichage -->
     <div class="bg-white rounded-xl shadow-md border p-6 mb-6">
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <!-- Boutons de vue -->
-        <div class="flex items-center space-x-4">
-            <button onclick="switchToTable()" id="btn-table" class="btn-confirm">
-                <i class="fas fa-table mr-2"></i>
-                Vue Tableau
-            </button>
-            <button onclick="switchToGrid()" id="btn-grid" class="flex items-center px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors">
-                <i class="fas fa-th-large mr-2"></i>
-                Vue Grille
-            </button>
-        </div>
-            
-            <!-- Barre de recherche intelligente -->
-            <div class="flex-grow max-w-md">
-                <div class="relative">
-                    <input type="text" 
-                           id="searchInput" 
-                           class="w-full pl-10 pr-4 py-2 rounded-lg border focus:ring-2 transition-all" 
-                           style="border-color: #f7d9c4; focus:ring-color: #6d4b3b; focus:border-color: #4B352A;"
-                           placeholder="Rechercher par N° Commande, N° externe, client, téléphone, ville, date, total, état...">
-                    <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2" style="color: #6d4b3b;"></i>
-                    <button onclick="clearSearch()" id="clearSearchBtn" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 hidden">
-                        <i class="fas fa-times"></i>
+        <form method="get" class="w-full">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+                <!-- Boutons de vue -->
+                <div class="flex items-center space-x-4">
+                    <button type="button" onclick="switchToTable()" id="btn-table" class="btn-confirm">
+                        <i class="fas fa-table mr-2"></i>
+                        Vue Tableau
+                    </button>
+                    <button type="button" onclick="switchToGrid()" id="btn-grid" class="flex items-center px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors">
+                        <i class="fas fa-th-large mr-2"></i>
+                        Vue Grille
                     </button>
                 </div>
+
+                <!-- Barre de recherche -->
+                <div class="flex-grow max-w-md">
+                    <div class="relative">
+                        <input type="text"
+                               name="search"
+                               id="searchInput"
+                               value="{{ search_query|default:'' }}"
+                               class="w-full pl-10 pr-4 py-2 rounded-lg border focus:ring-2 transition-all"
+                               style="border-color: #f7d9c4; focus:ring-color: #6d4b3b; focus:border-color: #4B352A;"
+                               placeholder="Rechercher par N° Commande, client, téléphone, ville...">
+                        <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2" style="color: #6d4b3b;"></i>
+                    </div>
+                </div>
+
+                <!-- Bouton de recherche et reset -->
+                <div class="flex items-center space-x-2">
+                    <button type="submit" class="btn-confirm">
+                        <i class="fas fa-search mr-2"></i>
+                        Rechercher
+                    </button>
+                    {% if search_query or date_filter or date_cmd_filter or sync_filter or request.GET.sync_date_start or request.GET.sync_date_end or order_by %}
+                    <a href="?" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors">
+                        <i class="fas fa-redo mr-2"></i>
+                        Réinitialiser
+                    </a>
+                    {% endif %}
+                </div>
             </div>
-            
-            <!-- Compteur -->
-        <div class="flex items-center space-x-4">
+
+            <!-- Filtres réutilisables -->
+            {% include 'common/filters.html' %}
+        </form>
+
+        <!-- Compteur -->
+        <div class="flex items-center justify-end mt-4">
             <div class="text-sm text-gray-600">
-                    <strong id="filteredCount">{{ commandes_a_confirmer.count }}</strong> commande{{ commandes_a_confirmer.count|pluralize }} à lancer
-            </div>
+                <strong id="filteredCount">{{ page_obj.paginator.count }}</strong> commande{{ page_obj.paginator.count|pluralize }} à lancer
             </div>
         </div>
     </div>
@@ -211,7 +230,6 @@
                         <tr class="text-white text-left">
                             
                             <th class="px-4 py-3 font-semibold">N° Commande</th>
-                            <th class="px-4 py-3 font-semibold">N° Externe</th>
                             <th class="px-4 py-3 font-semibold">Client</th>
                             <th class="px-4 py-3 font-semibold">Téléphone</th>
                             <th class="px-4 py-3 font-semibold">Ville Client</th>
@@ -227,9 +245,6 @@
                         <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                             <td class="px-4 py-3">
                                 <div class="font-bold" style="color: #4B352A;">{{ commande.id_yz }}</div>
-                            </td>
-                            <td class="px-4 py-3">
-                                <div class="text-sm text-gray-500">{{ commande.num_cmd }}</div>
                             </td>
                             <td class="px-4 py-3">
                                 <div class="font-medium text-gray-900">{{ commande.client.get_full_name }}</div>

@@ -2,6 +2,7 @@ from django.urls import path
 from django.shortcuts import redirect
 from . import views, views_retournee,views_articles
 from .barre_recherche_globale import views as search_views
+from operatConfirme import views as view_modif 
 
 app_name = 'Superpreparation'
 
@@ -13,8 +14,7 @@ urlpatterns = [
     path('', views.home_view, name='home'),
     path('home/', views.home_view, name='home_redirect'),
 
-     #Gestion des commandes 
-    path('liste-prepa/', views.liste_prepa, name='liste_prepa'),
+  
     path('commandes-en-preparation/', views.commandes_en_preparation, name='commandes_en_preparation'),
     path('commandes-emballees/', views.commandes_emballees, name='commandes_emballees'),
     path('commandes-preparees/', views.commandes_preparees, name='commandes_preparees'),
@@ -35,10 +35,19 @@ urlpatterns = [
     path('api/commande-info/<int:commande_id>/', views.api_commande_info, name='api_commande_info'),
 
 
-    path('modifier-commande/<int:commande_id>/', views.modifier_commande_prepa, name='modifier_commande'),
+
     path('modifier-commande-superviseur/<int:commande_id>/', views.modifier_commande_superviseur, name='modifier_commande_superviseur'),
+
+    # Routes pour la gestion des remises personnalisées
+    path('appliquer-remise/<int:panier_id>/', views.appliquer_remise_panier_superviseur, name='appliquer_remise_panier_superviseur'),
+    path('retirer-remise/<int:panier_id>/', views.retirer_remise_panier_superviseur, name='retirer_remise_panier_superviseur'),
+    path('calculer-remise-preview/<int:panier_id>/', views.calculer_remise_panier_preview_superviseur, name='calculer_remise_panier_preview_superviseur'),
+
     path('api/commande/<int:commande_id>/produits/', views.api_commande_produits, name='api_commande_produits'),
-    
+
+
+
+
 
 
     # path('api/commande/<int:commande_id>/changer-etat/', views.api_changer_etat_preparation, name='api_changer_etat_preparation') # Supprimée - plus nécessaire
@@ -59,7 +68,8 @@ urlpatterns = [
     path('commande/<int:commande_id>/prix-upsell/', views.api_prix_upsell_articles, name='api_prix_upsell_articles'),
     path('commande/<int:commande_id>/diagnostiquer-compteur/', views_articles.diagnostiquer_compteur, name='diagnostiquer_compteur'),
     path('api/article/<int:article_id>/variantes/', views.get_article_variants, name='get_article_variants'),
-    
+    path('commande/<int:commande_id>/ajouter-variantes-ajax/', views.ajouter_variantes_ajax, name='ajouter_variantes_ajax'),
+
 
 
 

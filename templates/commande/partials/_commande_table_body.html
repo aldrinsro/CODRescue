@@ -6,18 +6,9 @@
             <span class="font-bold" style="color: var(--admin-color);">{{ commande.id_yz }}</span>
         </div>
     </td>
-    <!-- N° Externe -->
-    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-600 border-r border-gray-200">
-        {% if commande.num_cmd != commande.id_yz|stringformat:"s" %}
-            {{ commande.num_cmd }}
-        {% else %}
-            <span class="text-gray-400 italic">Auto</span>
-        {% endif %}
-    </td>
+
     <!-- Client -->
     <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200">{{ commande.client.get_full_name }}</td>
-    <!-- Date -->
-    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200">{{ commande.date_cmd|date:"d/m/Y" }}</td>
     <!-- Ville -->
     <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200">
         {% if commande.ville %}
@@ -26,6 +17,14 @@
             {{ commande.ville_init|default:"Non spécifiée" }}
         {% endif %}
     </td>
+    <!-- Date Cmd -->
+    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200">{{ commande.date_cmd|date:"d/m/Y" }}</td>
+    <!-- Date Création -->
+    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200">
+        <div class="font-medium text-gray-700">{{ commande.date_creation|date:"d/m/Y" }}</div>
+        <div class="text-xs text-gray-400">{{ commande.date_creation|date:"H:i:s" }}</div>
+    </td>
+
     <!-- Total -->
     <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200" style="color: var(--admin-color);">
         <div title="Total: {{ commande.sous_total_articles|floatformat:2 }} DH (articles) + {{ commande.frais_livraison|floatformat:2 }} DH (livraison)">

@@ -632,24 +632,24 @@
     function loadClientsPage(page) {
         const searchInput = document.getElementById('searchInput');
         const searchQuery = searchInput ? searchInput.value : '';
-        loadClients(searchQuery, page);
+        loadClients(searchQuery, page, currentItemsPerPage, currentStartRange, currentEndRange, currentFilters);
     }
 
     // Nouvelles fonctions pour la pagination flexible
     function changePage(page) {
-        loadClients(currentSearchQuery, page, currentItemsPerPage, currentStartRange, currentEndRange);
+        loadClients(currentSearchQuery, page, currentItemsPerPage, currentStartRange, currentEndRange, currentFilters);
     }
 
     function changeItemsPerPage(itemsPerPage) {
-        loadClients(currentSearchQuery, 1, itemsPerPage, currentStartRange, currentEndRange);
+        loadClients(currentSearchQuery, 1, itemsPerPage, currentStartRange, currentEndRange, currentFilters);
     }
 
     function applyCustomRange(startRange, endRange) {
-        loadClients(currentSearchQuery, 1, null, startRange, endRange);
+        loadClients(currentSearchQuery, 1, null, startRange, endRange, currentFilters);
     }
 
     function clearCustomRange() {
-        loadClients(currentSearchQuery, 1, currentItemsPerPage, '', '');
+        loadClients(currentSearchQuery, 1, currentItemsPerPage, '', '', currentFilters);
     }
 
     // Fonction pour attacher les event listeners de pagination flexible
@@ -1020,30 +1020,41 @@
     // Initialisation au chargement de la page
     document.addEventListener('DOMContentLoaded', function() {
         const searchInput = document.getElementById('searchInput');
-        
+
+        // Initialiser les filtres avec les valeurs actuelles des champs
+        const statusFilterEl = document.getElementById('statusFilter');
+        const cityFilterEl = document.getElementById('cityFilter');
+        const ordersCountFilterEl = document.getElementById('ordersCountFilter');
+        const dateFilterEl = document.getElementById('dateFilter');
+
+        if (statusFilterEl) currentFilters.status = statusFilterEl.value;
+        if (cityFilterEl) currentFilters.city = cityFilterEl.value;
+        if (ordersCountFilterEl) currentFilters.ordersCount = ordersCountFilterEl.value;
+        if (dateFilterEl) currentFilters.date = dateFilterEl.value;
+
         if (searchInput) {
             // Gestionnaire d'événement pour la recherche en temps réel
             searchInput.addEventListener('input', function() {
                 const searchQuery = this.value.trim();
-                
+
                 // Annuler le timeout précédent
                 if (searchTimeout) {
                     clearTimeout(searchTimeout);
                 }
-                
+
                 // Attendre 500ms après la dernière frappe avant de lancer la recherche
                 searchTimeout = setTimeout(() => {
                     loadClients(searchQuery, 1, null, null, null, currentFilters);
                 }, 500);
             });
         }
-        
+
         // Initialiser les checkboxes
         initializeCheckboxes();
-        
+
         // Initialiser la pagination flexible
         attachEventListeners();
-        
+
         // Charger les villes pour le filtre
         // loadCities(); // Fonction manquante - à définir si nécessaire
 

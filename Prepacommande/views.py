@@ -890,6 +890,34 @@ def liste_prepa(request):
             + stats_par_type["affectees_supervision"]
         )
 
+    # Calculer les statistiques par état
+    stats_etats = {
+        "en_preparation": toutes_commandes.filter(etats__enum_etat__libelle="En préparation", etats__date_fin__isnull=True).distinct().count(),
+        "collectee": toutes_commandes.filter(etats__enum_etat__libelle="Collectée", etats__date_fin__isnull=True).distinct().count(),
+        "emballee": toutes_commandes.filter(etats__enum_etat__libelle="Emballée", etats__date_fin__isnull=True).distinct().count(),
+    }
+
+    # Gérer le filtre par état
+    etat_filter = request.GET.get("etat", "")
+    if etat_filter == "en_preparation":
+        if isinstance(commandes_affectees, list):
+            commandes_affectees = [cmd for cmd in commandes_affectees if cmd.etat_actuel and cmd.etat_actuel.enum_etat.libelle == "En préparation"]
+        else:
+            commandes_affectees = commandes_affectees.filter(etats__enum_etat__libelle="En préparation", etats__date_fin__isnull=True)
+        filter_type = "en_preparation"
+    elif etat_filter == "collectee":
+        if isinstance(commandes_affectees, list):
+            commandes_affectees = [cmd for cmd in commandes_affectees if cmd.etat_actuel and cmd.etat_actuel.enum_etat.libelle == "Collectée"]
+        else:
+            commandes_affectees = commandes_affectees.filter(etats__enum_etat__libelle="Collectée", etats__date_fin__isnull=True)
+        filter_type = "collectee"
+    elif etat_filter == "emballee":
+        if isinstance(commandes_affectees, list):
+            commandes_affectees = [cmd for cmd in commandes_affectees if cmd.etat_actuel and cmd.etat_actuel.enum_etat.libelle == "Emballée"]
+        else:
+            commandes_affectees = commandes_affectees.filter(etats__enum_etat__libelle="Emballée", etats__date_fin__isnull=True)
+        filter_type = "emballee"
+
     # Vérifier si c'est une requête AJAX pour les statistiques
     if request.GET.get("ajax") == "stats":
         from django.http import JsonResponse
@@ -899,6 +927,9 @@ def liste_prepa(request):
                 "affectees_supervision": stats_par_type.get("affectees_supervision", 0),
                 "total_affectees": total_affectees,
                 "renvoyees_logistique": stats_par_type.get("renvoyees_logistique", 0),
+                "en_preparation": stats_etats.get("en_preparation", 0),
+                "collectee": stats_etats.get("collectee", 0),
+                "emballee": stats_etats.get("emballee", 0),
             }
         )
 
@@ -926,6 +957,9 @@ def liste_prepa(request):
             "total_affectees": total_affectees,
             "valeur_totale": valeur_totale,
             "commandes_urgentes": commandes_urgentes,
+            "en_preparation": stats_etats.get("en_preparation", 0),
+            "collectee": stats_etats.get("collectee", 0),
+            "emballee": stats_etats.get("emballee", 0),
         },
         "stats_par_type": stats_par_type,
         "operateur_profile": operateur_profile,
@@ -1012,196 +1046,7 @@ def commandes_en_preparation(request):
     return render(request, "Prepacommande/commandes_en_preparation.html", context)
 
 
-@login_required
-def commandes_livrees_partiellement(request):
-    """Liste des commandes livrées partiellement renvoyées en préparation"""
-    from django.core.paginator import Paginator
-    
-    try:
-        operateur_profile = request.user.profil_operateur
-        
-        # Vérifier que l'utilisateur est un opérateur de préparation
-        if not operateur_profile.is_preparation:
-            messages.error(
-                request,
-                "Accès non autorisé. Vous n'êtes pas un opérateur de préparation.",
-            )
-            return redirect("login")
-            
-    except Operateur.DoesNotExist:
-        messages.error(request, "Votre profil opérateur n'existe pas.")
-        return redirect("login")
 
-    # Nouvel objectif: récupérer les commandes livrées partiellement
-    # qui ont été préparées (envoyées à la logistique) par cet opérateur
-    # L'opérateur de préparation crée l'état 'En préparation', pas 'Préparée'
-    commandes_livrees_partiellement_qs = (
-        Commande.objects.filter(etats__enum_etat__libelle="Livrée Partiellement")
-        .filter(
-            etats__enum_etat__libelle="En préparation",
-            etats__operateur=operateur_profile,
-        )
-        .select_related("client", "ville", "ville__region")
-        .prefetch_related("paniers__article", "etats")
-        .distinct()
-    )
-    
-    # Pour chaque commande originale, essayer de retrouver une éventuelle commande de renvoi associée
-    commandes_livrees_partiellement = []
-    for commande_originale in commandes_livrees_partiellement_qs:
-        commande_renvoi = Commande.objects.filter(
-            num_cmd__startswith=f"RENVOI-{commande_originale.num_cmd}",
-            client=commande_originale.client,
-        ).first()
-        if commande_renvoi:
-            commande_originale.commande_renvoi = commande_renvoi
-        commandes_livrees_partiellement.append(commande_originale)
-
-    # Les commandes sont déjà filtrées et pertinentes
-    commandes_filtrees = commandes_livrees_partiellement
-
-    # Pour chaque commande, récupérer les détails de la livraison partielle
-    for commande in commandes_livrees_partiellement:
-        # Trouver l'état "Livrée Partiellement" le plus récent
-        etat_livraison_partielle = (
-            commande.etats.filter(enum_etat__libelle="Livrée Partiellement")
-            .order_by("-date_debut")
-            .first()
-        )
-        
-        if etat_livraison_partielle:
-            commande.date_livraison_partielle = etat_livraison_partielle.date_debut
-            commande.commentaire_livraison_partielle = (
-                etat_livraison_partielle.commentaire
-            )
-            commande.operateur_livraison = etat_livraison_partielle.operateur
-            
-            # Le statut est toujours "Renvoyée en préparation" car nous ne récupérons que les commandes avec renvoi
-            commande.statut_actuel = "Renvoyée en préparation"
-            
-            # Ajouter les informations de la commande de renvoi
-            if hasattr(commande, "commande_renvoi"):
-                commande.commande_renvoi_id = commande.commande_renvoi.id
-                commande.commande_renvoi_num = commande.commande_renvoi.num_cmd
-                commande.commande_renvoi_id_yz = commande.commande_renvoi.id_yz
-
-    # Pagination côté serveur
-    items_per_page = int(request.GET.get('per_page', 10))  # Par défaut 10 éléments par page
-    page_number = request.GET.get('page', 1)
-    
-    # Créer le paginator avec la liste des commandes
-    paginator = Paginator(commandes_livrees_partiellement, items_per_page)
-    
-    try:
-        commandes_paginated = paginator.page(page_number)
-    except (Paginator.EmptyPage, ValueError):
-        # Si la page demandée n'existe pas ou n'est pas un nombre valide, afficher la première page
-        commandes_paginated = paginator.page(1)
-        page_number = 1
-
-    context = {
-        "page_title": "Commandes Livrées Partiellement",
-        "page_subtitle": "Interface Opérateur de Préparation",
-        "profile": operateur_profile,
-        "commandes_livrees_partiellement": commandes_paginated,  # Utiliser les commandes paginées
-        "commandes_count": len(commandes_livrees_partiellement),
-        "active_tab": "livrees_partiellement",
-        # Informations de pagination
-        "paginator": paginator,
-        "page_obj": commandes_paginated,
-        "items_per_page": items_per_page,
-        "current_page": page_number,
-        "total_pages": paginator.num_pages,
-        "has_previous": commandes_paginated.has_previous(),
-        "has_next": commandes_paginated.has_next(),
-        "previous_page_number": commandes_paginated.previous_page_number() if commandes_paginated.has_previous() else None,
-        "next_page_number": commandes_paginated.next_page_number() if commandes_paginated.has_next() else None,
-    }
-    return render(
-        request, "Prepacommande/commandes_livrees_partiellement.html", context
-    )
-
-
-@login_required
-def commandes_retournees(request):
-    """Liste des commandes retournées (état actuel 'Retournée') préparées initialement par l'opérateur courant"""
-    from django.core.paginator import Paginator
-    
-    try:
-        operateur_profile = request.user.profil_operateur
-        if not operateur_profile.is_preparation:
-            messages.error(
-                request,
-                "Accès non autorisé. Vous n'êtes pas un opérateur de préparation.",
-            )
-            return redirect("login")
-    
-    except Operateur.DoesNotExist:
-        messages.error(request, "Votre profil opérateur n'existe pas.")
-        return redirect("login")
-
-    # Commandes dont l'état ACTUEL est 'Retournée' et qui ont été préparées par l'opérateur courant
-    # L'opérateur de préparation crée l'état 'En préparation', pas 'Préparée'
-    commandes_qs = (
-        Commande.objects.filter(
-            etats__enum_etat__libelle="Retournée", etats__date_fin__isnull=True
-        )  # État actuel
-        .filter(
-            etats__enum_etat__libelle="En préparation",
-            etats__operateur=operateur_profile,
-        )
-        .select_related("client", "ville", "ville__region")
-        .prefetch_related("paniers__article", "etats")
-        .distinct()
-    )
-
-    commandes = list(commandes_qs)
-
-    # Enrichir avec méta d'état 'Retournée'
-    for commande in commandes:
-        etat_retour = (
-            commande.etats.filter(enum_etat__libelle="Retournée")
-            .order_by("-date_debut")
-            .first()
-        )
-        if etat_retour:
-            commande.date_retournee = etat_retour.date_debut
-            commande.commentaire_retournee = etat_retour.commentaire
-            commande.operateur_retour = etat_retour.operateur
-
-    # Pagination côté serveur
-    items_per_page = int(request.GET.get('per_page', 10))  # Par défaut 10 éléments par page
-    page_number = request.GET.get('page', 1)
-    
-    # Créer le paginator avec la liste des commandes
-    paginator = Paginator(commandes, items_per_page)
-    
-    try:
-        commandes_paginated = paginator.page(page_number)
-    except (Paginator.EmptyPage, ValueError):
-        # Si la page demandée n'existe pas ou n'est pas un nombre valide, afficher la première page
-        commandes_paginated = paginator.page(1)
-        page_number = 1
-
-    context = {
-        "page_title": "Commandes Retournées",
-        "page_subtitle": "Commandes renvoyées à la préparation (état 'Retournée')",
-        "profile": operateur_profile,
-        "commandes_retournees": commandes_paginated,  # Utiliser les commandes paginées
-        "commandes_count": len(commandes),
-        "active_tab": "retournees",
-        # Informations de pagination
-        "paginator": paginator,
-        "page_obj": commandes_paginated,
-        "items_per_page": items_per_page,
-        "current_page": page_number,
-        "total_pages": paginator.num_pages,
-        "has_previous": commandes_paginated.has_previous(),
-        "has_next": commandes_paginated.has_next(),
-        "previous_page_number": commandes_paginated.previous_page_number() if commandes_paginated.has_previous() else None,
-        "next_page_number": commandes_paginated.next_page_number() if commandes_paginated.has_next() else None,
-    }
-    return render(request, "Prepacommande/commandes_retournees.html", context)
 
 
 @login_required
@@ -1384,7 +1229,12 @@ def detail_prepa(request, pk):
         commande = (
             Commande.objects.select_related("client", "ville", "ville__region")
             .prefetch_related(
-                "paniers__article", "etats__enum_etat", "etats__operateur"
+                "paniers__article",
+                "paniers__variante",
+                "paniers__variante__couleur",
+                "paniers__variante__pointure",
+                "etats__enum_etat",
+                "etats__operateur"
             )
             .get(id=pk)
         )
@@ -1408,8 +1258,14 @@ def detail_prepa(request, pk):
         return redirect("Prepacommande:liste_prepa")
 
     # Récupérer les paniers (articles) de la commande
-    paniers = commande.paniers.all().select_related("article")
-    
+    paniers = commande.paniers.all().select_related(
+        "article",
+        "variante",
+        "variante__couleur",
+        "variante__pointure",
+        "remise_personnalisee"
+    )
+
     # Initialiser les variables pour les cas de livraison partielle/renvoi
     articles_livres = []
     articles_renvoyes = []
@@ -1418,13 +1274,58 @@ def detail_prepa(request, pk):
     commande_originale = None  # Initialiser à None
     etat_articles_renvoyes = {}  # Initialiser à un dictionnaire vide
 
-    # Ajouter le prix unitaire, le total de chaque ligne, et l'URL d'image si disponible
+    # Ajouter le prix unitaire, le total de chaque ligne, l'URL d'image et les variantes
     articles_image_urls = {}
+    total_articles = 0
+    total_remises = 0
+
     for panier in paniers:
-        panier.prix_unitaire = (
+        # Prix unitaire - utiliser prix_panier qui est le prix historique gelé
+        panier.prix_unitaire = panier.prix_panier if panier.prix_panier else (
             panier.sous_total / panier.quantite if panier.quantite > 0 else 0
         )
-        panier.total_ligne = panier.sous_total
+
+        # Calculer le sous-total avant remise
+        panier.sous_total_avant_remise = panier.prix_panier * panier.quantite if panier.prix_panier else panier.sous_total
+
+        # Gérer les remises
+        panier.a_remise = False
+        panier.montant_remise = 0
+        panier.info_remise = ""
+
+        # Vérifier si une remise personnalisée existe
+        if hasattr(panier, 'remise_personnalisee') and panier.remise_personnalisee:
+            remise = panier.remise_personnalisee
+            panier.a_remise = True
+            panier.montant_remise = float(remise.montant_applique)
+
+            if remise.type_remise == 'POURCENTAGE':
+                panier.info_remise = f"Remise {remise.valeur_remise}%"
+            else:
+                panier.info_remise = f"Remise {remise.valeur_remise} DH"
+
+            total_remises += panier.montant_remise
+        # Vérifier si une remise standard est appliquée
+        elif panier.remise_appliquer and panier.type_remise_appliquee:
+            panier.a_remise = True
+            # Calculer le montant de la remise
+            if panier.sous_total_remise and panier.sous_total_remise > 0:
+                panier.montant_remise = panier.sous_total_avant_remise - panier.sous_total_remise
+                panier.info_remise = f"Remise {panier.type_remise_appliquee}"
+                total_remises += panier.montant_remise
+
+        # Total ligne final (après remise si applicable)
+        if panier.a_remise:
+            if panier.sous_total_remise and panier.sous_total_remise > 0:
+                panier.total_ligne = panier.sous_total_remise
+            else:
+                panier.total_ligne = panier.sous_total_avant_remise - panier.montant_remise
+        else:
+            panier.total_ligne = panier.sous_total_avant_remise
+
+        total_articles += panier.total_ligne
+
+        # Image de l'article
         image_url = None
         try:
             # Protéger l'accès à .url si aucun fichier n'est associé
@@ -1439,6 +1340,14 @@ def detail_prepa(request, pk):
         # Egalement disponible dans le context si nécessaire
         if getattr(panier.article, "id", None) is not None:
             articles_image_urls[panier.article.id] = image_url
+
+        # Ajouter les informations de variante (couleur et pointure)
+        if panier.variante:
+            panier.couleur_display = panier.variante.couleur.nom if panier.variante.couleur else None
+            panier.pointure_display = panier.variante.pointure.pointure if panier.variante.pointure else None
+        else:
+            panier.couleur_display = None
+            panier.pointure_display = None
     
     # Récupérer tous les états de la commande pour afficher l'historique
     etats_commande = (
@@ -1589,10 +1498,9 @@ def detail_prepa(request, pk):
                             )
             except Exception:
                 pass
-    
-    # Calculer le total des articles
-    total_articles = sum(panier.total_ligne for panier in paniers)
-    
+
+    # Note: total_articles et total_remises sont déjà calculés dans la boucle des paniers ci-dessus
+
     # Récupérer les opérations associées à la commande
     operations = commande.operations.select_related("operateur").order_by(
         "-date_operation"
@@ -1762,6 +1670,7 @@ def detail_prepa(request, pk):
         "etat_precedent": etat_precedent,
         "etat_preparation": etat_preparation,
         "total_articles": total_articles,
+        "total_remises": total_remises,
         "operations": operations,
         "commande_barcode": commande_barcode,
         "is_commande_livree_partiellement": is_commande_livree_partiellement,
@@ -2884,12 +2793,7 @@ def modifier_commande_prepa(request, commande_id):
 @login_required
 def ajouter_article_commande_prepa(request, commande_id):
     """Ajouter un article à la commande en préparation"""
-    print("🔄 ===== DÉBUT ajouter_article_commande_prepa =====")
-    print(f"📦 Méthode HTTP: {request.method}")
-    print(f"📦 Commande ID: {commande_id}")
-    print(f"📦 User: {request.user}")
-    print(f"📦 POST data: {dict(request.POST)}")
-    print(f"📦 Headers: {dict(request.headers)}")
+  
     
     if request.method != 'POST':
         print("❌ Méthode non autorisée")
@@ -3276,23 +3180,45 @@ def api_panier_commande_prepa(request, commande_id):
     if not etat_preparation:
         return JsonResponse({"success": False, "message": "Commande non affectée"})
     
-    # Récupérer les paniers
-    paniers = commande.paniers.all().select_related("article")
-    
+    # Récupérer les paniers avec les variantes
+    paniers = commande.paniers.all().select_related(
+        "article",
+        "variante",
+        "variante__couleur",
+        "variante__pointure"
+    )
+
     paniers_data = []
     for panier in paniers:
+        # Récupérer les informations de variante
+        couleur = ""
+        pointure = ""
+        if panier.variante:
+            if panier.variante.couleur:
+                couleur = panier.variante.couleur.nom
+            if panier.variante.pointure:
+                pointure = panier.variante.pointure.pointure
+
+        # Construire le texte d'affichage
+        display_parts = [panier.article.nom]
+        if couleur:
+            display_parts.append(couleur)
+        if pointure:
+            display_parts.append(pointure)
+        display_text = " - ".join(display_parts)
+
         paniers_data.append(
             {
                 "id": panier.id,
                 "article_id": panier.article.id,
                 "article_nom": panier.article.nom,
                 "article_reference": panier.article.reference or "",
-                "article_couleur": panier.article.couleur,
-                "article_pointure": panier.article.pointure,
+                "article_couleur": couleur,
+                "article_pointure": pointure,
                 "quantite": panier.quantite,
                 "prix_unitaire": float(panier.article.prix_unitaire),
                 "sous_total": float(panier.sous_total),
-                "display_text": f"{panier.article.nom} - {panier.article.couleur} - {panier.article.pointure}",
+                "display_text": display_text,
             }
         )
 
@@ -3306,76 +3232,6 @@ def api_panier_commande_prepa(request, commande_id):
     )
 
 
-# === NOUVELLES FONCTIONNALITÉS : GESTION DE STOCK ===
-
-# === FONCTION SUPPRIMÉE : GESTION DE STOCK DÉPLACÉE VERS ADMIN ===
-# @login_required
-# def ajuster_stock(request, article_id):
-#     """Ajuster le stock d'un article - Service de préparation"""
-#     try:
-#         operateur_profile = request.user.profil_operateur
-#         if not operateur_profile.is_preparation:
-#             messages.error(request, "Accès non autorisé.")
-#             return redirect('login')
-#     except Operateur.DoesNotExist:
-#         messages.error(request, "Profil opérateur non trouvé.")
-#         return redirect('login')
-#     
-#     article = get_object_or_404(Article, pk=article_id)
-#     
-#     if request.method == 'POST':
-#         form = AjusterStockForm(request.POST)
-#         if form.is_valid():
-#             type_mouvement = form.cleaned_data['type_mouvement']
-#             quantite = form.cleaned_data['quantite']
-#             commentaire = form.cleaned_data['commentaire']
-#             
-#             try:
-#                 print(f"🔧 Ajustement stock - Article: {article.nom}, Type: {type_mouvement}, Quantité: {quantite}")
-#                 print(f"🔧 Stock avant ajustement: {article.qte_disponible}")
-#                 
-#                 mouvement = creer_mouvement_stock(
-#                     article=article,
-#                     quantite=quantite,
-#                     type_mouvement=type_mouvement,
-#                     operateur=operateur_profile,
-#                     commentaire=commentaire
-#                 )
-#                 
-#                 # Recharger l'article pour voir le stock mis à jour
-#                 article.refresh_from_db()
-#                 print(f"✅ Stock après ajustement: {article.qte_disponible}")
-#                 
-#                 if mouvement:
-#                     messages.success(request, f"Le stock de l'article '{article.nom}' a été ajusté avec succès. Nouveau stock: {article.qte_disponible}")
-#                 else:
-#                     messages.warning(request, "L'ajustement n'a pas pu être effectué.")
-#                     
-#                 return redirect('Prepacommande:detail_article', article_id=article.id)
-#             except Exception as e:
-#                 print(f"❌ Erreur dans ajuster_stock: {str(e)}")
-#                 import traceback
-#                 traceback.print_exc()
-#                 messages.error(request, f"Une erreur est survenue lors de l'ajustement du stock : {e}")
-# 
-#     else:
-#         form = AjusterStockForm()
-# 
-#     mouvements_recents = article.mouvements.order_by('-date_mouvement')[:10]
-# 
-#     context = {
-#         'form': form,
-#         'article': article,
-#         'mouvements_recents': mouvements_recents,
-#         'page_title': f"Ajuster le Stock - {article.nom}",
-#     }
-#     return render(request, 'Prepacommande/stock/ajuster_stock.html', context)
-    pass
-
-# === FONCTION SUPPRIMÉE : GESTION DE STOCK DÉPLACÉE VERS ADMIN ===
-# @login_required
-# def detail_article(request, article_id):
-#     """Afficher les détails d'un article spécifique - Service de préparation"""
     article = get_object_or_404(Article, pk=article_id)
     
     # Calculer la valeur totale du stock
@@ -3394,793 +3250,6 @@ def api_panier_commande_prepa(request, commande_id):
         "page_subtitle": "Informations complètes sur l'article",
     }
     return render(request, "Prepacommande/stock/detail_article.html", context)
-
-# === FONCTION SUPPRIMÉE : GESTION DE STOCK DÉPLACÉE VERS ADMIN ===
-# @login_required
-# def liste_articles(request):
-#     """Afficher la liste des articles avec filtres et statistiques - Service de préparation"""
-    try:
-        operateur_profile = request.user.profil_operateur
-        if not operateur_profile.is_preparation:
-            messages.error(request, "Accès non autorisé.")
-            return redirect("login")
-    except Operateur.DoesNotExist:
-        messages.error(request, "Profil opérateur non trouvé.")
-        return redirect("login")
-    
-    # Calcul des statistiques globales (avant tout filtrage)
-    articles_qs = Article.objects.all()
-    articles_total = articles_qs.count()
-    articles_actifs = articles_qs.filter(actif=True).count()
-    articles_inactifs = articles_qs.filter(actif=False).count()
-    articles_rupture = articles_qs.filter(qte_disponible__lte=0).count()
-    
-    # Articles créés aujourd'hui
-    today = timezone.now().date()
-    articles_crees_aujourd_hui = articles_qs.filter(date_creation__date=today).count()
-
-    # Récupération des articles pour la liste, filtrée
-    articles_list = Article.objects.all()
-    
-    # Filtres de recherche améliorés
-    query = request.GET.get("q", "").strip()
-    categorie_filter = request.GET.get("categorie", "").strip()
-    statut_filter = request.GET.get("statut", "").strip()
-    stock_filter = request.GET.get("stock", "").strip()
-    prix_min = request.GET.get("prix_min", "").strip()
-    prix_max = request.GET.get("prix_max", "").strip()
-    couleur_filter = request.GET.get("couleur", "").strip()
-    phase_filter = request.GET.get("phase", "").strip()
-    tri = request.GET.get("tri", "date_creation").strip()
-    
-    # Recherche textuelle intelligente
-    if query:
-        articles_list = articles_list.filter(
-            Q(nom__icontains=query)
-            | Q(reference__icontains=query)
-            | Q(description__icontains=query)
-            | Q(categorie__icontains=query)
-            | Q(couleur__icontains=query)
-        )
-    
-    # Filtre par catégorie
-    if categorie_filter:
-        articles_list = articles_list.filter(categorie__icontains=categorie_filter)
-    
-    # Filtre par statut
-    if statut_filter:
-        if statut_filter == "actif":
-            articles_list = articles_list.filter(actif=True)
-        elif statut_filter == "inactif":
-            articles_list = articles_list.filter(actif=False)
-    
-    # Filtre par niveau de stock
-    if stock_filter:
-        if stock_filter == "rupture":
-            articles_list = articles_list.filter(qte_disponible__lte=0)
-        elif stock_filter == "faible":
-            articles_list = articles_list.filter(
-                qte_disponible__gt=0, qte_disponible__lte=10
-            )
-        elif stock_filter == "normal":
-            articles_list = articles_list.filter(
-                qte_disponible__gt=10, qte_disponible__lte=50
-            )
-        elif stock_filter == "eleve":
-            articles_list = articles_list.filter(qte_disponible__gt=50)
-    
-    # Filtre par prix
-    if prix_min:
-        try:
-            prix_min_val = float(prix_min.replace(",", "."))
-            articles_list = articles_list.filter(prix_unitaire__gte=prix_min_val)
-        except (ValueError, TypeError):
-            pass
-    
-    if prix_max:
-        try:
-            prix_max_val = float(prix_max.replace(",", "."))
-            articles_list = articles_list.filter(prix_unitaire__lte=prix_max_val)
-        except (ValueError, TypeError):
-            pass
-    
-    # Filtre par couleur
-    if couleur_filter:
-        articles_list = articles_list.filter(couleur__icontains=couleur_filter)
-    
-    # Filtre par phase
-    if phase_filter:
-        articles_list = articles_list.filter(phase=phase_filter)
-    
-    # Tri des résultats
-    if tri == "nom":
-        articles_list = articles_list.order_by("nom")
-    elif tri == "prix_asc":
-        articles_list = articles_list.order_by("prix_unitaire")
-    elif tri == "prix_desc":
-        articles_list = articles_list.order_by("-prix_unitaire")
-    elif tri == "stock_asc":
-        articles_list = articles_list.order_by("qte_disponible")
-    elif tri == "stock_desc":
-        articles_list = articles_list.order_by("-qte_disponible")
-    elif tri == "date_creation":
-        articles_list = articles_list.order_by("-date_creation")
-    elif tri == "reference":
-        articles_list = articles_list.order_by("reference")
-    else:
-        articles_list = articles_list.order_by("-date_creation")
-    
-    # Récupération des valeurs uniques pour les filtres
-    categories_uniques = (
-        Article.objects.values_list("categorie", flat=True)
-        .distinct()
-        .exclude(categorie__isnull=True)
-        .exclude(categorie__exact="")
-    )
-    couleurs_uniques = (
-        Article.objects.values_list("couleur", flat=True)
-        .distinct()
-        .exclude(couleur__isnull=True)
-        .exclude(couleur__exact="")
-    )
-    phases_uniques = (
-        Article.objects.values_list("phase", flat=True)
-        .distinct()
-        .exclude(phase__isnull=True)
-        .exclude(phase__exact="")
-    )
-
-    # Pagination
-    paginator = Paginator(articles_list, 12)
-    page_number = request.GET.get("page")
-    page_obj = paginator.get_page(page_number)
-    
-    context = {
-        "articles": page_obj,
-        "categories_uniques": categories_uniques,
-        "couleurs_uniques": couleurs_uniques,
-        "phases_uniques": phases_uniques,
-        "articles_total": articles_total,
-        "articles_actifs": articles_actifs,
-        "articles_inactifs": articles_inactifs,
-        "articles_rupture": articles_rupture,
-        "articles_crees_aujourd_hui": articles_crees_aujourd_hui,
-        "page_title": "Liste des Articles",
-        "page_subtitle": "Inventaire complet et gestion du stock",
-        "request": request,
-        "query": query,
-        "current_filters": {
-            "categorie": categorie_filter,
-            "statut": statut_filter,
-            "stock": stock_filter,
-            "prix_min": prix_min,
-            "prix_max": prix_max,
-            "couleur": couleur_filter,
-            "phase": phase_filter,
-            "tri": tri,
-        },
-    }
-    return render(request, "Prepacommande/stock/liste_articles.html", context)
-
-# === FONCTION SUPPRIMÉE : GESTION DE STOCK DÉPLACÉE VERS ADMIN ===
-# @login_required
-# def mouvements_stock(request):
-#     """Vue pour afficher l'historique des mouvements de stock - Service de préparation"""
-    try:
-        operateur_profile = request.user.profil_operateur
-        if not operateur_profile.is_preparation:
-            messages.error(request, "Accès non autorisé.")
-            return redirect("login")
-    except Operateur.DoesNotExist:
-        messages.error(request, "Profil opérateur non trouvé.")
-        return redirect("login")
-    
-    from article.models import MouvementStock
-    
-    # Récupération de tous les mouvements
-    mouvements_list = MouvementStock.objects.select_related(
-        "article", "operateur"
-    ).order_by("-date_mouvement")
-    
-    # Filtres de recherche
-    article_filter = request.GET.get("article", "").strip()
-    type_filter = request.GET.get("type", "").strip()
-    date_filter = request.GET.get("date_range", "").strip()
-    
-    # Filtre par article (nom ou référence)
-    if article_filter:
-        mouvements_list = mouvements_list.filter(
-            Q(article__nom__icontains=article_filter)
-            | Q(article__reference__icontains=article_filter)
-        )
-    
-    # Filtre par type de mouvement
-    if type_filter:
-        if type_filter == "entree":
-            mouvements_list = mouvements_list.filter(type_mouvement="entree")
-        elif type_filter == "sortie":
-            mouvements_list = mouvements_list.filter(type_mouvement="sortie")
-        elif type_filter == "ajustement":
-            mouvements_list = mouvements_list.filter(
-                type_mouvement__in=["ajustement_pos", "ajustement_neg"]
-            )
-    
-    # Filtre par date
-    if date_filter:
-        try:
-            date_obj = datetime.strptime(date_filter, "%Y-%m-%d").date()
-            mouvements_list = mouvements_list.filter(date_mouvement__date=date_obj)
-        except ValueError:
-            pass
-    
-    # Pagination
-    paginator = Paginator(mouvements_list, 25)
-    page_number = request.GET.get("page")
-    page_obj = paginator.get_page(page_number)
-    
-    # Statistiques rapides
-    total_mouvements = mouvements_list.count()
-    mouvements_aujourd_hui = MouvementStock.objects.filter(
-        date_mouvement__date=timezone.now().date()
-    ).count()
-    
-    context = {
-        "mouvements": page_obj,
-        "total_mouvements": total_mouvements,
-        "mouvements_aujourd_hui": mouvements_aujourd_hui,
-        "page_title": "Mouvements de Stock",
-        "current_filters": {
-            "article": article_filter,
-            "type": type_filter,
-            "date_range": date_filter,
-        },
-    }
-    return render(request, "Prepacommande/stock/mouvements_stock.html", context)
-
-# === FONCTION SUPPRIMÉE : GESTION DE STOCK DÉPLACÉE VERS ADMIN ===
-# @login_required
-# def alertes_stock(request):
-#     """Vue pour afficher les alertes de stock - Service de préparation"""
-    try:
-        operateur_profile = request.user.profil_operateur
-        if not operateur_profile.is_preparation:
-            messages.error(request, "Accès non autorisé.")
-            return redirect("login")
-    except Operateur.DoesNotExist:
-        messages.error(request, "Profil opérateur non trouvé.")
-        return redirect("login")
-    
-    from article.models import MouvementStock
-    
-    # Paramètres de seuils
-    SEUIL_RUPTURE = 0
-    SEUIL_STOCK_FAIBLE = 10
-    SEUIL_A_COMMANDER = 20
-    
-    # Récupération de tous les articles actifs
-    articles_actifs = Article.objects.filter(actif=True)
-    
-    # Filtres par niveau d'alerte
-    filtre_alerte = request.GET.get("filtre", "tous")
-    
-    if filtre_alerte == "rupture":
-        articles_alerte = articles_actifs.filter(qte_disponible__lte=SEUIL_RUPTURE)
-    elif filtre_alerte == "faible":
-        articles_alerte = articles_actifs.filter(
-            qte_disponible__gt=SEUIL_RUPTURE, qte_disponible__lte=SEUIL_STOCK_FAIBLE
-        )
-    elif filtre_alerte == "a_commander":
-        articles_alerte = articles_actifs.filter(
-            qte_disponible__gt=SEUIL_STOCK_FAIBLE, qte_disponible__lte=SEUIL_A_COMMANDER
-        )
-    else:
-        articles_alerte = articles_actifs.filter(qte_disponible__lte=SEUIL_A_COMMANDER)
-    
-    # Tri des résultats
-    tri = request.GET.get("tri", "stock_asc")
-    if tri == "stock_asc":
-        articles_alerte = articles_alerte.order_by("qte_disponible")
-    elif tri == "stock_desc":
-        articles_alerte = articles_alerte.order_by("-qte_disponible")
-    elif tri == "nom":
-        articles_alerte = articles_alerte.order_by("nom")
-    elif tri == "reference":
-        articles_alerte = articles_alerte.order_by("reference")
-    elif tri == "categorie":
-        articles_alerte = articles_alerte.order_by("categorie")
-    else:
-        articles_alerte = articles_alerte.order_by("qte_disponible")
-    
-    # Statistiques détaillées
-    stats = {
-        "total_articles": articles_actifs.count(),
-        "rupture_stock": articles_actifs.filter(
-            qte_disponible__lte=SEUIL_RUPTURE
-        ).count(),
-        "stock_faible": articles_actifs.filter(
-            qte_disponible__gt=SEUIL_RUPTURE, qte_disponible__lte=SEUIL_STOCK_FAIBLE
-        ).count(),
-        "a_commander": articles_actifs.filter(
-            qte_disponible__gt=SEUIL_STOCK_FAIBLE, qte_disponible__lte=SEUIL_A_COMMANDER
-        ).count(),
-        "stock_ok": articles_actifs.filter(
-            qte_disponible__gt=SEUIL_A_COMMANDER
-        ).count(),
-    }
-    
-    # Alertes critiques
-    alertes_critiques = articles_actifs.filter(
-        qte_disponible__lte=SEUIL_RUPTURE
-    ).order_by("qte_disponible")[:5]
-    
-    # Analyse par catégorie
-    categories_alertes = (
-        articles_actifs.values("categorie")
-        .annotate(
-            total=Count("id"),
-            rupture=Count("id", filter=Q(qte_disponible__lte=SEUIL_RUPTURE)),
-            faible=Count(
-                "id",
-                filter=Q(
-                    qte_disponible__gt=SEUIL_RUPTURE,
-                    qte_disponible__lte=SEUIL_STOCK_FAIBLE,
-                ),
-            ),
-            a_commander=Count(
-                "id",
-                filter=Q(
-                    qte_disponible__gt=SEUIL_STOCK_FAIBLE,
-                    qte_disponible__lte=SEUIL_A_COMMANDER,
-                ),
-            ),
-            stock_moyen=Avg("qte_disponible"),
-            valeur_stock=Sum("qte_disponible"),
-        )
-        .exclude(categorie__isnull=True)
-        .exclude(categorie__exact="")
-        .order_by("-rupture", "-faible")
-    )
-    
-    # Historique des mouvements récents
-    mouvements_recents = (
-        MouvementStock.objects.filter(
-        article__in=articles_alerte,
-            date_mouvement__gte=timezone.now() - timedelta(days=30),
-        )
-        .select_related("article", "operateur")
-        .order_by("-date_mouvement")[:10]
-    )
-    
-    # Suggestions d'actions
-    suggestions = []
-    
-    if stats["rupture_stock"] > 0:
-        suggestions.append(
-            {
-                "type": "danger",
-                "titre": "Rupture de Stock Critique",
-                "message": f'{stats["rupture_stock"]} article(s) en rupture totale nécessitent un réapprovisionnement immédiat.',
-                "action": "Contacter les fournisseurs",
-                "icone": "fas fa-exclamation-triangle",
-            }
-        )
-
-    if stats["stock_faible"] > 0:
-        suggestions.append(
-            {
-                "type": "warning",
-                "titre": "Stock Faible",
-                "message": f'{stats["stock_faible"]} article(s) ont un stock faible. Planifier les commandes.',
-                "action": "Préparer les commandes",
-                "icone": "fas fa-exclamation-circle",
-            }
-        )
-
-    if stats["a_commander"] > 0:
-        suggestions.append(
-            {
-                "type": "info",
-                "titre": "À Commander Bientôt",
-                "message": f'{stats["a_commander"]} article(s) devront être commandés prochainement.',
-                "action": "Surveiller l'évolution",
-                "icone": "fas fa-info-circle",
-            }
-        )
-    
-    # Pagination
-    paginator = Paginator(articles_alerte, 20)
-    page_number = request.GET.get("page")
-    page_obj = paginator.get_page(page_number)
-    
-    context = {
-        "articles": page_obj,
-        "stats": stats,
-        "alertes_critiques": alertes_critiques,
-        "categories_alertes": categories_alertes,
-        "mouvements_recents": mouvements_recents,
-        "suggestions": suggestions,
-        "filtre_actuel": filtre_alerte,
-        "tri_actuel": tri,
-        "seuils": {
-            "rupture": SEUIL_RUPTURE,
-            "faible": SEUIL_STOCK_FAIBLE,
-            "a_commander": SEUIL_A_COMMANDER,
-        },
-        "page_title": "Alertes Stock",
-        "page_subtitle": "Articles nécessitant une attention immédiate",
-    }
-    return render(request, "Prepacommande/stock/alertes_stock.html", context)
-
-# === FONCTION SUPPRIMÉE : GESTION DE STOCK DÉPLACÉE VERS ADMIN ===
-# @login_required
-# def statistiques_stock(request):
-#     """Vue pour afficher les statistiques de stock - Service de préparation"""
-    try:
-        operateur_profile = request.user.profil_operateur
-        if not operateur_profile.is_preparation:
-            messages.error(request, "Accès non autorisé.")
-            return redirect("login")
-    except Operateur.DoesNotExist:
-        messages.error(request, "Profil opérateur non trouvé.")
-        return redirect("login")
-    
-    from article.models import MouvementStock
-    
-    # Paramètres de filtrage
-    periode = int(request.GET.get("periode", 30))
-    categorie_filter = request.GET.get("categorie", "")
-    
-    # Date de début selon la période
-    date_debut = timezone.now() - timedelta(days=periode)
-    
-    # Articles de base
-    articles_qs = Article.objects.filter(actif=True)
-    
-    # Filtrage par catégorie si spécifié
-    if categorie_filter:
-        articles_qs = articles_qs.filter(categorie=categorie_filter)
-    
-    # Valeur totale du stock
-    valeur_stock = (
-        articles_qs.aggregate(
-            valeur_totale=Sum(F("qte_disponible") * F("prix_unitaire"))
-        )["valeur_totale"]
-        or 0
-    )
-    
-    # Nombre total d'articles en stock
-    articles_en_stock = articles_qs.filter(qte_disponible__gt=0).count()
-    
-    # Articles par niveau de stock
-    stats_niveaux = articles_qs.aggregate(
-        total_articles=Count("id"),
-        rupture=Count("id", filter=Q(qte_disponible=0)),
-        stock_faible=Count(
-            "id", filter=Q(qte_disponible__gt=0, qte_disponible__lte=10)
-        ),
-        stock_normal=Count(
-            "id", filter=Q(qte_disponible__gt=10, qte_disponible__lte=50)
-        ),
-        stock_eleve=Count("id", filter=Q(qte_disponible__gt=50)),
-    )
-    
-    # Taux de rupture
-    taux_rupture = (
-        (stats_niveaux["rupture"] / stats_niveaux["total_articles"] * 100)
-        if stats_niveaux["total_articles"] > 0
-        else 0
-    )
-    
-    # Statistiques par catégorie
-    stats_categories = (
-        articles_qs.values("categorie")
-        .annotate(
-            total_articles=Count("id"),
-            stock_total=Sum("qte_disponible"),
-            valeur_totale=Sum(F("qte_disponible") * F("prix_unitaire")),
-            prix_moyen=Avg("prix_unitaire"),
-            stock_moyen=Avg("qte_disponible"),
-            articles_rupture=Count("id", filter=Q(qte_disponible=0)),
-            articles_faible=Count(
-                "id", filter=Q(qte_disponible__gt=0, qte_disponible__lte=10)
-            ),
-        )
-        .exclude(categorie__isnull=True)
-        .exclude(categorie__exact="")
-        .order_by("-valeur_totale")
-    )
-    
-    # Top articles
-    top_articles_valeur = (
-        articles_qs.annotate(valeur_stock=F("qte_disponible") * F("prix_unitaire"))
-        .filter(qte_disponible__gt=0)
-        .order_by("-valeur_stock")[:10]
-    )
-
-    top_articles_quantite = articles_qs.filter(qte_disponible__gt=0).order_by(
-        "-qte_disponible"
-    )[:10]
-    
-    # Mouvements de stock
-    mouvements_periode = MouvementStock.objects.filter(
-        date_mouvement__gte=date_debut, article__in=articles_qs
-    ).select_related("article")
-
-    mouvements_sortie = (
-        mouvements_periode.filter(
-            type_mouvement__in=["sortie", "ajustement_neg"]
-        ).aggregate(total_sorties=Sum("quantite"))["total_sorties"]
-        or 0
-    )
-    
-    rotation_stock = (mouvements_sortie / valeur_stock * 100) if valeur_stock > 0 else 0
-    
-    # Évolution temporelle
-    evolution_donnees = []
-    nb_semaines = min(periode // 7, 12)
-    
-    for i in range(nb_semaines):
-        date_fin = timezone.now() - timedelta(days=i * 7)
-        valeur_semaine = (
-            articles_qs.aggregate(valeur=Sum(F("qte_disponible") * F("prix_unitaire")))[
-                "valeur"
-            ]
-            or 0
-        )
-
-        evolution_donnees.append(
-            {"date": date_fin.strftime("%d/%m"), "valeur": float(valeur_semaine)}
-        )
-    
-    evolution_donnees.reverse()
-    
-    # Alertes
-    alertes = []
-    
-    if stats_niveaux["rupture"] > 0:
-        alertes.append(
-            {
-                "type": "danger",
-                "titre": "Articles en Rupture",
-                "message": f'{stats_niveaux["rupture"]} article(s) en rupture de stock',
-                "valeur": stats_niveaux["rupture"],
-            }
-        )
-    
-    if taux_rupture > 10:
-        alertes.append(
-            {
-                "type": "warning",
-                "titre": "Taux de Rupture Élevé",
-                "message": f"Taux de rupture de {taux_rupture:.1f}% (seuil recommandé: 5%)",
-                "valeur": f"{taux_rupture:.1f}%",
-            }
-        )
-    
-    if rotation_stock < 2:
-        alertes.append(
-            {
-                "type": "info",
-                "titre": "Rotation Faible",
-                "message": "La rotation du stock est faible, optimisation possible",
-                "valeur": f"{rotation_stock:.1f}",
-            }
-        )
-    
-    # Données pour graphiques
-    categories_chart_data = {
-        "labels": [cat["categorie"] for cat in stats_categories],
-        "values": [float(cat["valeur_totale"] or 0) for cat in stats_categories],
-        "colors": ["#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF", "#FF9F40"],
-    }
-    
-    top_articles_chart_data = {
-        "labels": [art.nom[:20] for art in top_articles_valeur[:5]],
-        "values": [
-            float((art.qte_disponible or 0) * (art.prix_unitaire or 0))
-            for art in top_articles_valeur[:5]
-        ],
-    }
-
-    categories_disponibles = (
-        Article.objects.filter(actif=True)
-        .values_list("categorie", flat=True)
-        .distinct()
-        .exclude(categorie__isnull=True)
-        .exclude(categorie__exact="")
-        .order_by("categorie")
-    )
-    
-    context = {
-        "page_title": "Statistiques Stock",
-        "page_subtitle": "Analyse de la performance et de la valeur de l'inventaire",
-        "valeur_stock": valeur_stock,
-        "articles_en_stock": articles_en_stock,
-        "rotation_stock": rotation_stock,
-        "taux_rupture": taux_rupture,
-        "stats_niveaux": stats_niveaux,
-        "stats_categories": stats_categories,
-        "top_articles_valeur": top_articles_valeur,
-        "top_articles_quantite": top_articles_quantite,
-        "evolution_donnees": evolution_donnees,
-        "alertes": alertes,
-        "categories_chart_data": categories_chart_data,
-        "top_articles_chart_data": top_articles_chart_data,
-        "categories_disponibles": categories_disponibles,
-        "periode_actuelle": periode,
-        "categorie_actuelle": categorie_filter,
-    }
-    return render(request, "Prepacommande/stock/statistiques_stock.html", context)
-
-# === FONCTION SUPPRIMÉE : GESTION DE STOCK DÉPLACÉE VERS ADMIN ===
-# @login_required
-# def creer_article(request):
-#     """Créer un nouvel article - Service de préparation"""
-    try:
-        operateur_profile = request.user.profil_operateur
-        if not operateur_profile.is_preparation:
-            messages.error(request, "Accès non autorisé.")
-            return redirect("login")
-    except Operateur.DoesNotExist:
-        messages.error(request, "Profil opérateur non trouvé.")
-        return redirect("login")
-    
-    if request.method == "POST":
-        # Récupération des données
-        nom = request.POST.get("nom")
-        reference = request.POST.get("reference")
-        categorie = request.POST.get("categorie")
-        couleur = request.POST.get("couleur")
-        pointure_str = request.POST.get("pointure", "").strip()
-        phase = request.POST.get("phase")
-        prix_str = request.POST.get("prix_unitaire", "").strip().replace(",", ".")
-        description = request.POST.get("description")
-        qte_disponible_str = request.POST.get("qte_disponible", "0").strip()
-        actif = "actif" in request.POST
-        image = request.FILES.get("image")
-
-        if not all([nom, reference, categorie, prix_str]):
-            messages.error(
-                request,
-                "Veuillez remplir tous les champs obligatoires (Nom, Référence, Catégorie, Prix).",
-            )
-        else:
-            try:
-                prix_unitaire = float(prix_str)
-                qte_disponible = int(qte_disponible_str) if qte_disponible_str else 0
-                pointure = pointure_str if pointure_str else None
-
-                article = Article.objects.create(
-                    nom=nom,
-                    reference=reference,
-                    categorie=categorie,
-                    couleur=couleur,
-                    pointure=pointure,
-                    phase=phase,
-                    prix_unitaire=prix_unitaire,
-                    description=description,
-                    qte_disponible=qte_disponible,
-                    actif=actif,
-                    image=image,
-                )
-                messages.success(
-                    request, f"L'article '{article.nom}' a été créé avec succès."
-                )
-                return redirect("Prepacommande:liste_articles")
-            except (ValueError, TypeError):
-                messages.error(
-                    request, "Le prix et la quantité doivent être des nombres valides."
-                )
-
-    context = {
-        "article_phases": Article.PHASE_CHOICES,
-        "page_title": "Créer un Nouvel Article",
-        "page_subtitle": "Ajouter un article au catalogue",
-    }
-    return render(request, "Prepacommande/stock/creer_article.html", context)
-
-# === FONCTION SUPPRIMÉE : GESTION DE STOCK DÉPLACÉE VERS ADMIN ===
-# @login_required
-# def modifier_article(request, article_id):
-#     """Modifier un article existant - Service de préparation"""
-    try:
-        operateur_profile = request.user.profil_operateur
-        if not operateur_profile.is_preparation:
-            messages.error(request, "Accès non autorisé.")
-            return redirect("login")
-    except Operateur.DoesNotExist:
-        messages.error(request, "Profil opérateur non trouvé.")
-        return redirect("login")
-    
-    article = get_object_or_404(Article, pk=article_id)
-    
-    if request.method == "POST":
-        form = ArticleForm(request.POST, request.FILES, instance=article)
-        if form.is_valid():
-            # Sauvegarder l'article
-            article_modifie = form.save()
-            
-            # Gérer l'ajustement de stock optionnel
-            type_mouvement_stock = request.POST.get("type_mouvement_stock")
-            quantite_ajustement = request.POST.get("quantite_ajustement")
-            commentaire_ajustement = request.POST.get("commentaire_ajustement", "")
-            
-            if type_mouvement_stock and quantite_ajustement:
-                try:
-                    quantite = int(quantite_ajustement)
-                    if quantite > 0:
-                        print(
-                            f"🔧 Ajustement stock via modification - Article: {article_modifie.nom}, Type: {type_mouvement_stock}, Quantité: {quantite}"
-                        )
-                        print(
-                            f"🔧 Stock avant ajustement: {article_modifie.qte_disponible}"
-                        )
-                        
-                        mouvement = creer_mouvement_stock(
-                            article=article_modifie,
-                            quantite=quantite,
-                            type_mouvement=type_mouvement_stock,
-                            operateur=operateur_profile,
-                            commentaire=f"Ajustement via modification article. {commentaire_ajustement}".strip(),
-                        )
-                        
-                        # Recharger l'article pour voir le stock mis à jour
-                        article_modifie.refresh_from_db()
-                        print(
-                            f"✅ Stock après ajustement: {article_modifie.qte_disponible}"
-                        )
-                        
-                        if mouvement:
-                            messages.success(
-                                request,
-                                f"L'article '{article_modifie.nom}' a été modifié avec succès. Stock ajusté : nouveau stock = {article_modifie.qte_disponible} unités.",
-                            )
-                        else:
-                            messages.warning(
-                                request,
-                                f"L'article '{article_modifie.nom}' a été modifié avec succès, mais l'ajustement de stock a échoué.",
-                            )
-                    else:
-                        messages.warning(
-                            request,
-                            f"L'article '{article_modifie.nom}' a été modifié avec succès, mais la quantité d'ajustement doit être positive.",
-                        )
-                except (ValueError, TypeError) as e:
-                    print(f"❌ Erreur lors de l'ajustement de stock: {str(e)}")
-                    messages.warning(
-                        request,
-                        f"L'article '{article_modifie.nom}' a été modifié avec succès, mais l'ajustement de stock a échoué (quantité invalide).",
-                    )
-                except Exception as e:
-                    print(f"❌ Erreur lors de l'ajustement de stock: {str(e)}")
-                    import traceback
-
-                    traceback.print_exc()
-                    messages.warning(
-                        request,
-                        f"L'article '{article_modifie.nom}' a été modifié avec succès, mais l'ajustement de stock a échoué.",
-                    )
-            else:
-                messages.success(
-                    request,
-                    f"L'article '{article_modifie.nom}' a été modifié avec succès.",
-                )
-                
-            return redirect(
-                "Prepacommande:detail_article", article_id=article_modifie.id
-            )
-        else:
-            messages.error(request, "Veuillez corriger les erreurs ci-dessous.")
-    else:
-        form = ArticleForm(instance=article)
-
-    context = {
-        "form": form,
-        "article": article,
-        "page_title": "Modifier l'Article",
-        "page_subtitle": f"Mise à jour de {article.nom}",
-    }
-    return render(request, "Prepacommande/stock/modifier_article.html", context)
 
 
 # === NOUVELLES FONCTIONNALITÉS : RÉPARTITION AUTOMATIQUE ===
@@ -4202,170 +3271,6 @@ def get_operateur_display_name(operateur):
     else:
         return "Opérateur inconnu"
 
-
-
-
-
-# === VUES D'EXPORT ET D'IMPRESSION ===
-
-
-@login_required
-def details_region_view(request):
-    """Vue détaillée pour afficher les commandes par région - Service de préparation"""
-    try:
-        operateur_profile = request.user.profil_operateur
-        if not operateur_profile.is_preparation:
-            messages.error(request, "Accès non autorisé.")
-            return redirect("login")
-    except Operateur.DoesNotExist:
-        messages.error(request, "Profil opérateur non trouvé.")
-        return redirect("login")
-    
-    from parametre.models import Region, Ville
-    
-    # Récupérer les paramètres de filtrage
-    region_name = request.GET.get("region")
-    ville_name = request.GET.get("ville")
-    
-    # Base queryset pour toutes les commandes en traitement
-    commandes_reparties = (
-        Commande.objects.filter(
-            etats__enum_etat__libelle__in=[
-                "Confirmée",
-                "À imprimer",
-                "Préparée",
-                "En cours de livraison",
-            ],
-        etats__date_fin__isnull=True,
-        ville__isnull=False,  # Exclure les commandes sans ville
-            ville__region__isnull=False,  # Exclure les commandes sans région
-        )
-        .select_related("client", "ville", "ville__region")
-        .prefetch_related("etats__operateur", "etats__enum_etat", "paniers__article")
-        .distinct()
-    )
-    
-    # Appliquer les filtres
-    if region_name:
-        commandes_reparties = commandes_reparties.filter(
-            ville__region__nom_region=region_name
-        )
-    if ville_name:
-        commandes_reparties = commandes_reparties.filter(ville__nom=ville_name)
-    
-    # Statistiques par ville dans la région/ville filtrée
-    stats_par_ville = (
-        commandes_reparties.values(
-            "ville__id", "ville__nom", "ville__region__nom_region"
-        )
-        .annotate(nb_commandes=Count("id"), total_montant=Sum("total_cmd"))
-        .order_by("ville__region__nom_region", "ville__nom")
-    )
-    
-    # Statistiques des commandes PRÉPARÉES par ville dans la région/ville filtrée
-    commandes_preparees = Commande.objects.filter(
-        etats__enum_etat__libelle="Préparée",
-        etats__date_fin__isnull=True,
-        ville__isnull=False,
-        ville__region__isnull=False,
-    ).select_related("ville", "ville__region")
-    
-    # Appliquer les mêmes filtres que pour les commandes en traitement
-    if region_name:
-        commandes_preparees = commandes_preparees.filter(
-            ville__region__nom_region=region_name
-        )
-    if ville_name:
-        commandes_preparees = commandes_preparees.filter(ville__nom=ville_name)
-    
-    stats_preparees_par_ville = (
-        commandes_preparees.values("ville__nom", "ville__region__nom_region")
-        .annotate(nb_commandes_preparees=Count("id"))
-        .order_by("ville__region__nom_region", "ville__nom")
-    )
-    
-    # Créer un dictionnaire pour un accès rapide
-    preparees_par_ville = {
-        (stat["ville__nom"], stat["ville__region__nom_region"]): stat[
-            "nb_commandes_preparees"
-        ]
-        for stat in stats_preparees_par_ville
-    }
-    
-    # Calculer les totaux
-    total_commandes = commandes_reparties.count()
-    total_montant = commandes_reparties.aggregate(total=Sum("total_cmd"))["total"] or 0
-    
-    # Définir le titre selon le filtre appliqué
-    if region_name:
-        page_title = f"Détails - {region_name}"
-        page_subtitle = f"Commandes en traitement dans la région {region_name}"
-    elif ville_name:
-        page_title = f"Détails - {ville_name}"
-        page_subtitle = f"Commandes en traitement à {ville_name}"
-    else:
-        page_title = "Détails par Région"
-        page_subtitle = "Répartition détaillée des commandes en traitement"
-    
-    context = {
-        "operateur": operateur_profile,
-        "commandes_reparties": commandes_reparties,
-        "stats_par_ville": stats_par_ville,
-        "preparees_par_ville": preparees_par_ville,
-        "total_commandes": total_commandes,
-        "total_montant": total_montant,
-        "region_name": region_name,
-        "ville_name": ville_name,
-        "page_title": page_title,
-        "page_subtitle": page_subtitle,
-    }
-
-    return render(request, "Prepacommande/details_region.html", context)
-
-
-
-
-@login_required 
-def exporter_etats_pdf(request):
-    """
-    Exporte l'état actuel des livraisons en PDF.
-    """
-    # Votre logique d'exportation PDF ici
-    return HttpResponse(
-        "Export PDF des états de livraison à implémenter.", content_type="text/plain"
-    )
-
-
-
-
-@login_required
-def exporter_envoi(request, envoi_id, format):
-    """
-    Exporte un envoi dans un format spécifique (CSV/PDF).
-    """
-    envoi = get_object_or_404(Envoi, id=envoi_id)
-    if format == "csv":
-        # Logique d'export CSV
-        return HttpResponse(
-            f"Export CSV de l'envoi {envoi_id}", content_type="text/csv"
-        )
-    elif format == "pdf":
-        # Logique d'export PDF
-        return HttpResponse(
-            f"Export PDF de l'envoi {envoi_id}", content_type="application/pdf"
-        )
-    return HttpResponse("Format non supporté", status=400)
-
-
-@login_required
-def exporter_envois_journaliers(request):
-    """
-    Exporte tous les envois du jour.
-    """
-    # Votre logique d'exportation ici
-    return HttpResponse(
-        "Export des envois journaliers à implémenter.", content_type="text/plain"
-    )
 
 
 @login_required
@@ -4398,9 +3303,14 @@ def rafraichir_articles_commande_prepa(request, commande_id):
             )
         
         # Générer le HTML directement pour éviter les erreurs de template
-        paniers = commande.paniers.select_related("article").all()
+        paniers = commande.paniers.select_related(
+            "article",
+            "variante",
+            "variante__couleur",
+            "variante__pointure"
+        ).all()
         html_rows = []
-        
+
         for panier in paniers:
             # Utiliser le filtre Django pour calculer le prix selon la logique upsell
             from commande.templatetags.commande_filters import (
@@ -4445,7 +3355,18 @@ def rafraichir_articles_commande_prepa(request, commande_id):
                 upsell_info = ""
             
             sous_total = prix_calcule * panier.quantite
-            
+
+            # Récupérer les informations de variante
+            variante_html = ""
+            if panier.variante:
+                variante_parts = []
+                if panier.variante.couleur:
+                    variante_parts.append(f'<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"><i class="fas fa-palette mr-1"></i>{panier.variante.couleur.nom}</span>')
+                if panier.variante.pointure:
+                    variante_parts.append(f'<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800"><i class="fas fa-ruler mr-1"></i>{panier.variante.pointure.pointure}</span>')
+                if variante_parts:
+                    variante_html = f'<div class="flex gap-1 mt-1">{"".join(variante_parts)}</div>'
+
             html_row = f"""
             <tr data-panier-id="{panier.id}" data-article-id="{panier.article.id}">
                 <td class="px-4 py-3">
@@ -4458,6 +3379,7 @@ def rafraichir_articles_commande_prepa(request, commande_id):
                             <div class="text-sm text-gray-500">
                                 Réf: {panier.article.reference or 'N/A'}
                             </div>
+                            {variante_html}
                         </div>
                     </div>
                 </td>
@@ -4526,196 +3448,6 @@ def rafraichir_articles_commande_prepa(request, commande_id):
 
         traceback.print_exc()
         return JsonResponse({"error": f"Erreur interne: {str(e)}"}, status=500)
-
-
-@login_required
-def ajouter_article_commande_prepa(request, commande_id):
-    """Ajouter un article à la commande en préparation"""
-    if request.method != "POST":
-        return JsonResponse({"error": "Méthode non autorisée"}, status=405)
-    
-    try:
-        operateur = Operateur.objects.get(
-            user=request.user, type_operateur="PREPARATION"
-        )
-    except Operateur.DoesNotExist:
-        return JsonResponse({"error": "Profil d'opérateur non trouvé."}, status=403)
-    
-    try:
-        with transaction.atomic():
-            commande = Commande.objects.select_for_update().get(id=commande_id)
-            
-            # Vérifier que la commande est bien en préparation pour cet opérateur
-            etat_preparation = commande.etats.filter(
-                operateur=operateur,
-                enum_etat__libelle__in=["En préparation", "À imprimer"],
-                date_fin__isnull=True,
-            ).first()
-            
-            if not etat_preparation:
-                return JsonResponse(
-                    {"error": "Cette commande n'est pas en préparation pour vous."},
-                    status=403,
-                )
-            
-            # Support both parameter names for backward compatibility
-            article_id = request.POST.get("articleId") or request.POST.get("article_id")
-            quantite = int(request.POST.get("quantite", 1))
-            variante_id = request.POST.get("varianteId")
-            
-            if not article_id or quantite <= 0:
-                return JsonResponse({"error": "Données invalides"}, status=400)
-
-            article = Article.objects.get(id=article_id)
-            
-            # Handle variant if provided
-            variante = None
-            if variante_id:
-                try:
-                    from article.models import VarianteArticle
-                    variante = VarianteArticle.objects.get(id=variante_id, article=article)
-                except VarianteArticle.DoesNotExist:
-                    return JsonResponse({"error": "Variante non trouvée"}, status=404)
-            
-            # Décrémenter le stock et créer un mouvement
-            creer_mouvement_stock(
-                article=article,
-                quantite=quantite,
-                type_mouvement="sortie",
-                commande=commande,
-                operateur=operateur,
-                commentaire=f"Ajout article pendant préparation cmd {commande.id_yz}",
-            )
-            
-            # Vérifier si l'article existe déjà dans la commande
-            panier_existant = Panier.objects.filter(
-                commande=commande, article=article
-            ).first()
-            
-            if panier_existant:
-                # Si l'article existe déjà, mettre à jour la quantité
-                panier_existant.quantite += quantite
-                panier_existant.save()
-                panier = panier_existant
-                print(
-                    f"🔄 Article existant mis à jour: ID={article.id}, nouvelle quantité={panier.quantite}"
-                )
-            else:
-                # Si l'article n'existe pas, créer un nouveau panier
-                panier = Panier.objects.create(
-                    commande=commande,
-                    article=article,
-                    quantite=quantite,
-                    sous_total=0,  # Sera recalculé après
-                )
-                print(f"➕ Nouvel article ajouté: ID={article.id}, quantité={quantite}")
-            
-            # Recalculer le compteur après ajout (logique de confirmation)
-            if (
-                article.isUpsell
-                and hasattr(article, "prix_upsell_1")
-                and article.prix_upsell_1 is not None
-            ):
-                # Compter la quantité totale d'articles upsell (après ajout)
-                total_quantite_upsell = (
-                    commande.paniers.filter(article__isUpsell=True).aggregate(
-                        total=Sum("quantite")
-                    )["total"]
-                    or 0
-                )
-                
-                # Le compteur ne s'incrémente qu'à partir de 2 unités d'articles upsell
-                # 0-1 unités upsell → compteur = 0
-                # 2+ unités upsell → compteur = total_quantite_upsell - 1
-                if total_quantite_upsell >= 2:
-                    commande.compteur = total_quantite_upsell - 1
-                else:
-                    commande.compteur = 0
-                
-                commande.save()
-                
-                # Recalculer TOUS les articles de la commande avec le nouveau compteur
-                commande.recalculer_totaux_upsell()
-            else:
-                # Pour les articles normaux, juste calculer le sous-total
-                from commande.templatetags.commande_filters import (
-                    get_prix_upsell_avec_compteur,
-                )
-
-                prix_unitaire = get_prix_upsell_avec_compteur(
-                    article, commande.compteur
-                )
-                sous_total = prix_unitaire * panier.quantite
-                panier.sous_total = float(sous_total)
-                panier.save()
-            
-            # Recalculer le total
-            commande.total_cmd = sum(p.sous_total for p in commande.paniers.all())
-            commande.save()
-            
-            # Calculer les statistiques upsell
-            articles_upsell = commande.paniers.filter(article__isUpsell=True)
-            total_quantite_upsell = (
-                articles_upsell.aggregate(total=Sum("quantite"))["total"] or 0
-            )
-            
-            # Déterminer si c'était un ajout ou une mise à jour
-            message = (
-                "Article ajouté"
-                if not panier_existant
-                else f"Quantité mise à jour ({panier.quantite})"
-            )
-            
-            # Préparer les données de l'article pour le frontend
-            article_data = {
-                "panier_id": panier.id,
-                "article_id": article.id,
-                "nom": article.nom,
-                "reference": article.reference,
-                "couleur_fr": article.couleur or "",
-                "couleur_ar": article.couleur or "",
-                "pointure": article.pointure or "",
-                "quantite": panier.quantite,
-                "prix": panier.sous_total / panier.quantite,  # Prix unitaire
-                "sous_total": panier.sous_total,
-                "is_upsell": article.isUpsell,
-                "compteur": commande.compteur,
-                "description": article.description or "",
-            }
-
-            return JsonResponse(
-                {
-                    "success": True,
-                    "message": message,
-                    "compteur": commande.compteur,
-                    "total_commande": float(commande.total_cmd),
-                    "was_update": panier_existant is not None,
-                    "new_quantity": panier.quantite,
-                    "article_data": article_data,
-                    "articles_count": commande.paniers.count(),
-                    "sous_total_articles": float(
-                        sum(p.sous_total for p in commande.paniers.all())
-                    ),
-                    "articles_upsell": articles_upsell.count(),
-                    "quantite_totale_upsell": total_quantite_upsell,
-                }
-            )
-            
-    except Article.DoesNotExist:
-        return JsonResponse({"error": "Article non trouvé"}, status=404)
-    except Exception as e:
-        return JsonResponse({"error": f"Erreur interne: {str(e)}"}, status=500)
-
-
-# Fonction de modification des quantités supprimée - Les opérateurs de préparation ne peuvent plus modifier les commandes
-
-
-# Fonction de suppression d'articles supprimée - Les opérateurs de préparation ne peuvent plus modifier les commandes
-
-
-# === VUES DE RÉPARTITION SUPPRIMÉES (DÉPLACÉES VERS ADMIN) ===
-# Les vues de répartition ont été déplacées vers l'interface admin
-# car ce sont les administrateurs qui s'en occupent maintenant
 
 
 @login_required
@@ -5162,6 +3894,325 @@ def api_changer_etat_commande(request, commande_id):
         
     except Commande.DoesNotExist:
         return JsonResponse({"success": False, "error": "Commande non trouvée"}, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({"success": False, "error": "Données JSON invalides"}, status=400)
+    except Exception as e:
+        return JsonResponse({"success": False, "error": f"Erreur serveur: {str(e)}"}, status=500)
+
+
+@login_required
+def commandes_collectees(request):
+    """Liste des commandes En préparation à collecter pour les opérateurs de préparation"""
+    from django.core.paginator import Paginator
+
+    try:
+        operateur_profile = request.user.profil_operateur
+
+        # Vérifier que l'utilisateur est un opérateur de préparation
+        if not operateur_profile.is_preparation:
+            messages.error(
+                request,
+                "Accès non autorisé. Vous n'êtes pas un opérateur de préparation.",
+            )
+            return redirect("login")
+
+    except Operateur.DoesNotExist:
+        messages.error(request, "Votre profil opérateur n'existe pas.")
+        return redirect("login")
+
+    # Récupérer les commandes dans l'état "En préparation" affectées à cet opérateur
+    commandes_affectees = (
+        Commande.objects.filter(
+            etats__enum_etat__libelle="En préparation",
+            etats__operateur=operateur_profile,
+            etats__date_fin__isnull=True,  # État actif (en cours)
+        )
+        .select_related("client", "ville", "ville__region")
+        .prefetch_related("paniers__article", "etats")
+        .distinct()
+        .order_by("-etats__date_debut")
+    )
+
+    # Recherche
+    search_query = request.GET.get("search", "").strip()
+    if search_query:
+        commandes_affectees = commandes_affectees.filter(
+            Q(id_yz__icontains=search_query)
+            | Q(num_cmd__icontains=search_query)
+            | Q(client__nom__icontains=search_query)
+            | Q(client__prenom__icontains=search_query)
+            | Q(client__numero_tel__icontains=search_query)
+        )
+
+    # Ajouter l'état précédent pour chaque commande
+    for commande in commandes_affectees:
+        etats_commande = commande.etats.all().order_by("date_debut")
+
+        # Trouver l'état actuel (En préparation)
+        etat_actuel = None
+        for etat in etats_commande:
+            if etat.enum_etat.libelle == "En préparation" and not etat.date_fin:
+                etat_actuel = etat
+                break
+
+        # Trouver l'état précédent
+        if etat_actuel:
+            etat_precedent = None
+            for etat in reversed(etats_commande):
+                if etat.date_fin and etat.date_fin < etat_actuel.date_debut:
+                    etat_precedent = etat
+                    break
+            commande.etat_precedent = etat_precedent
+
+    # Pagination
+    items_per_page = request.GET.get("per_page", 10)
+    try:
+        items_per_page = int(items_per_page)
+        if items_per_page not in [5, 10, 25, 50, 100]:
+            items_per_page = 10
+    except (ValueError, TypeError):
+        items_per_page = 10
+
+    paginator = Paginator(commandes_affectees, items_per_page)
+    page_number = request.GET.get("page", 1)
+    commandes_affectees = paginator.get_page(page_number)
+
+    # Statistiques
+    stats = {
+        "total_a_collecter": paginator.count,
+        "valeur_totale": sum([cmd.total_cmd or 0 for cmd in paginator.object_list]),
+    }
+
+    context = {
+        "commandes_affectees": commandes_affectees,
+        "page_title": "Commandes à Collecter",
+        "page_subtitle": "Liste des commandes en préparation - À marquer comme collectées",
+        "stats": stats,
+        "search_query": search_query,
+        "items_per_page": items_per_page,
+        "paginator": paginator,
+        "current_page": commandes_affectees.number,
+        "total_pages": paginator.num_pages,
+        "has_previous": commandes_affectees.has_previous(),
+        "has_next": commandes_affectees.has_next(),
+        "previous_page_number": commandes_affectees.previous_page_number() if commandes_affectees.has_previous() else None,
+        "next_page_number": commandes_affectees.next_page_number() if commandes_affectees.has_next() else None,
+    }
+
+    return render(request, "Prepacommande/commandes_collectees.html", context)
+
+
+@login_required
+def commandes_emballees(request):
+    """Liste des commandes Collectées à emballer pour les opérateurs de préparation"""
+    from django.core.paginator import Paginator
+
+    try:
+        operateur_profile = request.user.profil_operateur
+
+        # Vérifier que l'utilisateur est un opérateur de préparation
+        if not operateur_profile.is_preparation:
+            messages.error(
+                request,
+                "Accès non autorisé. Vous n'êtes pas un opérateur de préparation.",
+            )
+            return redirect("login")
+
+    except Operateur.DoesNotExist:
+        messages.error(request, "Votre profil opérateur n'existe pas.")
+        return redirect("login")
+
+    # Récupérer les commandes dans l'état "Collectée" affectées à cet opérateur
+    commandes_affectees = (
+        Commande.objects.filter(
+            etats__enum_etat__libelle="Collectée",
+            etats__operateur=operateur_profile,
+            etats__date_fin__isnull=True,  # État actif (en cours)
+        )
+        .select_related("client", "ville", "ville__region")
+        .prefetch_related("paniers__article", "etats")
+        .distinct()
+        .order_by("-etats__date_debut")
+    )
+
+    # Recherche
+    search_query = request.GET.get("search", "").strip()
+    if search_query:
+        commandes_affectees = commandes_affectees.filter(
+            Q(id_yz__icontains=search_query)
+            | Q(num_cmd__icontains=search_query)
+            | Q(client__nom__icontains=search_query)
+            | Q(client__prenom__icontains=search_query)
+            | Q(client__numero_tel__icontains=search_query)
+        )
+
+    # Ajouter l'état précédent pour chaque commande
+    for commande in commandes_affectees:
+        etats_commande = commande.etats.all().order_by("date_debut")
+
+        # Trouver l'état actuel (Collectée)
+        etat_actuel = None
+        for etat in etats_commande:
+            if etat.enum_etat.libelle == "Collectée" and not etat.date_fin:
+                etat_actuel = etat
+                break
+
+        # Trouver l'état précédent
+        if etat_actuel:
+            etat_precedent = None
+            for etat in reversed(etats_commande):
+                if etat.date_fin and etat.date_fin < etat_actuel.date_debut:
+                    etat_precedent = etat
+                    break
+            commande.etat_precedent = etat_precedent
+
+    # Pagination
+    items_per_page = request.GET.get("per_page", 10)
+    try:
+        items_per_page = int(items_per_page)
+        if items_per_page not in [5, 10, 25, 50, 100]:
+            items_per_page = 10
+    except (ValueError, TypeError):
+        items_per_page = 10
+
+    paginator = Paginator(commandes_affectees, items_per_page)
+    page_number = request.GET.get("page", 1)
+    commandes_affectees = paginator.get_page(page_number)
+
+    # Statistiques
+    stats = {
+        "total_a_emballer": paginator.count,
+        "valeur_totale": sum([cmd.total_cmd or 0 for cmd in paginator.object_list]),
+    }
+
+    context = {
+        "commandes_affectees": commandes_affectees,
+        "page_title": "Commandes à Emballer",
+        "page_subtitle": "Liste des commandes collectées - À marquer comme emballées",
+        "stats": stats,
+        "search_query": search_query,
+        "items_per_page": items_per_page,
+        "paginator": paginator,
+        "current_page": commandes_affectees.number,
+        "total_pages": paginator.num_pages,
+        "has_previous": commandes_affectees.has_previous(),
+        "has_next": commandes_affectees.has_next(),
+        "previous_page_number": commandes_affectees.previous_page_number() if commandes_affectees.has_previous() else None,
+        "next_page_number": commandes_affectees.next_page_number() if commandes_affectees.has_next() else None,
+    }
+
+    return render(request, "Prepacommande/commandes_emballees.html", context)
+
+
+@login_required
+def api_bulk_changer_etat_commandes(request):
+    """API pour changer l'état de plusieurs commandes en une seule fois"""
+    if request.method != "POST":
+        return JsonResponse({"success": False, "error": "Méthode non autorisée"}, status=405)
+
+    try:
+        # Vérifier que l'utilisateur est un opérateur de préparation
+        operateur = Operateur.objects.get(
+            user=request.user, type_operateur="PREPARATION"
+        )
+    except Operateur.DoesNotExist:
+        return JsonResponse({"success": False, "error": "Accès non autorisé"}, status=403)
+
+    try:
+        # Récupérer les données de la requête
+        data = json.loads(request.body)
+        commande_ids = data.get('commande_ids', [])
+        nouvel_etat = data.get('nouvel_etat')
+
+        if not commande_ids:
+            return JsonResponse({"success": False, "error": "Aucune commande sélectionnée"}, status=400)
+
+        if not nouvel_etat:
+            return JsonResponse({"success": False, "error": "Nouvel état non spécifié"}, status=400)
+
+        # Vérifier que l'état est valide
+        etats_valides = ['Collectée', 'Emballée']
+        if nouvel_etat not in etats_valides:
+            return JsonResponse({"success": False, "error": f"État invalide. États autorisés: {', '.join(etats_valides)}"}, status=400)
+
+        # Récupérer l'état enum correspondant
+        try:
+            nouvel_etat_enum = EnumEtatCmd.objects.get(libelle=nouvel_etat)
+        except EnumEtatCmd.DoesNotExist:
+            return JsonResponse({"success": False, "error": f"État '{nouvel_etat}' non trouvé dans le système"}, status=400)
+
+        updated_commandes = []
+        errors = []
+
+        # Traiter chaque commande
+        for commande_id in commande_ids:
+            try:
+                with transaction.atomic():
+                    # Récupérer la commande
+                    commande = Commande.objects.get(id=commande_id)
+
+                    # Vérifier que la commande est affectée à cet opérateur
+                    etat_actuel = commande.etats.filter(
+                        operateur=operateur,
+                        enum_etat__libelle__in=["En préparation", "À imprimer", "Collectée", "Emballée"],
+                        date_fin__isnull=True,
+                    ).first()
+
+                    if not etat_actuel:
+                        errors.append(f"Commande {commande_id}: non affectée à cet opérateur")
+                        continue
+
+                    # Vérifier la logique de transition d'état
+                    etat_actuel_libelle = etat_actuel.enum_etat.libelle
+
+                    if nouvel_etat == 'Collectée':
+                        if etat_actuel_libelle not in ['En préparation', 'À imprimer']:
+                            errors.append(f"Commande {commande_id}: impossible de passer à 'Collectée' depuis l'état '{etat_actuel_libelle}'")
+                            continue
+                    elif nouvel_etat == 'Emballée':
+                        if etat_actuel_libelle not in ['Collectée']:
+                            errors.append(f"Commande {commande_id}: impossible de passer à 'Emballée' depuis l'état '{etat_actuel_libelle}'")
+                            continue
+
+                    # Terminer l'état actuel
+                    etat_actuel.date_fin = timezone.now()
+                    etat_actuel.save()
+
+                    # Créer le nouvel état
+                    EtatCommande.objects.create(
+                        commande=commande,
+                        enum_etat=nouvel_etat_enum,
+                        operateur=operateur,
+                        date_debut=timezone.now(),
+                        commentaire=f"État changé vers {nouvel_etat} par l'opérateur de préparation (action groupée)"
+                    )
+
+                    updated_commandes.append(commande_id)
+
+            except Commande.DoesNotExist:
+                errors.append(f"Commande {commande_id}: non trouvée")
+            except Exception as e:
+                errors.append(f"Commande {commande_id}: {str(e)}")
+
+        # Préparer la réponse
+        response_data = {
+            "success": len(updated_commandes) > 0,
+            "updated_count": len(updated_commandes),
+            "updated_commandes": updated_commandes,
+            "nouvel_etat": nouvel_etat,
+        }
+
+        if errors:
+            response_data["errors"] = errors
+            response_data["error_count"] = len(errors)
+
+        if len(updated_commandes) > 0:
+            response_data["message"] = f"{len(updated_commandes)} commande(s) mise(s) à jour avec succès"
+        else:
+            response_data["error"] = "Aucune commande n'a pu être mise à jour"
+
+        return JsonResponse(response_data)
+
     except json.JSONDecodeError:
         return JsonResponse({"success": False, "error": "Données JSON invalides"}, status=400)
     except Exception as e:

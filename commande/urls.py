@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views, views_etiquettes
+from . import views_search
 
 app_name = 'commande'
  
@@ -11,9 +12,7 @@ urlpatterns = [
 
     path('etats/', views.gestion_etats, name='gestion_etats'),
     # URLs CRUD pour la gestion des états
-    path('etats/ajouter/', views.ajouter_etat, name='ajouter_etat'),
-    path('etats/modifier/<int:etat_id>/', views.modifier_etat, name='modifier_etat'),
-    path('etats/supprimer/<int:etat_id>/', views.supprimer_etat, name='supprimer_etat'),
+
     path('etats/couleur/<int:etat_id>/', views.changer_couleur_etat, name='changer_couleur_etat'),
     path('etats/monter/<int:etat_id>/', views.monter_etat, name='monter_etat'),
     path('etats/descendre/<int:etat_id>/', views.descendre_etat, name='descendre_etat'),
@@ -41,6 +40,8 @@ urlpatterns = [
     path('affecter/', views.affecter_commandes, name='affecter_commandes'),
     path('desaffecter/', views.desaffecter_commandes, name='desaffecter_commandes'),
     path('desaffecter/<int:commande_id>/', views.desaffecter_commande_unique, name='desaffecter_commande_unique'),
+    path('reaffecter/<int:commande_id>/', views.reaffecter_commande, name='reaffecter_commande'),
+    path('reaffecter-multiple/', views.reaffecter_commandes_multiple, name='reaffecter_commandes_multiple'),
     path('changer-statut/', views.changer_statut_commandes, name='changer_statut_commandes'),
     path('changer-statut/<int:commande_id>/', views.changer_statut_commande_unique, name='changer_statut_commande_unique'),
     path('annuler/<int:pk>/', views.annuler_commande, name='annuler_commande'),
@@ -54,10 +55,21 @@ urlpatterns = [
     # API
     path('api/commande/<int:commande_id>/panier/', views.api_panier_commande, name='api_panier_commande'),
     path('rechercher-client-telephone/', views.rechercher_client_telephone, name='rechercher_client_telephone'),
-    
+
+    # API Gestion des articles et remises
+    path('api/modifier-quantite/<int:panier_id>/', views.api_modifier_quantite_panier_commande, name='api_modifier_quantite_panier_commande'),
+    path('api/supprimer-article/<int:panier_id>/', views.api_supprimer_article_commande, name='api_supprimer_article_commande'),
+    path('api/appliquer-remise/<int:panier_id>/', views.api_appliquer_remise_commande, name='api_appliquer_remise_commande'),
+    path('api/retirer-remise/<int:panier_id>/', views.api_retirer_remise_commande, name='api_retirer_remise_commande'),
+    path('api/calculer-remise-preview/<int:panier_id>/', views.api_calculer_remise_preview_commande, name='api_calculer_remise_preview_commande'),
+    path('api/ajouter-article/<int:commande_id>/', views.api_ajouter_article_commande, name='api_ajouter_article_commande'),
+
     # Étiquettes professionnelles
     path('etiquettes/', views_etiquettes.EtiquetteGeneratorView.as_view(), name='etiquettes_generator'),
     path('etiquettes/generate/', views_etiquettes.EtiquetteGeneratorView.as_view(), name='generate_etiquettes'),
     path('api/commande/<int:commande_id>/articles/', views_etiquettes.get_commande_articles, name='get_commande_articles'),
     path('etiquettes/preview/<int:commande_id>/<int:template_id>/', views_etiquettes.preview_etiquette, name='preview_etiquette'),
+
+    #Rerche par periode 
+    path('ajax/search_commandes_by_date/', views_search.ajax_search_commandes_by_date, name='ajax_search_commandes_by_date'),
 ]

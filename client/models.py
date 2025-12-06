@@ -32,3 +32,6 @@ class Client(models.Model):
         verbose_name = "Client"
         verbose_name_plural = "Clients"
         ordering = ['-date_creation']
+        models.Index(
+            fields=['numero_tel']
+        )

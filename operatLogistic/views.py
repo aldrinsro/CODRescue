@@ -12,6 +12,7 @@ import json
 from parametre.models import Operateur
 from commande.models  import Commande, Envoi, EnumEtatCmd, EtatCommande
 from article.models   import Article
+from .views_kpi import get_distribution_repartition_stats
 
 
 
@@ -83,6 +84,9 @@ def dashboard(request):
     villes_labels_json = json.dumps(villes_labels)
     villes_data_json = json.dumps(villes_data)
 
+    # Récupérer les statistiques de répartition des commandes mises en distribution
+    distribution_stats = get_distribution_repartition_stats()
+
     context = {
         'operateur'        : operateur,
         'commandes_distribution': commandes_distribution,
@@ -92,6 +96,11 @@ def dashboard(request):
         'villes_labels_json': villes_labels_json,
         'villes_data_json': villes_data_json,
         'page_title': 'Tableau de Bord Logistique',
+        # Données pour le graphique de répartition des distributions
+        'distribution_labels_json': distribution_stats['labels_json'],
+        'distribution_data_json': distribution_stats['data_json'],
+        'distribution_colors_json': distribution_stats['colors_json'],
+        'distribution_total': distribution_stats['total'],
     }
     return render(request, 'composant_generale/operatLogistic/home.html', context)
 
@@ -99,133 +108,35 @@ def dashboard(request):
 @login_required
 def liste_commandes(request):
     """Liste des commandes affectées à cet opérateur logistique."""
+    from common.filter_utils import apply_commande_filters
+    from datetime import datetime, timedelta
+
     try:
         operateur = Operateur.objects.get(user=request.user, type_operateur='LOGISTIQUE')
     except Operateur.DoesNotExist:
         messages.error(request, "Profil d'opérateur logistique non trouvé.")
         return redirect('login')
-    
-    # Récupérer les commandes avec les relations nécessaires
-    # Essayer plusieurs états possibles pour les commandes logistiques
+
+    # Récupérer les commandes en livraison avec les relations nécessaires
     commandes_list = Commande.objects.filter(
         Q(etats__enum_etat__libelle='Mise en distribution'),
         etats__date_fin__isnull=True
     ).select_related(
-        'client', 
-        'ville', 
+        'client',
+        'ville',
         'ville__region'
     ).prefetch_related(
         'etats__enum_etat',
         'etats__operateur'
     ).distinct().order_by('-etats__date_debut')
-    
-    # Gestion du filtre de temps
-    start_date = request.GET.get('start_date')
-    end_date = request.GET.get('end_date')
-    preset = request.GET.get('preset')
-    
-    # Appliquer le filtre de temps si des paramètres sont fournis
-    if start_date and end_date:
-        try:
-            from datetime import datetime
-            start_datetime = datetime.strptime(start_date, '%Y-%m-%d')
-            end_datetime = datetime.strptime(end_date, '%Y-%m-%d')
-            # Ajouter 23:59:59 à la date de fin pour inclure toute la journée
-            end_datetime = end_datetime.replace(hour=23, minute=59, second=59)
-            
-            # Filtrer par date de début des états "En livraison"
-            commandes_list = commandes_list.filter(
-                etats__enum_etat__libelle__in=['En cours de livraison', 'En livraison','Mise en distribution'],
-                etats__date_debut__date__range=[start_datetime.date(), end_datetime.date()]
-            )
-            print(f"🔍 Filtre de temps appliqué: {start_date} à {end_date}")
-        except ValueError:
-            print("❌ Erreur de format de date dans les paramètres de filtre")
-    elif preset:
-        # Appliquer des presets prédéfinis
-        from datetime import datetime, timedelta
-        today = datetime.now().date()
-        
-        if preset == 'today':
-            commandes_list = commandes_list.filter(
-                etats__enum_etat__libelle__in=['En cours de livraison', 'En livraison','Mise en distribution'],
-                etats__date_debut__date=today
-            )
-        elif preset == 'yesterday':
-            yesterday = today - timedelta(days=1)
-            commandes_list = commandes_list.filter(
-                etats__enum_etat__libelle__in=['En cours de livraison', 'En livraison','Mise en distribution'],
-                etats__date_debut__date=yesterday
-            )
-        elif preset == 'this_week':
-            # Lundi de cette semaine
-            monday = today - timedelta(days=today.weekday())
-            commandes_list = commandes_list.filter(
-                etats__enum_etat__libelle__in=['En cours de livraison', 'En livraison','Mise en distribution'],
-                etats__date_debut__date__gte=monday
-            )
-        elif preset == 'last_week':
-            # Lundi de la semaine dernière
-            last_monday = today - timedelta(days=today.weekday() + 7)
-            last_sunday = last_monday + timedelta(days=6)
-            commandes_list = commandes_list.filter(
-                etats__enum_etat__libelle__in=['En cours de livraison', 'En livraison','Mise en distribution'],
-                etats__date_debut__date__range=[last_monday, last_sunday]
-            )
-        elif preset == 'this_month':
-            # Premier jour du mois
-            first_day = today.replace(day=1)
-            commandes_list = commandes_list.filter(
-                etats__enum_etat__libelle__in=['En cours de livraison', 'En livraison','Mise en distribution'],
-                etats__date_debut__date__gte=first_day
-            )
-        elif preset == 'last_month':
-            # Premier jour du mois dernier
-            if today.month == 1:
-                first_day_last_month = today.replace(year=today.year-1, month=12, day=1)
-            else:
-                first_day_last_month = today.replace(month=today.month-1, day=1)
-            # Dernier jour du mois dernier
-            if today.month == 1:
-                last_day_last_month = today.replace(year=today.year-1, month=12, day=31)
-            else:
-                last_day_last_month = (today.replace(month=today.month, day=1) - timedelta(days=1))
-            commandes_list = commandes_list.filter(
-                etats__enum_etat__libelle__in=['En cours de livraison', 'En livraison','Mise en distribution'],
-                etats__date_debut__date__range=[first_day_last_month, last_day_last_month]
-            )
-        elif preset == 'this_year':
-            # Premier jour de l'année
-            first_day_year = today.replace(month=1, day=1)
-            commandes_list = commandes_list.filter(
-                etats__enum_etat__libelle__in=['En cours de livraison', 'En livraison','Mise en distribution'],
-                etats__date_debut__date__gte=first_day_year
-            )
-        elif preset == 'last_year':
-            # Premier et dernier jour de l'année dernière
-            first_day_last_year = today.replace(year=today.year-1, month=1, day=1)
-            last_day_last_year = today.replace(year=today.year-1, month=12, day=31)
-            commandes_list = commandes_list.filter(
-                etats__enum_etat__libelle__in=['En cours de livraison', 'En livraison','Mise en distribution'],
-                etats__date_debut__date__range=[first_day_last_year, last_day_last_year]
-            )
-        
-        print(f"🔍 Preset appliqué: {preset}")
-    
+
+    # Appliquer les filtres globaux de commandes
+    commandes_list = apply_commande_filters(commandes_list, request)
+
     # Debug: afficher les commandes trouvées
     print(f"🔍 Debug: {commandes_list.count()} commandes trouvées pour l'opérateur {operateur.nom}")
     for cmd in commandes_list[:3]:  # Afficher les 3 premières pour debug
         print(f"  - Commande {cmd.id_yz}: Client={cmd.client}, Ville={cmd.ville}")
-    
-    search_query = request.GET.get('search', '')
-    if search_query:
-        commandes_list = commandes_list.filter(
-            Q(id_yz__icontains=search_query) |
-            Q(num_cmd__icontains=search_query) |
-            Q(client__nom__icontains=search_query) |
-            Q(client__prenom__icontains=search_query) |
-            Q(client__numero_tel__icontains=search_query)
-        )
     
     # Calculer les statistiques par période
     from datetime import datetime, timedelta
@@ -278,7 +189,6 @@ def liste_commandes(request):
     
     context = {
         'page_obj'        : page_obj,
-        'search_query'    : search_query,
         'total_commandes' : commandes_list.count(),
         'total_montant'   : total_montant,
         'page_title'      : 'Commandes en Livraison',
@@ -287,10 +197,6 @@ def liste_commandes(request):
         'affectees_semaine': affectees_semaine,
         'affectees_mois': affectees_mois,
         'per_page'        : per_page,
-        # Paramètres de filtre pour le template
-        'filter_start_date': start_date,
-        'filter_end_date': end_date,
-        'filter_preset': preset,
     }
     return render(request, 'operatLogistic/liste_commande.html', context)
 
@@ -320,9 +226,21 @@ def detail_commande(request, commande_id):
 
             panier.save(update_fields=['type_prix_gele'])
 
+    # Récupérer l'opérateur de confirmation (celui qui a confirmé la commande)
+    operateur_confirmation = None
+    etat_confirmee = None
+    etat_confirmee = commande.etats.filter(
+        enum_etat__libelle__icontains='Confirmée'
+    ).order_by('date_debut').first()
+
+    if etat_confirmee and etat_confirmee.operateur:
+        operateur_confirmation = etat_confirmee.operateur
+
     context = {
         'commande'   : commande,
         'page_title' : f'Détail Commande {commande.id_yz}',
+        'operateur_confirmation': operateur_confirmation,
+        'etat_confirmee': etat_confirmee,
     }
     return render(request, 'operatLogistic/detail_commande.html', context)
 
@@ -590,10 +508,10 @@ def api_articles(request):
                     'isUpsell': article.isUpsell,
                     'has_promo_active': has_promo_active,
                     # Prix upsell si disponibles
-                    'prix_upsell_1': float(article.prix_upsell_1) if article.prix_upsell_1 else None,
                     'prix_upsell_2': float(article.prix_upsell_2) if article.prix_upsell_2 else None,
                     'prix_upsell_3': float(article.prix_upsell_3) if article.prix_upsell_3 else None,
                     'prix_upsell_4': float(article.prix_upsell_4) if article.prix_upsell_4 else None,
+                    'prix_gros': float(article.prix_gros) if hasattr(article, 'prix_gros') and article.prix_gros else None,
                 }
                 articles_data.append(article_data)
         
@@ -654,24 +572,17 @@ def ajouter_article(request, commande_id):
             variante.qte_disponible -= quantite
             variante.save()
         
-        # Calculer le prix selon le compteur de la commande
-        prix_unitaire = article.prix_unitaire
-        if commande.compteur > 0:
-            if commande.compteur == 1 and article.prix_upsell_1:
-                prix_unitaire = article.prix_upsell_1
-            elif commande.compteur == 2 and article.prix_upsell_2:
-                prix_unitaire = article.prix_upsell_2
-            elif commande.compteur == 3 and article.prix_upsell_3:
-                prix_unitaire = article.prix_upsell_3
-            elif commande.compteur >= 4 and article.prix_upsell_4:
-                prix_unitaire = article.prix_upsell_4
-        
+        # Calculer le prix selon le compteur de la commande (utiliser get_prix_upsell_avec_compteur)
+        from commande.templatetags.commande_filters import get_prix_upsell_avec_compteur
+        prix_unitaire = get_prix_upsell_avec_compteur(article, commande.compteur)
+
         # Créer le panier avec la variante
         panier = Panier.objects.create(
             commande=commande,
             article=article,
             variante=variante,
             quantite=quantite,
+            prix_panier=float(prix_unitaire),  # Enregistrer le prix_panier
             sous_total=float(prix_unitaire * quantite)
         )
             
@@ -742,9 +653,17 @@ def modifier_quantite_article(request, commande_id):
                     'error': f'Article {panier.article.nom} sans variante définie. Impossible de gérer le stock.'
                 })
         
-        # Mettre à jour le panier
+        # Mettre à jour le panier (utiliser prix_panier existant ou recalculer avec compteur)
         panier.quantite = nouvelle_quantite
-        panier.sous_total = float(panier.article.prix_unitaire * nouvelle_quantite)
+        # Si prix_panier existe, l'utiliser; sinon recalculer avec le compteur
+        if panier.prix_panier:
+            prix_utilise = panier.prix_panier
+        else:
+            from commande.templatetags.commande_filters import get_prix_upsell_avec_compteur
+            prix_utilise = get_prix_upsell_avec_compteur(panier.article, commande.compteur)
+            panier.prix_panier = float(prix_utilise)
+
+        panier.sous_total = float(prix_utilise * nouvelle_quantite)
         panier.save()
         
         # Recalculer le total de la commande
@@ -792,7 +711,8 @@ def livraison_partielle(request, commande_id):
         articles_livres_raw = request.POST.get('articles_livres', '[]')
         articles_renvoyes_raw = request.POST.get('articles_renvoyes', '[]')
         commentaire = request.POST.get('commentaire', '').strip()
-        
+        date_livraison_str = request.POST.get('date_livraison', '').strip()
+
         print(f"🔧 DEBUG JSON: articles_livres_raw = '{articles_livres_raw}'")
         print(f"🔧 DEBUG JSON: articles_renvoyes_raw = '{articles_renvoyes_raw}'")
         
@@ -821,7 +741,20 @@ def livraison_partielle(request, commande_id):
         
         if not commentaire:
             return JsonResponse({'success': False, 'error': 'Un commentaire est obligatoire pour expliquer la livraison partielle.'})
-        
+
+        if not date_livraison_str:
+            return JsonResponse({'success': False, 'error': 'La date de livraison est obligatoire.'})
+
+        # Convertir la date de livraison
+        try:
+            from datetime import datetime
+            date_livraison = datetime.strptime(date_livraison_str, '%Y-%m-%d')
+            # Vérifier que la date n'est pas dans le futur
+            if date_livraison.date() > timezone.now().date():
+                return JsonResponse({'success': False, 'error': 'La date de livraison ne peut pas être dans le futur.'})
+        except ValueError:
+            return JsonResponse({'success': False, 'error': 'Format de date invalide.'})
+
         if not articles_livres:
             return JsonResponse({'success': False, 'error': 'Aucun article à livrer spécifié.'})
 
@@ -839,7 +772,7 @@ def livraison_partielle(request, commande_id):
             
             # 3. Créer le nouvel état avec le commentaire
             commentaire_etat = f"{commentaire}"
-                
+
             EtatCommande.objects.create(
                 commande=commande,
                 enum_etat=etat_livree_partiellement,
@@ -847,7 +780,12 @@ def livraison_partielle(request, commande_id):
                 date_debut=timezone.now(),
                 commentaire=commentaire_etat
             )
-            
+
+            # Enregistrer la date de livraison partielle dans la commande
+            commande.Date_livraison = date_livraison
+            commande.save(update_fields=['Date_livraison'])
+            print(f"✅ Date de livraison partielle enregistrée: {date_livraison}")
+
             # 4. NOUVELLE LOGIQUE: Stocker les articles retournés en base de données
             from commande.models import ArticleRetourne
             articles_retournes_crees = []
@@ -896,9 +834,10 @@ def livraison_partielle(request, commande_id):
                     # Mettre à jour le panier avec seulement la quantité livrée
                     if quantite_livree > 0:
                         panier.quantite = quantite_livree
+                        panier.prix_panier = prix_unitaire_actuel  # Mettre à jour prix_panier avec le prix effectif
                         panier.sous_total = prix_unitaire_actuel * quantite_livree
-                        panier.save()
-                        print(f"✅ Panier {panier.id} mis à jour - Quantité livrée: {quantite_livree}, Sous-total: {panier.sous_total}")
+                        panier.save(update_fields=['quantite', 'prix_panier', 'sous_total'])
+                        print(f"✅ Panier {panier.id} mis à jour - Quantité livrée: {quantite_livree}, Prix panier: {panier.prix_panier}, Sous-total: {panier.sous_total}")
                     else:
                         # Aucun article livré, supprimer le panier
                         print(f"🗑️ Panier {panier.id} supprimé - Aucun article livré")
@@ -989,30 +928,25 @@ def livraison_partielle(request, commande_id):
             if ancien_compteur != commande.compteur:
                 print("DEBUG: Recalcul des prix car compteur a changé")
                 for panier in commande.paniers.all():
-                    # Calculer le nouveau prix selon le compteur
-                    prix_unitaire = panier.article.prix_unitaire
-                    if commande.compteur > 0 and panier.article.isUpsell:
-                        if commande.compteur == 1 and panier.article.prix_upsell_1:
-                            prix_unitaire = panier.article.prix_upsell_1
-                        elif commande.compteur == 2 and panier.article.prix_upsell_2:
-                            prix_unitaire = panier.article.prix_upsell_2
-                        elif commande.compteur == 3 and panier.article.prix_upsell_3:
-                            prix_unitaire = panier.article.prix_upsell_3
-                        elif commande.compteur >= 4 and panier.article.prix_upsell_4:
-                            prix_unitaire = panier.article.prix_upsell_4
-                    
-                    # Mettre à jour le prix_actuel de l'article ET le sous-total du panier
+                    # Calculer le nouveau prix selon le compteur (comme dans modifier_commande)
+                    from commande.templatetags.commande_filters import get_prix_upsell_avec_compteur
+                    prix_unitaire = get_prix_upsell_avec_compteur(panier.article, commande.compteur)
+
+                    # Mettre à jour le prix_actuel de l'article, le prix_panier ET le sous-total du panier
                     ancien_prix_actuel = panier.article.prix_actuel
+                    ancien_prix_panier = panier.prix_panier
                     ancien_sous_total = panier.sous_total
-                    
+
                     panier.article.prix_actuel = prix_unitaire
                     panier.article.save(update_fields=['prix_actuel'])
-                    
-                    panier.sous_total = prix_unitaire * panier.quantite
-                    panier.save()
-                    
+
+                    panier.prix_panier = float(prix_unitaire)  # Mettre à jour prix_panier
+                    panier.sous_total = float(prix_unitaire * panier.quantite)
+                    panier.save(update_fields=['prix_panier', 'sous_total'])
+
                     print(f"DEBUG: Article {panier.article.nom}")
                     print(f"  - Prix actuel: {ancien_prix_actuel} → {prix_unitaire}")
+                    print(f"  - Prix panier: {ancien_prix_panier} → {panier.prix_panier}")
                     print(f"  - Sous-total: {ancien_sous_total} → {panier.sous_total}")
             
             # 7. Recalculer le total de la commande originale avec frais de livraison
@@ -1046,14 +980,14 @@ def livraison_partielle(request, commande_id):
                     
                     # Appliquer les prix upsell seulement si l'article est éligible et le compteur > 0
                     if commande.compteur > 0 and article.isUpsell:
-                        if commande.compteur == 1 and article.prix_upsell_1:
-                            prix_unitaire = article.prix_upsell_1
-                        elif commande.compteur == 2 and article.prix_upsell_2:
+                        if commande.compteur == 1 and article.prix_upsell_2:
                             prix_unitaire = article.prix_upsell_2
-                        elif commande.compteur == 3 and article.prix_upsell_3:
+                        elif commande.compteur == 2 and article.prix_upsell_3:
                             prix_unitaire = article.prix_upsell_3
-                        elif commande.compteur >= 4 and article.prix_upsell_4:
+                        elif commande.compteur == 3 and article.prix_upsell_4:
                             prix_unitaire = article.prix_upsell_4
+                        elif commande.compteur >= 4 and hasattr(article, 'prix_gros') and article.prix_gros:
+                            prix_unitaire = article.prix_gros
                 except Exception:
                     prix_unitaire = 0.0
                 
@@ -1105,7 +1039,6 @@ def livraison_partielle(request, commande_id):
             
             return JsonResponse({
                 'success': True,
-                'message': f'Livraison partielle effectuée avec succès',
                 'articles_livres': len(articles_livres),
                 'articles_retournes': len(recap_articles_retournes),
                 'recap_articles_retournes': recap_articles_retournes,
@@ -1138,13 +1071,6 @@ def marque_retournee(request, commande_id):
     try : 
         commande= get_object_or_404(Commande,id=commande_id)
 
-         # Vérifier que la commande est bien en cours de livraison
-        if not commande.etat_actuel or commande.etat_actuel.enum_etat.libelle != 'Mise en distribution':
-            return JsonResponse({
-                'success': False, 
-                'error': 'Cette commande n\'est pas en Mise en distribution. Seules les commandes en Mise en distribution peuvent être livrées partiellement.'
-            })
-        
         articles_retournees = request.POST.get('articles_retournes','[]')
         
         commentaire = request.POST.get('commentaire', '').strip()
@@ -1257,41 +1183,70 @@ def api_panier_commande(request, commande_id):
         commande = get_object_or_404(Commande, id=commande_id)
         print(f"🔧 DEBUG API: Commande trouvée {commande.id_yz}")
         
-        # Récupérer les paniers avec les articles
-        paniers = commande.paniers.select_related('article').all()
+        # Récupérer les paniers avec les articles et variantes
+        paniers = commande.paniers.select_related('article', 'variante__couleur', 'variante__pointure').prefetch_related('remise_personnalisee').all()
         print(f"🔧 DEBUG API: Nombre de paniers trouvés: {paniers.count()}")
-        
+
         # Préparer les données du panier avec calcul de prix upsell
         paniers_data = []
         for panier in paniers:
             try:
                 # Calculer le prix en fonction du compteur et de l'upsell (même logique que detail_commande)
                 prix_actuel = float(panier.article.prix_unitaire or 0)  # Prix de base par défaut
-                
+
                 if commande.compteur and commande.compteur > 0 and getattr(panier.article, 'isUpsell', False):
-                    if commande.compteur == 1 and getattr(panier.article, 'prix_upsell_1', None):
-                        prix_actuel = float(panier.article.prix_upsell_1)
-                    elif commande.compteur == 2 and getattr(panier.article, 'prix_upsell_2', None):
+                    if commande.compteur == 1 and getattr(panier.article, 'prix_upsell_2', None):
                         prix_actuel = float(panier.article.prix_upsell_2)
-                    elif commande.compteur == 3 and getattr(panier.article, 'prix_upsell_3', None):
+                    elif commande.compteur == 2 and getattr(panier.article, 'prix_upsell_3', None):
                         prix_actuel = float(panier.article.prix_upsell_3)
-                    elif commande.compteur >= 4 and getattr(panier.article, 'prix_upsell_4', None):
+                    elif commande.compteur == 3 and getattr(panier.article, 'prix_upsell_4', None):
                         prix_actuel = float(panier.article.prix_upsell_4)
-                
-                paniers_data.append({
+                    elif commande.compteur >= 4 and getattr(panier.article, 'prix_gros', None):
+                        prix_actuel = float(panier.article.prix_gros)
+
+                # Préparer les données de base
+                panier_dict = {
                     'id': panier.id,
                     'nom': panier.article.nom or '',
                     'reference': getattr(panier.article, 'reference', '') or '',
                     'quantite': panier.quantite or 0,
                     'prix_unitaire': f"{float(panier.article.prix_unitaire or 0):.2f}",
+                    'prix_panier': f"{prix_actuel:.2f}",  # Utiliser le prix calculé avec le compteur
                     'prix_actuel': f"{prix_actuel:.2f}",
                     'sous_total': f"{float(panier.sous_total or 0):.2f}",
+                    'sous_total_remise': f"{float(panier.sous_total_remise or 0):.2f}" if panier.sous_total_remise else "0.00",
+                    'remise_appliquee': panier.remise_appliquer,
+                    'type_remise_appliquee': panier.type_remise_appliquee if panier.type_remise_appliquee else '',
                     'pointure': getattr(panier.article, 'pointure', '') or '',
                     'couleur': getattr(panier.article, 'couleur', '') or '',
                     'article_id': panier.article.id,
                     'is_upsell': getattr(panier.article, 'isUpsell', False),
                     'compteur': commande.compteur or 0,
-                })
+                    'phase': panier.article.phase,
+                    'has_promo_active': getattr(panier.article, 'has_promo_active', False),
+                }
+
+                # Ajouter les informations de la variante si elle existe
+                if panier.variante:
+                    panier_dict['variante'] = {
+                        'id': panier.variante.pk,
+                        'couleur': str(panier.variante.couleur.nom) if panier.variante.couleur else None,
+                        'pointure': str(panier.variante.pointure.pointure) if panier.variante.pointure else None,
+                    }
+                else:
+                    panier_dict['variante'] = None
+
+                # Ajouter les informations de remise personnalisée si elle existe
+                if panier.remise_personnalisee:
+                    panier_dict['remise_personnalisee'] = {
+                        'type_remise': panier.remise_personnalisee.type_remise,
+                        'valeur_remise': float(panier.remise_personnalisee.valeur_remise),
+                        'montant_applique': float(panier.remise_personnalisee.montant_applique),
+                    }
+                else:
+                    panier_dict['remise_personnalisee'] = None
+
+                paniers_data.append(panier_dict)
             except Exception as panier_error:
                 print(f"❌ Erreur traitement panier {panier.id}: {panier_error}")
                 # Ajouter quand même le panier avec des valeurs par défaut

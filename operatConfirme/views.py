@@ -9,6 +9,7 @@ from parametre.models import Operateur, Ville # Assurez-vous que ce chemin est c
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.forms import PasswordChangeForm # Importez PasswordChangeForm
 from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
 import json
 from django.utils import timezone
 from commande.models import Commande, EtatCommande, EnumEtatCmd, Panier
@@ -20,6 +21,7 @@ from article.models import Article, VarianteArticle
 import logging
 from django.urls import reverse
 from django.template.loader import render_to_string
+from decimal import Decimal
 # Suppression de l'app notifications: retirer les imports
 
 # Create your views here.
@@ -131,6 +133,7 @@ def liste_commandes(request):
     from django.core.paginator import Paginator
     from django.db.models import Q, Count, Sum
     from commande.models import Commande, EtatCommande
+    from common.filter_utils import apply_all_filters, get_filter_context
     
     try:
         # Récupérer le profil opérateur de l'utilisateur connecté
@@ -148,7 +151,7 @@ def liste_commandes(request):
     ).distinct().select_related(
         'client', 'ville', 'ville__region'
     ).prefetch_related(
-        'etats__enum_etat', 'paniers__article'
+        'etats__enum_etat', 'paniers__article', 'operations'
     ).order_by('-etats__date_debut')
     
     # Recherche
@@ -163,7 +166,10 @@ def liste_commandes(request):
             Q(ville__nom__icontains=search_query) |
             Q(adresse__icontains=search_query)
         )
-    
+
+    # Appliquer les filtres (date, synchronisation, tri)
+    commandes_list = apply_all_filters(commandes_list, request)
+
     # Statistiques pour l'affichage des onglets/badges
     stats = {
         'en_attente': Commande.objects.filter(
@@ -235,7 +241,8 @@ def liste_commandes(request):
         'current_tab_display_name': current_tab_display_name,
         'dates_report': dates_report,
     }
-    
+    context.update(get_filter_context(request))
+
     return render(request, 'operatConfirme/liste_commande.html', context)
 
 @login_required
@@ -318,10 +325,15 @@ def confirmer_commande_ajax(request, commande_id):
             except Exception as e:
                 print(f"⚠️ DEBUG: Erreur lors de la sauvegarde des infos de livraison: {str(e)}")
             
-            # Vérifier le stock et décrémenter les articles
-            articles_decrémentes = []
+            # ========================================
+            # PHASE 1 : VÉRIFICATION DES STOCKS
+            # Vérifier TOUS les stocks AVANT toute décrémentation
+            # ========================================
             stock_insuffisant = []
-            
+            paniers_valides = []  # Stocke les infos des paniers à décrémenter
+
+            print(f"🔍 DEBUG: PHASE 1 - Vérification des stocks pour tous les articles")
+
             for panier in commande.paniers.all():
                 article = panier.article
                 variante = panier.variante
@@ -358,10 +370,10 @@ def confirmer_commande_ajax(request, commande_id):
                     stock_disponible = article.qte_disponible
                     nom_article = article.nom
                     print(f"📦 DEBUG: Article {nom_article} (ID:{article.id})")
-                
+
                 print(f"   - Stock actuel: {stock_disponible}")
                 print(f"   - Quantité commandée: {quantite_commandee}")
-                
+
                 # Vérifier si le stock est suffisant
                 if stock_disponible < quantite_commandee:
                     stock_insuffisant.append({
@@ -371,49 +383,73 @@ def confirmer_commande_ajax(request, commande_id):
                     })
                     print(f"❌ DEBUG: Stock insuffisant pour {nom_article}")
                 else:
-                    # Décrémentation directe et simple du stock
-                    ancien_stock = stock_disponible
-
-                    # Décrémenter directement le stock sur la variante ou l'article
-                    if variante:
-                        # Décrémenter sur la variante
-                        variante.qte_disponible = max(0, variante.qte_disponible - quantite_commandee)
-                        variante.save()
-                        nouveau_stock = variante.qte_disponible
-                        print(f"✅ DEBUG: Stock variante mis à jour: {ancien_stock} → {nouveau_stock}")
-                    else:
-                        # Décrémenter sur l'article principal
-                        article.qte_disponible = max(0, article.qte_disponible - quantite_commandee)
-                        article.save()
-                        nouveau_stock = article.qte_disponible
-                        print(f"✅ DEBUG: Stock article mis à jour: {ancien_stock} → {nouveau_stock}")
-
-                    articles_decrémentes.append({
-                        'article': nom_article,
-                        'ancien_stock': ancien_stock,
-                        'nouveau_stock': nouveau_stock,
-                        'quantite_decrémententée': quantite_commandee
+                    # Stocker les informations pour la décrémentation ultérieure
+                    paniers_valides.append({
+                        'panier': panier,
+                        'article': article,
+                        'variante': variante,
+                        'nom_article': nom_article,
+                        'quantite': quantite_commandee,
+                        'stock_actuel': stock_disponible
                     })
-                    
-                    print(f"✅ DEBUG: Stock mis à jour pour {nom_article}")
-                    print(f"   - Ancien stock: {ancien_stock}")
-                    print(f"   - Nouveau stock: {nouveau_stock}")
-            
-            # Si il y a des problèmes de stock, annuler la transaction
+                    print(f"✅ DEBUG: Stock suffisant pour {nom_article}")
+
+            # Si UN SEUL article manque de stock, ANNULER sans décrémenter quoi que ce soit
             if stock_insuffisant:
                 error_msg = f"Stock insuffisant pour : "
                 for item in stock_insuffisant:
                     error_msg += f"\n• {item['article']}: Stock={item['stock_actuel']}, Demandé={item['quantite_demandee']}"
-                
-                print(f"❌ DEBUG: Confirmation annulée - problèmes de stock")
+
+                print(f"❌ DEBUG: Confirmation annulée - problèmes de stock détectés")
+                print(f"⚠️ IMPORTANT: AUCUN article n'a été décrémenté (logique tout ou rien)")
                 for item in stock_insuffisant:
                     print(f"   - {item['article']}: {item['stock_actuel']}/{item['quantite_demandee']}")
-                
+
                 return JsonResponse({
-                    'success': False, 
+                    'success': False,
                     'message': error_msg,
                     'stock_insuffisant': stock_insuffisant
                 })
+
+            # ========================================
+            # PHASE 2 : DÉCRÉMENTATION DES STOCKS
+            # Tous les stocks sont suffisants, on peut décrémenter en toute sécurité
+            # ========================================
+            articles_decrémentes = []
+
+            print(f"✅ DEBUG: PHASE 2 - Tous les stocks sont suffisants, début de la décrémentation")
+
+            for item in paniers_valides:
+                article = item['article']
+                variante = item['variante']
+                nom_article = item['nom_article']
+                quantite_commandee = item['quantite']
+                ancien_stock = item['stock_actuel']
+
+                # Décrémenter directement le stock sur la variante ou l'article
+                if variante:
+                    # Décrémenter sur la variante
+                    variante.qte_disponible = max(0, variante.qte_disponible - quantite_commandee)
+                    variante.save()
+                    nouveau_stock = variante.qte_disponible
+                    print(f"✅ DEBUG: Stock variante mis à jour: {ancien_stock} → {nouveau_stock}")
+                else:
+                    # Décrémenter sur l'article principal
+                    article.qte_disponible = max(0, article.qte_disponible - quantite_commandee)
+                    article.save()
+                    nouveau_stock = article.qte_disponible
+                    print(f"✅ DEBUG: Stock article mis à jour: {ancien_stock} → {nouveau_stock}")
+
+                articles_decrémentes.append({
+                    'article': nom_article,
+                    'ancien_stock': ancien_stock,
+                    'nouveau_stock': nouveau_stock,
+                    'quantite_decrémententée': quantite_commandee
+                })
+
+                print(f"✅ DEBUG: Stock mis à jour pour {nom_article}")
+                print(f"   - Ancien stock: {ancien_stock}")
+                print(f"   - Nouveau stock: {nouveau_stock}")
             
             # Déterminer l'état suivant: toujours "Confirmée"
             enum_suivant = EnumEtatCmd.objects.get(libelle='Confirmée')
@@ -879,6 +915,9 @@ def confirmation(request):
     from commande.models import Commande, EtatCommande, EnumEtatCmd
     from django.http import JsonResponse
     from django.utils import timezone
+    from django.core.paginator import Paginator
+    from django.db.models import Q
+    from common.filter_utils import apply_all_filters, get_filter_context
     
     try:
         # Récupérer l'opérateur
@@ -905,12 +944,36 @@ def confirmation(request):
     ).prefetch_related(
         'paniers__article', 'etats__enum_etat'
     ).distinct().order_by('-date_cmd', '-date_creation')
-    
+
+    # Recherche
+    search_query = request.GET.get('search', '').strip()
+    if search_query:
+        commandes_a_confirmer = commandes_a_confirmer.filter(
+            Q(id_yz__icontains=search_query) |
+            Q(num_cmd__icontains=search_query) |
+            Q(client__nom__icontains=search_query) |
+            Q(client__prenom__icontains=search_query) |
+            Q(client__numero_tel__icontains=search_query) |
+            Q(ville__nom__icontains=search_query) |
+            Q(adresse__icontains=search_query)
+        )
+
+    # Appliquer les filtres (date, synchronisation, tri)
+    commandes_a_confirmer = apply_all_filters(commandes_a_confirmer, request)
+
+    # Pagination
+    paginator = Paginator(commandes_a_confirmer, 15)  # 15 commandes par page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
     context = {
         'operateur': operateur,
         'commandes_a_confirmer': commandes_a_confirmer,
+        'page_obj': page_obj,
+        'search_query': search_query,
     }
-    
+    context.update(get_filter_context(request))
+
     return render(request, 'operatConfirme/confirmation.html', context)
 
 @login_required
@@ -1586,6 +1649,984 @@ def reporter_commande_confirmation(request, commande_id):
 
     return JsonResponse({'success': False, 'message': 'Méthode non autorisée'})
 
+def determiner_type_prix_gele(article, compteur):
+    """
+    Détermine le type de prix gelé à enregistrer dans le panier.
+
+    PRIORITÉ 1: Les phases spéciales (promotion, liquidation, test) sont TOUJOURS gelées,
+                même pour les articles upsell.
+
+    PRIORITÉ 2: Les articles upsell en phase normale → enregistrer le niveau upsell actuel
+                basé sur le compteur au moment de la création du panier.
+
+    PRIORITÉ 3: Les articles normaux en phase normale ont le type 'normal'.
+    """
+    # PRIORITÉ 1: Phases spéciales et promotions (même pour les articles upsell)
+    # Ces types doivent être gelés car ils représentent des prix spéciaux
+    if hasattr(article, 'has_promo_active') and article.has_promo_active:
+        return 'promotion'
+    elif article.phase == 'LIQUIDATION':
+        return 'liquidation'
+    elif article.phase == 'EN_TEST':
+        return 'test'
+
+    # PRIORITÉ 2: Articles upsell en phase normale → enregistrer le niveau selon le compteur
+    # Le niveau upsell est gelé au moment de l'ajout du panier
+    if article.isUpsell:
+        if compteur == 0:
+            return 'normal'  # Pas encore de niveau upsell
+        elif compteur == 1:
+            return 'upsell_niveau_1'
+        elif compteur == 2:
+            return 'upsell_niveau_2'
+        elif compteur == 3:
+            return 'upsell_niveau_3'
+        elif compteur >= 4:
+            return 'upsell_niveau_4'
+        else:
+            return 'normal'
+
+    # PRIORITÉ 3: Articles normaux en phase normale
+    return 'normal'
+
+
+def mettre_a_jour_types_prix_gele_upsell(commande):
+    """
+    Met à jour dynamiquement les type_prix_gele de tous les paniers upsell
+    en fonction du compteur actuel de la commande.
+
+    Cette fonction doit être appelée après chaque modification du panier qui peut
+    impacter le compteur (ajout, suppression, modification de quantité).
+
+    IMPORTANT: Seuls les paniers upsell en phase normale sont mis à jour.
+    Les paniers en promotion, liquidation ou test conservent leur type_prix_gele fixe.
+    """
+    from commande.models import Panier
+
+    # Récupérer tous les paniers upsell de la commande
+    paniers_upsell = commande.paniers.filter(article__isUpsell=True)
+
+    for panier in paniers_upsell:
+        article = panier.article
+
+        # Recalculer le type_prix_gele basé sur le compteur actuel
+        nouveau_type = determiner_type_prix_gele(article, commande.compteur)
+
+        # Mettre à jour uniquement si le type a changé et que ce n'est pas une phase spéciale
+        # (les phases spéciales restent figées)
+        if nouveau_type != panier.type_prix_gele and nouveau_type not in ['promotion', 'liquidation', 'test']:
+            ancien_type = panier.type_prix_gele
+            panier.type_prix_gele = nouveau_type
+            panier.save(update_fields=['type_prix_gele'])
+            print(f"🔄 Panier {panier.id} mis à jour: {ancien_type} → {nouveau_type} (compteur={commande.compteur})")
+
+
+def _recalculer_remises_apres_changement_compteur(commande):
+    """
+    Recalcule toutes les remises personnalisées des paniers après un changement de compteur upsell.
+
+    Cette fonction est nécessaire car:
+    - Le compteur upsell détermine le prix unitaire effectif
+    - Les remises en pourcentage dépendent du prix effectif
+    - Quand le compteur change, toutes les remises doivent être recalculées
+
+    Args:
+        commande: L'instance de la commande
+    """
+    from decimal import Decimal
+    from commande.templatetags.remise_filters import calculer_prix_unitaire_effectif
+
+    # Récupérer tous les paniers avec une remise personnalisée
+    paniers_avec_remise = commande.paniers.filter(remise_appliquer=True).prefetch_related('remise_personnalisee')
+
+    for panier in paniers_avec_remise:
+        if hasattr(panier, 'remise_personnalisee'):
+            remise = panier.remise_personnalisee
+
+            # Recalculer le sous-total basé sur le prix effectif actuel (avec le nouveau compteur)
+            prix_unitaire_effectif = calculer_prix_unitaire_effectif(panier)
+            quantite = Decimal(str(panier.quantite))
+            sous_total_sans_remise = prix_unitaire_effectif * quantite
+
+            # Mettre à jour le sous_total_remise
+            panier.sous_total_remise = float(sous_total_sans_remise)
+
+            # Recalculer le montant de la remise
+            montant_remise = remise.calculer_montant_remise()
+            remise.montant_applique = float(montant_remise)
+            remise.save()
+
+            # Recalculer le sous-total avec remise
+            sous_total_avec_remise = sous_total_sans_remise - montant_remise
+            panier.sous_total = float(sous_total_avec_remise)
+            panier.save()
+
+            print(f"   🏷️ Remise recalculée pour panier {panier.id}: {sous_total_sans_remise} DH - {montant_remise} DH = {sous_total_avec_remise} DH")
+
+
+def _recalculer_compteur_upsell(commande):
+    """
+    Recalcule le compteur upsell de la commande et met à jour tous les paniers concernés.
+
+    Cette fonction centralise la logique de recalcul du compteur upsell:
+    - Compte les articles upsell dans la commande
+    - Applique la règle: compteur = max(0, total_upsell - 1) si total >= 2, sinon 0
+    - Met à jour les type_prix_gele de tous les paniers upsell
+    - Recalcule tous les totaux
+    - Recalcule toutes les remises personnalisées
+
+    Args:
+        commande: L'instance de la commande à recalculer
+    """
+    from django.db.models import Sum
+
+    # Compter la quantité totale d'articles upsell
+    total_quantite_upsell = commande.paniers.filter(
+        article__isUpsell=True
+    ).aggregate(total=Sum('quantite'))['total'] or 0
+
+    # Règle métier: Le compteur s'incrémente à partir de 2 unités d'articles upsell
+    # 0-1 unités → compteur = 0
+    # 2+ unités → compteur = total - 1
+    ancien_compteur = commande.compteur
+    if total_quantite_upsell >= 2:
+        commande.compteur = total_quantite_upsell - 1
+    else:
+        commande.compteur = 0
+
+    commande.save()
+
+    # Mettre à jour les type_prix_gele de tous les paniers upsell
+    mettre_a_jour_types_prix_gele_upsell(commande)
+
+    # Recalculer tous les totaux
+    commande.recalculer_totaux_upsell()
+
+    # Si le compteur a changé, recalculer toutes les remises personnalisées
+    if ancien_compteur != commande.compteur:
+        print(f"🔄 Compteur upsell changé: {ancien_compteur} → {commande.compteur}")
+        _recalculer_remises_apres_changement_compteur(commande)
+
+    print(f"🔄 Compteur upsell recalculé: {commande.compteur} (total articles upsell: {total_quantite_upsell})")
+
+
+def _handle_add_article(request, commande, operateur):
+    """
+    Gère l'ajout d'un article à une commande via AJAX.
+    
+    Cette fonction spécialisée:
+    - Gère les articles avec ou sans variantes
+    - Évite les doublons (incrémente la quantité si l'article existe)
+    - Recalcule automatiquement les compteurs upsell
+    - Met à jour tous les totaux
+    
+    Args:
+        request: L'objet HttpRequest contenant les données POST
+        commande: L'instance de la commande à modifier
+        operateur: L'opérateur effectuant l'action
+    
+    Returns:
+        JsonResponse avec le statut de l'opération
+    """
+    from commande.models import Panier
+    from article.models import Article, VarianteArticle
+    from django.db.models import Sum
+    from commande.templatetags.commande_filters import get_prix_upsell_avec_compteur
+    
+    # ========== 1. RÉCUPÉRATION ET VALIDATION DES DONNÉES ==========
+    article_id = request.POST.get('article_id')
+    try:
+        quantite = int(request.POST.get('quantite', 1))
+        if quantite < 1:
+            return JsonResponse({
+                'success': False,
+                'error': 'La quantité doit être au moins 1'
+            })
+        if quantite > 999:
+            return JsonResponse({
+                'success': False,
+                'error': 'La quantité ne peut pas dépasser 999'
+            })
+    except (ValueError, TypeError):
+        return JsonResponse({
+            'success': False,
+            'error': 'Quantité invalide'
+        })
+    
+    variante_id = request.POST.get('variante_id')
+    
+    print(f"📦 Ajout article: ID={article_id}, Qté={quantite}, Variante={variante_id}")
+    
+    try:
+        # ========== 2. RECHERCHE DE L'ARTICLE ET DE LA VARIANTE ==========
+        article = None
+        variante_obj = None
+        
+        # Essayer d'abord de trouver l'article directement
+        try:
+            article = Article.objects.get(id=article_id, actif=True)
+            print(f"✅ Article trouvé directement: {article.nom}")
+            
+            # Si une variante est spécifiée, la récupérer
+            if variante_id and variante_id not in ['null', '']:
+                try:
+                    variante_id_int = int(variante_id)
+                    variante_obj = VarianteArticle.objects.get(
+                        id=variante_id_int, 
+                        article=article, 
+                        actif=True
+                    )
+                    print(f"✅ Variante vérifiée: {variante_obj.id}")
+                except (ValueError, VarianteArticle.DoesNotExist):
+                    return JsonResponse({
+                        'success': False,
+                        'error': f'La variante sélectionnée (ID: {variante_id}) n\'existe pas ou n\'est pas active.',
+                        'message': 'Veuillez sélectionner une variante valide.'
+                    })
+        
+        except Article.DoesNotExist:
+            # Peut-être que c'est l'ID d'une variante directement
+            try:
+                variante_obj = VarianteArticle.objects.get(id=article_id, actif=True)
+                article = variante_obj.article
+                print(f"✅ Variante trouvée: {variante_obj} -> Article: {article.nom}")
+            except VarianteArticle.DoesNotExist:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Article ou variante avec l\'ID {article_id} non trouvé ou désactivé.'
+                })
+        
+        # Vérifier que l'article est actif
+        if not article or not article.actif:
+            return JsonResponse({
+                'success': False,
+                'error': 'Article inactif ou introuvable'
+            })
+        
+        # ========== 3. VÉRIFICATION DES DOUBLONS ==========
+        if variante_obj:
+            panier_existant = Panier.objects.filter(
+                commande=commande,
+                article=article,
+                variante=variante_obj
+            ).first()
+        else:
+            panier_existant = Panier.objects.filter(
+                commande=commande,
+                article=article,
+                variante__isnull=True
+            ).first()
+        
+        # ========== 4. CRÉATION OU MISE À JOUR DU PANIER ==========
+        if panier_existant:
+            # Article existe déjà → Incrémenter la quantité
+            panier_existant.quantite += quantite
+            panier_existant.sous_total = float(panier_existant.prix_panier * panier_existant.quantite)
+            panier_existant.save()
+            panier = panier_existant
+            print(f"🔄 Article existant mis à jour: ID={article.id}, nouvelle quantité={panier.quantite}")
+        else:
+            # Nouvel article → Créer un panier
+            prix_panier_initial = get_prix_upsell_avec_compteur(article, commande.compteur)
+            sous_total_initial = float(prix_panier_initial * quantite)
+            type_prix = determiner_type_prix_gele(article, commande.compteur)
+            
+            panier = Panier.objects.create(
+                commande=commande,
+                article=article,
+                quantite=quantite,
+                prix_panier=float(prix_panier_initial),
+                sous_total=sous_total_initial,
+                variante=variante_obj,
+                type_prix_gele=type_prix
+            )
+            print(f"➕ Nouvel article ajouté: ID={article.id}, quantité={quantite}, type_prix_gele={type_prix}")
+        
+        # ========== 5. RECALCUL DU COMPTEUR UPSELL ==========
+        if article.isUpsell:
+            _recalculer_compteur_upsell(commande)
+        
+        # ========== 6. RECALCUL DU TOTAL AVEC FRAIS ==========
+        commande.recalculer_total_avec_frais()
+        
+        # ========== 7. RÉPONSE JSON ==========
+        message = 'Article ajouté avec succès' if not panier_existant else f'Quantité mise à jour ({panier.quantite})'
+        
+        return JsonResponse({
+            'success': True,
+            'message': message,
+            'article_id': panier.id,
+            'total_commande': float(commande.total_cmd),
+            'nb_articles': commande.paniers.count(),
+            'compteur': commande.compteur,
+            'was_update': panier_existant is not None,
+            'new_quantity': panier.quantite
+        })
+    
+    except Article.DoesNotExist as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Article ou variante avec l\'ID {article_id} non trouvé ou désactivé. {str(e)}'
+        })
+    except Exception as e:
+        print(f"❌ Erreur lors de l'ajout d'article: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur serveur: {str(e)}'
+        })
+
+
+def _handle_delete_panier(request, commande, operateur):
+    """
+    Gère la suppression d'un article du panier via AJAX.
+    
+    Cette fonction spécialisée:
+    - Supprime un article/panier de la commande
+    - Recalcule automatiquement les compteurs upsell si nécessaire
+    - Met à jour tous les totaux de la commande
+    - Retourne les nouvelles valeurs pour mise à jour de l'interface
+    
+    Args:
+        request: L'objet HttpRequest contenant les données POST
+        commande: L'instance de la commande à modifier
+        operateur: L'opérateur effectuant l'action
+    
+    Returns:
+        JsonResponse avec le statut de l'opération
+    """
+    from commande.models import Panier
+    
+    # ========== 1. RÉCUPÉRATION ET VALIDATION DES DONNÉES ==========
+    panier_id = request.POST.get('panier_id')
+    
+    if not panier_id:
+        return JsonResponse({
+            'success': False,
+            'error': 'ID du panier non spécifié'
+        })
+    
+    try:
+        # ========== 2. RÉCUPÉRATION DU PANIER À SUPPRIMER ==========
+        try:
+            panier = Panier.objects.get(id=panier_id, commande=commande)
+        except Panier.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': f'Article avec l\'ID panier {panier_id} non trouvé dans cette commande'
+            })
+        
+        # ========== 3. SAUVEGARDE DES INFORMATIONS AVANT SUPPRESSION ==========
+        article_nom = panier.article.nom
+        etait_upsell = panier.article.isUpsell
+        
+        print(f"🗑️ Suppression panier {panier_id}: {article_nom} (upsell: {etait_upsell})")
+        
+        # ========== 4. SUPPRESSION DU PANIER ==========
+        panier.delete()
+        
+        # ========== 5. RECALCUL DU COMPTEUR UPSELL SI NÉCESSAIRE ==========
+        if etait_upsell:
+            _recalculer_compteur_upsell(commande)
+        
+        # ========== 6. RECALCUL DU TOTAL AVEC FRAIS ==========
+        commande.recalculer_total_avec_frais()
+        
+        # ========== 7. RÉPONSE JSON ==========
+        return JsonResponse({
+            'success': True,
+            'message': f'Article "{article_nom}" supprimé avec succès',
+            'total_commande': float(commande.total_cmd),
+            'nb_articles': commande.paniers.count(),
+            'compteur': commande.compteur
+        })
+    
+    except Exception as e:
+        print(f"❌ Erreur lors de la suppression du panier: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur serveur: {str(e)}'
+        })
+
+
+def _handle_save_client_info(request, commande, operateur):
+    """
+    Gère la sauvegarde des informations du client via AJAX.
+    
+    Args:
+        request: L'objet HttpRequest contenant les données POST
+        commande: L'instance de la commande à modifier
+        operateur: L'opérateur effectuant l'action
+    
+    Returns:
+        JsonResponse avec le statut de l'opération
+    """
+    # ========== 1. RÉCUPÉRATION DES DONNÉES ==========
+    nom = request.POST.get('nom', '').strip()
+    prenom = request.POST.get('prenom', '').strip()
+    telephone = request.POST.get('telephone', '').strip()
+    
+    print(f"👤 Sauvegarde infos client: {prenom} {nom}, Tel: {telephone}")
+    
+    try:
+        # ========== 2. MISE À JOUR DU CLIENT ==========
+        client = commande.client
+        client.nom = nom
+        client.prenom = prenom
+        client.numero_tel = telephone
+        client.save()
+        
+        # ========== 3. RÉPONSE JSON ==========
+        return JsonResponse({
+            'success': True,
+            'message': 'Informations client sauvegardées avec succès'
+        })
+    
+    except Exception as e:
+        print(f"❌ Erreur lors de la sauvegarde des infos client: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur serveur: {str(e)}'
+        })
+
+
+def _handle_update_quantity(request, commande, operateur):
+    """
+    Gère la modification de la quantité d'un article via AJAX.
+    
+    Args:
+        request: L'objet HttpRequest contenant les données POST
+        commande: L'instance de la commande à modifier
+        operateur: L'opérateur effectuant l'action
+    
+    Returns:
+        JsonResponse avec le statut de l'opération
+    """
+    from commande.models import Panier
+    
+    # ========== 1. RÉCUPÉRATION ET VALIDATION DES DONNÉES ==========
+    panier_id = request.POST.get('panier_id')
+    
+    try:
+        nouvelle_quantite = int(request.POST.get('nouvelle_quantite', 1))
+        if nouvelle_quantite < 1:
+            return JsonResponse({
+                'success': False,
+                'error': 'La quantité doit être au moins 1'
+            })
+        if nouvelle_quantite > 999:
+            return JsonResponse({
+                'success': False,
+                'error': 'La quantité ne peut pas dépasser 999'
+            })
+    except (ValueError, TypeError):
+        return JsonResponse({
+            'success': False,
+            'error': 'Quantité invalide'
+        })
+    
+    try:
+        # ========== 2. RÉCUPÉRATION DU PANIER ==========
+        try:
+            panier = Panier.objects.get(id=panier_id, commande=commande)
+        except Panier.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': f'Article avec l\'ID panier {panier_id} non trouvé dans cette commande'
+            })
+        
+        # ========== 3. SAUVEGARDE DES INFORMATIONS ==========
+        ancienne_quantite = panier.quantite
+        etait_upsell = panier.article.isUpsell
+
+        print(f"🔢 Modification quantité panier {panier_id}: {ancienne_quantite} → {nouvelle_quantite}")
+
+        # ========== 4. MODIFICATION DE LA QUANTITÉ ==========
+        # IMPORTANT: Le prix_panier reste INCHANGÉ (prix historique gelé)
+        panier.quantite = nouvelle_quantite
+        panier.save()
+
+        # ========== 5. RECALCUL DU COMPTEUR UPSELL SI NÉCESSAIRE ==========
+        # IMPORTANT: _recalculer_compteur_upsell gère automatiquement le recalcul des remises
+        if etait_upsell:
+            _recalculer_compteur_upsell(commande)
+            # Rafraîchir le panier pour avoir les données à jour
+            panier.refresh_from_db()
+            commande.refresh_from_db()
+
+        # ========== 6. GESTION DE LA REMISE SI APPLIQUÉE ET SI PAS UPSELL ==========
+        # Si c'était un article upsell, la remise a déjà été recalculée dans _recalculer_compteur_upsell
+        # On ne recalcule la remise manuellement que pour les articles non-upsell
+        from commande.models import RemisePanier
+        from decimal import Decimal
+        from commande.templatetags.remise_filters import calculer_prix_unitaire_effectif
+
+        remise_info = None  # Pour la réponse JSON
+
+        if not etait_upsell and hasattr(panier, 'remise_personnalisee'):
+            remise = panier.remise_personnalisee
+
+            print(f"🏷️ Remise détectée sur panier non-upsell {panier_id}: {remise.type_remise} {remise.valeur_remise}")
+
+            # Calculer le sous-total basé sur le prix effectif actuel
+            prix_unitaire_effectif = calculer_prix_unitaire_effectif(panier)
+            quantite = Decimal(str(nouvelle_quantite))
+            nouveau_sous_total_sans_remise = prix_unitaire_effectif * quantite
+
+            # Mettre à jour le sous_total_remise
+            panier.sous_total_remise = float(nouveau_sous_total_sans_remise)
+
+            # Recalculer le montant de la remise
+            montant_remise = remise.calculer_montant_remise()
+            remise.montant_applique = float(montant_remise)
+            remise.save()
+
+            # Calculer le nouveau sous-total AVEC remise
+            nouveau_sous_total_avec_remise = nouveau_sous_total_sans_remise - montant_remise
+
+            # Appliquer le sous-total avec remise
+            panier.sous_total = float(nouveau_sous_total_avec_remise)
+            panier.save()
+
+            print(f"   ✅ Remise recalculée: {nouveau_sous_total_sans_remise} DH - {montant_remise} DH = {nouveau_sous_total_avec_remise} DH")
+
+            # Préparer les infos de remise pour la réponse JSON
+            remise_info = {
+                'sous_total_original': float(nouveau_sous_total_sans_remise),
+                'montant_remise': float(montant_remise),
+                'nouveau_sous_total': float(nouveau_sous_total_avec_remise),
+                'type_remise': remise.type_remise,
+                'valeur_remise': float(remise.valeur_remise)
+            }
+        elif not etait_upsell:
+            # Pas de remise et pas upsell: recalculer le sous-total basé sur le prix effectif
+            prix_unitaire_effectif = calculer_prix_unitaire_effectif(panier)
+            quantite = Decimal(str(nouvelle_quantite))
+            panier.sous_total = float(prix_unitaire_effectif * quantite)
+            panier.save()
+
+        # Si c'était un article upsell avec remise, récupérer les infos pour la réponse
+        if etait_upsell and hasattr(panier, 'remise_personnalisee'):
+            panier.refresh_from_db()
+            remise = panier.remise_personnalisee
+            remise_info = {
+                'sous_total_original': float(panier.sous_total_remise),
+                'montant_remise': float(remise.montant_applique),
+                'nouveau_sous_total': float(panier.sous_total),
+                'type_remise': remise.type_remise,
+                'valeur_remise': float(remise.valeur_remise)
+            }
+
+        # ========== 7. RECALCUL DU TOTAL AVEC FRAIS ==========
+        commande.recalculer_total_avec_frais()
+
+        # ========== 8. CALCUL DU PRIX UNITAIRE EFFECTIF POUR L'AFFICHAGE ==========
+        # Pour les articles upsells, le prix unitaire change selon le compteur
+        prix_unitaire_effectif = calculer_prix_unitaire_effectif(panier)
+
+        # ========== 9. RÉPONSE JSON ==========
+        response_data = {
+            'success': True,
+            'message': f'Quantité modifiée de {ancienne_quantite} à {nouvelle_quantite}',
+            'sous_total': float(panier.sous_total),
+            'total_commande': float(commande.total_cmd),
+            'compteur': commande.compteur,
+            'prix_unitaire_effectif': float(prix_unitaire_effectif)  # Prix effectif actuel selon compteur/promo/liquidation
+        }
+
+        # Ajouter les infos de remise si elle existe
+        if remise_info:
+            response_data['remise'] = remise_info
+
+        return JsonResponse(response_data)
+    
+    except Exception as e:
+        print(f"❌ Erreur lors de la modification de quantité: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur serveur: {str(e)}'
+        })
+
+
+def _handle_update_operation(request, commande, operateur):
+    """
+    Gère la mise à jour d'une opération existante via AJAX.
+    
+    Args:
+        request: L'objet HttpRequest contenant les données POST
+        commande: L'instance de la commande à modifier
+        operateur: L'opérateur effectuant l'action
+    
+    Returns:
+        JsonResponse avec le statut de l'opération
+    """
+    from commande.models import Operation
+    import logging
+    
+    logger = logging.getLogger(__name__)
+    
+    # ========== 1. RÉCUPÉRATION ET VALIDATION DES DONNÉES ==========
+    operation_id = request.POST.get('operation_id')
+    nouveau_commentaire = request.POST.get('nouveau_commentaire', '').strip()
+    
+    print(f"🔄 Mise à jour opération {operation_id} pour commande {commande.id}")
+    print(f"📝 Nouveau commentaire: '{nouveau_commentaire}'")
+    
+    if not operation_id or not nouveau_commentaire:
+        print(f"❌ Données manquantes - operation_id: '{operation_id}', commentaire: '{nouveau_commentaire}'")
+        return JsonResponse({
+            'success': False,
+            'error': 'ID opération et commentaire requis'
+        })
+    
+    try:
+        # ========== 2. RÉCUPÉRATION DE L'OPÉRATION ==========
+        try:
+            operation = Operation.objects.get(id=operation_id, commande=commande)
+        except Operation.DoesNotExist:
+            print(f"❌ Opération {operation_id} introuvable pour commande {commande.id}")
+            return JsonResponse({
+                'success': False,
+                'error': 'Opération introuvable'
+            })
+        
+        # ========== 3. SAUVEGARDE DE L'ANCIEN COMMENTAIRE ==========
+        ancien_commentaire = operation.conclusion
+        print(f"📋 Ancien commentaire: '{ancien_commentaire}'")
+        
+        # ========== 4. MISE À JOUR DE L'OPÉRATION ==========
+        operation.conclusion = nouveau_commentaire
+        operation.operateur = operateur  # Mettre à jour l'opérateur qui modifie
+        operation.save()
+        
+        print(f"✅ Opération {operation_id} sauvegardée en base de données")
+        
+        # ========== 5. VÉRIFICATION POST-SAUVEGARDE ==========
+        operation_verif = Operation.objects.get(id=operation_id)
+        print(f"🔍 Vérification en base: conclusion = '{operation_verif.conclusion}'")
+        
+        # ========== 6. RÉPONSE JSON ==========
+        return JsonResponse({
+            'success': True,
+            'message': 'Opération mise à jour avec succès',
+            'operation_id': operation_id,
+            'nouveau_commentaire': nouveau_commentaire,
+            'ancien_commentaire': ancien_commentaire,
+            'debug_info': {
+                'verification_conclusion': operation_verif.conclusion,
+                'total_operations': Operation.objects.filter(commande=commande).count()
+            }
+        })
+    
+    except Exception as e:
+        print(f"❌ Erreur mise à jour opération: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur serveur: {str(e)}'
+        })
+
+
+def _handle_create_operation(request, commande, operateur):
+    """
+    Gère la création d'une nouvelle opération via AJAX.
+    
+    Args:
+        request: L'objet HttpRequest contenant les données POST
+        commande: L'instance de la commande à modifier
+        operateur: L'opérateur effectuant l'action
+    
+    Returns:
+        JsonResponse avec le statut de l'opération
+    """
+    from commande.models import Operation
+    
+    # ========== 1. RÉCUPÉRATION ET VALIDATION DES DONNÉES ==========
+    type_operation = request.POST.get('type_operation')
+    commentaire = request.POST.get('commentaire', '').strip()
+    
+    print(f"🆕 Création nouvelle opération pour commande {commande.id}")
+    print(f"📝 Type: '{type_operation}', Commentaire: '{commentaire}'")
+    
+    if not type_operation or not commentaire:
+        print(f"❌ Données manquantes - type: '{type_operation}', commentaire: '{commentaire}'")
+        return JsonResponse({
+            'success': False,
+            'error': 'Type d\'opération et commentaire requis'
+        })
+    
+    try:
+        # ========== 2. VALIDATION DU TYPE D'OPÉRATION ==========
+        allowed_types = {choice[0] for choice in Operation.TYPE_OPERATION_CHOICES}
+        if type_operation not in allowed_types:
+            return JsonResponse({
+                'success': False,
+                'error': "Type d'opération non autorisé"
+            })
+        
+        # ========== 3. CRÉATION DE LA NOUVELLE OPÉRATION ==========
+        nouvelle_operation = Operation.objects.create(
+            type_operation=type_operation,
+            conclusion=commentaire,
+            commande=commande,
+            operateur=operateur
+        )
+        
+        print(f"✅ Nouvelle opération créée avec ID: {nouvelle_operation.id}")
+        
+        # ========== 4. VÉRIFICATION POST-CRÉATION ==========
+        toutes_operations = Operation.objects.filter(commande=commande)
+        print(f"📊 {toutes_operations.count()} opération(s) totales pour cette commande")
+        
+        # ========== 5. RÉPONSE JSON ==========
+        return JsonResponse({
+            'success': True,
+            'message': 'Nouvelle opération créée avec succès',
+            'operation_id': nouvelle_operation.id,
+            'type_operation': nouvelle_operation.type_operation,
+            'commentaire': nouvelle_operation.conclusion,
+            'debug_info': {
+                'total_operations': toutes_operations.count(),
+                'operation_date': nouvelle_operation.date_operation.strftime('%d/%m/%Y %H:%M')
+            }
+        })
+    
+    except Exception as e:
+        print(f"❌ Erreur création opération: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur serveur: {str(e)}'
+        })
+
+
+def _handle_delete_operation(request, commande, operateur):
+    """
+    Gère la suppression d'une opération via AJAX.
+
+    Args:
+        request: L'objet HttpRequest contenant les données POST
+        commande: L'instance de la commande à modifier
+        operateur: L'opérateur effectuant l'action
+
+    Returns:
+        JsonResponse avec le statut de l'opération
+    """
+    from commande.models import Operation
+    import logging
+
+    logger = logging.getLogger(__name__)
+
+    # ========== 1. RÉCUPÉRATION ET VALIDATION DES DONNÉES ==========
+    operation_id = request.POST.get('operation_id')
+
+    print(f"🗑️ Suppression opération {operation_id} pour commande {commande.id}")
+
+    if not operation_id:
+        print(f"❌ Données manquantes - operation_id: '{operation_id}'")
+        return JsonResponse({
+            'success': False,
+            'error': 'ID opération requis'
+        })
+
+    try:
+        # ========== 2. RÉCUPÉRATION DE L'OPÉRATION ==========
+        try:
+            operation = Operation.objects.get(
+                id=operation_id,
+                commande=commande
+            )
+            print(f"✅ Opération {operation_id} trouvée: {operation.type_operation}")
+        except Operation.DoesNotExist:
+            print(f"❌ Opération {operation_id} introuvable pour commande {commande.id}")
+            return JsonResponse({
+                'success': False,
+                'error': 'Opération introuvable'
+            })
+
+        # ========== 3. SAUVEGARDE DES INFORMATIONS AVANT SUPPRESSION ==========
+        operation_info = {
+            'id': operation.id,
+            'type_operation': operation.type_operation,
+            'conclusion': operation.conclusion,
+            'date_operation': operation.date_operation.strftime('%d/%m/%Y %H:%M')
+        }
+
+        print(f"📋 Informations de l'opération à supprimer:")
+        print(f"   - Type: {operation_info['type_operation']}")
+        print(f"   - Conclusion: {operation_info['conclusion']}")
+        print(f"   - Date: {operation_info['date_operation']}")
+
+        # ========== 4. SUPPRESSION DE L'OPÉRATION ==========
+        operation.delete()
+        print(f"✅ Opération {operation_id} supprimée avec succès")
+
+        # ========== 5. VÉRIFICATION POST-SUPPRESSION ==========
+        operations_restantes = Operation.objects.filter(commande=commande)
+        print(f"📊 {operations_restantes.count()} opération(s) restante(s) pour cette commande")
+
+        # ========== 6. RÉPONSE JSON ==========
+        return JsonResponse({
+            'success': True,
+            'message': f'Opération {operation_info["type_operation"]} supprimée avec succès',
+            'operation_deleted': operation_info,
+            'debug_info': {
+                'total_operations_restantes': operations_restantes.count(),
+            }
+        })
+
+    except Exception as e:
+        print(f"❌ Erreur suppression opération: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur serveur: {str(e)}'
+        })
+
+
+def _handle_save_livraison(request, commande, operateur):
+    """
+    Gère la sauvegarde des informations de livraison via AJAX.
+    
+    Args:
+        request: L'objet HttpRequest contenant les données POST
+        commande: L'instance de la commande à modifier
+        operateur: L'opérateur effectuant l'action
+    
+    Returns:
+        JsonResponse avec le statut de l'opération
+    """
+    from parametre.models import Ville
+    
+    # ========== 1. RÉCUPÉRATION DES DONNÉES ==========
+    ville_id = request.POST.get('ville_livraison')
+    adresse = request.POST.get('adresse_livraison', '').strip()
+    
+    print(f"🚚 Sauvegarde livraison: Ville ID={ville_id}, Adresse={adresse[:50] if adresse else 'N/A'}")
+    
+    try:
+        # ========== 2. MISE À JOUR DE LA VILLE ==========
+        if ville_id:
+            try:
+                nouvelle_ville = Ville.objects.get(id=ville_id)
+                commande.ville = nouvelle_ville
+            except Ville.DoesNotExist:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Ville de livraison invalide'
+                })
+        
+        # ========== 3. MISE À JOUR DE L'ADRESSE ==========
+        commande.adresse = adresse
+        
+        # ========== 4. RECALCUL DU TOTAL AVEC FRAIS ==========
+        commande.recalculer_total_avec_frais()
+        
+        # ========== 5. SAUVEGARDE ==========
+        commande.save()
+        
+        # ========== 6. PRÉPARATION DU MESSAGE DE SUCCÈS ==========
+        elements_sauvegardes = []
+        if ville_id:
+            elements_sauvegardes.append(f"ville: {commande.ville.nom}")
+        if adresse:
+            elements_sauvegardes.append(f"adresse: {adresse[:50]}{'...' if len(adresse) > 50 else ''}")
+        
+        if elements_sauvegardes:
+            message = f"Informations de livraison sauvegardées ({', '.join(elements_sauvegardes)})"
+        else:
+            message = 'Section livraison validée'
+        
+        # ========== 7. RÉPONSE JSON ==========
+        return JsonResponse({
+            'success': True,
+            'message': message,
+            'ville_nom': commande.ville.nom if commande.ville else None,
+            'region_nom': commande.ville.region.nom_region if commande.ville and commande.ville.region else None,
+            'frais_livraison': commande.montant_frais_livraison,
+            'adresse': adresse,
+            'nouveau_total': commande.total_cmd,
+            'sous_total_articles': commande.sous_total_articles
+        })
+    
+    except Exception as e:
+        print(f"❌ Erreur lors de la sauvegarde de la livraison: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur serveur: {str(e)}'
+        })
+
+
+def _handle_toggle_frais_livraison(request, commande, operateur):
+    """
+    Gère l'activation/désactivation des frais de livraison via AJAX.
+    
+    Args:
+        request: L'objet HttpRequest contenant les données POST
+        commande: L'instance de la commande à modifier
+        operateur: L'opérateur effectuant l'action
+    
+    Returns:
+        JsonResponse avec le statut de l'opération
+    """
+    # ========== 1. RÉCUPÉRATION ET VALIDATION DES DONNÉES ==========
+    nouveau_statut = request.POST.get('frais_livraison_actif') == 'true'
+    ancien_statut = commande.frais_livraison
+    
+    print(f"💰 Toggle frais de livraison: {ancien_statut} → {nouveau_statut}")
+    
+    try:
+        # ========== 2. MISE À JOUR DU STATUT ==========
+        commande.frais_livraison = nouveau_statut
+        commande.save()
+        
+        # ========== 3. RECALCUL DU TOTAL AVEC FRAIS ==========
+        commande.recalculer_total_avec_frais()
+        
+        # ========== 4. PRÉPARATION DU MESSAGE ET DES INFOS D'AFFICHAGE ==========
+        if nouveau_statut:
+            message = "Frais de livraison activés et inclus dans le total"
+            statut_display = "Activés"
+            couleur = "green"
+        else:
+            message = "Frais de livraison désactivés et retirés du total"
+            statut_display = "Désactivés"
+            couleur = "gray"
+        
+        # ========== 5. RÉPONSE JSON ==========
+        return JsonResponse({
+            'success': True,
+            'message': message,
+            'nouveau_statut': nouveau_statut,
+            'statut_display': statut_display,
+            'couleur': couleur,
+            'total_commande': float(commande.total_cmd),
+            'frais_livraison_ville': float(commande.montant_frais_livraison),
+            'ancien_statut': ancien_statut
+        })
+    
+    except Exception as e:
+        print(f"❌ Erreur lors du toggle des frais de livraison: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur serveur: {str(e)}'
+        })
+
+
 @login_required
 def modifier_commande(request, commande_id):
     """Page de modification complète d'une commande pour les opérateurs de confirmation"""
@@ -1602,10 +2643,7 @@ def modifier_commande(request, commande_id):
     
     # Récupérer la commande
     commande = get_object_or_404(Commande, id=commande_id)
-    
-    # Corriger automatiquement les paniers d'articles en liquidation et en promotion
-    commande.corriger_paniers_liquidation_et_promotion()
-    
+        
     # Vérifier que la commande est affectée à cet opérateur
     etat_actuel = commande.etats.filter(
         operateur=operateur,
@@ -1628,833 +2666,46 @@ def modifier_commande(request, commande_id):
             if is_ajax and not action:
                 return JsonResponse({'success': False, 'error': 'Action non spécifiée'})
             
-            if is_ajax and action not in ['add_article', 'update_ville', 'apply_remise', 'toggle_frais_livraison', 'update_article', 'remove_article', 'update_article_complet', 'save_livraison', 'update_quantity', 'delete_panier', 'save_client_info', 'update_operation', 'create_operation']:
+            if is_ajax and action not in ['add_article', 'update_ville', 'toggle_frais_livraison', 'remove_article', 'update_article_complet', 'save_livraison', 'update_quantity', 'delete_panier', 'save_client_info', 'update_operation', 'create_operation', 'delete_operation']:
                 return JsonResponse({'success': False, 'error': f'Action non reconnue: {action}'})
             
-            if action == 'add_article':
-                # Ajouter un nouvel article immédiatement
-                
-                article_id = request.POST.get('article_id')
-                quantite = int(request.POST.get('quantite', 1))
-                variante_id = request.POST.get('variante_id')  # Nouveau paramètre
-                
-                print(f"📦 Ajout article: ID={article_id}, Qté={quantite}, Variante={variante_id}")
-                
-                try:
-                    # D'abord, essayer de trouver l'article directement
-                    article = None
-                    variante_id_int = None
-                    
-                    try:
-                        article = Article.objects.get(id=article_id, actif=True)
-                        # Convertir variante_id en entier ou None
-                        variante_id_int = int(variante_id) if variante_id and variante_id != 'null' and variante_id != '' else None
-                        print(f"✅ Article trouvé directement: {article.nom}")
-                    except Article.DoesNotExist:
-                        # Si pas trouvé comme Article, peut-être que c'est l'ID d'une variante
-                        try:
-                            variante = VarianteArticle.objects.get(id=article_id, actif=True)
-                            article = variante.article
-                            variante_id_int = variante.id
-                            print(f"✅ Variante trouvée: {variante} -> Article: {article.nom}")
-                        except VarianteArticle.DoesNotExist:
-                            raise Article.DoesNotExist(f"Ni article ni variante trouvé avec l'ID {article_id}")
-                    
-                    if not article or not article.actif:
-                        raise Article.DoesNotExist(f"Article inactif ou introuvable")
-                    
-                                        # Vérifier si l'article avec cette variante existe déjà dans la commande
-                    if variante_id_int:
-                        try:
-                            variante_obj = VarianteArticle.objects.get(id=variante_id_int, actif=True)
-                            panier_existant = Panier.objects.filter(
-                                commande=commande,
-                                article=article,
-                                variante=variante_obj
-                            ).first()
-                            print(f"✅ Variante vérifiée: {variante_obj.id}")
-                        except VarianteArticle.DoesNotExist:
-                            print(f"❌ ERREUR: Variante {variante_id_int} introuvable ou inactive")
-                            return JsonResponse({
-                                'success': False,
-                                'error': f'La variante sélectionnée (ID: {variante_id_int}) n\'existe pas ou n\'est pas active.',
-                                'message': 'Veuillez sélectionner une variante valide ou contacter l\'administrateur.'
-                            })
-                    else:
-                        variante_obj = None
-                        panier_existant = Panier.objects.filter(
-                            commande=commande,
-                            article=article,
-                            variante__isnull=True
-                        ).first()
-                    
-                    if panier_existant:
-                        # Si l'article existe déjà, mettre à jour la quantité
-                        panier_existant.quantite += quantite
-                        panier_existant.save()
-                        panier = panier_existant
-                        print(f"🔄 Article existant mis à jour: ID={article.id}, nouvelle quantité={panier.quantite}")
-                    else:
-                        # Si l'article n'existe pas, créer un nouveau panier
-                        if variante_id_int:
-                            try:
-                                variante_obj = VarianteArticle.objects.get(id=variante_id_int, article=article, actif=True)
-                                print(f"✅ Variante trouvée pour nouveau panier: {variante_obj.id}")
-                            except VarianteArticle.DoesNotExist:
-                                print(f"❌ ERREUR: Variante {variante_id_int} introuvable pour nouveau panier, article {article.id}")
-                                return JsonResponse({
-                                    'success': False,
-                                    'error': f'La variante sélectionnée (ID: {variante_id_int}) n\'existe pas ou n\'est pas active.',
-                                    'message': 'Impossible d\'ajouter l\'article avec une variante invalide. Veuillez sélectionner une variante valide.'
-                                })
-                        else:
-                            variante_obj = None
-
-                        panier = Panier.objects.create(
-                            commande=commande,
-                            article=article,
-                            quantite=quantite,
-                            sous_total=0,  # Sera recalculé après
-                            variante=variante_obj
-                        )
-                        print(f"➕ Nouvel article ajouté: ID={article.id}, quantité={quantite}")
-                    
-                    # Recalculer le compteur après ajout
-                    if article.isUpsell and hasattr(article, 'prix_upsell_1') and article.prix_upsell_1 is not None:
-                        # Compter la quantité totale d'articles upsell (après ajout)
-                        from django.db.models import Sum
-                        total_quantite_upsell = commande.paniers.filter(article__isUpsell=True).aggregate(
-                            total=Sum('quantite')
-                        )['total'] or 0
-                        
-                        # Le compteur ne s'incrémente qu'à partir de 2 unités d'articles upsell
-                        # 0-1 unités upsell → compteur = 0
-                        # 2+ unités upsell → compteur = total_quantite_upsell - 1
-                        if total_quantite_upsell >= 2:
-                            commande.compteur = total_quantite_upsell - 1
-                        else:
-                            commande.compteur = 0
-                        
-                        commande.save()
-                        
-                        # Recalculer TOUS les articles de la commande avec le nouveau compteur
-                        commande.recalculer_totaux_upsell()
-                    else:
-                        # Pour les articles normaux, juste calculer le sous-total
-                        from commande.templatetags.commande_filters import get_prix_upsell_avec_compteur
-                        prix_unitaire = get_prix_upsell_avec_compteur(article, commande.compteur)
-                        sous_total = prix_unitaire * panier.quantite
-                        panier.sous_total = float(sous_total)
-                        panier.save()
-                    
-                    # Recalculer le total de la commande avec les frais de livraison
-                    commande.recalculer_total_avec_frais()
-                    
-                    # Déterminer si c'était un ajout ou une mise à jour
-                    message = 'Article ajouté avec succès' if not panier_existant else f'Quantité mise à jour ({panier.quantite})'
-                    
-                    return JsonResponse({
-                        'success': True,
-                        'message': message,
-                        'article_id': panier.id,
-                        'total_commande': float(commande.total_cmd),
-                        'nb_articles': commande.paniers.count(),
-                        'compteur': commande.compteur,
-                        'was_update': panier_existant is not None,
-                        'new_quantity': panier.quantite
-                    })
-                    
-                except Article.DoesNotExist as e:
-                    return JsonResponse({
-                        'success': False,
-                        'error': f'Article ou variante avec l\'ID {article_id} non trouvé ou désactivé. {str(e)}'
-                    })
-                except Exception as e:
-                    return JsonResponse({
-                        'success': False,
-                        'error': str(e)
-                    })
+            # ================ ACTIONS AJAX INDIVIDUELLES ================
             
-            elif action == 'replace_article':
-                # Remplacer un article existant
-                from article.models import Article
-                from commande.models import Panier
-                
-                ancien_article_id = request.POST.get('ancien_article_id')
-                nouvel_article_id = request.POST.get('nouvel_article_id')
-                nouvelle_quantite = int(request.POST.get('nouvelle_quantite', 1))
-                
-                try:
-                    # Supprimer l'ancien panier et décrémenter le compteur
-                    ancien_panier = Panier.objects.get(id=ancien_article_id, commande=commande)
-                    ancien_article = ancien_panier.article
-                    
-                    # Sauvegarder les infos avant suppression
-                    ancien_etait_upsell = ancien_article.isUpsell
-                    
-                    # Supprimer l'ancien panier
-                    ancien_panier.delete()
-                    
-                    # Créer le nouveau panier
-                    nouvel_article = Article.objects.get(id=nouvel_article_id)
-                    
-                    # Recalculer le compteur après remplacement
-                    from django.db.models import Sum
-                    total_quantite_upsell = commande.paniers.filter(article__isUpsell=True).aggregate(
-                        total=Sum('quantite')
-                    )['total'] or 0
-                    
-                    # Ajouter la quantité si le nouvel article est upsell
-                    if nouvel_article.isUpsell:
-                        total_quantite_upsell += nouvelle_quantite
-                    
-                    # Appliquer la logique : compteur = max(0, total_quantite_upsell - 1)
-                    if total_quantite_upsell >= 2:
-                        commande.compteur = total_quantite_upsell - 1
-                    else:
-                        commande.compteur = 0
-                    
-                    commande.save()
-                    
-                    # Recalculer TOUS les articles de la commande avec le nouveau compteur
-                    commande.recalculer_totaux_upsell()
-                    
-                    # Calculer le sous-total selon le compteur de la commande
-                    from commande.templatetags.commande_filters import get_prix_upsell_avec_compteur
-                    prix_unitaire = get_prix_upsell_avec_compteur(nouvel_article, commande.compteur)
-                    sous_total = prix_unitaire * nouvelle_quantite
-                    
-                    nouveau_panier = Panier.objects.create(
-                        commande=commande,
-                        article=nouvel_article,
-                        quantite=nouvelle_quantite,
-                        sous_total=float(sous_total)
-                    )
-                    
-                    # Recalculer le total de la commande avec les frais de livraison
-                    commande.recalculer_total_avec_frais()
-                    
-                    return JsonResponse({
-                        'success': True,
-                        'message': 'Article remplacé avec succès',
-                        'nouvel_article_id': nouveau_panier.id,
-                        'total_commande': float(commande.total_cmd),
-                        'nb_articles': commande.paniers.count(),
-                        'compteur': commande.compteur
-                    })
-                    
-                except Panier.DoesNotExist:
-                    return JsonResponse({
-                        'success': False,
-                        'error': 'Article original non trouvé'
-                    })
-                except Article.DoesNotExist:
-                    return JsonResponse({
-                        'success': False,
-                        'error': 'Nouvel article non trouvé'
-                    })
-                except Exception as e:
-                    return JsonResponse({
-                        'success': False,
-                        'error': str(e)
-                    })
+            if action == 'add_article':
+                # Déléguer à la fonction spécialisée
+                return _handle_add_article(request, commande, operateur)
             
             elif action == 'delete_panier':
-                # Supprimer un article
-                from commande.models import Panier
-                
-                panier_id = request.POST.get('panier_id')
-                
-                try:
-                    panier = Panier.objects.get(id=panier_id, commande=commande)
-                    
-                    # Sauvegarder l'info avant suppression
-                    etait_upsell = panier.article.isUpsell
-                    
-                    # Supprimer l'article
-                    panier.delete()
-                    
-                    # Recalculer le compteur après suppression
-                    if etait_upsell:
-                        # Compter la quantité totale d'articles upsell restants (après suppression)
-                        from django.db.models import Sum
-                        total_quantite_upsell = commande.paniers.filter(article__isUpsell=True).aggregate(
-                            total=Sum('quantite')
-                        )['total'] or 0
-                        
-                        # Le compteur ne s'incrémente qu'à partir de 2 unités d'articles upsell
-                        # 0-1 unités upsell → compteur = 0
-                        # 2+ unités upsell → compteur = total_quantite_upsell - 1
-                        if total_quantite_upsell >= 2:
-                            commande.compteur = total_quantite_upsell - 1
-                        else:
-                            commande.compteur = 0
-                        
-                        commande.save()
-                        
-                        # Recalculer TOUS les articles de la commande avec le nouveau compteur
-                        commande.recalculer_totaux_upsell()
-                    
-                    # Recalculer le total de la commande avec les frais de livraison
-                    commande.recalculer_total_avec_frais()
-                    
-                    return JsonResponse({
-                        'success': True,
-                        'message': 'Article supprimé avec succès',
-                        'total_commande': float(commande.total_cmd),
-                        'nb_articles': commande.paniers.count(),
-                        'compteur': commande.compteur
-                    })
-                    
-                except Panier.DoesNotExist:
-                    return JsonResponse({
-                        'success': False,
-                        'error': f'Article avec l\'ID panier {panier_id} non trouvé dans cette commande'
-                    })
-                except Exception as e:
-                    return JsonResponse({
-                        'success': False,
-                        'error': str(e)
-                    })
+                # Déléguer à la fonction spécialisée
+                return _handle_delete_panier(request, commande, operateur)
             
             elif action == 'save_client_info':
-                # Sauvegarder les informations du client
-                nom = request.POST.get('nom')
-                prenom = request.POST.get('prenom')
-                telephone = request.POST.get('telephone')
-
-                try:
-                    client = commande.client
-                    client.nom = nom
-                    client.prenom = prenom
-                    client.numero_tel = telephone
-                    client.save()
-                    return JsonResponse({'success': True, 'message': 'Informations client sauvegardées'})
-                except Exception as e:
-                    return JsonResponse({'success': False, 'error': str(e)})
+                # Déléguer à la fonction spécialisée
+                return _handle_save_client_info(request, commande, operateur)
             
             elif action == 'update_quantity':
-                # Modifier la quantité d'un article
-                from commande.models import Panier
-                
-                panier_id = request.POST.get('panier_id')
-                nouvelle_quantite = int(request.POST.get('nouvelle_quantite', 1))
-                
-                try:
-                    panier = Panier.objects.get(id=panier_id, commande=commande)
-                    ancienne_quantite = panier.quantite
-                    etait_upsell = panier.article.isUpsell
-                    
-                    # Vérifier si une remise a été appliquée sur ce panier
-                    if hasattr(panier, 'remise_appliquer') and panier.remise_appliquer:
-                        # Une remise a été appliquée - préserver le prix unitaire remisé
-                        prix_unitaire_remise = float(panier.sous_total) / ancienne_quantite if ancienne_quantite > 0 else 0
-                        panier.quantite = nouvelle_quantite
-                        panier.sous_total = float(prix_unitaire_remise * nouvelle_quantite)
-                        panier.save()
-                        print(f"💰 DEBUG: Remise préservée lors du changement de quantité - Prix unitaire remisé: {prix_unitaire_remise}, Nouveau sous-total: {panier.sous_total}")
-                    else:
-                        # Aucune remise appliquée - utiliser la logique normale
-                        panier.quantite = nouvelle_quantite
-                        panier.save()
-                        
-                        # Recalculer le compteur si c'était un article upsell
-                        if etait_upsell:
-                            # Compter la quantité totale d'articles upsell (après modification)
-                            from django.db.models import Sum
-                            total_quantite_upsell = commande.paniers.filter(article__isUpsell=True).aggregate(
-                                total=Sum('quantite')
-                            )['total'] or 0
-                            
-                            # Le compteur ne s'incrémente qu'à partir de 2 unités d'articles upsell
-                            if total_quantite_upsell >= 2:
-                                commande.compteur = total_quantite_upsell - 1
-                            else:
-                                commande.compteur = 0
-                            
-                            commande.save()
-                            
-                            # Recalculer TOUS les articles de la commande avec le nouveau compteur
-                            commande.recalculer_totaux_upsell()
-                        else:
-                            # Pour les articles normaux, juste recalculer le sous-total
-                            from commande.templatetags.commande_filters import get_prix_upsell_avec_compteur
-                            prix_unitaire = get_prix_upsell_avec_compteur(panier.article, commande.compteur)
-                            panier.sous_total = float(prix_unitaire * nouvelle_quantite)
-                            panier.save()
-                    
-                    # Recalculer le total de la commande avec les frais de livraison
-                    commande.recalculer_total_avec_frais()
-                    
-                    return JsonResponse({
-                        'success': True,
-                        'message': f'Quantité modifiée de {ancienne_quantite} à {nouvelle_quantite}',
-                        'sous_total': float(panier.sous_total),
-                        'total_commande': float(commande.total_cmd),
-                        'compteur': commande.compteur
-                    })
-                    
-                except Panier.DoesNotExist:
-                    return JsonResponse({
-                        'success': False,
-                        'error': f'Article avec l\'ID panier {panier_id} non trouvé dans cette commande'
-                    })
-                except Exception as e:
-                    return JsonResponse({
-                        'success': False,
-                        'error': str(e)
-                    })
+                # Déléguer à la fonction spécialisée
+                return _handle_update_quantity(request, commande, operateur)
             
             elif action == 'update_operation':
-                # Mettre à jour une opération existante
-                try:
-                    from commande.models import Operation
-                    import logging
-                    logger = logging.getLogger(__name__)
-                    
-                    operation_id = request.POST.get('operation_id')
-                    nouveau_commentaire = request.POST.get('nouveau_commentaire', '').strip()
-                    
-                    print(f"🔄 DEBUG: Mise à jour opération {operation_id} pour commande {commande.id}")
-                    print(f"📝 DEBUG: Nouveau commentaire: '{nouveau_commentaire}'")
-                    print(f"🔍 DEBUG: Données POST reçues: {dict(request.POST)}")
-                    
-                    if not operation_id or not nouveau_commentaire:
-                        print(f"❌ DEBUG: Données manquantes - operation_id: '{operation_id}', commentaire: '{nouveau_commentaire}'")
-                        return JsonResponse({'success': False, 'error': 'ID opération et commentaire requis'})
-                    
-                    # Récupérer et mettre à jour l'opération
-                    operation = Operation.objects.get(id=operation_id, commande=commande)
-                    ancien_commentaire = operation.conclusion
-                    
-                    print(f"📋 DEBUG: Ancien commentaire: '{ancien_commentaire}'")
-                    
-                    operation.conclusion = nouveau_commentaire
-                    operation.operateur = operateur  # Mettre à jour l'opérateur qui modifie
-                    operation.save()
-                    
-                    print(f"✅ DEBUG: Opération {operation_id} sauvegardée en base de données")
-                    
-                    # Vérification post-sauvegarde
-                    operation_verif = Operation.objects.get(id=operation_id)
-                    print(f"🔍 DEBUG: Vérification en base: conclusion = '{operation_verif.conclusion}'")
-                    
-                    # Vérifier toutes les opérations de cette commande
-                    toutes_operations = Operation.objects.filter(commande=commande)
-                    print(f"📊 DEBUG: {toutes_operations.count()} opération(s) totales pour cette commande:")
-                    for op in toutes_operations:
-                        print(f"   - ID {op.id}: {op.type_operation} - '{op.conclusion}'")
-                    
-                    return JsonResponse({
-                        'success': True,
-                        'message': 'Opération mise à jour avec succès en base de données',
-                        'operation_id': operation_id,
-                        'nouveau_commentaire': nouveau_commentaire,
-                        'ancien_commentaire': ancien_commentaire,
-                        'debug_info': {
-                            'verification_conclusion': operation_verif.conclusion,
-                            'total_operations': toutes_operations.count()
-                        }
-                    })
-                    
-                except Operation.DoesNotExist:
-                    print(f"❌ DEBUG: Opération {operation_id} introuvable pour commande {commande.id}")
-                    return JsonResponse({'success': False, 'error': 'Opération introuvable'})
-                except Exception as e:
-                    print(f"❌ DEBUG: Erreur mise à jour opération: {str(e)}")
-                    import traceback
-                    traceback.print_exc()
-                    return JsonResponse({'success': False, 'error': str(e)})
+                # Déléguer à la fonction spécialisée
+                return _handle_update_operation(request, commande, operateur)
             
             elif action == 'create_operation':
-                # Créer une nouvelle opération immédiatement
-                try:
-                    from commande.models import Operation
-                    
-                    type_operation = request.POST.get('type_operation')
-                    commentaire = request.POST.get('commentaire', '').strip()
-                    
-                    print(f"🆕 DEBUG: Création nouvelle opération pour commande {commande.id}")
-                    print(f"📝 DEBUG: Type: '{type_operation}', Commentaire: '{commentaire}'")
-                    print(f"🔍 DEBUG: Données POST reçues: {dict(request.POST)}")
-                    
-                    if not type_operation or not commentaire:
-                        print(f"❌ DEBUG: Données manquantes - type: '{type_operation}', commentaire: '{commentaire}'")
-                        return JsonResponse({'success': False, 'error': 'Type d\'opération et commentaire requis'})
-                    
-                    # Valider le type d'opération
-                    allowed_types = {choice[0] for choice in Operation.TYPE_OPERATION_CHOICES}
-                    if type_operation not in allowed_types:
-                        return JsonResponse({'success': False, 'error': "Type d'opération non autorisé"})
+                # Déléguer à la fonction spécialisée
+                return _handle_create_operation(request, commande, operateur)
 
-                    # Créer la nouvelle opération
-                    nouvelle_operation = Operation.objects.create(
-                        type_operation=type_operation,
-                        conclusion=commentaire,
-                        commande=commande,
-                        operateur=operateur
-                    )
-                    
-                    print(f"✅ DEBUG: Nouvelle opération créée avec ID: {nouvelle_operation.id}")
-                    
-                    # Vérifier toutes les opérations de cette commande
-                    toutes_operations = Operation.objects.filter(commande=commande)
-                    print(f"📊 DEBUG: {toutes_operations.count()} opération(s) totales pour cette commande:")
-                    for op in toutes_operations:
-                        print(f"   - ID {op.id}: {op.type_operation} - '{op.conclusion}'")
-                    
-                    return JsonResponse({
-                        'success': True,
-                        'message': 'Nouvelle opération créée avec succès en base de données',
-                        'operation_id': nouvelle_operation.id,
-                        'type_operation': nouvelle_operation.type_operation,
-                        'commentaire': nouvelle_operation.conclusion,
-                        'debug_info': {
-                            'total_operations': toutes_operations.count(),
-                            'operation_date': nouvelle_operation.date_operation.strftime('%d/%m/%Y %H:%M')
-                        }
-                    })
-                    
-                except Exception as e:
-                    print(f"❌ DEBUG: Erreur création opération: {str(e)}")
-                    import traceback
-                    traceback.print_exc()
-                    return JsonResponse({'success': False, 'error': str(e)})
-            
+            elif action == 'delete_operation':
+                # Déléguer à la fonction spécialisée
+                return _handle_delete_operation(request, commande, operateur)
+
             elif action == 'save_livraison':
-                # Sauvegarder les informations de livraison (ville + adresse)
-                try:
-                    ville_id = request.POST.get('ville_livraison')
-                    adresse = request.POST.get('adresse_livraison', '').strip()
-                    
-                    # Mettre à jour la ville de livraison si fournie
-                    if ville_id:
-                        try:
-                            nouvelle_ville = Ville.objects.get(id=ville_id)
-                            commande.ville = nouvelle_ville
-                        except Ville.DoesNotExist:
-                            return JsonResponse({'success': False, 'error': 'Ville de livraison invalide'})
-                    
-                    # Mettre à jour l'adresse (pas obligatoire)
-                    commande.adresse = adresse
-                    
-                    # Recalculer le total avec les nouveaux frais de livraison
-                    commande.recalculer_total_avec_frais()
-                    
-                    # Sauvegarder les modifications
-                    commande.save()
-                    
-                    # Préparer le message de succès
-                    elements_sauvegardes = []
-                    if ville_id:
-                        elements_sauvegardes.append(f"ville: {commande.ville.nom}")
-                    if adresse:
-                        elements_sauvegardes.append(f"adresse: {adresse[:50]}{'...' if len(adresse) > 50 else ''}")
-                    
-                    if elements_sauvegardes:
-                        message = f"Informations de livraison sauvegardées ({', '.join(elements_sauvegardes)})"
-                    else:
-                        message = 'Section livraison validée'
-                    
-                    return JsonResponse({
-                        'success': True,
-                        'message': message,
-                        'ville_nom': commande.ville.nom if commande.ville else None,
-                        'region_nom': commande.ville.region.nom_region if commande.ville and commande.ville.region else None,
-                        'frais_livraison': commande.montant_frais_livraison,
-                        'adresse': adresse,
-                        'nouveau_total': commande.total_cmd,
-                        'sous_total_articles': commande.sous_total_articles
-                    })
-                    
-                except Exception as e:
-                    return JsonResponse({'success': False, 'error': str(e)})
-            
-            elif action == 'apply_remise':
-                # Appliquer une remise sur un article du panier
-                print(f"🔄 DEBUG: Application de remise - Panier: {request.POST.get('panier_id')}, Type: {request.POST.get('type_remise')}, Prix: {request.POST.get('nouveau_prix')}")
-                
-                try:
-                    panier_id = request.POST.get('panier_id')
-                    type_remise = request.POST.get('type_remise')
-                    nouveau_prix = request.POST.get('nouveau_prix')
-                    
-                    if not all([panier_id, type_remise, nouveau_prix]):
-                        print(f"❌ DEBUG: Données manquantes - Panier: {panier_id}, Type: {type_remise}, Prix: {nouveau_prix}")
-                        return JsonResponse({'success': False, 'error': 'Données manquantes pour appliquer la remise'})
-                    
-                    # Récupérer le panier
-                    panier = Panier.objects.get(id=panier_id, commande=commande)
-                    print(f"✅ DEBUG: Panier trouvé - Article: {panier.article.nom}, Variante: {panier.variante}")
-                    
-                    # Vérifier si l'article est en phase LIQUIDATION ou en promotion
-                    if panier.article.phase == 'LIQUIDATION':
-                        print(f"❌ DEBUG: Tentative d'application de remise sur article en liquidation")
-                        return JsonResponse({
-                            'success': False, 
-                            'error': 'Les articles en liquidation ne peuvent pas avoir de remise appliquée'
-                        })
-                    
-                    if hasattr(panier.article, 'has_promo_active') and panier.article.has_promo_active:
-                        print(f"❌ DEBUG: Tentative d'application de remise sur article en promotion")
-                        return JsonResponse({
-                            'success': False, 
-                            'error': 'Les articles en promotion ne peuvent pas avoir de remise appliquée'
-                        })
-                    
-                    # Valider le nouveau prix
-                    try:
-                        nouveau_prix_float = float(nouveau_prix)
-                        if nouveau_prix_float < 0:
-                            return JsonResponse({'success': False, 'error': 'Le prix ne peut pas être négatif'})
-                    except ValueError:
-                        return JsonResponse({'success': False, 'error': 'Prix invalide'})
-                    
-                    # Calculer l'économie basée sur le prix de l'article (pas de la variante car elle n'a pas ses propres prix)
-                    prix_original = float(panier.article.prix_actuel or panier.article.prix_unitaire)
-                    economie = prix_original - nouveau_prix_float
-                    print(f"💰 DEBUG: Prix original: {prix_original}, Nouveau prix unitaire: {nouveau_prix_float}, Économie: {economie}")
-                    
-                    # Mettre à jour le sous-total avec le nouveau prix unitaire × quantité
-                    # Cela permet de stocker le prix unitaire remisé dans le panier
-                    ancien_sous_total = panier.sous_total
-                    nouveau_sous_total = nouveau_prix_float * panier.quantite
-                    panier.sous_total = nouveau_sous_total
-                    
-                    # Marquer que la remise a été appliquée et enregistrer le type
-                    panier.remise_appliquer = True
-                    panier.type_remise_appliquee = type_remise
-                    
-                    # Mettre à jour le prix_actuel de l'article avec le prix de remise choisi
-                    if type_remise in ['remise_1', 'remise_2', 'remise_3', 'remise_4']:
-                        # Récupérer le prix de remise correspondant
-                        prix_remise_choisi = None
-                        
-                        if type_remise == 'remise_1' and hasattr(panier.article, 'prix_remise_1') and panier.article.prix_remise_1:
-                            prix_remise_choisi = panier.article.prix_remise_1
-                        elif type_remise == 'remise_2' and hasattr(panier.article, 'prix_remise_2') and panier.article.prix_remise_2:
-                            prix_remise_choisi = panier.article.prix_remise_2
-                        elif type_remise == 'remise_3' and hasattr(panier.article, 'prix_remise_3') and panier.article.prix_remise_3:
-                            prix_remise_choisi = panier.article.prix_remise_3
-                        elif type_remise == 'remise_4' and hasattr(panier.article, 'prix_remise_4') and panier.article.prix_remise_4:
-                            prix_remise_choisi = panier.article.prix_remise_4
-                        
-                        # Si le prix de remise existe, l'appliquer comme nouveau prix_actuel
-                        if prix_remise_choisi:
-                            ancien_prix_actuel = panier.article.prix_actuel
-                            panier.article.prix_actuel = prix_remise_choisi
-                            panier.article.save()
-                            print(f"💾 DEBUG: prix_actuel mis à jour - Ancien: {ancien_prix_actuel}, Nouveau: {prix_remise_choisi} (depuis {type_remise})")
-                        else:
-                            print(f"⚠️ DEBUG: Prix de remise {type_remise} non trouvé pour l'article {panier.article.nom}")
-                    
-                    
-                    panier.save()
-
-                    # ⚡ CORRECTION UPSELL: Recalculer le compteur après application de remise
-                    if panier.article.isUpsell:
-                        commande.mettre_a_jour_compteur_si_necessaire()
-
-                    print(f"💾 DEBUG: Prix unitaire remisé appliqué - Ancien sous-total: {ancien_sous_total}, Nouveau sous-total: {nouveau_sous_total} (prix unitaire: {nouveau_prix_float})")
-
-
-
-                    # Recalculer les totaux de la commande (utilise la méthode qui existe)
-                    commande.recalculer_total_avec_frais()
-                    commande.save()
-                    
-                    print(f"✅ DEBUG: Remise appliquée avec succès")
-                    
-                    return JsonResponse({
-                        'success': True,
-                        'message': f'Remise appliquée avec succès',
-                        'nouveau_prix': nouveau_prix_float,
-                        'economie': economie,
-                        'nouveau_sous_total': float(panier.sous_total),
-                        'nouveau_total_commande': float(commande.total_cmd),
-                        'type_remise': type_remise
-                    })
-                    
-                except Panier.DoesNotExist:
-                    print(f"❌ DEBUG: Panier non trouvé - ID: {panier_id}")
-                    return JsonResponse({'success': False, 'error': 'Article non trouvé dans cette commande'})
-                except Exception as e:
-                    print(f"❌ DEBUG: Erreur application remise: {str(e)}")
-                    import traceback
-                    traceback.print_exc()
-                    return JsonResponse({'success': False, 'error': str(e)})
+                # Déléguer à la fonction spécialisée
+                return _handle_save_livraison(request, commande, operateur)
             
             elif action == 'toggle_frais_livraison':
-                # Changer le statut des frais de livraison
-                try:
-                    nouveau_statut = request.POST.get('frais_livraison_actif') == 'true'
-                    ancien_statut = commande.frais_livraison
-                    
-                    # Mettre à jour le statut
-                    commande.frais_livraison = nouveau_statut
-                    commande.save()
-                    
-                    # Recalculer le total avec les frais de livraison
-                    commande.recalculer_total_avec_frais()
-                    
-                    # Préparer le message de succès
-                    if nouveau_statut:
-                        message = "Frais de livraison activés et inclus dans le total"
-                        statut_display = "Activés"
-                        couleur = "green"
-                    else:
-                        message = "Frais de livraison désactivés et retirés du total"
-                        statut_display = "Désactivés"
-                        couleur = "gray"
-                    
-                    return JsonResponse({
-                        'success': True,
-                        'message': message,
-                        'nouveau_statut': nouveau_statut,
-                        'statut_display': statut_display,
-                        'couleur': couleur,
-                        'total_commande': float(commande.total_cmd),
-                        'frais_livraison_ville': float(commande.montant_frais_livraison),
-                        'ancien_statut': ancien_statut
-                    })
-                    
-                except Exception as e:
-                    return JsonResponse({'success': False, 'error': str(e)})
-            
-            elif action == 'update_article':
-                # Action pour mettre à jour un article (quantité ou article lui-même)
-                
-                panier_id = request.POST.get('panier_id')
-                nouvel_article_id = request.POST.get('article_id')
-                nouvelle_quantite = int(request.POST.get('quantite', 1))
-
-                try:
-                    # Récupérer le panier à modifier et le nouvel article
-                    panier_a_modifier = Panier.objects.get(id=panier_id, commande=commande)
-                    nouvel_article = Article.objects.get(id=nouvel_article_id)
-                    
-                    # Vérifier si un autre panier avec le nouvel article existe déjà
-                    panier_existant = Panier.objects.filter(
-                        commande=commande, 
-                        article=nouvel_article
-                    ).exclude(id=panier_id).first()
-
-                    if panier_existant:
-                        # Fusionner les quantités et supprimer l'ancien panier
-                        panier_existant.quantite += nouvelle_quantite
-                        panier_existant.save()
-                        panier_a_modifier.delete()
-                        print(f"🔄 Articles fusionnés: ID={nouvel_article.id}, nouvelle qté={panier_existant.quantite}")
-                    else:
-                        # Mettre à jour le panier existant
-                        panier_a_modifier.article = nouvel_article
-                        panier_a_modifier.quantite = nouvelle_quantite
-                        panier_a_modifier.save()
-                        print(f"✍️ Article mis à jour: Panier ID={panier_id}, Article ID={nouvel_article.id}, Qté={nouvelle_quantite}")
-
-                    # Recalculer tous les totaux de la commande
-                    commande.recalculer_totaux_upsell()
-                    
-                    return JsonResponse({
-                        'success': True,
-                        'message': 'Article mis à jour avec succès',
-                        'total_commande': float(commande.total_cmd),
-                        'nb_articles': commande.paniers.count(),
-                        'compteur': commande.compteur
-                    })
-                    
-                except Panier.DoesNotExist:
-                    return JsonResponse({'success': False, 'error': 'Article original non trouvé dans le panier'}, status=404)
-                except Article.DoesNotExist:
-                    return JsonResponse({'success': False, 'error': 'Nouvel article non trouvé'}, status=404)
-                except Exception as e:
-                    import traceback
-                    print(traceback.format_exc())
-                    return JsonResponse({'success': False, 'error': str(e)}, status=500)
-
-            elif action == 'replace_article':
-                # Remplacer un article existant
-                from article.models import Article
-                from commande.models import Panier
-                
-                ancien_article_id = request.POST.get('ancien_article_id')
-                nouvel_article_id = request.POST.get('nouvel_article_id')
-                nouvelle_quantite = int(request.POST.get('nouvelle_quantite', 1))
-                
-                try:
-                    # Supprimer l'ancien panier et décrémenter le compteur
-                    ancien_panier = Panier.objects.get(id=ancien_article_id, commande=commande)
-                    ancien_article = ancien_panier.article
-                    
-                    # Sauvegarder les infos avant suppression
-                    ancien_etait_upsell = ancien_article.isUpsell
-                    
-                    # Supprimer l'ancien panier
-                    ancien_panier.delete()
-                    
-                    # Créer le nouveau panier
-                    nouvel_article = Article.objects.get(id=nouvel_article_id)
-                    
-                    # Recalculer le compteur après remplacement
-                    from django.db.models import Sum
-                    total_quantite_upsell = commande.paniers.filter(article__isUpsell=True).aggregate(
-                        total=Sum('quantite')
-                    )['total'] or 0
-                    
-                    # Ajouter la quantité si le nouvel article est upsell
-                    if nouvel_article.isUpsell:
-                        total_quantite_upsell += nouvelle_quantite
-                    
-                    # Appliquer la logique : compteur = max(0, total_quantite_upsell - 1)
-                    if total_quantite_upsell >= 2:
-                        commande.compteur = total_quantite_upsell - 1
-                    else:
-                        commande.compteur = 0
-                    
-                    commande.save()
-                    
-                    # Recalculer TOUS les articles de la commande avec le nouveau compteur
-                    commande.recalculer_totaux_upsell()
-                    
-                    # Calculer le sous-total selon le compteur de la commande
-                    from commande.templatetags.commande_filters import get_prix_upsell_avec_compteur
-                    prix_unitaire = get_prix_upsell_avec_compteur(nouvel_article, commande.compteur)
-                    sous_total = prix_unitaire * nouvelle_quantite
-                    
-                    nouveau_panier = Panier.objects.create(
-                        commande=commande,
-                        article=nouvel_article,
-                        quantite=nouvelle_quantite,
-                        sous_total=float(sous_total)
-                    )
-                    
-                    # Recalculer le total de la commande avec les frais de livraison
-                    commande.recalculer_total_avec_frais()
-                    
-                    return JsonResponse({
-                        'success': True,
-                        'message': 'Article remplacé avec succès',
-                        'nouvel_article_id': nouveau_panier.id,
-                        'total_commande': float(commande.total_cmd),
-                        'nb_articles': commande.paniers.count(),
-                        'compteur': commande.compteur
-                    })
-                    
-                except Panier.DoesNotExist:
-                    return JsonResponse({
-                        'success': False,
-                        'error': 'Article original non trouvé'
-                    })
-                except Article.DoesNotExist:
-                    return JsonResponse({
-                        'success': False,
-                        'error': 'Nouvel article non trouvé'
-                    })
-                except Exception as e:
-                    return JsonResponse({
-                        'success': False,
-                        'error': str(e)
-                    })
+                # Déléguer à la fonction spécialisée
+                return _handle_toggle_frais_livraison(request, commande, operateur)
             
             # ================ TRAITEMENT NORMAL DU FORMULAIRE ================
             
@@ -2509,16 +2760,11 @@ def modifier_commande(request, commande_id):
                             panier = Panier.objects.get(id=panier_id, commande=commande)
                             nouvelle_quantite = int(nouvelles_quantites[i])
                             if nouvelle_quantite > 0:
-                                # Vérifier si une remise a été appliquée
-                                if hasattr(panier, 'remise_appliquer') and panier.remise_appliquer:
-                                    # Préserver le prix unitaire remisé
-                                    prix_unitaire_remise = float(panier.sous_total) / panier.quantite if panier.quantite > 0 else 0
-                                    panier.quantite = nouvelle_quantite
-                                    panier.sous_total = float(prix_unitaire_remise * nouvelle_quantite)
-                                else:
-                                    # Logique normale sans remise
-                                    panier.quantite = nouvelle_quantite
-                                    panier.sous_total = float(panier.article.prix_unitaire * nouvelle_quantite)
+                                # INTÉGRITÉ: Le prix_panier est un prix historique gelé
+                                # On ne modifie QUE la quantité et le sous-total
+                                # Le prix_panier reste INCHANGÉ pour préserver l'historique des prix
+                                panier.quantite = nouvelle_quantite
+                                panier.sous_total = float(panier.prix_panier * nouvelle_quantite)
                                 panier.save()
                         except (Panier.DoesNotExist, ValueError):
                             continue
@@ -2537,12 +2783,21 @@ def modifier_commande(request, commande_id):
                             article = Article.objects.get(id=article_id)
                             quantite = int(quantites_nouveaux[i])
                             if quantite > 0:
-                                sous_total = float(article.prix_unitaire * quantite)
+                                # Utiliser la logique upsell pour calculer le prix_panier
+                                from commande.templatetags.commande_filters import get_prix_upsell_avec_compteur
+                                prix_panier = get_prix_upsell_avec_compteur(article, commande.compteur)
+                                sous_total = float(prix_panier * quantite)
+
+                                # Déterminer le type de prix gelé
+                                type_prix = determiner_type_prix_gele(article, commande.compteur)
+
                                 Panier.objects.create(
                                     commande=commande,
                                     article=article,
                                     quantite=quantite,
-                                    sous_total=sous_total
+                                    prix_panier=float(prix_panier),
+                                    sous_total=sous_total,
+                                    type_prix_gele=type_prix
                                 )
                         except (Article.DoesNotExist, ValueError):
                             continue
@@ -2648,10 +2903,10 @@ def modifier_commande(request, commande_id):
             'reference': str(article.reference or ''),
             'prix_actuel': float(article.prix_actuel) if article.prix_actuel else 0.0,
             'prix_unitaire': float(article.prix_unitaire) if article.prix_unitaire else 0.0,
-            'prix_upsell_1': float(article.prix_upsell_1) if article.prix_upsell_1 else 0.0,
             'prix_upsell_2': float(article.prix_upsell_2) if article.prix_upsell_2 else 0.0,
             'prix_upsell_3': float(article.prix_upsell_3) if article.prix_upsell_3 else 0.0,
             'prix_upsell_4': float(article.prix_upsell_4) if article.prix_upsell_4 else 0.0,
+            'prix_gros': float(article.prix_gros) if hasattr(article, 'prix_gros') and article.prix_gros else 0.0,
             'qte_disponible': int(article.get_total_qte_disponible()),
             'couleur': str(article.couleur or ''),
             'pointure': str(article.pointure or ''),
@@ -2777,10 +3032,10 @@ def api_articles_disponibles(request):
                 'categorie': (str(article.categorie) if article.categorie else ''),
                 'prix_unitaire': float(article.prix_unitaire),
                 'prix_actuel': float(article.prix_actuel or article.prix_unitaire),
-                'prix_upsell_1': float(article.prix_upsell_1) if article.prix_upsell_1 else None,
                 'prix_upsell_2': float(article.prix_upsell_2) if article.prix_upsell_2 else None,
                 'prix_upsell_3': float(article.prix_upsell_3) if article.prix_upsell_3 else None,
                 'prix_upsell_4': float(article.prix_upsell_4) if article.prix_upsell_4 else None,
+                'prix_gros': float(article.prix_gros) if hasattr(article, 'prix_gros') and article.prix_gros else None,
                 'qte_disponible': stock,
                 'isUpsell': bool(article.isUpsell),
                 'phase': article.phase,
@@ -2816,6 +3071,9 @@ def api_commentaires_disponibles(request):
         # Récupérer les choix de commentaires depuis le modèle
         commentaires_choices = Operation.Type_Commentaire_CHOICES
         
+        print(f"🔍 DEBUG: Type_Commentaire_CHOICES récupéré: {commentaires_choices}")
+        print(f"📊 DEBUG: Nombre de choix: {len(commentaires_choices)}")
+        
         # Convertir en format utilisable par le frontend
         commentaires_data = {
             'APPEL': [],
@@ -2836,12 +3094,18 @@ def api_commentaires_disponibles(request):
             for type_operation in commentaires_data.keys():
                 commentaires_data[type_operation].append(commentaire_item)
         
+        print(f"✅ DEBUG: Commentaires formatés: {commentaires_data}")
+        print(f"📝 DEBUG: Nombre de commentaires par type:")
+        for type_op, comments in commentaires_data.items():
+            print(f"   - {type_op}: {len(comments)} commentaires")
+        
         return JsonResponse({
             'success': True,
             'commentaires': commentaires_data
         })
     
     return JsonResponse({'error': 'Méthode non autorisée'}, status=405)
+
 
 @login_required
 def creer_commande(request):
@@ -2962,18 +3226,19 @@ def creer_commande(request):
                                 sous_total = float(prix_a_utiliser * quantite)
                                 total_calcule += sous_total
 
+                                # Déterminer le type de prix gelé
+                                type_prix = determiner_type_prix_gele(article, commande.compteur)
+
                                 Panier.objects.create(
                                     commande=commande,
                                     article=article,
                                     variante=variante,
                                     quantite=quantite,
-                                    sous_total=float(sous_total)
+                                    prix_panier=float(prix_a_utiliser),
+                                    sous_total=float(sous_total),
+                                    type_prix_gele=type_prix
                                 )
-                                
-                                # Incrémenter le compteur si c'est un article upsell
-                                if article.isUpsell and quantite > 1:
-                                    commande.compteur += 1
-                                    
+
                         except (ValueError, Article.DoesNotExist) as e:
                             logging.error(f"Erreur lors de l'ajout d'un article: {str(e)}")
                             messages.error(request, f"Erreur lors de l'ajout d'un article : {e}")
@@ -2985,8 +3250,23 @@ def creer_commande(request):
 
                 # Mettre à jour le total final de la commande avec le montant recalculé
                 commande.total_cmd = float(total_calcule)
+
+                # Recalculer le compteur en fonction du nombre total d'articles upsell
+                from django.db.models import Sum
+                total_quantite_upsell = commande.paniers.filter(article__isUpsell=True).aggregate(
+                    total=Sum('quantite')
+                )['total'] or 0
+
+                if total_quantite_upsell >= 2:
+                    commande.compteur = total_quantite_upsell - 1
+                else:
+                    commande.compteur = 0
+
                 commande.save()
-                
+
+                # Mettre à jour les type_prix_gele de tous les paniers upsell
+                mettre_a_jour_types_prix_gele_upsell(commande)
+
                 # Recalculer le total avec les frais de livraison si activés
                 commande.recalculer_total_avec_frais()
 
@@ -3081,29 +3361,31 @@ def api_panier_commande(request, commande_id):
     
     if request.method == 'GET':
         try:
-            # Récupérer la commande avec ses paniers
+            # Récupérer la commande avec ses paniers et variantes
             commande = get_object_or_404(
                 Commande.objects.select_related('client', 'ville').prefetch_related(
-                    'paniers__article'
+                    'paniers__article',
+                    'paniers__variante__couleur',
+                    'paniers__variante__pointure'
                 ),
                 pk=commande_id
             )
-            
+
             # Vérifier que l'opérateur peut voir cette commande
             # Soit elle lui est actuellement affectée (date_fin=null)
             # Soit il l'a déjà traitée (peu importe date_fin)
             etat_operateur = commande.etats.filter(
                 operateur=operateur
             ).first()
-            
+
             if not etat_operateur:
                 return JsonResponse({'error': 'Cette commande ne vous est pas affectée'}, status=403)
-            
+
             # Préparer les données pour le template
             paniers = commande.paniers.all()
             total_articles = sum(panier.quantite for panier in paniers)
             total_montant = sum(panier.sous_total for panier in paniers)
-            
+
             # Calculer les frais de livraison SEULEMENT si activés
             if commande.frais_livraison:
                 frais_livraison = commande.ville.frais_livraison if commande.ville else 0
@@ -3111,18 +3393,45 @@ def api_panier_commande(request, commande_id):
             else:
                 frais_livraison = 0
                 total_final = float(total_montant)
-            
+
             # Construire la liste des articles pour le JSON
             articles_data = []
             for panier in paniers:
-                articles_data.append({
+                # Construire l'URL de l'image
+                image_url = None
+                if panier.article.image:
+                    image_url = panier.article.image.url
+                elif panier.article.image_url:
+                    image_url = panier.article.image_url
+
+                article_dict = {
                     'nom': str(panier.article.nom),
                     'reference': str(panier.article.reference) if panier.article.reference else 'N/A',
                     'description': str(panier.article.description) if panier.article.description else '',
+                    'prix_panier': float(panier.prix_panier) if panier.prix_panier else float(panier.article.prix_unitaire),
                     'prix_unitaire': float(panier.article.prix_unitaire),
                     'quantite': panier.quantite,
-                    'sous_total': float(panier.sous_total)
-                })
+                    'sous_total': float(panier.sous_total),
+                    'sous_total_remise': float(panier.sous_total_remise) if panier.sous_total_remise else 0,
+                    'remise_appliquee': panier.remise_appliquer,
+                    'type_remise_appliquee': panier.type_remise_appliquee if panier.type_remise_appliquee else '',
+                    'image_url': image_url,
+                    'phase': panier.article.phase,
+                    'isUpsell': panier.article.isUpsell,
+                    'has_promo_active': panier.article.has_promo_active
+                }
+
+                # Ajouter les informations de la variante si elle existe
+                if panier.variante:
+                    article_dict['variante'] = {
+                        'id': panier.variante.pk,
+                        'couleur': str(panier.variante.couleur.nom) if panier.variante.couleur else None,
+                        'pointure': str(panier.variante.pointure.pointure) if panier.variante.pointure else None
+                    }
+                else:
+                    article_dict['variante'] = None
+
+                articles_data.append(article_dict)
             
             return JsonResponse({
                 'success': True,
@@ -3446,378 +3755,374 @@ def get_article_variants(request, article_id):
             'error': 'Erreur lors de la récupération des variantes'
         }, status=500)
 
+
 @login_required
-def get_prix_remise_article(request, commande_id, panier_id):
+@require_http_methods(["POST"])
+def appliquer_remise_panier(request, panier_id):
     """
-    Endpoint pour récupérer les prix de remise d'un article dans un panier
+    Applique une remise personnalisée sur un panier spécifique.
+    La remise est calculée sur le sous_total du panier (pas sur prix_panier).
+
+    Paramètres attendus (POST JSON):
+    - type_remise: 'POURCENTAGE' ou 'MONTANT_FIXE'
+    - valeur_remise: La valeur de la remise (pourcentage ou montant en DH)
+    - raison_remise: (optionnel) Motif de la remise
+
+    Returns:
+        JsonResponse avec:
+        - success: bool
+        - message: str
+        - data: {
+            sous_total_original: Decimal,
+            montant_remise: Decimal,
+            nouveau_sous_total: Decimal,
+            nouveau_total_commande: Decimal
+        }
     """
-    if request.method != 'GET':
-        return JsonResponse({'success': False, 'error': 'Méthode non autorisée'}, status=405)
-    
+    from commande.models import RemisePanier
+    from django.views.decorators.http import require_http_methods
+    from decimal import Decimal
+
     try:
-        # Vérifier l'opérateur
+        # Récupérer l'opérateur
         try:
-            operateur = Operateur.objects.get(user=request.user, type_operateur='CONFIRMATION')
+            operateur = Operateur.objects.get(
+                user=request.user,
+                type_operateur__in=['CONFIRMATION', 'SUPERVISEUR_PREPARATION']
+            )
         except Operateur.DoesNotExist:
             return JsonResponse({
                 'success': False,
-                'error': 'Profil d\'opérateur de confirmation non trouvé'
+                'error': 'Profil opérateur non trouvé'
             }, status=403)
-        
-        # Vérifier la commande
+
+        # Récupérer le panier
         try:
-            commande = Commande.objects.get(id=commande_id)
-        except Commande.DoesNotExist:
-            return JsonResponse({
-                'success': False,
-                'error': 'Commande non trouvée'
-            }, status=404)
-        
-        # Vérifier le panier
-        try:
-            panier = Panier.objects.select_related('article').get(
-                id=panier_id,
-                commande=commande
-            )
+            panier = Panier.objects.get(id=panier_id)
         except Panier.DoesNotExist:
             return JsonResponse({
                 'success': False,
-                'error': 'Article non trouvé dans cette commande'
+                'error': 'Panier non trouvé'
             }, status=404)
-        
-        article = panier.article
-        
-        # Construire les données des prix de remise
-        prix_remises = []
-        
-        # Prix de remise 1
-        if article.prix_remise_1 and article.prix_remise_1 > 0:
-            prix_remises.append({
-                'type': 'prix_remise_1',
-                'label': 'Prix Remise 1',
-                'prix': float(article.prix_remise_1),
-                'badge': 'Remise 1',
-                'couleur_classe': 'bg-green-100 text-green-800 border-green-300'
-            })
-        
-        # Prix de remise 2
-        if article.prix_remise_2 and article.prix_remise_2 > 0:
-            prix_remises.append({
-                'type': 'prix_remise_2',
-                'label': 'Prix Remise 2',
-                'prix': float(article.prix_remise_2),
-                'badge': 'Remise 2',
-                'couleur_classe': 'bg-blue-100 text-blue-800 border-blue-300'
-            })
-        
-        # Prix de remise 3
-        if article.prix_remise_3 and article.prix_remise_3 > 0:
-            prix_remises.append({
-                'type': 'prix_remise_3',
-                'label': 'Prix Remise 3',
-                'prix': float(article.prix_remise_3),
-                'badge': 'Remise 3',
-                'couleur_classe': 'bg-purple-100 text-purple-800 border-purple-300'
-            })
-        
-        # Prix de remise 4
-        if article.prix_remise_4 and article.prix_remise_4 > 0:
-            prix_remises.append({
-                'type': 'prix_remise_4',
-                'label': 'Prix Remise 4',
-                'prix': float(article.prix_remise_4),
-                'badge': 'Remise 4',
-                'couleur_classe': 'bg-red-100 text-red-800 border-red-300'
-            })
-        
-        
-        # Informations de l'article
-        article_info = {
-            'id': article.id,
-            'nom': article.nom,
-            'reference': article.reference,
-            'prix_actuel': float(article.prix_actuel) if article.prix_actuel else float(article.prix_unitaire),
-            'prix_unitaire': float(article.prix_unitaire),
-            'categorie': article.categorie if hasattr(article, 'categorie') else None,
-            'couleur': panier.couleur if panier.couleur else None,
-            'pointure': panier.pointure if panier.pointure else None,
-            'quantite': panier.quantite
-        }
-        
-        # Informations du panier
-        panier_info = {
-            'id': panier.id,
-            'quantite': panier.quantite,
-            'sous_total': float(panier.sous_total)
-        }
-        
+
+        commande = panier.commande
+
+        # Vérifier que la commande appartient aux commandes accessibles par l'opérateur
+        if not commande.etats.filter(
+            Q(operateur=operateur) | Q(enum_etat__libelle__in=['Affectée', 'En cours de confirmation', 'Retour Confirmation'])
+        ).exists():
+            return JsonResponse({
+                'success': False,
+                'error': 'Vous n\'avez pas accès à cette commande'
+            }, status=403)
+
+        # Parser les données JSON
+        data = json.loads(request.body)
+        type_remise = data.get('type_remise', 'POURCENTAGE')
+        valeur_remise = data.get('valeur_remise')
+        raison_remise = data.get('raison_remise', '')
+
+        # Validation des données
+        if not valeur_remise:
+            return JsonResponse({
+                'success': False,
+                'error': 'La valeur de la remise est requise'
+            }, status=400)
+
+        try:
+            valeur_remise = Decimal(str(valeur_remise))
+        except (ValueError, TypeError):
+            return JsonResponse({
+                'success': False,
+                'error': 'Valeur de remise invalide'
+            }, status=400)
+
+        if valeur_remise <= 0:
+            return JsonResponse({
+                'success': False,
+                'error': 'La valeur de la remise doit être supérieure à 0'
+            }, status=400)
+
+        # Calculer le sous-total basé sur le prix effectif actuel (upsells, promo, liquidation)
+        from commande.templatetags.remise_filters import calculer_prix_unitaire_effectif
+
+        prix_unitaire_effectif = calculer_prix_unitaire_effectif(panier)
+        quantite = Decimal(str(panier.quantite))
+        sous_total_actuel = prix_unitaire_effectif * quantite
+
+        # On ne travaille qu'en pourcentage
+        type_remise = 'POURCENTAGE'
+        # Contrainte: Le pourcentage ne doit pas dépasser 100%
+        if valeur_remise > Decimal('100'):
+            return JsonResponse({
+                'success': False,
+                'error': 'Le pourcentage de remise ne peut pas dépasser 100%'
+            }, status=400)
+
+        # Vérifier si une remise existe déjà
+        if hasattr(panier, 'remise_personnalisee'):
+            return JsonResponse({
+                'success': False,
+                'error': 'Une remise est déjà appliquée sur ce panier. Veuillez d\'abord la retirer.'
+            }, status=400)
+
+        # Créer la remise avec transaction
+        with transaction.atomic():
+            remise = RemisePanier.objects.create(
+                panier=panier,
+                type_remise=type_remise,
+                valeur_remise=valeur_remise,
+                raison_remise=raison_remise,
+                operateur=operateur
+            )
+
+            # Appliquer la remise (calcule et modifie le sous_total du panier)
+            # La méthode appliquer_remise() sauvegarde automatiquement le sous-total original dans panier.sous_total_remise
+            nouveau_sous_total = remise.appliquer_remise()
+
+            # Recalculer le total de la commande avec les frais de livraison
+            commande.recalculer_total_avec_frais()
+
+        # Récupérer le sous-total original depuis panier.sous_total_remise (sauvegardé par appliquer_remise)
+        panier.refresh_from_db()
+        sous_total_original = Decimal(str(panier.sous_total_remise))
+
+        # Retourner les informations
         return JsonResponse({
             'success': True,
-            'article': article_info,
-            'panier': panier_info,
-            'prix_remises': prix_remises,
-            'total_prix_remises': len(prix_remises)
+            'message': f'Remise de {remise.montant_applique:.2f} DH appliquée avec succès',
+            'data': {
+                'panier_id': panier.id,
+                'sous_total_original': float(sous_total_original),
+                'montant_remise': float(remise.montant_applique),
+                'nouveau_sous_total': float(nouveau_sous_total),
+                'nouveau_total_commande': float(commande.total_cmd),
+                'type_remise': remise.type_remise,
+                'valeur_remise': float(remise.valeur_remise),
+                'raison_remise': remise.raison_remise
+            }
         })
-        
+
+    except Panier.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Panier non trouvé'
+        }, status=404)
     except Exception as e:
         import traceback
-        print(f"❌ Erreur dans get_prix_remise_article: {str(e)}")
+        print(f"❌ Erreur dans appliquer_remise_panier: {str(e)}")
         print(traceback.format_exc())
         return JsonResponse({
             'success': False,
-            'error': 'Erreur lors de la récupération des prix de remise'
+            'error': f'Erreur lors de l\'application de la remise: {str(e)}'
         }, status=500)
 
+
 @login_required
-def corriger_remises_liquidation_et_promotion(request):
+@require_http_methods(["POST"])
+def retirer_remise_panier(request, panier_id):
     """
-    Fonction utilitaire pour corriger les paniers d'articles en liquidation et en promotion
-    qui auraient remise_appliquer = True (ce qui ne devrait pas arriver)
+    Retire une remise appliquée sur un panier.
+    Restaure le sous_total original du panier.
+
+    Returns:
+        JsonResponse avec:
+        - success: bool
+        - message: str
+        - data: {
+            sous_total_restaure: Decimal,
+            montant_remise_retiree: Decimal,
+            nouveau_total_commande: Decimal
+        }
     """
-    if request.method == 'POST' and request.user.is_staff:
-        from commande.models import Panier
-        from django.db.models import Q
-        
-        # Corriger les paniers d'articles en liquidation
-        paniers_liquidation = Panier.objects.filter(
-            article__phase='LIQUIDATION',
-            remise_appliquer=True
-        )
-        
-        # Corriger les paniers d'articles en promotion
-        # Utiliser une requête Django pour identifier les articles avec promotions actives
-        from django.utils import timezone
-        now = timezone.now()
-        
-        paniers_promotion = Panier.objects.filter(
-            article__promotions__active=True,
-            article__promotions__date_debut__lte=now,
-            article__promotions__date_fin__gte=now,
-            remise_appliquer=True
-        ).distinct()
-        
-        count_liquidation = paniers_liquidation.count()
-        count_promotion = paniers_promotion.count()
-        total_count = count_liquidation + count_promotion
-        
-        if total_count > 0:
-            # Corriger les paniers de liquidation (requête bulk)
-            paniers_liquidation.update(
-                remise_appliquer=False,
-                type_remise_appliquee=''
+    from commande.models import RemisePanier
+    from django.views.decorators.http import require_http_methods
+    from decimal import Decimal
+
+    try:
+        # Récupérer l'opérateur
+        try:
+            operateur = Operateur.objects.get(
+                user=request.user,
+                type_operateur__in=['CONFIRMATION', 'SUPERVISEUR_PREPARATION']
             )
-            
-            # Corriger les paniers de promotion (requête bulk)
-            paniers_promotion.update(
-                remise_appliquer=False,
-                type_remise_appliquee=''
-            )
-            
-            print(f"✅ Correction effectuée: {count_liquidation} paniers liquidation + {count_promotion} paniers promotion remis à remise_appliquer=False")
-            
-            return JsonResponse({
-                'success': True,
-                'message': f'{count_liquidation} paniers d\'articles en liquidation et {count_promotion} paniers d\'articles en promotion corrigés'
-            })
-        else:
-            return JsonResponse({
-                'success': True,
-                'message': 'Aucun panier d\'article en liquidation ou promotion avec remise_appliquer=True trouvé'
-            })
-    
-    return JsonResponse({'success': False, 'message': 'Non autorisé'})
-
-@login_required
-def activer_remise_panier(request, panier_id):
-    """Endpoint pour activer remise_appliquer à True pour un panier donné"""
-    print(f"🔄 DEBUG: activer_remise_panier appelé avec panier_id={panier_id}")
-    print(f"🔄 DEBUG: Method={request.method}, User={request.user}")
-    
-    if request.method == 'POST':
-        try:
-            # Récupérer l'opérateur
-            operateur = Operateur.objects.get(user=request.user, type_operateur='CONFIRMATION')
-            print(f"✅ DEBUG: Opérateur trouvé: {operateur}")
-        except Operateur.DoesNotExist:
-            print(f"❌ DEBUG: Opérateur non trouvé pour user={request.user}")
-            return JsonResponse({
-                'success': False,
-                'message': 'Profil d\'opérateur de confirmation non trouvé'
-            })
-        
-        try:
-            # Récupérer le panier
-            panier = Panier.objects.get(id=panier_id)
-            print(f"✅ DEBUG: Panier trouvé: {panier}")
-            
-            # Vérifier que la commande est affectée à cet opérateur
-            etat_actuel = panier.commande.etat_actuel
-            print(f"✅ DEBUG: État actuel: {etat_actuel}")
-            print(f"✅ DEBUG: Opérateur état actuel: {etat_actuel.operateur if etat_actuel else None}")
-            print(f"✅ DEBUG: Opérateur connecté: {operateur}")
-            
-            if not etat_actuel or etat_actuel.operateur != operateur:
-                print(f"❌ DEBUG: Commande non affectée à cet opérateur")
-                return JsonResponse({
-                    'success': False,
-                    'message': 'Cette commande ne vous est pas affectée'
-                })
-            
-            # Vérifier si l'article est en phase LIQUIDATION ou en promotion
-            if panier.article.phase == 'LIQUIDATION':
-                print(f"❌ DEBUG: Tentative d'activation de remise sur article en liquidation")
-                return JsonResponse({
-                    'success': False,
-                    'message': 'Les articles en liquidation ne peuvent pas avoir de remise appliquée'
-                })
-            
-            # Vérifier si l'article a une promotion active
-            from django.utils import timezone
-            now = timezone.now()
-            article_en_promotion = panier.article.promotions.filter(
-                active=True,
-                date_debut__lte=now,
-                date_fin__gte=now
-            ).exists()
-            
-            if article_en_promotion:
-                print(f"❌ DEBUG: Tentative d'activation de remise sur article en promotion")
-                return JsonResponse({
-                    'success': False,
-                    'message': 'Les articles en promotion ne peuvent pas avoir de remise appliquée'
-                })
-
-            # Vérifier que l'article a au moins un prix de remise configuré
-            prix_remise_1 = getattr(panier.article, 'prix_remise_1', None) or 0
-            prix_remise_2 = getattr(panier.article, 'prix_remise_2', None) or 0
-            prix_remise_3 = getattr(panier.article, 'prix_remise_3', None) or 0
-            prix_remise_4 = getattr(panier.article, 'prix_remise_4', None) or 0
-
-            # Vérifier si tous les prix de remise sont nuls
-            if all(prix <= 0 for prix in [prix_remise_1, prix_remise_2, prix_remise_3, prix_remise_4]):
-                print(f"❌ DEBUG: Aucun prix de remise configuré pour cet article")
-                return JsonResponse({
-                    'success': False,
-                    'message': 'Cet article n\'a aucun prix de remise configuré. Contactez l\'administrateur.'
-                })
-
-            # Activer la remise avec prix remise 1 par défaut
-            print(f"✅ DEBUG: Activation de la remise pour panier {panier.id}")
-
-            # Utiliser prix_remise_1 déjà récupéré ci-dessus
-            if prix_remise_1 and prix_remise_1 > 0:
-                # Appliquer le prix remise 1 et recalculer le sous-total
-                nouveau_sous_total = float(prix_remise_1) * panier.quantite
-                panier.sous_total = nouveau_sous_total
-                panier.type_remise_appliquee = 'remise_1'
-                print(f"✅ DEBUG: Prix remise 1 appliqué: {prix_remise_1} DH, nouveau sous-total: {nouveau_sous_total} DH")
-            else:
-                print(f"⚠️ DEBUG: Aucun prix remise 1 configuré pour cet article")
-            
-            panier.remise_appliquer = True
-            panier.save(update_fields=['remise_appliquer', 'sous_total', 'type_remise_appliquee'])
-
-            # ⚡ CORRECTION UPSELL: Recalculer le compteur après activation de remise
-            if panier.article.isUpsell:
-                panier.commande.mettre_a_jour_compteur_si_necessaire()
-
-            print(f"✅ DEBUG: Remise activée avec succès")
-            
-            return JsonResponse({
-                'success': True,
-                'message': 'Prix remise 1 appliqué par défaut' if prix_remise_1 and prix_remise_1 > 0 else 'Remise activée avec succès',
-                'panier_id': panier.id,
-                'remise_appliquer': panier.remise_appliquer,
-                'type_remise_appliquee': panier.type_remise_appliquee,
-                'nouveau_sous_total': float(panier.sous_total),
-                'prix_unitaire': float(prix_remise_1) if prix_remise_1 and prix_remise_1 > 0 else None
-            })
-            
-        except Panier.DoesNotExist:
-            print(f"❌ DEBUG: Panier non trouvé avec id={panier_id}")
-            return JsonResponse({
-                'success': False,
-                'message': 'Panier non trouvé'
-            })
-        except Exception as e:
-            print(f"❌ DEBUG: Erreur exception: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            return JsonResponse({
-                'success': False,
-                'message': f'Erreur lors de l\'activation de la remise: {str(e)}'
-            })
-    
-    print(f"❌ DEBUG: Méthode non autorisée - method={request.method}")
-    return JsonResponse({'success': False, 'message': 'Méthode non autorisée'})
-
-@login_required
-def desactiver_remise_panier(request, panier_id):
-    """Endpoint pour désactiver remise_appliquer (mettre à False) pour un panier donné"""
-    if request.method == 'POST':
-        try:
-            # Récupérer l'opérateur
-            operateur = Operateur.objects.get(user=request.user, type_operateur='CONFIRMATION')
         except Operateur.DoesNotExist:
             return JsonResponse({
                 'success': False,
-                'message': 'Profil d\'opérateur de confirmation non trouvé'
-            })
-        
+                'error': 'Profil opérateur non trouvé'
+            }, status=403)
+
+        # Récupérer le panier
         try:
-            # Récupérer le panier
             panier = Panier.objects.get(id=panier_id)
-            
-            # Vérifier que la commande est affectée à cet opérateur
-            etat_actuel = panier.commande.etat_actuel
-            if not etat_actuel or etat_actuel.operateur != operateur:
-                return JsonResponse({
-                    'success': False,
-                    'message': 'Cette commande ne vous est pas affectée'
-                })
-            
-            # Vérifier si l'article est en phase LIQUIDATION (optionnel, car on peut désactiver)
-            if panier.article.phase == 'LIQUIDATION':
-                print(f"⚠️ DEBUG: Désactivation de remise sur article en liquidation (normalement pas possible)")
-            
-            # Désactiver la remise et recalculer le prix normal
-            print(f"✅ DEBUG: Désactivation de la remise pour panier {panier.id}")
-            
-            # Recalculer le sous-total avec le prix normal
-            prix_normal = panier.article.prix_actuel or panier.article.prix_unitaire
-            nouveau_sous_total = float(prix_normal) * panier.quantite
-            
-            panier.remise_appliquer = False
-            panier.type_remise_appliquee = ''
-            panier.sous_total = nouveau_sous_total
-            panier.save(update_fields=['remise_appliquer', 'type_remise_appliquee', 'sous_total'])
-
-            # ⚡ CORRECTION UPSELL: Recalculer le compteur après désactivation de remise
-            if panier.article.isUpsell:
-                panier.commande.mettre_a_jour_compteur_si_necessaire()
-
-            print(f"✅ DEBUG: Prix normal restauré: {prix_normal} DH, nouveau sous-total: {nouveau_sous_total} DH")
-            
-            return JsonResponse({
-                'success': True,
-                'message': 'Remise désactivée, prix normal restauré',
-                'panier_id': panier.id,
-                'remise_appliquer': panier.remise_appliquer,
-                'type_remise_appliquee': panier.type_remise_appliquee,
-                'nouveau_sous_total': float(panier.sous_total),
-                'prix_unitaire': float(prix_normal)
-            })
-            
         except Panier.DoesNotExist:
             return JsonResponse({
                 'success': False,
-                'message': 'Panier non trouvé'
-            })
-        except Exception as e:
+                'error': 'Panier non trouvé'
+            }, status=404)
+
+        commande = panier.commande
+
+        # Vérifier l'accès
+        if not commande.etats.filter(
+            Q(operateur=operateur) | Q(enum_etat__libelle__in=['Affectée', 'En cours de confirmation', 'Retour Confirmation'])
+        ).exists():
             return JsonResponse({
                 'success': False,
-                'message': f'Erreur lors de la désactivation de la remise: {str(e)}'
-            })
-    
-    return JsonResponse({'success': False, 'message': 'Méthode non autorisée'})
+                'error': 'Vous n\'avez pas accès à cette commande'
+            }, status=403)
+
+        # Vérifier si une remise existe
+        if not hasattr(panier, 'remise_personnalisee'):
+            return JsonResponse({
+                'success': False,
+                'error': 'Aucune remise n\'est appliquée sur ce panier'
+            }, status=400)
+
+        remise = panier.remise_personnalisee
+        montant_remise_retiree = Decimal(str(remise.montant_applique))
+
+        # Retirer la remise avec transaction
+        with transaction.atomic():
+            sous_total_restaure = remise.retirer_remise()
+
+            # Recalculer le total de la commande avec les frais de livraison
+            commande.recalculer_total_avec_frais()
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Remise de {montant_remise_retiree:.2f} DH retirée avec succès',
+            'data': {
+                'panier_id': panier.id,
+                'sous_total_restaure': float(sous_total_restaure),
+                'montant_remise_retiree': float(montant_remise_retiree),
+                'nouveau_total_commande': float(commande.total_cmd)
+            }
+        })
+
+    except Panier.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Panier non trouvé'
+        }, status=404)
+    except Exception as e:
+        import traceback
+        print(f"❌ Erreur dans retirer_remise_panier: {str(e)}")
+        print(traceback.format_exc())
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur lors du retrait de la remise: {str(e)}'
+        }, status=500)
+
+
+@login_required
+def calculer_remise_panier_preview(request, panier_id):
+    """
+    Calcule et retourne un aperçu de la remise sans l'appliquer.
+    Utile pour afficher le montant avant confirmation.
+
+    Paramètres GET:
+    - type_remise: 'POURCENTAGE' ou 'MONTANT_FIXE'
+    - valeur_remise: La valeur de la remise
+
+    Returns:
+        JsonResponse avec:
+        - success: bool
+        - data: {
+            sous_total_actuel: Decimal,
+            montant_remise_calcule: Decimal,
+            sous_total_apres_remise: Decimal,
+            pourcentage_reduction: Decimal (si applicable)
+        }
+    """
+    from decimal import Decimal
+
+    try:
+        # Récupérer le panier
+        try:
+            panier = Panier.objects.get(id=panier_id)
+        except Panier.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Panier non trouvé'
+            }, status=404)
+
+        # Récupérer les paramètres
+        type_remise = request.GET.get('type_remise', 'POURCENTAGE')
+        valeur_remise = request.GET.get('valeur_remise')
+
+        if not valeur_remise:
+            return JsonResponse({
+                'success': False,
+                'error': 'La valeur de la remise est requise'
+            }, status=400)
+
+        try:
+            valeur_remise = Decimal(str(valeur_remise))
+        except (ValueError, TypeError):
+            return JsonResponse({
+                'success': False,
+                'error': 'Valeur de remise invalide'
+            }, status=400)
+
+        if valeur_remise <= 0:
+            return JsonResponse({
+                'success': False,
+                'error': 'La valeur de la remise doit être supérieure à 0'
+            }, status=400)
+
+        # Calculer le sous-total basé sur le prix effectif actuel (upsells, promo, liquidation)
+        from commande.templatetags.remise_filters import calculer_prix_unitaire_effectif
+
+        prix_unitaire_effectif = calculer_prix_unitaire_effectif(panier)
+        quantite = Decimal(str(panier.quantite))
+        sous_total_actuel = prix_unitaire_effectif * quantite
+
+        # On ne travaille qu'en pourcentage
+        type_remise = 'POURCENTAGE'
+        # Contrainte: Le pourcentage ne doit pas dépasser 100%
+        if valeur_remise > Decimal('100'):
+            return JsonResponse({
+                'success': False,
+                'error': 'Le pourcentage de remise ne peut pas dépasser 100%'
+            }, status=400)
+        montant_remise = sous_total_actuel * (valeur_remise / Decimal('100'))
+        pourcentage_reduction = valeur_remise
+
+        # Limiter la remise au sous-total (sécurité supplémentaire)
+        if montant_remise > sous_total_actuel:
+            montant_remise = sous_total_actuel
+
+        sous_total_apres_remise = sous_total_actuel - montant_remise
+
+        return JsonResponse({
+            'success': True,
+            'data': {
+                'panier_id': panier.id,
+                'article_nom': panier.article.nom,
+                'quantite': panier.quantite,
+                'sous_total_actuel': float(sous_total_actuel),
+                'montant_remise_calcule': float(montant_remise),
+                'sous_total_apres_remise': float(sous_total_apres_remise),
+                'pourcentage_reduction': float(pourcentage_reduction),
+                'type_remise': type_remise,
+                'valeur_remise': float(valeur_remise)
+            }
+        })
+
+    except Panier.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Panier non trouvé'
+        }, status=404)
+    except Exception as e:
+        import traceback
+        print(f"❌ Erreur dans calculer_remise_panier_preview: {str(e)}")
+        print(traceback.format_exc())
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur lors du calcul de la remise: {str(e)}'
+        }, status=500)
+
+
 

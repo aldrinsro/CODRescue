@@ -3,6 +3,55 @@ from decimal import Decimal, ROUND_HALF_UP
 
 register = template.Library()
 
+
+def calculer_prix_unitaire_effectif(panier):
+    """
+    Calcule le prix unitaire effectif d'un panier en tenant compte de:
+    - Promotion active (priorité 1)
+    - Phase LIQUIDATION (priorité 2)
+    - Phase EN_TEST (priorité 3)
+    - Upsell avec compteur (priorité 4)
+    - Prix normal (défaut)
+
+    Cette fonction est utilisée pour calculer les remises en pourcentage
+    sur le prix actuel réel (et non sur prix_panier gelé).
+
+    Args:
+        panier: L'objet Panier
+
+    Returns:
+        Decimal: Prix unitaire effectif
+    """
+    article = panier.article
+    commande = panier.commande
+
+    # Promotion active - priorité sur tout
+    if hasattr(article, 'has_promo_active') and article.has_promo_active:
+        return Decimal(str(article.prix_actuel or article.prix_unitaire))
+
+    # Phase liquidation
+    if article.phase == 'LIQUIDATION':
+        prix_liq = article.Prix_liquidation if hasattr(article, 'Prix_liquidation') and article.Prix_liquidation else article.prix_actuel or article.prix_unitaire
+        return Decimal(str(prix_liq))
+
+    # Phase test
+    if article.phase == 'EN_TEST':
+        return Decimal(str(article.prix_actuel or article.prix_unitaire))
+
+    # Article upsell avec compteur
+    if hasattr(article, 'isUpsell') and article.isUpsell and commande.compteur > 0:
+        if commande.compteur == 1 and article.prix_upsell_2:
+            return Decimal(str(article.prix_upsell_2))
+        elif commande.compteur == 2 and article.prix_upsell_3:
+            return Decimal(str(article.prix_upsell_3))
+        elif commande.compteur == 3 and article.prix_upsell_4:
+            return Decimal(str(article.prix_upsell_4))
+        elif commande.compteur >= 4 and article.prix_gros:
+            return Decimal(str(article.prix_gros))
+
+    # Prix normal
+    return Decimal(str(article.prix_actuel or article.prix_unitaire))
+
 @register.filter
 def get_prix_affichage_remise(article, quantite=1):
     """
@@ -73,18 +122,18 @@ def get_prix_affichage_remise(article, quantite=1):
         if quantite <= 1:
             prix = article.prix_actuel or article.prix_unitaire
             libelle = 'Prix normal'
-        elif quantite >= 2 and hasattr(article, 'prix_upsell_1') and article.prix_upsell_1:
-            prix = article.prix_upsell_1
-            libelle = 'Prix upsell niveau 1'
-        elif quantite >= 3 and hasattr(article, 'prix_upsell_2') and article.prix_upsell_2:
+        elif quantite >= 2 and hasattr(article, 'prix_upsell_2') and article.prix_upsell_2:
             prix = article.prix_upsell_2
-            libelle = 'Prix upsell niveau 2'
-        elif quantite >= 4 and hasattr(article, 'prix_upsell_3') and article.prix_upsell_3:
+            libelle = 'Prix upsell 2'
+        elif quantite >= 3 and hasattr(article, 'prix_upsell_3') and article.prix_upsell_3:
             prix = article.prix_upsell_3
-            libelle = 'Prix upsell niveau 3'
-        elif quantite >= 5 and hasattr(article, 'prix_upsell_4') and article.prix_upsell_4:
+            libelle = 'Prix upsell 3'
+        elif quantite >= 4 and hasattr(article, 'prix_upsell_4') and article.prix_upsell_4:
             prix = article.prix_upsell_4
-            libelle = 'Prix upsell niveau 4'
+            libelle = 'Prix upsell 4'
+        elif quantite >= 5 and hasattr(article, 'prix_gros') and article.prix_gros:
+            prix = article.prix_gros
+            libelle = 'Prix Gros'
         else:
             prix = article.prix_actuel or article.prix_unitaire
             libelle = 'Prix normal'
@@ -107,61 +156,42 @@ def get_prix_affichage_remise(article, quantite=1):
         'type': 'normal'
     }
 
-@register.filter
-def get_prix_remise_applicable(article, niveau_remise):
-    """
-    Retourne le prix de remise selon le niveau spécifié.
-    
-    Args:
-        article: L'objet Article
-        niveau_remise: Le niveau de remise (1, 2, 3, 4 ou 'liquidation')
-        
-    Returns:
-        Decimal: Prix de remise ou None si non disponible
-    """
-    if not article:
-        return None
-        
-    if niveau_remise == 1:
-        return getattr(article, 'prix_remise_1', None)
-    elif niveau_remise == 2:
-        return getattr(article, 'prix_remise_2', None)
-    elif niveau_remise == 3:
-        return getattr(article, 'prix_remise_3', None)
-    elif niveau_remise == 4:
-        return getattr(article, 'prix_remise_4', None)
-    
-    return None
+# @register.filter
+# def get_prix_remise_applicable(article, niveau_remise):
+#     """
+#     FONCTION DÉSACTIVÉE - Les champs prix_remise ont été supprimés du modèle Article
+#     Retourne le prix de remise selon le niveau spécifié.
+#
+#     Args:
+#         article: L'objet Article
+#         niveau_remise: Le niveau de remise (1, 2, 3, 4 ou 'liquidation')
+#
+#     Returns:
+#         Decimal: Prix de remise ou None si non disponible
+#     """
+#     if not article:
+#         return None
+#
+#     # Les champs prix_remise_1, prix_remise_2, prix_remise_3, prix_remise_4 ont été supprimés
+#     return None
 
-@register.filter
-def calcul_economie_remise(article, prix_remise):
-    """
-    Calcule l'économie réalisée avec une remise.
-    
-    Args:
-        article: L'objet Article
-        prix_remise: Prix de la remise
-        
-    Returns:
-        dict: {
-            'economie': montant économisé,
-            'pourcentage': pourcentage d'économie
-        }
-    """
-    if not article or not prix_remise:
-        return {'economie': 0, 'pourcentage': 0}
-    
-    prix_normal = article.prix_actuel or article.prix_unitaire
-    if not prix_normal or prix_remise >= prix_normal:
-        return {'economie': 0, 'pourcentage': 0}
-    
-    economie = Decimal(str(prix_normal)) - Decimal(str(prix_remise))
-    pourcentage = (economie / Decimal(str(prix_normal)) * 100).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-    
-    return {
-        'economie': economie,
-        'pourcentage': pourcentage
-    }
+# @register.filter
+# def calcul_economie_remise(article, prix_remise):
+#     """
+#     FONCTION DÉSACTIVÉE - Les champs prix_remise ont été supprimés du modèle Article
+#     Calcule l'économie réalisée avec une remise.
+#
+#     Args:
+#         article: L'objet Article
+#         prix_remise: Prix de la remise
+#
+#     Returns:
+#         dict: {
+#             'economie': montant économisé,
+#             'pourcentage': pourcentage d'économie
+#         }
+#     """
+#     return {'economie': 0, 'pourcentage': 0}
 
 @register.filter
 def format_prix_avec_devise(prix, devise='DH'):
@@ -220,133 +250,53 @@ def get_prix_effectif_panier(panier):
     prix_unitaire_effectif = sous_total_actuel / Decimal(str(quantite))
 
     # PRIORITÉ 1: Utiliser le type de prix gelé si disponible
-    # Cela permet d'afficher "Prix liquidation" ou "Prix promotion" même si l'article a changé
+    # EXCEPTION: Les types upsell_niveau_X ne sont PAS utilisés pour l'affichage
+    # car le libellé upsell doit être dynamique selon le compteur actuel
     if hasattr(panier, 'type_prix_gele') and panier.type_prix_gele:
         type_prix_gele = panier.type_prix_gele
 
-        # Mapper le type de prix gelé vers un libellé et style
-        if type_prix_gele == 'liquidation':
-            return {
-                'prix_unitaire': float(prix_unitaire_effectif),
-                'sous_total': float(sous_total_actuel),
-                'libelle': 'Prix liquidation',
-                'couleur_classe': 'text-orange-600',
-                'icone': 'fas fa-tags',
-                'est_remise': False
-            }
-        elif type_prix_gele == 'promotion':
-            return {
-                'prix_unitaire': float(prix_unitaire_effectif),
-                'sous_total': float(sous_total_actuel),
-                'libelle': 'Prix promotion',
-                'couleur_classe': 'text-red-600',
-                'icone': 'fas fa-fire',
-                'est_remise': False
-            }
-        elif type_prix_gele == 'test':
-            return {
-                'prix_unitaire': float(prix_unitaire_effectif),
-                'sous_total': float(sous_total_actuel),
-                'libelle': 'Prix test',
-                'couleur_classe': 'text-blue-600',
-                'icone': 'fas fa-flask',
-                'est_remise': False
-            }
-        elif type_prix_gele.startswith('upsell_niveau_'):
-            niveau = type_prix_gele.split('_')[-1]
-            return {
-                'prix_unitaire': float(prix_unitaire_effectif),
-                'sous_total': float(sous_total_actuel),
-                'libelle': f'Prix upsell niveau {niveau}',
-                'couleur_classe': 'text-green-600',
-                'icone': 'fas fa-arrow-up',
-                'est_remise': False
-            }
-        elif type_prix_gele.startswith('remise_'):
-            return {
-                'prix_unitaire': float(prix_unitaire_effectif),
-                'sous_total': float(sous_total_actuel),
-                'libelle': f'Prix {type_prix_gele.replace("_", " ")} appliquée',
-                'couleur_classe': 'text-purple-600',
-                'icone': 'fas fa-percent',
-                'est_remise': True
-            }
-        elif type_prix_gele == 'normal':
-            return {
-                'prix_unitaire': float(prix_unitaire_effectif),
-                'sous_total': float(sous_total_actuel),
-                'libelle': 'Prix normal',
-                'couleur_classe': 'text-gray-600',
-                'icone': 'fas fa-tag',
-                'est_remise': False
-            }
+        # IGNORER les types upsell_niveau_X → ils seront recalculés dynamiquement
+        if not type_prix_gele.startswith('upsell_niveau_'):
+            # Mapper le type de prix gelé vers un libellé et style
+            if type_prix_gele == 'liquidation':
+                return {
+                    'prix_unitaire': float(prix_unitaire_effectif),
+                    'sous_total': float(sous_total_actuel),
+                    'libelle': 'Prix liquidation',
+                    'couleur_classe': 'text-orange-600',
+                    'icone': 'fas fa-tags',
+                    'est_remise': False
+                }
+            elif type_prix_gele == 'promotion':
+                return {
+                    'prix_unitaire': float(prix_unitaire_effectif),
+                    'sous_total': float(sous_total_actuel),
+                    'libelle': 'Prix promotion',
+                    'couleur_classe': 'text-red-600',
+                    'icone': 'fas fa-fire',
+                    'est_remise': False
+                }
+            elif type_prix_gele == 'test':
+                return {
+                    'prix_unitaire': float(prix_unitaire_effectif),
+                    'sous_total': float(sous_total_actuel),
+                    'libelle': 'Prix test',
+                    'couleur_classe': 'text-blue-600',
+                    'icone': 'fas fa-flask',
+                    'est_remise': False
+                }
+            elif type_prix_gele == 'normal':
+                return {
+                    'prix_unitaire': float(prix_unitaire_effectif),
+                    'sous_total': float(sous_total_actuel),
+                    'libelle': 'Prix normal',
+                    'couleur_classe': 'text-gray-600',
+                    'icone': 'fas fa-tag',
+                    'est_remise': False
+                }
 
-    # Vérifier si une remise a été explicitement appliquée
-    # PROTECTION: Les articles en liquidation et en promotion ne doivent jamais être traités comme ayant une remise
-    article_en_promotion = hasattr(article, 'has_promo_active') and article.has_promo_active
-    if hasattr(panier, 'remise_appliquer') and panier.remise_appliquer and article.phase != 'LIQUIDATION' and not article_en_promotion:
-        type_remise = getattr(panier, 'type_remise_appliquee', '')
-        
-        # Retourner le prix avec le libellé approprié selon le type de remise
-        if type_remise == 'remise_1':
-            return {
-                'prix_unitaire': float(prix_unitaire_effectif),
-                'sous_total': float(sous_total_actuel),
-                'libelle': 'Prix remise 1 appliquée',
-                'couleur_classe': 'text-purple-600',
-                'icone': 'fas fa-percent',
-                'est_remise': True
-            }
-        elif type_remise == 'remise_2':
-            return {
-                'prix_unitaire': float(prix_unitaire_effectif),
-                'sous_total': float(sous_total_actuel),
-                'libelle': 'Prix remise 2 appliquée',
-                'couleur_classe': 'text-purple-600',
-                'icone': 'fas fa-percent',
-                'est_remise': True
-            }
-        elif type_remise == 'remise_3':
-            return {
-                'prix_unitaire': float(prix_unitaire_effectif),
-                'sous_total': float(sous_total_actuel),
-                'libelle': 'Prix remise 3 appliquée',
-                'couleur_classe': 'text-purple-600',
-                'icone': 'fas fa-percent',
-                'est_remise': True
-            }
-        elif type_remise == 'remise_4':
-            return {
-                'prix_unitaire': float(prix_unitaire_effectif),
-                'sous_total': float(sous_total_actuel),
-                'libelle': 'Prix remise 4 appliquée',
-                'couleur_classe': 'text-purple-600',
-                'icone': 'fas fa-percent',
-                'est_remise': True
-            }
-        else:
-            # Remise personnalisée
-            return {
-                'prix_unitaire': float(prix_unitaire_effectif),
-                'sous_total': float(sous_total_actuel),
-                'libelle': 'Prix remisé',
-                'couleur_classe': 'text-purple-600',
-                'icone': 'fas fa-percent',
-                'est_remise': True
-            }
-    
-    # Aucune remise appliquée - utiliser la logique standard MAIS exclure les calculs upsell
-    # si le panier a une remise disponible (pour éviter les conflits)
-
-    # Vérifier si l'article a des prix de remise configurés
-    article_a_remise_disponible = any([
-        getattr(article, 'prix_remise_1', None),
-        getattr(article, 'prix_remise_2', None),
-        getattr(article, 'prix_remise_3', None),
-        getattr(article, 'prix_remise_4', None)
-    ])
-
-    # Pour tous les articles sans remise appliquée, utiliser les prix upsell selon le compteur de la commande
+    # Logique standard pour déterminer le prix
+    # Calculer dynamiquement le libellé selon le compteur actuel
     from commande.templatetags.commande_filters import get_prix_upsell_avec_compteur
 
     # Obtenir le prix selon le compteur actuel de la commande
@@ -354,24 +304,37 @@ def get_prix_effectif_panier(panier):
     compteur_actuel = commande.compteur
     prix_avec_compteur = get_prix_upsell_avec_compteur(article, compteur_actuel)
 
-    # Déterminer le libellé selon le compteur
-    if compteur_actuel > 0 and hasattr(article, 'isUpsell') and article.isUpsell:
-        libelle = f'Prix upsell niveau {compteur_actuel}'
-        couleur_classe = 'text-green-600'
-        icone = 'fas fa-arrow-up'
-    elif hasattr(article, 'has_promo_active') and article.has_promo_active:
+    # Déterminer le libellé selon la PRIORITÉ :
+    # 1. Phases spéciales (promotion, liquidation, test) ont TOUJOURS la priorité
+    # 2. Upsell uniquement si pas de phase spéciale
+    # 3. Normal par défaut
+
+    if hasattr(article, 'has_promo_active') and article.has_promo_active:
+        # PRIORITÉ 1: Promotion active
         libelle = 'Prix promotion'
         couleur_classe = 'text-red-600'
         icone = 'fas fa-fire'
     elif article.phase == 'LIQUIDATION':
+        # PRIORITÉ 1: Phase liquidation
         libelle = 'Prix liquidation'
         couleur_classe = 'text-orange-600'
         icone = 'fas fa-tags'
     elif article.phase == 'EN_TEST':
+        # PRIORITÉ 1: Phase test
         libelle = 'Prix test'
         couleur_classe = 'text-blue-600'
         icone = 'fas fa-flask'
+    elif compteur_actuel > 0 and hasattr(article, 'isUpsell') and article.isUpsell:
+        # PRIORITÉ 2: Upsell dynamique (seulement si pas de phase spéciale)
+        if compteur_actuel >= 4:
+            libelle = 'Prix Gros'
+        else:
+            # Ajuster le niveau affiché : compteur 1 → 2, compteur 2 → 3, compteur 3 → 4
+            libelle = f'Prix upsell {compteur_actuel + 1}'
+        couleur_classe = 'text-green-600'
+        icone = 'fas fa-arrow-up'
     else:
+        # PRIORITÉ 3: Prix normal par défaut
         libelle = 'Prix normal'
         couleur_classe = 'text-gray-600'
         icone = 'fas fa-tag'
@@ -418,57 +381,24 @@ def get_libelle_prix_contextuel(article, panier=None):
     # Retour par défaut basé sur la phase de l'article
     return get_prix_affichage_remise(article, 1)
 
-@register.filter
-def has_prix_remise_disponible(article):
-    """
-    Vérifie si l'article a des prix de remise configurés.
-    
-    Returns:
-        bool: True si au moins un prix de remise est défini
-    """
-    if not article:
-        return False
-    
-    prix_remises = [
-        getattr(article, 'prix_remise_1', None),
-        getattr(article, 'prix_remise_2', None),
-        getattr(article, 'prix_remise_3', None),
-        getattr(article, 'prix_remise_4', None)
-    ]
-    
-    return any(prix for prix in prix_remises if prix and prix > 0)
+# @register.filter
+# def has_prix_remise_disponible(article):
+#     """
+#     FONCTION DÉSACTIVÉE - Les champs prix_remise ont été supprimés du modèle Article
+#     Vérifie si l'article a des prix de remise configurés.
+#
+#     Returns:
+#         bool: True si au moins un prix de remise est défini
+#     """
+#     return False
 
-@register.filter
-def get_meilleur_prix_remise(article):
-    """
-    Retourne le meilleur prix de remise disponible (le plus bas).
-    
-    Returns:
-        dict: Informations sur le meilleur prix de remise
-    """
-    if not article or not has_prix_remise_disponible(article):
-        return None
-    
-    prix_remises = []
-    
-    for niveau in [1, 2, 3, 4]:
-        prix = get_prix_remise_applicable(article, niveau)
-        if prix and prix > 0:
-            prix_remises.append({
-                'prix': prix,
-                'niveau': niveau,
-                'libelle': f'Prix remise {niveau}'
-            })
-    
-    
-    if not prix_remises:
-        return None
-    
-    # Retourner le prix le plus bas
-    meilleur_prix = min(prix_remises, key=lambda x: x['prix'])
-    
-    # Calculer l'économie
-    economie_info = calcul_economie_remise(article, meilleur_prix['prix'])
-    meilleur_prix.update(economie_info)
-    
-    return meilleur_prix
+# @register.filter
+# def get_meilleur_prix_remise(article):
+#     """
+#     FONCTION DÉSACTIVÉE - Les champs prix_remise ont été supprimés du modèle Article
+#     Retourne le meilleur prix de remise disponible (le plus bas).
+#
+#     Returns:
+#         dict: Informations sur le meilleur prix de remise
+#     """
+#     return None

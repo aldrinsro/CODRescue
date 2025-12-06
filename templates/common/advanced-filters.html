@@ -1,0 +1,166 @@
+{% comment %}
+===========================================
+ COMPOSANT DE FILTRES AVANCÉS GLOBAL
+===========================================
+
+Ce composant fournit un panneau de filtres avancés réutilisable
+dans toute l'application.
+
+UTILISATION:
+-----------
+{% include 'common/advanced-filters.html' with filter_config=filter_config %}
+
+CONFIGURATION:
+-------------
+filter_config = {
+    'title': 'Filtres avancés',
+    'button_text': 'Filtres',
+    'button_class': 'bg-blue-600 hover:bg-blue-700',  # Optionnel
+    'filters': [
+        {
+            'id': 'filterIdYz',
+            'label': 'N° Commande',
+            'type': 'text',
+            'placeholder': 'Ex: 212268',
+            'data_field': 'idYz'  # Nom du data-attribute sur les lignes du tableau
+        },
+        {
+            'id': 'filterClient',
+            'label': 'Client',
+            'type': 'text',
+            'placeholder': 'Nom ou prénom...',
+            'data_field': 'client'
+        },
+        {
+            'id': 'filterDate',
+            'label': 'Date',
+            'type': 'date',
+            'data_field': 'datePreparation'
+        },
+        {
+            'id': 'filterTotalMin',
+            'label': 'Total Min',
+            'type': 'number',
+            'placeholder': '0',
+            'data_field': 'total',
+            'filter_type': 'min'  # Pour les comparaisons numériques
+        },
+        {
+            'id': 'filterTotalMax',
+            'label': 'Total Max',
+            'type': 'number',
+            'placeholder': '1000',
+            'data_field': 'total',
+            'filter_type': 'max'
+        }
+    ]
+}
+
+IMPORTANT: Les lignes du tableau doivent avoir des data-attributes:
+<tr class="filterable-row" data-id-yz="212268" data-client="John Doe" data-total="500">
+    ...
+</tr>
+
+VOIR: static/js/common/filter-system.js pour la logique JavaScript
+VOIR: static/css/common/filter-system.css pour les styles
+{% endcomment %}
+
+<!-- Bouton pour ouvrir les filtres -->
+<button onclick="toggleAdvancedFilters()"
+        id="advancedFiltersBtn"
+        class="inline-flex items-center px-3 py-2 {{ filter_config.button_class|default:'bg-blue-600 hover:bg-blue-700' }} text-white text-sm font-medium rounded transition-colors h-10"
+        aria-expanded="false"
+        aria-controls="advancedFilters"
+        title="{{ filter_config.title|default:'Filtres avancés' }}">
+    <i class="fas fa-filter mr-2"></i>
+    {{ filter_config.button_text|default:'Filtres' }}
+    <span id="filterBadge" class="hidden ml-2 px-2 py-0.5 bg-red-500 text-white text-xs rounded-full font-bold">0</span>
+</button>
+
+<!-- Panneau de filtres avancés -->
+<div id="advancedFilters"
+     class="hidden absolute top-full left-0 right-0 md:left-0 md:right-auto mt-2 bg-white border border-gray-300 rounded-md shadow-lg p-4 z-50 min-w-full md:min-w-[600px] max-w-4xl"
+     role="dialog"
+     aria-labelledby="advancedFiltersTitle"
+     data-filter-config='{{ filter_config|safe }}'>
+
+    <div class="flex items-center justify-between mb-4">
+        <h3 id="advancedFiltersTitle" class="text-lg font-semibold text-gray-900">
+            <i class="fas fa-sliders-h mr-2"></i>
+            {{ filter_config.title|default:'Filtres avancés' }}
+        </h3>
+        <button onclick="toggleAdvancedFilters()"
+                class="text-gray-400 hover:text-gray-600 transition-colors"
+                aria-label="Fermer les filtres">
+            <i class="fas fa-times text-xl"></i>
+        </button>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {% for filter in filter_config.filters %}
+        <div>
+            <label for="{{ filter.id }}" class="block text-sm font-medium text-gray-700 mb-1">
+                {{ filter.label }}
+            </label>
+
+            {% if filter.type == 'select' %}
+                <select id="{{ filter.id }}"
+                        class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+                        data-field="{{ filter.data_field }}"
+                        data-filter-type="{{ filter.filter_type|default:'text' }}"
+                        aria-label="{{ filter.label }}">
+                    <option value="">{{ filter.placeholder|default:'Tous' }}</option>
+                    {% for option in filter.options %}
+                    <option value="{{ option.value }}">{{ option.label }}</option>
+                    {% endfor %}
+                </select>
+            {% else %}
+                <input type="{{ filter.type }}"
+                       id="{{ filter.id }}"
+                       {% if filter.placeholder %}placeholder="{{ filter.placeholder }}"{% endif %}
+                       {% if filter.min %}min="{{ filter.min }}"{% endif %}
+                       {% if filter.max %}max="{{ filter.max }}"{% endif %}
+                       {% if filter.step %}step="{{ filter.step }}"{% endif %}
+                       class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+                       data-field="{{ filter.data_field }}"
+                       data-filter-type="{{ filter.filter_type|default:'text' }}"
+                       aria-label="{{ filter.label }}">
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="mt-4 flex justify-between items-center pt-4 border-t border-gray-200">
+        <button onclick="applyAdvancedFilters()"
+                class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded transition-colors h-10">
+            <i class="fas fa-check mr-2"></i>
+            Appliquer
+        </button>
+        <button onclick="clearAdvancedFilters()"
+                class="inline-flex items-center px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white text-sm font-medium rounded transition-colors h-10">
+            <i class="fas fa-eraser mr-2"></i>
+            Effacer
+        </button>
+    </div>
+</div>
+
+<!-- Indicateur de filtres actifs -->
+<div id="filterResults"
+     class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md hidden"
+     role="status"
+     aria-live="polite">
+    <div class="flex items-center justify-between">
+        <div class="flex items-center">
+            <i class="fas fa-filter text-blue-600 mr-2"></i>
+            <span class="text-blue-800">
+                <span id="filterResultCount">0</span> résultat(s) trouvé(s)
+                <span id="activeFiltersText" class="ml-2 text-sm"></span>
+            </span>
+        </div>
+        <button onclick="clearAdvancedFilters()"
+                class="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                aria-label="Effacer tous les filtres">
+            <i class="fas fa-times mr-1"></i>Effacer les filtres
+        </button>
+    </div>
+</div>
