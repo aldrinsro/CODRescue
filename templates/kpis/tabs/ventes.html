@@ -220,29 +220,10 @@
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <!-- Evolution CA temporelle -->
       <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100 evolution-ca-container">
-        <!-- En-tête avec sélection de période -->
-        <div class="flex items-center justify-between mb-4">
-          <div>
-            <h3 class="text-lg font-semibold text-gray-900">📈 Evolution du CA</h3>
-            <p id="periode-indicator" class="text-sm text-blue-600 font-medium">Période: 30 derniers jours</p>
-          </div>
-          <div class="flex gap-2">
-            <button onclick="window.yoozakKPI.changeEvolutionPeriod('7j')"
-                    class="text-xs px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg period-btn hover:bg-blue-50 transition-colors"
-                    data-period="7j">
-              7 jours
-            </button>
-            <button onclick="window.yoozakKPI.changeEvolutionPeriod('30j')"
-                    class="text-xs px-3 py-1.5 bg-blue-100 text-blue-600 font-medium rounded-lg period-btn hover:bg-blue-50 transition-colors"
-                    data-period="30j">
-              30 jours
-            </button>
-            <button onclick="window.yoozakKPI.changeEvolutionPeriod('90j')"
-                    class="text-xs px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg period-btn hover:bg-blue-50 transition-colors"
-                    data-period="90j">
-              90 jours
-            </button>
-          </div>
+        <!-- En-tête (utilise le filtre global en haut) -->
+        <div class="mb-4">
+          <h3 class="text-lg font-semibold text-gray-900">📈 Evolution du CA</h3>
+          <p id="periode-indicator" class="text-sm text-blue-600 font-medium">Période: 30 derniers jours</p>
         </div>
 
         <!-- Container du graphique -->

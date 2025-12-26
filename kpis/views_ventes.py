@@ -238,6 +238,8 @@ def ventes_data(request):
             'error': str(e),
             'message': 'Erreur lors du chargement des donnees Ventes'
         }, status=500)
+    
+    
 @login_required
 def evolution_ca_data(request):
     """API pour l'évolution du CA sur une période donnée
@@ -516,19 +518,22 @@ def repartition_sources_data(request):
         else:  # 30j par défaut
             debut_periode = aujourd_hui - timedelta(days=30)
 
+        # CORRECTION: Utiliser icontains au lieu de iexact pour gérer les problèmes d'accents
         # Debug: Compter le nombre total de commandes livrées
         total_commandes_livrees = Commande.objects.filter(
-            Q(etats__enum_etat__libelle__iexact='Livrée', etats__date_debut__gte=debut_periode, etats__date_debut__lte=aujourd_hui) |
-            Q(etats__enum_etat__libelle__iexact='Livrée Partiellement', etats__date_debut__gte=debut_periode, etats__date_debut__lte=aujourd_hui)
-        ).count()
+            etats__enum_etat__libelle__icontains='livr',
+            etats__date_debut__gte=debut_periode,
+            etats__date_debut__lte=aujourd_hui
+        ).distinct().count()
 
         logger.info(f"📊 Répartition sources - Période: {periode} ({debut_periode} à {aujourd_hui})")
         logger.info(f"📦 Total commandes livrées: {total_commandes_livrees}")
 
         # Calculer la répartition par source
         repartition = Commande.objects.filter(
-            Q(etats__enum_etat__libelle__iexact='Livrée', etats__date_debut__gte=debut_periode, etats__date_debut__lte=aujourd_hui) |
-            Q(etats__enum_etat__libelle__iexact='Livrée Partiellement', etats__date_debut__gte=debut_periode, etats__date_debut__lte=aujourd_hui)
+            etats__enum_etat__libelle__icontains='livr',
+            etats__date_debut__gte=debut_periode,
+            etats__date_debut__lte=aujourd_hui
         ).values('source').annotate(
             ca_total=Sum('total_cmd'),
             nb_commandes=Count('id')

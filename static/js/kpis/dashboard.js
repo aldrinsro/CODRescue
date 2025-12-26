@@ -13,7 +13,6 @@ class YoozakKPIManager {
     this.filters = {};
     this.activeTab = 'ventes';
     this.isLoading = false;
-    this.selectedPeriod = '30j'; // Persistance de la période sélectionnée pour graphiques
     this.selectedPeriodVentes = '30j'; // Persistance de la période pour les KPIs Ventes
     this.selectedPeriodPerformance = '30j'; // Persistance de la période pour Performance Commerciale
 
@@ -75,11 +74,11 @@ class YoozakKPIManager {
         const button = e.currentTarget;
         const btnText = button.querySelector('.btn-text');
         const loadingText = button.querySelector('.loading-text');
-        
+
         // Afficher l'état de chargement
         btnText.classList.add('hidden');
         loadingText.classList.remove('hidden');
-        
+
         // Réactiver le bouton après le téléchargement
         setTimeout(() => {
           btnText.classList.remove('hidden');
@@ -144,7 +143,7 @@ class YoozakKPIManager {
         break;
       default:
         console.log('⚠️ Onglet non implémenté, chargement des données par défaut');
-        // Pas de chargement par défaut, les données seront chargées lors du changement d'onglet
+      // Pas de chargement par défaut, les données seront chargées lors du changement d'onglet
     }
   }
 
@@ -469,10 +468,19 @@ class YoozakKPIManager {
   }
 
   async updateVentesEvolutionCAChart(data) {
+    console.log('🎨 Début de updateVentesEvolutionCAChart');
+    console.log('   selectedPeriodVentes:', this.selectedPeriodVentes);
+
     const chartId = 'ventes-evolution-ca-chart';
     const canvasElement = document.getElementById(chartId);
     const initialLoading = document.getElementById('evolution-ca-initial-loading');
     const emptyState = document.getElementById('evolution-ca-empty');
+
+    console.log('   Elements trouvés:', {
+      canvas: !!canvasElement,
+      initialLoading: !!initialLoading,
+      emptyState: !!emptyState
+    });
 
     if (!canvasElement) {
       console.error('❌ Canvas element not found');
@@ -480,29 +488,29 @@ class YoozakKPIManager {
     }
 
     try {
-      // Utiliser la période sélectionnée au lieu de '30j' en dur
-      const evolutionData = await this.fetchEvolutionCAData(this.selectedPeriod);
+      // CORRECTION: Utiliser selectedPeriodVentes (filtre global) au lieu de selectedPeriod (filtre local)
+      console.log('📞 Appel fetchEvolutionCAData...');
+      const evolutionData = await this.fetchEvolutionCAData(this.selectedPeriodVentes);
+      console.log('✅ fetchEvolutionCAData terminé:', evolutionData);
 
       // Mettre à jour l'indicateur de période
       const periodeIndicator = document.getElementById('periode-indicator');
       if (periodeIndicator) {
-        periodeIndicator.textContent = `Période: ${this.getPeriodLabel(this.selectedPeriod)}`;
+        periodeIndicator.textContent = `Période: ${this.getPeriodLabel(this.selectedPeriodVentes)}`;
       }
 
-      // Mettre à jour l'état actif des boutons de période
-      document.querySelectorAll('.period-btn').forEach(btn => {
-        const period = btn.dataset.period;
-        if (period === this.selectedPeriod) {
-          btn.classList.remove('bg-gray-100', 'text-gray-600');
-          btn.classList.add('bg-blue-100', 'text-blue-600', 'font-medium');
-        } else {
-          btn.classList.remove('bg-blue-100', 'text-blue-600', 'font-medium');
-          btn.classList.add('bg-gray-100', 'text-gray-600');
-        }
+      // Vérifier s'il y a des données
+      console.log('🔍 Vérification des données:', {
+        hasData: !!evolutionData,
+        hasValues: !!evolutionData?.values,
+        valuesLength: evolutionData?.values?.length,
+        allZeros: evolutionData?.values?.every(val => val === 0)
       });
 
-      // Vérifier s'il y a des données
-      if (!evolutionData || !evolutionData.values || evolutionData.values.length === 0 || evolutionData.values.every(val => val === 0)) {
+      // CORRECTION: Afficher le graphique même si toutes les valeurs sont à 0
+      // On affiche l'état vide seulement s'il n'y a PAS de données du tout
+      if (!evolutionData || !evolutionData.values || evolutionData.values.length === 0) {
+        console.warn('⚠️ Aucune donnée - Affichage de l\'état vide');
         // Afficher l'état vide
         if (initialLoading) initialLoading.classList.add('hidden');
         if (canvasElement) canvasElement.classList.add('hidden');
@@ -518,15 +526,23 @@ class YoozakKPIManager {
       }
 
       // Masquer l'état initial et l'état vide, afficher le canvas
+      console.log('✅ Données valides - Affichage du graphique');
       if (initialLoading) initialLoading.classList.add('hidden');
       if (emptyState) emptyState.classList.add('hidden');
       if (canvasElement) canvasElement.classList.remove('hidden');
 
       // Détruire l'ancien graphique si existant
       if (this.charts.has(chartId)) {
+        console.log('🗑️ Destruction de l\'ancien graphique');
         this.charts.get(chartId).destroy();
       }
 
+      // Vérifier que Chart.js est chargé
+      if (typeof Chart === 'undefined') {
+        throw new Error('Chart.js n\'est pas chargé');
+      }
+
+      console.log('🎨 Création du graphique Chart.js...');
       const ctx = canvasElement.getContext('2d');
       const chart = new Chart(ctx, {
         type: 'line',
@@ -576,7 +592,14 @@ class YoozakKPIManager {
               },
               ticks: {
                 color: '#6b7280',
-                font: { size: 11 }
+                font: { size: 11 },
+                // CORRECTION: Adapter le nombre de labels selon la période
+                // Pour éviter l'encombrement de l'axe X
+                maxTicksLimit: evolutionData.values.length <= 7 ? 7 :
+                  evolutionData.values.length <= 30 ? 10 : 12,
+                autoSkip: true,
+                maxRotation: 45,
+                minRotation: 0
               }
             },
             y: {
@@ -912,8 +935,13 @@ class YoozakKPIManager {
   }
 
   async fetchEvolutionCAData(period = '30j') {
+    console.log(`📈 Chargement évolution CA pour période: ${period}`);
+
     try {
-      const response = await fetch(`${this.apiEndpoint}evolution-ca/?period=${period}`, {
+      const url = `${this.apiEndpoint}evolution-ca/?period=${period}`;
+      console.log(`🔗 URL API: ${url}`);
+
+      const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -921,17 +949,25 @@ class YoozakKPIManager {
         }
       });
 
+      console.log(`📡 Réponse HTTP: ${response.status} ${response.statusText}`);
+
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Réponse d\'erreur du serveur:', errorText);
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
       const data = await response.json();
+      console.log('📦 Données évolution CA reçues:', data);
 
       if (data.success) {
         // Vérifier que data.evolution est un tableau
         if (!Array.isArray(data.evolution)) {
+          console.error('❌ data.evolution n\'est pas un tableau:', typeof data.evolution);
           throw new Error('Format de données d\'évolution invalide');
         }
+
+        console.log(`✅ ${data.evolution.length} jours de données trouvés`);
 
         // Transformer les données API en format Chart.js
         const chartData = {
@@ -940,13 +976,24 @@ class YoozakKPIManager {
           raw: data.evolution,
           resume: data.resume || { ca_total: 0, ca_moyen: 0, tendance: 0 }
         };
+
+        console.log('📊 Données chart préparées:', {
+          nbLabels: chartData.labels.length,
+          nbValues: chartData.values.length,
+          valuesSum: chartData.values.reduce((a, b) => a + b, 0),
+          resume: chartData.resume
+        });
+
         return chartData;
       } else {
+        console.error('❌ API a retourné success=false:', data.message);
         throw new Error(data.message || 'Erreur lors du chargement des données d\'évolution');
       }
 
     } catch (error) {
       console.error('❌ Erreur récupération données évolution CA:', error);
+      console.error('Type d\'erreur:', error.name);
+      console.error('Message:', error.message);
 
       // Retourner des données vides au lieu de données aléatoires
       return {
@@ -958,46 +1005,7 @@ class YoozakKPIManager {
     }
   }
 
-  async changeEvolutionPeriod(period) {
-    console.log(`🔄 Changement période évolution CA: ${period}`);
-
-    // Persister la période sélectionnée
-    this.selectedPeriod = period;
-
-    // Affichage du loading overlay
-    const loadingElement = document.getElementById('evolution-ca-loading');
-    if (loadingElement) {
-      loadingElement.classList.remove('hidden');
-    }
-
-    try {
-      // Recharger complètement le graphique avec la nouvelle période
-      // Cela mettra à jour automatiquement les boutons, l'indicateur et le graphique
-      await this.updateVentesEvolutionCAChart();
-
-      console.log('✅ Période mise à jour avec succès:', period);
-
-    } catch (error) {
-      console.error('❌ Erreur changement période:', error);
-
-      // Notification d'erreur à l'utilisateur
-      const periodeIndicator = document.getElementById('periode-indicator');
-      if (periodeIndicator) {
-        const originalText = periodeIndicator.textContent;
-        periodeIndicator.textContent = '❌ Erreur lors du changement de période';
-        periodeIndicator.classList.add('text-red-600');
-
-        setTimeout(() => {
-          periodeIndicator.textContent = originalText;
-          periodeIndicator.classList.remove('text-red-600');
-        }, 3000);
-      }
-    } finally {
-      if (loadingElement) {
-        loadingElement.classList.add('hidden');
-      }
-    }
-  }
+  // SUPPRIMÉ: changeEvolutionPeriod() - Utilise maintenant le filtre global changePeriodeVentes()
 
   handleFilterChange(filterElement) {
     const filterName = filterElement.name;
@@ -1315,7 +1323,7 @@ class YoozakKPIManager {
       // Ajouter un timeout pour éviter les blocages
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 secondes max
-      
+
       const response = await fetch(this.apiEndpoint + 'clients/', {
         signal: controller.signal,
         headers: {
@@ -1334,13 +1342,13 @@ class YoozakKPIManager {
       if (!data.success) {
         throw new Error(data.message || 'Erreur API');
       }
-      
+
       // Vérifier si les données sont vides
       if (data.empty) {
         this.showClientsEmpty();
         return;
       }
-      
+
       // Mettre à jour l'interface avec les données
       this.updateClientsKPIs(data);
       this.updateClientsAnalyses(data);
@@ -1350,14 +1358,14 @@ class YoozakKPIManager {
 
     } catch (error) {
       console.error('❌ Erreur chargement Clients:', error);
-      
+
       // Gestion spécifique des erreurs de timeout
       if (error.name === 'AbortError') {
         this.showErrorState('clients', 'Le chargement des données clients a pris trop de temps. Veuillez réessayer.');
       } else {
         this.showErrorState('clients', 'Erreur lors du chargement des données clients');
       }
-      
+
       // Afficher l'état vide pour éviter une interface bloquée
       this.showClientsEmpty();
     }
@@ -1560,7 +1568,7 @@ class YoozakKPIManager {
     if (loading) loading.style.display = 'none';
     if (content) content.style.display = 'block';
     if (emptyState) emptyState.style.display = 'none';
-    
+
     // Initialiser les graphiques clients une fois que le contenu est visible
     if (window.kpiCharts) {
       // Utiliser setTimeout pour s'assurer que le DOM est bien mis à jour avant de créer les graphiques
@@ -1671,9 +1679,9 @@ class YoozakKPIManager {
 
 // Initialisation au chargement du DOM
 document.addEventListener('DOMContentLoaded', () => {
-    window.kpiManager = new YoozakKPIManager();
+  window.kpiManager = new YoozakKPIManager();
   window.yoozakKPI = window.kpiManager; // Alias pour compatibilité avec le HTML généré
-    window.kpiCharts = new KPICharts();
+  window.kpiCharts = new KPICharts();
 
   // Vérification de l'attachement pour debug
   console.log('🔗 window.yoozakKPI attaché:', !!window.yoozakKPI);

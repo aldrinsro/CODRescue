@@ -6,7 +6,7 @@ Contient toutes les fonctions de calcul isolees pour faciliter la maintenance
 
 from django.db.models import Sum, Count, Avg, Max, Q
 from django.utils import timezone
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import logging
 
 from commande.models import Commande
@@ -74,14 +74,13 @@ def calcul_ca_periode(date_debut, date_fin, etats_inclus=None, methode=None):
         methode = MethodeCalculCA.METHODE_ACTIVE
 
     try:
-        # Creer un filtre OR pour tous les etats avec leurs dates
-        etat_filter = Q()
-        for etat in etats_inclus:
-            etat_filter |= Q(
-                etats__enum_etat__libelle__iexact=etat,
-                etats__date_debut__gte=date_debut,
-                etats__date_debut__lte=date_fin
-            )
+        # CORRECTION: Utiliser icontains au lieu de iexact pour gérer les problèmes d'accents
+        # Cherche les états contenant "livr" (trouvera "Livrée", "livree", "Livree", etc.)
+        etat_filter = Q(
+            etats__enum_etat__libelle__icontains='livr',
+            etats__date_debut__gte=date_debut,
+            etats__date_debut__lte=date_fin
+        )
 
         # Construction de la requete de base - filtre par date de debut de l'etat Livree
         queryset = Commande.objects.filter(etat_filter)
@@ -240,42 +239,42 @@ def calcul_ca_journalier(date_debut, date_fin, etats_inclus=None, methode=None):
         methode = MethodeCalculCA.METHODE_ACTIVE
 
     try:
-        # Creer un filtre OR pour tous les etats avec leurs dates
-        etat_filter = Q()
-        for etat in etats_inclus:
-            etat_filter |= Q(
-                etats__enum_etat__libelle__iexact=etat,
-                etats__date_debut__gte=date_debut,
-                etats__date_debut__lte=date_fin
-            )
+        # CORRECTION: Utiliser icontains au lieu de iexact pour gérer les problèmes d'accents
+        # Cherche les états contenant "livr" (trouvera "Livrée", "livree", "Livree", etc.)
+        etat_filter = Q(
+            etats__enum_etat__libelle__icontains='livr',
+            etats__date_debut__gte=date_debut,
+            etats__date_debut__lte=date_fin
+        )
 
         # Construction requete de base - filtre par date de debut de l'etat Livree
         queryset = Commande.objects.filter(etat_filter)
 
         # Grouper par jour et calculer CA
         # IMPORTANT: On groupe par la date de debut de l'etat Livree
+        # CORRECTION: Utiliser TruncDate au lieu de .extra() pour compatibilité
+        from django.db.models.functions import TruncDate
+        
+        # Annoter chaque commande avec sa date de livraison (date_debut de l'état)
+        # On prend la première date de début d'état qui correspond au filtre
+        queryset_avec_date = queryset.annotate(
+            date_livraison=TruncDate('etats__date_debut')
+        )
+        
         if methode == MethodeCalculCA.TOTAL_COMMANDE:
-            commandes_par_jour = queryset.extra(
-                select={'date_seule': 'DATE(etats.date_debut)'},
-                tables=['commande_etatcommande AS etats'],
-                where=['commande_commande.id = etats.commande_id']
-            ).values('date_seule').annotate(
+            commandes_par_jour = queryset_avec_date.values('date_livraison').annotate(
                 ca_jour=Sum('total_cmd')
-            ).order_by('date_seule')
+            ).order_by('date_livraison')
 
         elif methode == MethodeCalculCA.SUM_PANIERS:
-            commandes_par_jour = queryset.extra(
-                select={'date_seule': 'DATE(etats.date_debut)'},
-                tables=['commande_etatcommande AS etats'],
-                where=['commande_commande.id = etats.commande_id']
-            ).values('date_seule').annotate(
+            commandes_par_jour = queryset_avec_date.values('date_livraison').annotate(
                 ca_jour=Sum('paniers__sous_total')
-            ).order_by('date_seule')
+            ).order_by('date_livraison')
 
         elif methode == MethodeCalculCA.TOTAL_SANS_FRAIS:
             from django.db.models import Case, When, F, Value, FloatField
 
-            queryset_annote = queryset.annotate(
+            queryset_annote = queryset_avec_date.annotate(
                 frais=Case(
                     When(frais_livraison=True, ville__isnull=False,
                          then=F('ville__frais_livraison')),
@@ -284,18 +283,14 @@ def calcul_ca_journalier(date_debut, date_fin, etats_inclus=None, methode=None):
                 ),
                 ca_sans_frais=F('total_cmd') - F('frais')
             )
-            commandes_par_jour = queryset_annote.extra(
-                select={'date_seule': 'DATE(etats.date_debut)'},
-                tables=['commande_etatcommande AS etats'],
-                where=['commande_commande.id = etats.commande_id']
-            ).values('date_seule').annotate(
+            commandes_par_jour = queryset_annote.values('date_livraison').annotate(
                 ca_jour=Sum('ca_sans_frais')
-            ).order_by('date_seule')
+            ).order_by('date_livraison')
 
         # Convertir en dictionnaire {date: ca}
         ca_par_jour = {}
         for cmd in commandes_par_jour:
-            date_str = cmd['date_seule']
+            date_str = cmd['date_livraison']
             if isinstance(date_str, str):
                 date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
             else:
@@ -304,8 +299,8 @@ def calcul_ca_journalier(date_debut, date_fin, etats_inclus=None, methode=None):
 
         # Remplir tous les jours (meme ceux sans ventes)
         evolution_data = []
-        date_courante = date_debut if isinstance(date_debut, datetime.date) else date_debut.date()
-        date_fin_obj = date_fin if isinstance(date_fin, datetime.date) else date_fin.date()
+        date_courante = date_debut if isinstance(date_debut, date) else date_debut.date()
+        date_fin_obj = date_fin if isinstance(date_fin, date) else date_fin.date()
 
         while date_courante <= date_fin_obj:
             ca_jour = ca_par_jour.get(date_courante, 0)
