@@ -67,11 +67,40 @@ window.ouvrirModalAjouterArticle = function(event) {
         return;
     }
 
+    // Afficher le spinner pendant le chargement
+    const spinner = document.getElementById('articlesSpinner');
+    if (spinner) {
+        spinner.style.display = 'table-row';
+        console.log('🔄 Spinner affiché');
+    }
+
+    // Vider le tableau pour ne garder que le spinner
+    const tbody = document.getElementById('articlesTableBody');
+    if (tbody) {
+        const spinnerHTML = spinner ? spinner.outerHTML : '';
+        tbody.innerHTML = spinnerHTML;
+    }
+
+    // Activer le filtre "TOUS" par défaut
+    if (typeof window.mettreAJourFiltreActif === 'function') {
+        window.mettreAJourFiltreActif('all');
+    }
+
+    // Réinitialiser le champ de recherche
+    const searchInput = document.getElementById('recherche-article-input');
+    if (searchInput) {
+        searchInput.value = '';
+    }
+
     // Charger les articles disponibles
     try {
         chargerArticlesDisponibles();
     } catch (error) {
         console.error('❌ Erreur lors du chargement des articles:', error);
+        // Masquer le spinner en cas d'erreur
+        if (spinner) {
+            spinner.style.display = 'none';
+        }
         // Le modal reste ouvert même si le chargement échoue
     }
 };
@@ -168,6 +197,47 @@ window.chargerArticlesDisponibles = window.chargerArticlesDisponibles || functio
 };
 
 /**
+ * Fonction pour mettre à jour les compteurs des filtres depuis les stats du backend
+ */
+window.mettreAJourStatistiques = function(stats) {
+    console.log('📊 Mise à jour des statistiques depuis le backend:', stats);
+
+    // Mettre à jour chaque compteur avec les stats globales du backend
+    const countAll = document.getElementById('count-all');
+    if (countAll) countAll.textContent = stats.total || 0;
+
+    const countPromo = document.getElementById('count-promo');
+    if (countPromo) countPromo.textContent = stats.promo || 0;
+
+    const countLiquidation = document.getElementById('count-liquidation');
+    if (countLiquidation) countLiquidation.textContent = stats.liquidation || 0;
+
+    const countTest = document.getElementById('count-test');
+    if (countTest) countTest.textContent = stats.test || 0;
+
+    const countUpsell = document.getElementById('count-upsell');
+    if (countUpsell) countUpsell.textContent = stats.upsell || 0;
+};
+
+/**
+ * Fonction pour mettre à jour le filtre actif visuellement
+ */
+window.mettreAJourFiltreActif = function(type) {
+    console.log('🎨 Mise à jour filtre actif:', type);
+
+    // Retirer la classe active de tous les filtres
+    document.querySelectorAll('.filter-badge').forEach(badge => {
+        badge.classList.remove('active', 'ring-2', 'ring-blue-500', 'shadow-md');
+    });
+
+    // Ajouter la classe active au filtre sélectionné
+    const activeFilter = document.getElementById(`filter-${type}`);
+    if (activeFilter) {
+        activeFilter.classList.add('active', 'ring-2', 'ring-blue-500', 'shadow-md');
+    }
+};
+
+/**
  * Fonction pour afficher les articles dans le tableau
  */
 window.afficherArticles = function(articles) {
@@ -183,10 +253,18 @@ window.afficherArticles = function(articles) {
         console.error('❌ Corps du tableau non trouvé');
         return;
     }
-    
+
+    // Masquer le spinner
+    const spinner = document.getElementById('articlesSpinner');
+    if (spinner) {
+        spinner.style.display = 'none';
+    }
+
+    // Les compteurs des filtres ne doivent JAMAIS changer peu importe le filtre actif
+    // Ils sont mis à jour une seule fois au chargement initial par mettreAJourCompteurs()
+
     if (articles.length === 0) {
         // Sauvegarder le spinner
-        const spinner = document.getElementById('articlesSpinner');
         const spinnerHTML = spinner ? spinner.outerHTML : '';
 
         tbody.innerHTML = spinnerHTML + `
@@ -256,7 +334,7 @@ window.afficherArticles = function(articles) {
                             data-article-nom="${article.nom}"
                             onclick="event.preventDefault(); event.stopPropagation(); console.log('🔘 Clic bouton - Article ID:', ${article.id}, 'Nom:', '${article.nom}'); ${hasVariantes ? `ouvrirModalVariantesParId(${article.id})` : `ajouterArticleAuPanierParId(${article.id})`}"
                             class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${hasVariantes ? 'bg-purple-100 text-purple-700 hover:bg-purple-200' : 'bg-green-100 text-green-700 hover:bg-green-200'}">
-                        ${hasVariantes ? '🎨 Variantes' : '➕ Ajouter'}
+                        ${hasVariantes ? '🎨 Ajouter' : '➕ Ajouter'}
                     </button>
                 </td>
             </tr>
@@ -264,7 +342,6 @@ window.afficherArticles = function(articles) {
     });
 
     // Sauvegarder le spinner avant de vider le tbody
-    const spinner = document.getElementById('articlesSpinner');
     const spinnerHTML = spinner ? spinner.outerHTML : '';
 
     // Insérer le spinner en premier, puis les articles
@@ -1587,6 +1664,7 @@ window.calculerTotal = function() {
 
 /**
  * Fonction pour filtrer les articles par type
+ * IMPORTANT: Cette fonction recharge les articles depuis l'API avec le filtre approprié
  */
 window.filtrerArticles = function(type, event) {
     // Empêcher la soumission du formulaire
@@ -1594,30 +1672,32 @@ window.filtrerArticles = function(type, event) {
         event.preventDefault();
         event.stopPropagation();
     }
-    
+
     console.log('🎯 Filtrage par type:', type);
-    
-    let articlesFiltres = articlesDisponibles;
-    
-    if (type !== 'all') {
-        articlesFiltres = articlesDisponibles.filter(article => {
-            switch (type) {
-                case 'promo':
-                    return article.has_promo_active;
-                case 'liquidation':
-                    return article.phase === 'LIQUIDATION';
-                case 'test':
-                    return article.phase === 'EN_TEST';
-                case 'upsell':
-                    return article.isUpsell;
-                default:
-                    return true;
-            }
-        });
+
+    // Mettre à jour le filtre actif visuellement immédiatement
+    if (typeof window.mettreAJourFiltreActif === 'function') {
+        window.mettreAJourFiltreActif(type);
     }
-    
-    console.log('📊 Articles filtrés:', articlesFiltres.length);
-    afficherArticles(articlesFiltres);
+
+    // Mapper les noms de filtres frontend vers backend
+    const filterMapping = {
+        'all': 'tous',
+        'promo': 'promo',
+        'liquidation': 'liquidation',
+        'test': 'test',
+        'upsell': 'upsell'
+    };
+
+    const backendFilterType = filterMapping[type] || 'tous';
+    console.log(`📡 Rechargement depuis l'API avec filtre: ${backendFilterType}`);
+
+    // Recharger les articles depuis l'API avec le filtre
+    if (typeof window.chargerArticlesDisponibles === 'function') {
+        window.chargerArticlesDisponibles(backendFilterType);
+    } else {
+        console.error('❌ Fonction chargerArticlesDisponibles non disponible');
+    }
 };
 
 /**

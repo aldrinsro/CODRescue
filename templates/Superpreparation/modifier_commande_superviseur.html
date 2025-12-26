@@ -1340,12 +1340,22 @@
 {% block extra_js %}
 {{ block.super }}
 
+<script src="{% static 'js/modal_ajout_articles.js' %}"></script>
+
 <script>
-// ⚠️ DÉFINIR LA FONCTION AJAX AVANT de charger modal_ajout_articles.js
-// pour que le fichier JS utilise cette version au lieu de sa version JSON inline
+// ⚠️ DÉFINIR LA FONCTION AJAX APRÈS le chargement de modal_ajout_articles.js
+// pour que afficherArticles soit disponible quand l'AJAX se termine
 console.log('🔧 Définition de window.chargerArticlesDisponibles (version AJAX)');
 window.chargerArticlesDisponibles = function(filterType = 'tous') {
     console.log(`🔄 Chargement des articles avec filtre: ${filterType}`);
+
+    // Afficher le spinner pendant le chargement
+    const spinner = document.getElementById('articlesSpinner');
+    if (spinner) {
+        spinner.style.display = 'table-row';
+        console.log('🔄 Spinner affiché pour le chargement AJAX');
+    }
+
     const url = new URL("{% url 'Superpreparation:api_articles_disponibles_prepa' %}", window.location.origin);
     url.searchParams.set('filter', filterType);
     console.log(`🌐 URL de l'API: ${url.toString()}`);
@@ -1404,12 +1414,33 @@ window.chargerArticlesDisponibles = function(filterType = 'tous') {
             if (typeof window.mettreAJourFiltreActif === 'function') {
                 window.mettreAJourFiltreActif(filterType);
             }
-        }).catch(error => console.error('Erreur de chargement des articles:', error));
+        })
+        .catch(error => {
+            console.error('Erreur de chargement des articles:', error);
+            // Masquer le spinner en cas d'erreur
+            const spinner = document.getElementById('articlesSpinner');
+            if (spinner) {
+                spinner.style.display = 'none';
+            }
+            // Afficher un message d'erreur
+            const tbody = document.getElementById('articlesTableBody');
+            if (tbody) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="px-4 py-8 text-center text-red-500">
+                            <div class="flex flex-col items-center">
+                                <i class="fas fa-exclamation-triangle text-3xl mb-2"></i>
+                                <p>Erreur lors du chargement des articles</p>
+                                <p class="text-sm text-gray-500 mt-2">${error.message}</p>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }
+        });
 };
 console.log('✅ window.chargerArticlesDisponibles (AJAX) définie');
 </script>
-
-<script src="{% static 'js/modal_ajout_articles.js' %}"></script>
 
 <script>
 // Fonctions globales pour les `onclick` - définies en dehors du DOMContentLoaded

@@ -6,7 +6,7 @@
 class KPIFilters {
   constructor() {
     this.filters = {
-      periode: '30days',
+      periode: '30j',
       region: 'all',
       categorie: 'all',
       zone: 'all',
@@ -84,7 +84,7 @@ class KPIFilters {
   resetAllFilters() {
     // Reset vers les valeurs par défaut
     this.filters = {
-      periode: '30days',
+      periode: '30j',
       region: 'all',
       categorie: 'all',
       zone: 'all',

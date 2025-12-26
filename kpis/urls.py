@@ -1,17 +1,21 @@
 from django.urls import path
 from . import views
+from . import views_ventes
 
 app_name = 'kpis'
 
 urlpatterns = [
     # Dashboard principal
     path('', views.dashboard, name='dashboard'),
-    
-    # APIs pour données KPIs
-    path('api/ventes/', views.ventes_data, name='ventes_data'),
-    path('api/evolution-ca/', views.evolution_ca_data, name='evolution_ca_data'),
-    path('api/top-modeles/', views.top_modeles_data, name='top_modeles_data'),
-    path('api/performance-regions/', views.performance_regions_data, name='performance_regions_data'),
+
+    # APIs pour données KPIs - Ventes
+    path('api/ventes/', views_ventes.ventes_data, name='ventes_data'),
+    path('api/evolution-ca/', views_ventes.evolution_ca_data, name='evolution_ca_data'),
+    path('api/top-modeles/', views_ventes.top_modeles_data, name='top_modeles_data'),
+    path('api/repartition-sources/', views_ventes.repartition_sources_data, name='repartition_sources_data'),
+    path('api/performance-regions/', views_ventes.performance_regions_data, name='performance_regions_data'),
+
+    # APIs pour données KPIs - Clients et autres
     path('api/clients/', views.clients_data, name='clients_data'),
     path('api/vue-quantitative/', views.vue_quantitative_data, name='vue_quantitative_data'),
     path('performance-operateurs-data/', views.performance_operateurs_data, name='performance_operateurs_data'),

@@ -1892,27 +1892,44 @@ def api_articles_disponibles_prepa(request):
 
         
 
-        # Filtrer les articles en promotion si nécessaire (approche plus sûre)
+        # Imports nécessaires pour la détection des promotions
+        from django.db.models import Exists, OuterRef
 
+        # Calculer la date/heure actuelle une seule fois
+        now = timezone.now()
+
+        # Sous-requête pour détecter les promotions actives (même logique que has_promo_active)
+        # Note: Promotion a un ManyToManyField appelé "articles" vers Article
+        promo_active_subquery = Promotion.objects.filter(
+            articles=OuterRef('pk'),
+            active=True,
+            date_debut__lte=now,
+            date_fin__gte=now
+        )
+
+        # Filtrer les articles en promotion si nécessaire
         if filter_type == 'promo':
+            articles = articles.annotate(
+                has_promo=Exists(promo_active_subquery)
+            ).filter(has_promo=True)
 
-            # Filtrer les articles qui ont un prix actuel inférieur au prix unitaire
+        # IMPORTANT: Calculer les statistiques AVANT de limiter les résultats
+        # pour avoir les vrais totaux de chaque catégorie
+        all_articles_for_stats = Article.objects.filter(actif=True)
 
-            articles = articles.filter(
+        stats_globales = {
+            "total": all_articles_for_stats.count(),
+            "upsell": all_articles_for_stats.filter(isUpsell=True).count(),
+            "liquidation": all_articles_for_stats.filter(phase='LIQUIDATION').count(),
+            "test": all_articles_for_stats.filter(phase='EN_TEST').count(),
+            "promo": all_articles_for_stats.annotate(
+                has_promo=Exists(promo_active_subquery)
+            ).filter(has_promo=True).count()
+        }
 
-                prix_actuel__isnull=False,
+        # Limiter les résultats (augmenté à 500 pour avoir tous les articles)
+        articles = articles[:500]
 
-                prix_actuel__lt=F('prix_unitaire')
-
-            )
-
-        
-
-        # Limiter les résultats
-
-        articles = articles[:50]
-
-        
 
         articles_data = []
 
@@ -1969,35 +1986,19 @@ def api_articles_disponibles_prepa(request):
                 # Déterminer le type d'article pour l'affichage
 
                 article_type = 'normal'
-
                 type_icon = 'fas fa-box'
-
                 type_color = 'text-gray-600'
-
-
-
                 if article.isUpsell:
-
                     article_type = 'upsell'
-
                     type_icon = 'fas fa-arrow-up'
-
                     type_color = 'text-purple-600'
-
                 elif article.phase == 'LIQUIDATION':
-
                     article_type = 'liquidation'
-
                     type_icon = 'fas fa-money-bill-wave'
-
                     type_color = 'text-red-600'
-
                 elif article.phase == 'EN_TEST':
-
                     article_type = 'test'
-
                     type_icon = 'fas fa-flask'
-
                     type_color = 'text-yellow-600'
 
 
@@ -2033,76 +2034,37 @@ def api_articles_disponibles_prepa(request):
                     # Note: prix_upsell_2 = niveau 1, prix_upsell_3 = niveau 2, prix_upsell_4 = niveau 3, prix_gros = niveau 4
 
                     'prix_upsell_1': float(article.prix_upsell_2) if article.prix_upsell_2 else 0.0,
-
                     'prix_upsell_2': float(article.prix_upsell_3) if article.prix_upsell_3 else 0.0,
-
                     'prix_upsell_3': float(article.prix_upsell_4) if article.prix_upsell_4 else 0.0,
-
                     'prix_upsell_4': float(article.prix_gros) if article.prix_gros else 0.0,
-
                     'qte_disponible': total_stock,  # Stock total de toutes les variantes
-
                     'isUpsell': bool(article.isUpsell),
-
                     'phase': article.phase or 'NORMAL',
-
                     'has_promo_active': article.has_promo_active,
-
                     'image_url': article.image.url if article.image else article.image_url,
-
                     'categorie': str(article.categorie) if article.categorie else '',
-
                     'genre': str(article.genre) if article.genre else '',
-
                     'modele': article.modele_complet(),
-
                     'variantes_count': variantes_actives.count(),
-
                     'has_variantes': True,  # ✅ Indique qu'il faut charger les variantes au clic
-
                     'variantes': variantes_list,  # ✅ Liste de toutes les variantes
-
                     # Propriétés pour compatibilité avec le template
-
                     'prix': float(article.prix_actuel or article.prix_unitaire),
-
                     'prix_original': float(article.prix_unitaire),
-
                     'has_reduction': article.has_promo_active,
-
                     'reduction_pourcentage': round(((float(article.prix_unitaire) - float(article.prix_actuel or article.prix_unitaire)) / float(article.prix_unitaire)) * 100, 0) if article.has_promo_active else 0,
-
                     'article_type': article_type,
-
                     'type_icon': type_icon,
-
                     'type_color': type_color,
-
                     'display_text': f"{article.nom} ({variantes_actives.count()} variantes) - {float(article.prix_actuel or article.prix_unitaire):.2f} DH"
-
                 })
 
-        
 
-        # Calculer les statistiques pour la réponse
 
-        stats = {
+        # Les statistiques globales ont déjà été calculées plus haut (avant le filtrage)
+        # On ne les recalcule pas ici pour qu'elles restent constantes
 
-            "total": len(articles_data),
 
-            "disponible": len([a for a in articles_data if a.get('qte_disponible', 0) > 0]),
-
-            "upsell": len([a for a in articles_data if a.get('isUpsell', False)]),
-
-            "liquidation": len([a for a in articles_data if a.get('phase') == 'LIQUIDATION']),
-
-            "test": len([a for a in articles_data if a.get('phase') == 'EN_TEST']),
-
-            "promo": len([a for a in articles_data if a.get('has_promo_active', False)])
-
-        }
-
-        
 
         # Retourner le format attendu par le frontend
 
@@ -2112,7 +2074,7 @@ def api_articles_disponibles_prepa(request):
 
             'articles': articles_data,
 
-            'stats': stats
+            'stats': stats_globales
 
         })
 

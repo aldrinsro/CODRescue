@@ -13,7 +13,8 @@ class YoozakKPIManager {
     this.filters = {};
     this.activeTab = 'ventes';
     this.isLoading = false;
-    this.selectedPeriod = '30j'; // Persistance de la période sélectionnée
+    this.selectedPeriod = '30j'; // Persistance de la période sélectionnée pour graphiques
+    this.selectedPeriodVentes = '30j'; // Persistance de la période pour les KPIs Ventes
 
     this.init();
   }
@@ -34,9 +35,29 @@ class YoozakKPIManager {
     const periodeLabels = {
       '7j': '7 derniers jours',
       '30j': '30 derniers jours',
-      '90j': '90 derniers jours'
+      '90j': '90 derniers jours',
+      'mois': 'mois en cours'
     };
     return periodeLabels[period] || period;
+  }
+
+  // Fonction pour mettre à jour les textes "vs" en fonction de la période
+  updateVsPeriodTexts(period) {
+    const periodLabel = this.getPeriodLabel(period);
+    const elements = document.querySelectorAll('[data-kpi-vs]');
+
+    console.log(`🔄 Mise à jour des textes "vs" pour la période: ${period} (${periodLabel})`);
+    console.log(`   Nombre d'éléments trouvés: ${elements.length}`);
+
+    elements.forEach((element, index) => {
+      const kpiId = element.getAttribute('data-kpi-vs');
+      element.textContent = `vs ${periodLabel}`;
+      console.log(`   ✅ [${index + 1}] ${kpiId}: "${element.textContent}"`);
+    });
+
+    if (elements.length === 0) {
+      console.warn(`   ⚠️ Aucun élément [data-kpi-vs] trouvé dans le DOM`);
+    }
   }
 
   init() {
@@ -370,7 +391,7 @@ class YoozakKPIManager {
     try {
       console.log('📊 Chargement complet des données Ventes...');
 
-      const response = await fetch(this.apiEndpoint + 'ventes/', {
+      const response = await fetch(this.apiEndpoint + `ventes/?period=${this.selectedPeriodVentes}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -448,68 +469,59 @@ class YoozakKPIManager {
 
   async updateVentesEvolutionCAChart(data) {
     const chartId = 'ventes-evolution-ca-chart';
-    let canvasElement = document.getElementById(chartId);
+    const canvasElement = document.getElementById(chartId);
+    const initialLoading = document.getElementById('evolution-ca-initial-loading');
+    const emptyState = document.getElementById('evolution-ca-empty');
 
     if (!canvasElement) {
-      const container = document.querySelector('.evolution-ca-container');
-      if (!container) return;
-
-      // Créer le HTML avec la période persistée
-      container.innerHTML = `
-        <div class="flex items-center justify-between mb-4">
-          <div>
-          <h3 class="text-lg font-semibold text-gray-900">📈 Evolution du CA</h3>
-            <p id="periode-indicator" class="text-sm text-blue-600 font-medium">Période: ${this.getPeriodLabel(this.selectedPeriod)}</p>
-          </div>
-          <div class="flex gap-2">
-            <button onclick="window.yoozakKPI.changeEvolutionPeriod('7j')" class="text-xs px-3 py-1.5 ${this.selectedPeriod === '7j' ? 'bg-blue-100 text-blue-600 font-medium' : 'bg-gray-100 text-gray-600'} rounded-lg period-btn hover:bg-blue-50 transition-colors" data-period="7j">7 jours</button>
-            <button onclick="window.yoozakKPI.changeEvolutionPeriod('30j')" class="text-xs px-3 py-1.5 ${this.selectedPeriod === '30j' ? 'bg-blue-100 text-blue-600 font-medium' : 'bg-gray-100 text-gray-600'} rounded-lg period-btn hover:bg-blue-50 transition-colors" data-period="30j">30 jours</button>
-            <button onclick="window.yoozakKPI.changeEvolutionPeriod('90j')" class="text-xs px-3 py-1.5 ${this.selectedPeriod === '90j' ? 'bg-blue-100 text-blue-600 font-medium' : 'bg-gray-100 text-gray-600'} rounded-lg period-btn hover:bg-blue-50 transition-colors" data-period="90j">90 jours</button>
-          </div>
-        </div>
-        <div class="relative">
-          <canvas id="${chartId}" width="400" height="200"></canvas>
-          <div id="evolution-ca-loading" class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center hidden">
-            <i class="fas fa-spinner fa-spin text-blue-600"></i>
-          </div>
-        </div>
-      `;
-      canvasElement = document.getElementById(chartId);
+      console.error('❌ Canvas element not found');
+      return;
     }
 
     try {
       // Utiliser la période sélectionnée au lieu de '30j' en dur
       const evolutionData = await this.fetchEvolutionCAData(this.selectedPeriod);
 
+      // Mettre à jour l'indicateur de période
+      const periodeIndicator = document.getElementById('periode-indicator');
+      if (periodeIndicator) {
+        periodeIndicator.textContent = `Période: ${this.getPeriodLabel(this.selectedPeriod)}`;
+      }
+
+      // Mettre à jour l'état actif des boutons de période
+      document.querySelectorAll('.period-btn').forEach(btn => {
+        const period = btn.dataset.period;
+        if (period === this.selectedPeriod) {
+          btn.classList.remove('bg-gray-100', 'text-gray-600');
+          btn.classList.add('bg-blue-100', 'text-blue-600', 'font-medium');
+        } else {
+          btn.classList.remove('bg-blue-100', 'text-blue-600', 'font-medium');
+          btn.classList.add('bg-gray-100', 'text-gray-600');
+        }
+      });
+
       // Vérifier s'il y a des données
       if (!evolutionData || !evolutionData.values || evolutionData.values.length === 0 || evolutionData.values.every(val => val === 0)) {
-        const container = document.querySelector('.evolution-ca-container');
-        if (container) {
-          container.innerHTML = `
-            <div class="flex items-center justify-between mb-4">
-              <div>
-                <h3 class="text-lg font-semibold text-gray-900">📈 Evolution du CA</h3>
-                <p class="text-sm text-blue-600 font-medium">Période: ${this.getPeriodLabel(this.selectedPeriod)}</p>
-              </div>
-              <div class="flex gap-2">
-                <button onclick="window.yoozakKPI.changeEvolutionPeriod('7j')" class="text-xs px-3 py-1.5 ${this.selectedPeriod === '7j' ? 'bg-blue-100 text-blue-600 font-medium' : 'bg-gray-100 text-gray-600'} rounded-lg period-btn hover:bg-blue-50 transition-colors" data-period="7j">7 jours</button>
-                <button onclick="window.yoozakKPI.changeEvolutionPeriod('30j')" class="text-xs px-3 py-1.5 ${this.selectedPeriod === '30j' ? 'bg-blue-100 text-blue-600 font-medium' : 'bg-gray-100 text-gray-600'} rounded-lg period-btn hover:bg-blue-50 transition-colors" data-period="30j">30 jours</button>
-                <button onclick="window.yoozakKPI.changeEvolutionPeriod('90j')" class="text-xs px-3 py-1.5 ${this.selectedPeriod === '90j' ? 'bg-blue-100 text-blue-600 font-medium' : 'bg-gray-100 text-gray-600'} rounded-lg period-btn hover:bg-blue-50 transition-colors" data-period="90j">90 jours</button>
-              </div>
-            </div>
-            <div class="h-64 bg-blue-50 border-2 border-dashed border-blue-200 rounded-lg flex items-center justify-center">
-              <div class="text-center">
-                <i class="fas fa-chart-line text-blue-400 text-3xl mb-3"></i>
-                <h4 class="text-lg font-semibold text-blue-900 mb-2">Aucune donnée de ventes</h4>
-                <p class="text-blue-700 text-sm">Aucune commande livrée sur la période sélectionnée</p>
-                <p class="text-blue-600 text-xs mt-1">Les données apparaîtront dès qu'il y aura des livraisons</p>
-              </div>
-            </div>
-          `;
-        }
+        // Afficher l'état vide
+        if (initialLoading) initialLoading.classList.add('hidden');
+        if (canvasElement) canvasElement.classList.add('hidden');
+        if (emptyState) emptyState.classList.remove('hidden');
+
+        // Réinitialiser les statistiques
+        document.getElementById('stat-ca-total').textContent = '0 DH';
+        document.getElementById('stat-ca-moyen').textContent = '0 DH';
+        document.getElementById('stat-tendance').textContent = '0%';
+        document.getElementById('stat-tendance').className = 'font-bold text-sm text-gray-400';
+
         return;
       }
 
+      // Masquer l'état initial et l'état vide, afficher le canvas
+      if (initialLoading) initialLoading.classList.add('hidden');
+      if (emptyState) emptyState.classList.add('hidden');
+      if (canvasElement) canvasElement.classList.remove('hidden');
+
+      // Détruire l'ancien graphique si existant
       if (this.charts.has(chartId)) {
         this.charts.get(chartId).destroy();
       }
@@ -594,14 +606,59 @@ class YoozakKPIManager {
       this.charts.set(chartId, chart);
       console.log('✅ Graphique Evolution CA mis à jour');
 
+      // Mettre à jour les statistiques
+      this.updateEvolutionStats(evolutionData.resume);
+
     } catch (error) {
       console.error('❌ Erreur création graphique Evolution CA:', error);
-      canvasElement.parentElement.innerHTML = '<div class="h-64 flex items-center justify-center text-gray-500"><i class="fas fa-exclamation-triangle mr-2"></i>Erreur de chargement</div>';
+      // En cas d'erreur, afficher l'état vide
+      if (initialLoading) initialLoading.classList.add('hidden');
+      if (canvasElement) canvasElement.classList.add('hidden');
+      if (emptyState) {
+        emptyState.classList.remove('hidden');
+        emptyState.querySelector('h4').textContent = 'Erreur de chargement';
+        emptyState.querySelector('p').textContent = 'Impossible de charger les données. Veuillez réessayer.';
+      }
     }
   }
 
+  // Fonction pour mettre à jour les statistiques d'évolution du CA
+  updateEvolutionStats(resume) {
+    if (!resume) return;
+
+    // Formater les valeurs
+    const formatNumber = (num) => {
+      if (!num || num === 0) return '0 DH';
+      return `${Math.round(num).toLocaleString('fr-FR')} DH`;
+    };
+
+    const formatTendance = (tendance) => {
+      if (!tendance || tendance === 0) return { text: '0%', color: 'text-gray-600' };
+      const signe = tendance > 0 ? '+' : '';
+      const color = tendance > 0 ? 'text-green-600' : 'text-red-600';
+      const icon = tendance > 0 ? '↗' : '↘';
+      return { text: `${signe}${tendance.toFixed(1)}% ${icon}`, color };
+    };
+
+    // Mise à jour du DOM
+    const caTotal = document.getElementById('stat-ca-total');
+    const caMoyen = document.getElementById('stat-ca-moyen');
+    const tendance = document.getElementById('stat-tendance');
+
+    if (caTotal) caTotal.textContent = formatNumber(resume.ca_total);
+    if (caMoyen) caMoyen.textContent = formatNumber(resume.ca_moyen);
+
+    if (tendance) {
+      const tendanceFormatee = formatTendance(resume.tendance);
+      tendance.textContent = tendanceFormatee.text;
+      tendance.className = `font-bold text-sm ${tendanceFormatee.color}`;
+    }
+
+    console.log('✅ Statistiques d\'évolution mises à jour:', resume);
+  }
+
   async updateTopModelesChart(modeles = null) {
-    const chartId = 'top-modeles-chart';
+    const chartId = 'repartition-sources-chart';
     let canvasElement = document.getElementById(chartId);
 
     if (!canvasElement) {
@@ -610,8 +667,8 @@ class YoozakKPIManager {
 
       container.innerHTML = `
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-lg font-semibold text-gray-900">🏆 Top Modèles (CA)</h3>
-          <div class="text-xs text-gray-500">Top 5 par chiffre d'affaires</div>
+          <h3 class="text-lg font-semibold text-gray-900">📊 Répartition par Source</h3>
+          <div class="text-xs text-gray-500">Youcan, Shopify, Autres</div>
         </div>
         <div class="relative">
           <canvas id="${chartId}" width="400" height="200"></canvas>
@@ -624,27 +681,25 @@ class YoozakKPIManager {
     }
 
     try {
-      // Si pas de données passées, récupérer depuis l'API
-      if (!modeles) {
-        document.getElementById('top-modeles-loading').classList.remove('hidden');
-        modeles = await this.fetchTopModelesData();
-        document.getElementById('top-modeles-loading').classList.add('hidden');
-      }
+      // Charger les données depuis la nouvelle API
+      document.getElementById('top-modeles-loading')?.classList.remove('hidden');
+      const sources = await this.fetchRepartitionSourcesData();
+      document.getElementById('top-modeles-loading')?.classList.add('hidden');
 
-      if (!modeles || modeles.length === 0) {
+      if (!sources || sources.length === 0) {
         const container = document.querySelector('.top-modeles-container');
         if (container) {
           container.innerHTML = `
             <div class="flex items-center justify-between mb-4">
-              <h3 class="text-lg font-semibold text-gray-900">🏆 Top Modèles (CA)</h3>
-              <div class="text-xs text-gray-500">Top 5 par chiffre d'affaires</div>
+              <h3 class="text-lg font-semibold text-gray-900">📊 Répartition par Source</h3>
+              <div class="text-xs text-gray-500">Youcan, Shopify, Autres</div>
             </div>
             <div class="h-64 bg-yellow-50 border-2 border-dashed border-yellow-200 rounded-lg flex items-center justify-center">
               <div class="text-center">
-                <i class="fas fa-crown text-yellow-400 text-3xl mb-3"></i>
-                <h4 class="text-lg font-semibold text-yellow-900 mb-2">Aucun modèle vendu</h4>
+                <i class="fas fa-chart-pie text-yellow-400 text-3xl mb-3"></i>
+                <h4 class="text-lg font-semibold text-yellow-900 mb-2">Aucune donnée disponible</h4>
                 <p class="text-yellow-700 text-sm">Aucune commande livrée pour cette période</p>
-                <p class="text-yellow-600 text-xs mt-1">Le classement apparaîtra dès qu'il y aura des livraisons</p>
+                <p class="text-yellow-600 text-xs mt-1">La répartition apparaîtra dès qu'il y aura des livraisons</p>
               </div>
             </div>
           `;
@@ -656,52 +711,21 @@ class YoozakKPIManager {
         this.charts.get(chartId).destroy();
       }
 
-      // Prendre seulement les 5 premiers et valider
-      const topModeles = Array.isArray(modeles) ? modeles.slice(0, 5) : [];
-      
-      // Vérifier qu'il y a des données valides
-      if (topModeles.length === 0) {
-        const container = document.querySelector('.top-modeles-container');
-        if (container) {
-          container.innerHTML = `
-            <div class="flex items-center justify-between mb-4">
-              <h3 class="text-lg font-semibold text-gray-900">🏆 Top Modèles (CA)</h3>
-              <div class="text-xs text-gray-500">Top 5 par chiffre d'affaires</div>
-            </div>
-            <div class="h-64 bg-yellow-50 border-2 border-dashed border-yellow-200 rounded-lg flex items-center justify-center">
-              <div class="text-center">
-                <i class="fas fa-crown text-yellow-400 text-3xl mb-3"></i>
-                <h4 class="text-lg font-semibold text-yellow-900 mb-2">Aucun modèle vendu</h4>
-                <p class="text-yellow-700 text-sm">Aucune commande livrée pour cette période</p>
-                <p class="text-yellow-600 text-xs mt-1">Le classement apparaîtra dès qu'il y aura des livraisons</p>
-              </div>
-            </div>
-          `;
-        }
-        return;
-      }
-
-      const labels = topModeles.map(model =>
-        model && model.nom ? (model.nom.length > 15 ? model.nom.substring(0, 15) + '...' : model.nom) : 'Sans nom'
-      );
-      const values = topModeles.map(model => model && typeof model.ca === 'number' ? model.ca : 0);
-      const backgroundColors = topModeles.map(model => model && model.couleur ? model.couleur : '#3b82f6');
+      // Préparer les données pour le Pie Chart
+      const labels = sources.map(s => s.source);
+      const values = sources.map(s => s.ca);
+      const backgroundColors = sources.map(s => s.couleur);
 
       const ctx = canvasElement.getContext('2d');
       const chart = new Chart(ctx, {
-        type: 'bar',
+        type: 'pie',
         data: {
           labels: labels,
           datasets: [{
-            label: 'Chiffre d\'Affaires (DH)',
             data: values,
-            backgroundColor: backgroundColors.map(color => (color || '#3b82f6') + '20'),
-            borderColor: backgroundColors,
-            borderWidth: 2,
-            borderRadius: 6,
-            borderSkipped: false,
-            barThickness: 'flex',
-            maxBarThickness: 60
+            backgroundColor: backgroundColors,
+            borderColor: '#ffffff',
+            borderWidth: 2
           }]
         },
         options: {
@@ -709,7 +733,15 @@ class YoozakKPIManager {
           maintainAspectRatio: false,
           plugins: {
             legend: {
-              display: false
+              display: true,
+              position: 'right',
+              labels: {
+                color: '#374151',
+                font: { size: 11 },
+                padding: 10,
+                usePointStyle: true,
+                pointStyle: 'circle'
+              }
             },
             tooltip: {
               backgroundColor: 'rgba(0, 0, 0, 0.8)',
@@ -718,44 +750,15 @@ class YoozakKPIManager {
               borderColor: '#3b82f6',
               borderWidth: 1,
               cornerRadius: 6,
-              displayColors: false,
               callbacks: {
-                title: function (context) {
-                  return topModeles[context[0].dataIndex].nom;
-                },
                 label: function (context) {
-                  const model = topModeles[context.dataIndex];
+                  const source = sources[context.dataIndex];
                   return [
-                    `CA: ${context.parsed.y.toLocaleString('fr-FR')} DH`,
-                    `Ventes: ${model.nb_ventes} unités`,
-                    `Réf: ${model.reference}`
+                    `${source.source}`,
+                    `CA: ${source.ca_formate} DH`,
+                    `Commandes: ${source.nb_commandes}`,
+                    `Part: ${source.pourcentage}%`
                   ];
-                }
-              }
-            }
-          },
-          scales: {
-            x: {
-              grid: {
-                display: false
-              },
-              ticks: {
-                color: '#6b7280',
-                font: { size: 11 },
-                maxRotation: 45,
-                minRotation: 0
-              }
-            },
-            y: {
-              beginAtZero: true,
-              grid: {
-                color: 'rgba(0, 0, 0, 0.05)'
-              },
-              ticks: {
-                color: '#6b7280',
-                font: { size: 11 },
-                callback: function (value) {
-                  return value.toLocaleString('fr-FR') + ' DH';
                 }
               }
             }
@@ -768,11 +771,39 @@ class YoozakKPIManager {
       });
 
       this.charts.set(chartId, chart);
-      console.log('✅ Graphique Top Modèles créé avec succès');
+      console.log('✅ Graphique Répartition Sources créé avec succès');
 
     } catch (error) {
       console.error('❌ Erreur création graphique Top Modèles:', error);
       canvasElement.parentElement.innerHTML = '<div class="h-64 flex items-center justify-center text-gray-500"><i class="fas fa-exclamation-triangle mr-2"></i>Erreur de chargement</div>';
+    }
+  }
+
+  async fetchRepartitionSourcesData(period = '30j') {
+    try {
+      const response = await fetch(`${this.apiEndpoint}repartition-sources/?period=${period}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        return data.sources;
+      } else {
+        throw new Error(data.message || 'Erreur lors du chargement de la répartition par sources');
+      }
+
+    } catch (error) {
+      console.error('❌ Erreur récupération répartition sources:', error);
+      return [];
     }
   }
 
@@ -800,15 +831,7 @@ class YoozakKPIManager {
 
     } catch (error) {
       console.error('❌ Erreur récupération top modèles:', error);
-
-      // Données de fallback
-      return [
-        { nom: 'Classic Leather Boot', ca: 25000, nb_ventes: 45, reference: 'CLB-001', couleur: '#3b82f6' },
-        { nom: 'Summer Sandal Pro', ca: 18500, nb_ventes: 62, reference: 'SSP-002', couleur: '#10b981' },
-        { nom: 'Sport Runner Elite', ca: 15200, nb_ventes: 38, reference: 'SRE-003', couleur: '#f59e0b' },
-        { nom: 'Casual Comfort Walk', ca: 12800, nb_ventes: 41, reference: 'CCW-004', couleur: '#8b5cf6' },
-        { nom: 'Urban Style Sneaker', ca: 11400, nb_ventes: 29, reference: 'USS-005', couleur: '#ef4444' }
-      ];
+      return [];
     }
   }
 
@@ -849,34 +872,13 @@ class YoozakKPIManager {
     } catch (error) {
       console.error('❌ Erreur récupération données évolution CA:', error);
 
-      // Données de fallback
-      const days = parseInt(period.replace('j', ''));
-      const fallbackData = {
+      // Retourner des données vides au lieu de données aléatoires
+      return {
         labels: [],
         values: [],
         raw: [],
         resume: { ca_total: 0, ca_moyen: 0, tendance: 0 }
       };
-
-      for (let i = days - 1; i >= 0; i--) {
-        const date = new Date();
-        date.setDate(date.getDate() - i);
-        const ca = Math.floor(Math.random() * 50000) + 10000;
-
-        fallbackData.labels.push(date.toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' }));
-        fallbackData.values.push(ca);
-        fallbackData.raw.push({
-          date: date.toISOString().split('T')[0],
-          date_formatee: date.toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' }),
-          ca: ca,
-          ca_formate: `${ca.toLocaleString('fr-FR')} DH`
-        });
-      }
-
-      fallbackData.resume.ca_total = fallbackData.values.reduce((a, b) => a + b, 0);
-      fallbackData.resume.ca_moyen = fallbackData.resume.ca_total / fallbackData.values.length;
-
-      return fallbackData;
     }
   }
 
@@ -886,40 +888,16 @@ class YoozakKPIManager {
     // Persister la période sélectionnée
     this.selectedPeriod = period;
 
-    // Mise à jour visuelle des boutons
-    document.querySelectorAll('.period-btn').forEach(btn => {
-      btn.classList.remove('bg-blue-100', 'text-blue-600', 'font-medium');
-      btn.classList.add('bg-gray-100', 'text-gray-600');
-    });
-
-    const activeBtn = document.querySelector(`[data-period="${period}"]`);
-    if (activeBtn) {
-      activeBtn.classList.remove('bg-gray-100', 'text-gray-600');
-      activeBtn.classList.add('bg-blue-100', 'text-blue-600', 'font-medium');
-    }
-
-    // Mise à jour de l'indicateur de période
-    const periodeIndicator = document.getElementById('periode-indicator');
-    if (periodeIndicator) {
-      periodeIndicator.textContent = `Période: ${this.getPeriodLabel(period)}`;
-    }
-
-    // Affichage du loading
+    // Affichage du loading overlay
     const loadingElement = document.getElementById('evolution-ca-loading');
     if (loadingElement) {
       loadingElement.classList.remove('hidden');
     }
 
     try {
-      const evolutionData = await this.fetchEvolutionCAData(period);
-
-      const chartId = 'ventes-ca-evolution-chart';
-      if (this.charts.has(chartId)) {
-        const chart = this.charts.get(chartId);
-        chart.data.labels = evolutionData.labels;
-        chart.data.datasets[0].data = evolutionData.values;
-        chart.update('active');
-      }
+      // Recharger complètement le graphique avec la nouvelle période
+      // Cela mettra à jour automatiquement les boutons, l'indicateur et le graphique
+      await this.updateVentesEvolutionCAChart();
 
       console.log('✅ Période mise à jour avec succès:', period);
 
@@ -927,6 +905,7 @@ class YoozakKPIManager {
       console.error('❌ Erreur changement période:', error);
 
       // Notification d'erreur à l'utilisateur
+      const periodeIndicator = document.getElementById('periode-indicator');
       if (periodeIndicator) {
         const originalText = periodeIndicator.textContent;
         periodeIndicator.textContent = '❌ Erreur lors du changement de période';
@@ -954,6 +933,31 @@ class YoozakKPIManager {
     this.refreshData();
   }
 
+  async changePeriodeVentes(period) {
+    console.log(`🔄 Changement période Ventes: ${period}`);
+
+    // Persister la période sélectionnée
+    this.selectedPeriodVentes = period;
+
+    // Mise à jour visuelle des boutons
+    document.querySelectorAll('.periode-ventes-btn').forEach(btn => {
+      btn.classList.remove('bg-blue-600', 'text-white', 'font-medium');
+      btn.classList.add('bg-gray-100', 'text-gray-600');
+    });
+
+    const activeBtn = document.querySelector(`.periode-ventes-btn[data-period="${period}"]`);
+    if (activeBtn) {
+      activeBtn.classList.remove('bg-gray-100', 'text-gray-600');
+      activeBtn.classList.add('bg-blue-600', 'text-white', 'font-medium');
+    }
+
+    // Mettre à jour les textes "vs" pour tous les KPIs
+    this.updateVsPeriodTexts(period);
+
+    // Recharger toutes les données avec la nouvelle période
+    await this.loadVentesData();
+  }
+
   updateVentesKPIs(data) {
     console.log('🔄 Mise à jour des KPIs Ventes...', data);
 
@@ -961,6 +965,9 @@ class YoozakKPIManager {
       // Afficher le contenu principal et masquer le loading
       document.getElementById('ventes-loading')?.classList.add('hidden');
       document.getElementById('ventes-main-content')?.classList.remove('hidden');
+
+      // Mettre à jour les textes "vs" IMMÉDIATEMENT après l'affichage du contenu
+      this.updateVsPeriodTexts(this.selectedPeriodVentes);
 
       // KPIs principaux
       if (data.kpis_principaux) {
@@ -971,39 +978,25 @@ class YoozakKPIManager {
 
       // KPIs secondaires
       if (data.kpis_secondaires) {
-        // Top modèle avec vérification des données
-        if (data.kpis_secondaires.top_modele && data.kpis_secondaires.top_modele.nom) {
-          this.updateVentesKPICard('top_modele', {
-            nom: data.kpis_secondaires.top_modele.nom,
-            valeur_formatee: data.kpis_secondaires.top_modele.nom,
-            sub_value: data.kpis_secondaires.top_modele.ca ? `${data.kpis_secondaires.top_modele.ca.toLocaleString('fr-FR')} DH` : 'N/A',
-            tendance: data.kpis_secondaires.top_modele.pourcentage || 0,
-            pourcentage: data.kpis_secondaires.top_modele.pourcentage || 0,
-            unite: ''
-          });
+        // Top 3 modèles avec vérification des données
+        if (data.kpis_secondaires.top_modeles_kpi && data.kpis_secondaires.top_modeles_kpi.length > 0) {
+          this.updateTopModelesCard(data.kpis_secondaires.top_modeles_kpi);
+        } else {
+          this.showTopModelesEmpty();
         }
 
-        // Top région avec vérification des données
-        if (data.kpis_secondaires.top_region && data.kpis_secondaires.top_region.nom) {
-          this.updateVentesKPICard('top_region', {
-            nom: data.kpis_secondaires.top_region.nom,
-            valeur_formatee: data.kpis_secondaires.top_region.nom,
-            sub_value: data.kpis_secondaires.top_region.ca ? `${data.kpis_secondaires.top_region.ca.toLocaleString('fr-FR')} DH` : 'N/A',
-            tendance: data.kpis_secondaires.top_region.pourcentage || 0,
-            pourcentage: data.kpis_secondaires.top_region.pourcentage || 0,
-            unite: '',
-            est_donnees_manquantes: data.kpis_secondaires.top_region.est_donnees_manquantes || false
-          });
+        // Top 3 villes avec vérification des données
+        if (data.kpis_secondaires.top_villes && data.kpis_secondaires.top_villes.length > 0) {
+          this.updateTopVillesCard(data.kpis_secondaires.top_villes);
+        } else {
+          this.showTopVillesEmpty();
         }
 
-        // Commande max avec vérification des données
-        if (data.kpis_secondaires.commande_max && data.kpis_secondaires.commande_max.valeur_formatee) {
-          this.updateVentesKPICard('commande_max', {
-            valeur_formatee: data.kpis_secondaires.commande_max.valeur_formatee,
-            sub_value: 'Record ce mois',
-            tendance: 0,
-            unite: 'DH'
-        });
+        // TOP 3 Commandes max avec vérification des données
+        if (data.kpis_secondaires.top_commandes_max && data.kpis_secondaires.top_commandes_max.length > 0) {
+          this.updateTopCommandesCard(data.kpis_secondaires.top_commandes_max);
+        } else {
+          this.showTopCommandesEmpty();
         }
       }
 
@@ -1011,6 +1004,175 @@ class YoozakKPIManager {
     } catch (error) {
       console.error('❌ Erreur lors de la mise à jour des KPIs Ventes:', error);
     }
+  }
+
+  // Nouvelle fonction pour mettre à jour le Top 3 des modèles
+  updateTopModelesCard(modeles) {
+    const container = document.getElementById('top-modeles-list');
+    const emptyState = document.getElementById('top-modeles-empty');
+
+    if (!container) return;
+
+    // Masquer l'état vide
+    if (emptyState) emptyState.classList.add('hidden');
+
+    // Couleurs et icônes pour chaque rang (similaire aux villes mais thème produit)
+    const rangs = [
+      { couleur: 'yellow', icon: 'fa-crown', bg: 'bg-yellow-50', text: 'text-yellow-600', border: 'border-yellow-200' },
+      { couleur: 'purple', icon: 'fa-star', bg: 'bg-purple-50', text: 'text-purple-600', border: 'border-purple-200' },
+      { couleur: 'orange', icon: 'fa-gem', bg: 'bg-orange-50', text: 'text-orange-600', border: 'border-orange-200' }
+    ];
+
+    // Construire le HTML
+    let html = '';
+    modeles.forEach((modele, index) => {
+      const rang = rangs[index] || rangs[2]; // Fallback sur la 3ème couleur
+
+      html += `
+        <div class="flex items-center justify-between p-3 ${rang.bg} border ${rang.border} rounded-lg hover:shadow-sm transition-shadow">
+          <div class="flex items-center gap-3 flex-1">
+            <div class="flex items-center justify-center w-8 h-8 ${rang.bg} ${rang.text} rounded-full border ${rang.border}">
+              <i class="fas ${rang.icon} text-xs"></i>
+            </div>
+            <div class="flex-1">
+              <p class="font-semibold text-gray-900 text-sm" title="${modele.nom}">${modele.nom.length > 25 ? modele.nom.substring(0, 25) + '...' : modele.nom}</p>
+              <p class="text-xs text-gray-500">${modele.ca_formate} • ${modele.quantite} unités</p>
+            </div>
+          </div>
+          <div class="text-right">
+            <div class="inline-flex items-center gap-1 px-2 py-1 ${rang.bg} ${rang.text} rounded-full">
+              <span class="text-xs font-bold">${modele.pourcentage}%</span>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+
+    container.innerHTML = html;
+    console.log('✅ Top 3 modèles mis à jour:', modeles);
+  }
+
+  // Fonction pour afficher l'état vide pour les modèles
+  showTopModelesEmpty() {
+    const container = document.getElementById('top-modeles-list');
+    const emptyState = document.getElementById('top-modeles-empty');
+
+    if (container) container.innerHTML = '';
+    if (emptyState) emptyState.classList.remove('hidden');
+
+    console.log('⚠️ Aucune donnée de modèles disponible');
+  }
+
+  // Nouvelle fonction pour mettre à jour le Top 3 des villes
+  updateTopVillesCard(villes) {
+    const container = document.getElementById('top-villes-list');
+    const emptyState = document.getElementById('top-villes-empty');
+
+    if (!container) return;
+
+    // Masquer l'état vide
+    if (emptyState) emptyState.classList.add('hidden');
+
+    // Couleurs et icônes pour chaque rang
+    const rangs = [
+      { couleur: 'yellow', icon: 'fa-trophy', bg: 'bg-yellow-50', text: 'text-yellow-600', border: 'border-yellow-200' },
+      { couleur: 'blue', icon: 'fa-medal', bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-200' },
+      { couleur: 'green', icon: 'fa-award', bg: 'bg-green-50', text: 'text-green-600', border: 'border-green-200' }
+    ];
+
+    // Construire le HTML
+    let html = '';
+    villes.forEach((ville, index) => {
+      const rang = rangs[index] || rangs[2]; // Fallback sur la 3ème couleur
+
+      html += `
+        <div class="flex items-center justify-between p-3 ${rang.bg} border ${rang.border} rounded-lg hover:shadow-sm transition-shadow">
+          <div class="flex items-center gap-3 flex-1">
+            <div class="flex items-center justify-center w-8 h-8 ${rang.bg} ${rang.text} rounded-full border ${rang.border}">
+              <i class="fas ${rang.icon} text-xs"></i>
+            </div>
+            <div class="flex-1">
+              <p class="font-semibold text-gray-900 text-sm">${ville.nom}</p>
+              <p class="text-xs text-gray-500">${ville.ca_formate}</p>
+            </div>
+          </div>
+          <div class="text-right">
+            <div class="inline-flex items-center gap-1 px-2 py-1 ${rang.bg} ${rang.text} rounded-full">
+              <span class="text-xs font-bold">${ville.pourcentage}%</span>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+
+    container.innerHTML = html;
+    console.log('✅ Top 3 villes mis à jour:', villes);
+  }
+
+  // Fonction pour afficher l'état vide pour les villes
+  showTopVillesEmpty() {
+    const container = document.getElementById('top-villes-list');
+    const emptyState = document.getElementById('top-villes-empty');
+
+    if (container) container.innerHTML = '';
+    if (emptyState) emptyState.classList.remove('hidden');
+
+    console.log('⚠️ Aucune donnée de villes disponible');
+  }
+
+  // Nouvelle fonction pour mettre à jour le TOP 3 des commandes
+  updateTopCommandesCard(commandes) {
+    const container = document.getElementById('top-commandes-list');
+    const emptyState = document.getElementById('top-commandes-empty');
+
+    if (!container) return;
+
+    // Masquer l'état vide
+    if (emptyState) emptyState.classList.add('hidden');
+
+    // Couleurs et icônes pour chaque rang (thème trophée)
+    const rangs = [
+      { couleur: 'orange', icon: 'fa-trophy', bg: 'bg-orange-50', text: 'text-orange-600', border: 'border-orange-200' },
+      { couleur: 'yellow', icon: 'fa-medal', bg: 'bg-yellow-50', text: 'text-yellow-600', border: 'border-yellow-200' },
+      { couleur: 'gray', icon: 'fa-award', bg: 'bg-gray-50', text: 'text-gray-600', border: 'border-gray-200' }
+    ];
+
+    // Construire le HTML
+    let html = '';
+    commandes.forEach((commande, index) => {
+      const rang = rangs[index] || rangs[2]; // Fallback sur la 3ème couleur
+
+      html += `
+        <div class="flex items-center justify-between p-3 ${rang.bg} border ${rang.border} rounded-lg hover:shadow-sm transition-shadow">
+          <div class="flex items-center gap-3 flex-1">
+            <div class="flex items-center justify-center w-8 h-8 ${rang.bg} ${rang.text} rounded-full border ${rang.border}">
+              <i class="fas ${rang.icon} text-xs"></i>
+            </div>
+            <div class="flex-1">
+              <p class="font-semibold text-gray-900 text-sm">Nº${commande.id_yz || 'N/A'}</p>
+              <p class="text-xs text-gray-500">${commande.client} • ${commande.date}</p>
+            </div>
+          </div>
+          <div class="text-right">
+            <div class="font-bold ${rang.text} text-sm">${commande.montant_formate} DH</div>
+          </div>
+        </div>
+      `;
+    });
+
+    container.innerHTML = html;
+    console.log('✅ TOP 3 commandes mis à jour:', commandes);
+  }
+
+  // Fonction pour afficher l'état vide pour les commandes
+  showTopCommandesEmpty() {
+    const container = document.getElementById('top-commandes-list');
+    const emptyState = document.getElementById('top-commandes-empty');
+
+    if (container) container.innerHTML = '';
+    if (emptyState) emptyState.classList.remove('hidden');
+
+    console.log('⚠️ Aucune donnée de commandes disponible');
   }
 
   // Nouvelle fonction pour mettre à jour les KPIs avec la structure des cartes Ventes
@@ -1023,45 +1185,11 @@ class YoozakKPIManager {
       return;
     }
 
-    // Gestion spéciale pour les KPIs secondaires avec données manquantes
-    if (kpiId === 'top_region' && kpiData.est_donnees_manquantes) {
-      // Cas spécial : affichage simple pour données géographiques manquantes
-      const valueElement = document.querySelector(`[data-kpi="${kpiId}"]`);
-      const subValueElement = document.querySelector(`[data-kpi-sub="${kpiId}"]`);
-      const trendElement = document.querySelector(`[data-kpi-trend="${kpiId}"]`);
-      const uniteElement = document.querySelector(`[data-kpi-unite="${kpiId}"]`);
-
-      if (valueElement) {
-        valueElement.textContent = kpiData.nom || 'Données manquantes';
-        valueElement.className = valueElement.className.replace('text-gray-900', 'text-orange-600');
-        valueElement.style.fontSize = '14px';
-      }
-      if (subValueElement) {
-        subValueElement.style.display = 'none'; // Masquer complètement
-      }
-      if (uniteElement) {
-        uniteElement.style.display = 'none'; // Masquer complètement
-      }
-      if (trendElement) {
-        // Masquer complètement toute la section tendance
-        const trendParent = trendElement.closest('.text-right');
-        if (trendParent) {
-          trendParent.style.display = 'none';
-        }
-      }
-      return;
-    }
-
     // Mettre à jour la valeur principale
     const valueElement = document.querySelector(`[data-kpi="${kpiId}"]`);
     if (valueElement) {
-      if (kpiId === 'top_modele' || kpiId === 'top_region') {
-        // Pour les KPIs secondaires, afficher le nom
-        valueElement.textContent = kpiData.nom || kpiData.valeur_formatee || kpiData.valeur || '-';
-      } else {
-        // Pour les KPIs principaux, afficher la valeur formatée
-        valueElement.textContent = kpiData.valeur_formatee || kpiData.valeur || '-';
-      }
+      // Pour tous les KPIs, afficher la valeur formatée
+      valueElement.textContent = kpiData.valeur_formatee || kpiData.valeur || '-';
       console.log(`✅ Valeur mise à jour pour ${kpiId}: ${valueElement.textContent}`);
     } else {
       console.warn(`❌ Élément [data-kpi="${kpiId}"] introuvable`);
@@ -1095,12 +1223,7 @@ class YoozakKPIManager {
       // Mettre à jour le texte de la tendance
       const spanElement = trendElement.querySelector('span');
       if (spanElement) {
-        // Pour les KPIs secondaires, on affiche le pourcentage
-        if (kpiId === 'top_modele' || kpiId === 'top_region') {
-          spanElement.textContent = kpiData.pourcentage ? `${kpiData.pourcentage}%` : '-';
-        } else {
-          spanElement.textContent = isPositive ? `+${trend}%` : `${trend}%`;
-        }
+        spanElement.textContent = isPositive ? `+${trend}%` : `${trend}%`;
         spanElement.className = isPositive ? 'text-green-600' : isNegative ? 'text-red-600' : 'text-gray-600';
       }
     }
@@ -1396,6 +1519,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Vérification de l'attachement pour debug
   console.log('🔗 window.yoozakKPI attaché:', !!window.yoozakKPI);
   console.log('🔗 changeEvolutionPeriod disponible:', typeof window.yoozakKPI.changeEvolutionPeriod);
+  console.log('🔗 changePeriodeVentes disponible:', typeof window.yoozakKPI.changePeriodeVentes);
 });
 
 // Export pour utilisation dans d'autres modules
