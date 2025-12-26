@@ -65,8 +65,8 @@
                                    class="w-full p-3 bg-gray-100 border rounded-lg text-gray-600">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Total (Non modifiable)</label>
-                            <input type="text" value="{{ commande.total_cmd|floatformat:2 }} DH" readonly
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Source </label>
+                            <input type="text" value="{{commande.source}}" readonly
                                    class="w-full p-3 bg-gray-100 border rounded-lg text-gray-600">
                         </div>
                     </div>
@@ -124,54 +124,146 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                             
                         <div>
-                            <label for="ville-select" class="block text-sm font-medium text-gray-700 mb-2">Ville de livraison</label>
-                            <div class="mb-2">
-                                <input type="text" id="ville-search" placeholder="Tapez pour filtrer les villes..."
-                                       class="w-full p-3 border rounded-lg focus:ring-2 transition-all"
-                                       style="border-color: #f7d9c4; focus:ring-color: #6d4b3b;">
+                            <label for="ville-select" class="block text-sm font-medium text-gray-700 mb-2">
+                                Ville de livraison
+                                <span class="text-xs text-gray-500 ml-2">(Tapez pour rechercher)</span>
+                            </label>
+                            <div class="relative">
+                                <!-- Input de recherche avec icônes -->
+                                <div class="relative mb-2">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <i class="fas fa-search text-gray-400"></i>
+                                    </div>
+                                    <input type="text" id="ville-search"
+                                           placeholder="Rechercher une ville (ex: Casablanca, Rabat)..."
+                                           autocomplete="off"
+                                           class="w-full pl-10 pr-10 p-3 border rounded-lg focus:ring-2 transition-all"
+                                           style="border-color: #f7d9c4; focus:ring-color: #6d4b3b;">
+                                    <div id="search-clear" class="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer hidden">
+                                        <i class="fas fa-times text-gray-400 hover:text-gray-600"></i>
+                                    </div>
+                                </div>
+
+                                <!-- Counter de résultats -->
+                                <div id="search-counter" class="text-xs text-gray-500 mb-1 hidden">
+                                    <span id="counter-text"></span>
+                                </div>
+
+                                <!-- Select avec scroll amélioré -->
+                                <select name="ville_livraison" id="ville-select" onchange="chargerRegionEtFrais()"
+                                        class="w-full p-3 border rounded-lg focus:ring-2 transition-all"
+                                        style="border-color: #f7d9c4; focus:ring-color: #6d4b3b; max-height: 200px;">
+                                    <option value="">-- Sélectionner une ville --</option>
+                                    {% for ville in villes %}
+                                        <option value="{{ ville.id }}"
+                                                data-region="{{ ville.region.nom_region }}"
+                                                data-frais="{{ ville.frais_livraison|default:0 }}"
+                                                data-delai-min="{{ ville.Delai_livraison_min|default:0 }}"
+                                                data-delai-max="{{ ville.Delai_livraison_max|default:0 }}"
+                                                data-search="{{ ville.nom|lower }} {{ ville.region.nom_region|lower }}"
+                                                {% if commande.ville.id == ville.id %}selected{% endif %}>
+                                            {{ ville.nom }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
                             </div>
-                            <select name="ville_livraison" id="ville-select" onchange="chargerRegionEtFrais()"
-                                    class="w-full p-3 border rounded-lg focus:ring-2 transition-all" 
-                                    style="border-color: #f7d9c4; focus:ring-color: #6d4b3b;">
-                                <option value="">-- Sélectionner une ville --</option>
-                                {% for ville in villes %}
-                                    <option value="{{ ville.id }}" 
-                                            data-region="{{ ville.region.nom_region }}" 
-                                            data-frais="{{ ville.frais_livraison|default:0 }}"
-                                            data-delai-min="{{ ville.Delai_livraison_min|default:0 }}"
-                                            data-delai-max="{{ ville.Delai_livraison_max|default:0 }}"
-                                            {% if commande.ville.id == ville.id %}selected{% endif %}>
-                                        {{ ville.nom }}
-                                    </option>
-                                {% endfor %}
-                            </select>
 
                             <script>
                                 document.addEventListener('DOMContentLoaded', function () {
                                     const searchInput = document.getElementById('ville-search');
                                     const select = document.getElementById('ville-select');
+                                    const clearBtn = document.getElementById('search-clear');
+                                    const counter = document.getElementById('search-counter');
+                                    const counterText = document.getElementById('counter-text');
+
                                     if (!searchInput || !select) return;
-                                
+
+                                    // Fonction pour normaliser le texte (enlever les accents)
+                                    function normalizeText(text) {
+                                        return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+                                    }
+
                                     function filterOptions(query) {
-                                        const q = (query || '').trim().toLowerCase();
+                                        const q = normalizeText(query || '').trim();
                                         const options = Array.from(select.options);
+                                        let visibleCount = 0;
+
                                         options.forEach(function (option) {
-                                            if (option.value === '') { // conserver l'option vide
+                                            if (option.value === '') {
                                                 option.style.display = '';
                                                 return;
                                             }
-                                            const match = option.textContent.toLowerCase().includes(q);
+
+                                            // Recherche dans le nom de la ville ET la région
+                                            const searchText = option.getAttribute('data-search') || '';
+                                            const match = normalizeText(searchText).includes(q);
+
                                             option.style.display = match ? '' : 'none';
+                                            if (match) visibleCount++;
                                         });
+
+                                        // Afficher le compteur de résultats
+                                        if (q) {
+                                            counter.classList.remove('hidden');
+                                            counterText.textContent = visibleCount + ' ville(s) trouvée(s)';
+                                            clearBtn.classList.remove('hidden');
+                                        } else {
+                                            counter.classList.add('hidden');
+                                            clearBtn.classList.add('hidden');
+                                        }
+
+                                        // Auto-sélectionner si un seul résultat
+                                        if (visibleCount === 1 && q.length >= 3) {
+                                            const firstVisible = options.find(opt => opt.value !== '' && opt.style.display !== 'none');
+                                            if (firstVisible) {
+                                                select.value = firstVisible.value;
+                                                // Déclencher l'événement onchange
+                                                chargerRegionEtFrais();
+                                                // Highlight visuel
+                                                select.style.borderColor = '#10b981';
+                                                setTimeout(() => {
+                                                    select.style.borderColor = '#f7d9c4';
+                                                }, 500);
+                                            }
+                                        }
                                     }
-                                
+
+                                    // Debounce pour la performance
                                     let debounceTimer;
                                     searchInput.addEventListener('input', function () {
                                         clearTimeout(debounceTimer);
                                         const value = this.value;
                                         debounceTimer = setTimeout(function () {
                                             filterOptions(value);
-                                        }, 120);
+                                        }, 100);
+                                    });
+
+                                    // Bouton clear
+                                    clearBtn.addEventListener('click', function () {
+                                        searchInput.value = '';
+                                        filterOptions('');
+                                        searchInput.focus();
+                                    });
+
+                                    // Raccourcis clavier
+                                    searchInput.addEventListener('keydown', function (e) {
+                                        if (e.key === 'Escape') {
+                                            this.value = '';
+                                            filterOptions('');
+                                        } else if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            select.focus();
+                                        } else if (e.key === 'ArrowDown') {
+                                            e.preventDefault();
+                                            select.focus();
+                                        }
+                                    });
+
+                                    // Focus sur le select ouvre automatiquement la recherche
+                                    select.addEventListener('focus', function () {
+                                        if (!searchInput.value) {
+                                            searchInput.focus();
+                                        }
                                     });
                                 });
                             </script>

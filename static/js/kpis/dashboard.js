@@ -593,11 +593,12 @@ class YoozakKPIManager {
               ticks: {
                 color: '#6b7280',
                 font: { size: 11 },
-                // CORRECTION: Adapter le nombre de labels selon la période
-                // Pour éviter l'encombrement de l'axe X
+                // CORRECTION: Pour 7 jours, afficher TOUS les jours
+                // Pour 30 jours, limiter à 10 labels
+                // Pour 90 jours, limiter à 12 labels
                 maxTicksLimit: evolutionData.values.length <= 7 ? 7 :
                   evolutionData.values.length <= 30 ? 10 : 12,
-                autoSkip: true,
+                autoSkip: evolutionData.values.length <= 7 ? false : true,  // Ne pas sauter de labels pour 7j
                 maxRotation: 45,
                 minRotation: 0
               }

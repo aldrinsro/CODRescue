@@ -73,10 +73,11 @@ def ventes_data(request):
             jours_map = {'7j': 7, '30j': 30, '90j': 90}
             nb_jours = jours_map.get(periode, 30)
             fin_periode = aujourd_hui
-            debut_periode = aujourd_hui - timedelta(days=nb_jours)
+            # CORRECTION: Pour avoir exactement nb_jours (incluant aujourd'hui)
+            debut_periode = aujourd_hui - timedelta(days=nb_jours - 1)
             # Période précédente = même durée, avant
             fin_periode_precedente = debut_periode - timedelta(days=1)
-            debut_periode_precedente = fin_periode_precedente - timedelta(days=nb_jours)
+            debut_periode_precedente = fin_periode_precedente - timedelta(days=nb_jours - 1)
 
         # ===== KPI 1: CA AVEC TENDANCE =====
         ca_data = calcul_ca_avec_tendance(
@@ -127,8 +128,8 @@ def ventes_data(request):
         # IMPORTANT: Filtre par date de livraison (etats__date_debut)
         # Récupérer les 3 commandes avec les montants les plus élevés
         top_commandes = Commande.objects.filter(
-            Q(etats__enum_etat__libelle__iexact='Livrée', etats__date_debut__gte=debut_periode, etats__date_debut__lte=fin_periode) |
-            Q(etats__enum_etat__libelle__iexact='Livrée Partiellement', etats__date_debut__gte=debut_periode, etats__date_debut__lte=fin_periode)
+            Q(etats__enum_etat__libelle__iexact='Livrée', etats__date_debut__date__gte=debut_periode, etats__date_debut__date__lte=fin_periode) |
+            Q(etats__enum_etat__libelle__iexact='Livrée Partiellement', etats__date_debut__date__gte=debut_periode, etats__date_debut__date__lte=fin_periode)
         ).order_by('-total_cmd')[:3]
 
         # Construire la liste des TOP 3 commandes
@@ -252,8 +253,10 @@ def evolution_ca_data(request):
         nb_jours = jours_map.get(periode, 30)
 
         # Dates avec timezone
+        # CORRECTION: Pour avoir exactement nb_jours (incluant aujourd'hui)
+        # Ex: 7j = aujourd'hui + 6 jours avant = 7 jours au total
         fin_date = timezone.now().date()
-        debut_date = fin_date - timedelta(days=nb_jours)
+        debut_date = fin_date - timedelta(days=nb_jours - 1)
 
         # Utiliser la fonction isolée de calcul CA journalier
         result = calcul_ca_journalier(
@@ -338,8 +341,8 @@ def top_modeles_data(request):
             ca_total=Sum(
                 'paniers__sous_total',
                 filter=Q(
-                    paniers__commande__etats__date_debut__gte=debut_date,
-                    paniers__commande__etats__date_debut__lte=fin_date,
+                    paniers__commande__etats__date_debut__date__gte=debut_date,
+                    paniers__commande__etats__date_debut__date__lte=fin_date,
                     paniers__commande__etats__date_fin__isnull=False
                 ) & (
                     Q(paniers__commande__etats__enum_etat__libelle__iexact='Livrée') |
@@ -349,8 +352,8 @@ def top_modeles_data(request):
             nb_ventes=Count(
                 'paniers',
                 filter=Q(
-                    paniers__commande__etats__date_debut__gte=debut_date,
-                    paniers__commande__etats__date_debut__lte=fin_date,
+                    paniers__commande__etats__date_debut__date__gte=debut_date,
+                    paniers__commande__etats__date_debut__date__lte=fin_date,
                     paniers__commande__etats__date_fin__isnull=False
                 ) & (
                     Q(paniers__commande__etats__enum_etat__libelle__iexact='Livrée') |
@@ -522,8 +525,8 @@ def repartition_sources_data(request):
         # Debug: Compter le nombre total de commandes livrées
         total_commandes_livrees = Commande.objects.filter(
             etats__enum_etat__libelle__icontains='livr',
-            etats__date_debut__gte=debut_periode,
-            etats__date_debut__lte=aujourd_hui
+            etats__date_debut__date__gte=debut_periode,
+            etats__date_debut__date__lte=aujourd_hui
         ).distinct().count()
 
         logger.info(f"📊 Répartition sources - Période: {periode} ({debut_periode} à {aujourd_hui})")
@@ -532,8 +535,8 @@ def repartition_sources_data(request):
         # Calculer la répartition par source
         repartition = Commande.objects.filter(
             etats__enum_etat__libelle__icontains='livr',
-            etats__date_debut__gte=debut_periode,
-            etats__date_debut__lte=aujourd_hui
+            etats__date_debut__date__gte=debut_periode,
+            etats__date_debut__date__lte=aujourd_hui
         ).values('source').annotate(
             ca_total=Sum('total_cmd'),
             nb_commandes=Count('id')

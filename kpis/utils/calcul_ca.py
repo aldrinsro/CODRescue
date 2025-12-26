@@ -76,10 +76,11 @@ def calcul_ca_periode(date_debut, date_fin, etats_inclus=None, methode=None):
     try:
         # CORRECTION: Utiliser icontains au lieu de iexact pour gérer les problèmes d'accents
         # Cherche les états contenant "livr" (trouvera "Livrée", "livree", "Livree", etc.)
+        # CORRECTION TIMEZONE: Utiliser __date pour comparer avec DateTimeField timezone-aware
         etat_filter = Q(
             etats__enum_etat__libelle__icontains='livr',
-            etats__date_debut__gte=date_debut,
-            etats__date_debut__lte=date_fin
+            etats__date_debut__date__gte=date_debut,
+            etats__date_debut__date__lte=date_fin
         )
 
         # Construction de la requete de base - filtre par date de debut de l'etat Livree
@@ -241,10 +242,11 @@ def calcul_ca_journalier(date_debut, date_fin, etats_inclus=None, methode=None):
     try:
         # CORRECTION: Utiliser icontains au lieu de iexact pour gérer les problèmes d'accents
         # Cherche les états contenant "livr" (trouvera "Livrée", "livree", "Livree", etc.)
+        # CORRECTION TIMEZONE: Utiliser __date pour comparer avec DateTimeField timezone-aware
         etat_filter = Q(
             etats__enum_etat__libelle__icontains='livr',
-            etats__date_debut__gte=date_debut,
-            etats__date_debut__lte=date_fin
+            etats__date_debut__date__gte=date_debut,
+            etats__date_debut__date__lte=date_fin
         )
 
         # Construction requete de base - filtre par date de debut de l'etat Livree
@@ -398,8 +400,8 @@ def calcul_ca_par_article(date_debut, date_fin, limite=10, etats_inclus=None):
         for etat in etats_inclus:
             etat_filter |= Q(
                 paniers__commande__etats__enum_etat__libelle__iexact=etat,
-                paniers__commande__etats__date_debut__gte=date_debut,
-                paniers__commande__etats__date_debut__lte=date_fin
+                paniers__commande__etats__date_debut__date__gte=date_debut,
+                paniers__commande__etats__date_debut__date__lte=date_fin
             )
 
         # Requete
@@ -480,8 +482,8 @@ def calcul_ca_par_region(date_debut, date_fin, limite=10, etats_inclus=None, met
         for etat in etats_inclus:
             etat_filter |= Q(
                 etats__enum_etat__libelle__iexact=etat,
-                etats__date_debut__gte=date_debut,
-                etats__date_debut__lte=date_fin
+                etats__date_debut__date__gte=date_debut,
+                etats__date_debut__date__lte=date_fin
             )
 
         # Construction requete - filtre par date de debut de l'etat Livree
@@ -600,8 +602,8 @@ def calcul_ca_par_ville(date_debut, date_fin, limite=10, etats_inclus=None, meth
         for etat in etats_inclus:
             etat_filter |= Q(
                 etats__enum_etat__libelle__iexact=etat,
-                etats__date_debut__gte=date_debut,
-                etats__date_debut__lte=date_fin
+                etats__date_debut__date__gte=date_debut,
+                etats__date_debut__date__lte=date_fin
             )
 
         # Construction requete - filtre par date de debut de l'etat Livree
