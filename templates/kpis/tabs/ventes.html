@@ -38,9 +38,6 @@
           Ce mois
         </button>
       </div>
-      {% comment %} <button class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200">
-        <i class="fas fa-download"></i> Exporter
-      </button> {% endcomment %}
     </div>
   </div>
 
@@ -294,12 +291,16 @@
         </div>
       </div>
 
-      <!-- Répartition des Ventes par Modèle (Pie Chart) -->
+      <!-- Répartition des Ventes par Source (Pie Chart) -->
       <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100 top-modeles-container">
-        <div class="h-64 bg-gray-50 rounded-lg flex items-center justify-center">
-          <div class="text-center">
-            <i class="fas fa-spinner fa-spin text-green-600 text-2xl mb-2"></i>
-            <p class="text-gray-500">Chargement répartition des ventes...</p>
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-semibold text-gray-900">📊 Répartition par Source</h3>
+          <div class="text-xs text-gray-500">Youcan, Shopify, Autres</div>
+        </div>
+        <div class="relative" style="height: 300px;">
+          <canvas id="repartition-sources-chart"></canvas>
+          <div id="top-modeles-loading" class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center">
+            <i class="fas fa-spinner fa-spin text-blue-600"></i>
           </div>
         </div>
       </div>

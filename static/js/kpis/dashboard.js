@@ -15,6 +15,7 @@ class YoozakKPIManager {
     this.isLoading = false;
     this.selectedPeriod = '30j'; // Persistance de la période sélectionnée pour graphiques
     this.selectedPeriodVentes = '30j'; // Persistance de la période pour les KPIs Ventes
+    this.selectedPeriodPerformance = '30j'; // Persistance de la période pour Performance Commerciale
 
     this.init();
   }
@@ -658,57 +659,88 @@ class YoozakKPIManager {
   }
 
   async updateTopModelesChart(modeles = null) {
+    console.log('🎨 Début de updateTopModelesChart');
+
     const chartId = 'repartition-sources-chart';
     let canvasElement = document.getElementById(chartId);
+    const container = document.querySelector('.top-modeles-container');
+
+    if (!container) {
+      console.error('❌ Container .top-modeles-container introuvable');
+      return;
+    }
+
+    console.log('✅ Container trouvé');
 
     if (!canvasElement) {
-      const container = document.querySelector('.top-modeles-container');
-      if (!container) return;
-
+      console.warn('⚠️ Canvas non trouvé, création du conteneur');
       container.innerHTML = `
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-lg font-semibold text-gray-900">📊 Répartition par Source</h3>
           <div class="text-xs text-gray-500">Youcan, Shopify, Autres</div>
         </div>
-        <div class="relative">
-          <canvas id="${chartId}" width="400" height="200"></canvas>
+        <div class="relative" style="height: 300px;">
+          <canvas id="${chartId}"></canvas>
           <div id="top-modeles-loading" class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center hidden">
             <i class="fas fa-spinner fa-spin text-blue-600"></i>
           </div>
         </div>
       `;
       canvasElement = document.getElementById(chartId);
+
+      if (!canvasElement) {
+        console.error('❌ Impossible de créer le canvas pour le graphique');
+        return;
+      }
+    } else {
+      console.log('✅ Canvas trouvé:', chartId);
     }
 
     try {
-      // Charger les données depuis la nouvelle API
+      // Charger les données depuis la nouvelle API avec la période sélectionnée
       document.getElementById('top-modeles-loading')?.classList.remove('hidden');
-      const sources = await this.fetchRepartitionSourcesData();
+      const sources = await this.fetchRepartitionSourcesData(this.selectedPeriodVentes || '30j');
       document.getElementById('top-modeles-loading')?.classList.add('hidden');
 
       if (!sources || sources.length === 0) {
-        const container = document.querySelector('.top-modeles-container');
-        if (container) {
-          container.innerHTML = `
-            <div class="flex items-center justify-between mb-4">
-              <h3 class="text-lg font-semibold text-gray-900">📊 Répartition par Source</h3>
-              <div class="text-xs text-gray-500">Youcan, Shopify, Autres</div>
+        console.warn('⚠️ Aucune donnée de sources disponible');
+        container.innerHTML = `
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-gray-900">📊 Répartition par Source</h3>
+            <div class="text-xs text-gray-500">Youcan, Shopify, Autres</div>
+          </div>
+          <div class="h-64 bg-yellow-50 border-2 border-dashed border-yellow-200 rounded-lg flex items-center justify-center">
+            <div class="text-center">
+              <i class="fas fa-chart-pie text-yellow-400 text-3xl mb-3"></i>
+              <h4 class="text-lg font-semibold text-yellow-900 mb-2">Aucune donnée disponible</h4>
+              <p class="text-yellow-700 text-sm">Aucune commande livrée pour cette période</p>
+              <p class="text-yellow-600 text-xs mt-1">La répartition apparaîtra dès qu'il y aura des livraisons</p>
             </div>
-            <div class="h-64 bg-yellow-50 border-2 border-dashed border-yellow-200 rounded-lg flex items-center justify-center">
-              <div class="text-center">
-                <i class="fas fa-chart-pie text-yellow-400 text-3xl mb-3"></i>
-                <h4 class="text-lg font-semibold text-yellow-900 mb-2">Aucune donnée disponible</h4>
-                <p class="text-yellow-700 text-sm">Aucune commande livrée pour cette période</p>
-                <p class="text-yellow-600 text-xs mt-1">La répartition apparaîtra dès qu'il y aura des livraisons</p>
-              </div>
-            </div>
-          `;
-        }
+          </div>
+        `;
         return;
       }
 
+      // Valider la structure des données
+      if (!Array.isArray(sources)) {
+        throw new Error('Format de données invalide: sources n\'est pas un tableau');
+      }
+
+      // Vérifier que chaque source a les propriétés requises
+      for (const source of sources) {
+        if (!source.source || source.ca === undefined || !source.couleur) {
+          throw new Error(`Données source incomplètes: ${JSON.stringify(source)}`);
+        }
+      }
+
       if (this.charts.has(chartId)) {
+        console.log('🗑️ Destruction de l\'ancien graphique');
         this.charts.get(chartId).destroy();
+      }
+
+      // Vérifier que Chart.js est chargé
+      if (typeof Chart === 'undefined') {
+        throw new Error('Chart.js n\'est pas chargé. Veuillez inclure la bibliothèque Chart.js dans votre page.');
       }
 
       // Préparer les données pour le Pie Chart
@@ -716,7 +748,16 @@ class YoozakKPIManager {
       const values = sources.map(s => s.ca);
       const backgroundColors = sources.map(s => s.couleur);
 
+      console.log('📊 Données du graphique:', {
+        labels,
+        values,
+        backgroundColors,
+        sourceCount: sources.length
+      });
+
       const ctx = canvasElement.getContext('2d');
+      console.log('🎨 Contexte canvas obtenu:', !!ctx);
+
       const chart = new Chart(ctx, {
         type: 'pie',
         data: {
@@ -774,14 +815,39 @@ class YoozakKPIManager {
       console.log('✅ Graphique Répartition Sources créé avec succès');
 
     } catch (error) {
-      console.error('❌ Erreur création graphique Top Modèles:', error);
-      canvasElement.parentElement.innerHTML = '<div class="h-64 flex items-center justify-center text-gray-500"><i class="fas fa-exclamation-triangle mr-2"></i>Erreur de chargement</div>';
+      console.error('❌ Erreur création graphique Répartition Sources:', error);
+      console.error('Détails de l\'erreur:', error.message, error.stack);
+
+      // Utiliser le container au lieu de canvasElement.parentElement pour éviter les erreurs
+      if (container) {
+        container.innerHTML = `
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-gray-900">📊 Répartition par Source</h3>
+            <div class="text-xs text-gray-500">Erreur de chargement</div>
+          </div>
+          <div class="h-64 bg-red-50 border-2 border-dashed border-red-200 rounded-lg flex items-center justify-center">
+            <div class="text-center">
+              <i class="fas fa-exclamation-triangle text-red-400 text-3xl mb-3"></i>
+              <h4 class="text-lg font-semibold text-red-900 mb-2">Erreur de chargement</h4>
+              <p class="text-red-700 text-sm">${error.message || 'Erreur inconnue'}</p>
+              <button onclick="window.yoozakKPI.updateTopModelesChart()" class="mt-3 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm">
+                Réessayer
+              </button>
+            </div>
+          </div>
+        `;
+      }
     }
   }
 
   async fetchRepartitionSourcesData(period = '30j') {
+    console.log(`📊 Chargement répartition sources pour période: ${period}`);
+
     try {
-      const response = await fetch(`${this.apiEndpoint}repartition-sources/?period=${period}`, {
+      const url = `${this.apiEndpoint}repartition-sources/?period=${period}`;
+      console.log(`🔗 URL API: ${url}`);
+
+      const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -789,21 +855,31 @@ class YoozakKPIManager {
         }
       });
 
+      console.log(`📡 Réponse HTTP: ${response.status} ${response.statusText}`);
+
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Réponse d\'erreur du serveur:', errorText);
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
       const data = await response.json();
+      console.log('📦 Données reçues:', data);
 
       if (data.success) {
-        return data.sources;
+        console.log(`✅ ${data.sources?.length || 0} sources trouvées`);
+        return data.sources || [];
       } else {
         throw new Error(data.message || 'Erreur lors du chargement de la répartition par sources');
       }
 
     } catch (error) {
       console.error('❌ Erreur récupération répartition sources:', error);
-      return [];
+      console.error('Type d\'erreur:', error.name);
+      console.error('Message:', error.message);
+
+      // Re-throw l'erreur pour qu'elle soit gérée par updateTopModelesChart
+      throw error;
     }
   }
 
@@ -1504,8 +1580,91 @@ class YoozakKPIManager {
       case 'clients':
         this.loadClientsData();
         break;
+      case 'performance-commerciale':
+        this.loadPerformanceCommercialeData();
+        break;
       default:
         console.log('Onglet non encore implémenté:', tabName);
+    }
+  }
+
+  // ===== MÉTHODES PERFORMANCE COMMERCIALE =====
+  async changePeriodePerformance(period) {
+    console.log(`🔄 Changement période Performance Commerciale: ${period}`);
+
+    // Persister la période sélectionnée
+    this.selectedPeriodPerformance = period;
+
+    // Mise à jour visuelle des boutons
+    document.querySelectorAll('.periode-perf-btn').forEach(btn => {
+      btn.classList.remove('bg-blue-600', 'text-white', 'font-medium');
+      btn.classList.add('bg-gray-100', 'text-gray-600');
+    });
+
+    const activeBtn = document.querySelector(`.periode-perf-btn[data-period="${period}"]`);
+    if (activeBtn) {
+      activeBtn.classList.remove('bg-gray-100', 'text-gray-600');
+      activeBtn.classList.add('bg-blue-600', 'text-white', 'font-medium');
+    }
+
+    // Mettre à jour les textes "vs" pour tous les KPIs de performance
+    this.updateVsPeriodTextsPerformance(period);
+
+    // Recharger toutes les données avec la nouvelle période
+    await this.loadPerformanceCommercialeData();
+  }
+
+  updateVsPeriodTextsPerformance(period) {
+    const periodLabel = this.getPeriodLabel(period);
+    const elements = document.querySelectorAll('#performance-commerciale-content [data-kpi-vs]');
+
+    console.log(`🔄 Mise à jour des textes "vs" Performance pour la période: ${period} (${periodLabel})`);
+    console.log(`   Nombre d'éléments trouvés: ${elements.length}`);
+
+    elements.forEach((element, index) => {
+      const kpiId = element.getAttribute('data-kpi-vs');
+      element.textContent = `vs ${periodLabel}`;
+      console.log(`   ✅ [${index + 1}] ${kpiId}: "${element.textContent}"`);
+    });
+
+    if (elements.length === 0) {
+      console.warn(`   ⚠️ Aucun élément [data-kpi-vs] trouvé dans Performance Commerciale`);
+    }
+  }
+
+  async loadPerformanceCommercialeData() {
+    console.log('📊 Chargement des données Performance Commerciale...');
+
+    // Afficher le loading
+    const loading = document.getElementById('performance-loading');
+    const content = document.getElementById('performance-main-content');
+    const emptyState = document.getElementById('performance-empty-state');
+
+    if (loading) loading.classList.remove('hidden');
+    if (content) content.classList.add('hidden');
+    if (emptyState) emptyState.classList.add('hidden');
+
+    try {
+      // TODO: Remplacer par un vrai appel API
+      // const response = await fetch(this.apiEndpoint + `performance-commerciale/?period=${this.selectedPeriodPerformance || '30j'}`);
+      // const data = await response.json();
+
+      // Pour l'instant, simuler des données
+      setTimeout(() => {
+        // Masquer loading, afficher contenu
+        if (loading) loading.classList.add('hidden');
+        if (content) content.classList.remove('hidden');
+
+        // Mettre à jour les textes "vs"
+        this.updateVsPeriodTextsPerformance(this.selectedPeriodPerformance || '30j');
+
+        console.log('✅ Données Performance Commerciale chargées (simulation)');
+      }, 500);
+
+    } catch (error) {
+      console.error('❌ Erreur chargement Performance Commerciale:', error);
+      if (loading) loading.classList.add('hidden');
+      if (emptyState) emptyState.classList.remove('hidden');
     }
   }
 }

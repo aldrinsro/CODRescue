@@ -41,11 +41,17 @@
   </div>
   <!-- Navigation Onglets -->
   <div class="px-6">
-    <nav class="flex space-x-8" role="tablist" aria-label="Catégories de KPIs">
+    <nav class="flex space-x-8" role="tablist" aria-label="Categories de KPIs">
       <!-- Onglet Ventes -->
       <button class="kpi-tab-button active flex items-center gap-2 py-4 px-1 border-b-2 border-blue-600 font-medium text-sm text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-t-lg" data-tab="ventes" role="tab" aria-selected="true" aria-controls="ventes-content" tabindex="0" title="Performance des ventes et chiffre d'affaires">
         <i class="fas fa-chart-line" aria-hidden="true"></i>
         <span>Ventes</span>
+      </button>
+
+        <!-- Onglet Performance Commerciale -->
+      <button class="kpi-tab-button flex items-center gap-2 py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-t-lg transition-all duration-200" data-tab="performance-commerciale" role="tab" aria-selected="false" aria-controls="performance-commerciale-content" tabindex="-1" title="Analyse des performances commerciales">
+        <i class="fas fa-chart-line" aria-hidden="true"></i>
+        <span>Performance Commerciale</span>
       </button>
 
       <!-- Onglet Clients -->
@@ -89,6 +95,11 @@
   <!-- État des commandes -->
   <div id="vue-quantitative-content" class="kpi-tab-panel hidden" role="tabpanel">
     {% include 'kpis/tabs/vue_quantitative.html' %}
+  </div>
+
+  <!-- Performance Commerciale -->
+  <div id="performance-commerciale-content" class="kpi-tab-panel hidden" role="tabpanel">
+    {% include 'kpis/tabs/performance_commerciale.html' %}
   </div>
 </div>
 

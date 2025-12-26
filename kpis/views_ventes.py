@@ -516,6 +516,15 @@ def repartition_sources_data(request):
         else:  # 30j par défaut
             debut_periode = aujourd_hui - timedelta(days=30)
 
+        # Debug: Compter le nombre total de commandes livrées
+        total_commandes_livrees = Commande.objects.filter(
+            Q(etats__enum_etat__libelle__iexact='Livrée', etats__date_debut__gte=debut_periode, etats__date_debut__lte=aujourd_hui) |
+            Q(etats__enum_etat__libelle__iexact='Livrée Partiellement', etats__date_debut__gte=debut_periode, etats__date_debut__lte=aujourd_hui)
+        ).count()
+
+        logger.info(f"📊 Répartition sources - Période: {periode} ({debut_periode} à {aujourd_hui})")
+        logger.info(f"📦 Total commandes livrées: {total_commandes_livrees}")
+
         # Calculer la répartition par source
         repartition = Commande.objects.filter(
             Q(etats__enum_etat__libelle__iexact='Livrée', etats__date_debut__gte=debut_periode, etats__date_debut__lte=aujourd_hui) |
@@ -524,6 +533,10 @@ def repartition_sources_data(request):
             ca_total=Sum('total_cmd'),
             nb_commandes=Count('id')
         ).order_by('-ca_total')
+
+        logger.info(f"🔍 Nombre de sources trouvées: {len(repartition)}")
+        for item in repartition:
+            logger.info(f"  - {item['source'] or 'NULL'}: {item['nb_commandes']} commandes, CA: {item['ca_total']}")
 
         # Couleurs spécifiques pour chaque source
         couleurs_sources = {
