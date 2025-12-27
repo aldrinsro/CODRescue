@@ -560,3 +560,234 @@ def taux_erronees_data(request):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+@login_required
+def taux_retournees_data(request):
+    """API pour calculer le taux de commandes retournées dans toutes les commandes
+
+    Une commande retournée est une commande ayant l'état "Retournée" dans EnumEtatCmd
+
+    SANS FILTRE DE PÉRIODE - Analyse toute la base de données
+
+    Retourne:
+        - total_commandes: Nombre total de commandes
+        - nb_retournees: Nombre de commandes marquées comme retournées
+        - taux_retournees: Taux de commandes retournées (%)
+    """
+    try:
+        logger.info(f"🔍 Calcul du taux de commandes retournées - TOUTE LA BASE")
+
+        # Récupérer TOUTES les commandes
+        total_commandes = Commande.objects.count()
+
+        # Compter les commandes avec l'état "Retournée"
+        # Utiliser icontains pour gérer les variations possibles (Retournée, retournee, etc.)
+        nb_commandes_retournees = Commande.objects.filter(
+            Q(etats__enum_etat__libelle__icontains='retour')
+        ).distinct().count()
+
+        # Calculer le taux de commandes retournées
+        taux_retournees = (nb_commandes_retournees / total_commandes * 100) if total_commandes > 0 else 0
+
+        logger.info(f"📊 Retournées: {nb_commandes_retournees}/{total_commandes} commandes ({taux_retournees:.2f}%)")
+
+        return JsonResponse({
+            'success': True,
+            'total_commandes': total_commandes,
+            'total_commandes_fmt': format_number_fr(total_commandes),
+            'nb_retournees': nb_commandes_retournees,
+            'nb_retournees_fmt': format_number_fr(nb_commandes_retournees),
+            'taux_retournees': round(taux_retournees, 2),
+            'taux_retournees_fmt': f"{round(taux_retournees, 2)}%"
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Erreur dans taux_retournees_data: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+def taux_annulees_data(request):
+    """API pour calculer le taux de commandes annulées dans toutes les commandes
+
+    Une commande annulée est une commande ayant l'état "Annulée" dans EnumEtatCmd
+
+    SANS FILTRE DE PÉRIODE - Analyse toute la base de données
+
+    Retourne:
+        - total_commandes: Nombre total de commandes
+        - nb_annulees: Nombre de commandes marquées comme annulées
+        - taux_annulees: Taux de commandes annulées (%)
+    """
+    try:
+        logger.info(f"🔍 Calcul du taux de commandes annulées - TOUTE LA BASE")
+
+        # Récupérer TOUTES les commandes
+        total_commandes = Commande.objects.count()
+
+        # Compter les commandes avec l'état "Annulée"
+        # Utiliser icontains pour gérer les variations possibles (Annulée, annulee, etc.)
+        nb_commandes_annulees = Commande.objects.filter(
+            Q(etats__enum_etat__libelle__icontains='annul')
+        ).distinct().count()
+
+        # Calculer le taux de commandes annulées
+        taux_annulees = (nb_commandes_annulees / total_commandes * 100) if total_commandes > 0 else 0
+
+        logger.info(f"📊 Annulées: {nb_commandes_annulees}/{total_commandes} commandes ({taux_annulees:.2f}%)")
+
+        return JsonResponse({
+            'success': True,
+            'total_commandes': total_commandes,
+            'total_commandes_fmt': format_number_fr(total_commandes),
+            'nb_annulees': nb_commandes_annulees,
+            'nb_annulees_fmt': format_number_fr(nb_commandes_annulees),
+            'taux_annulees': round(taux_annulees, 2),
+            'taux_annulees_fmt': f"{round(taux_annulees, 2)}%"
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Erreur dans taux_annulees_data: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+def taux_livraison_data(request):
+    """API pour calculer le taux de livraison dans toutes les commandes
+
+    Une commande livrée est une commande ayant l'état "Livrée" ou "Livrée Partiellement" dans EnumEtatCmd
+
+    SANS FILTRE DE PÉRIODE - Analyse toute la base de données
+
+    Retourne:
+        - total_commandes: Nombre total de commandes
+        - nb_livrees: Nombre de commandes livrées (totalement ou partiellement)
+        - taux_livraison: Taux de livraison (%)
+    """
+    try:
+        logger.info(f"🔍 Calcul du taux de livraison - TOUTE LA BASE")
+
+        # Récupérer TOUTES les commandes
+        total_commandes = Commande.objects.count()
+
+        # Compter les commandes avec l'état "Livrée" ou "Livrée Partiellement"
+        # Utiliser icontains pour gérer les variations possibles
+        nb_commandes_livrees = Commande.objects.filter(
+            Q(etats__enum_etat__libelle__icontains='livr')
+        ).distinct().count()
+
+        # Calculer le taux de livraison
+        taux_livraison = (nb_commandes_livrees / total_commandes * 100) if total_commandes > 0 else 0
+
+        logger.info(f"📊 Livrées: {nb_commandes_livrees}/{total_commandes} commandes ({taux_livraison:.2f}%)")
+
+        return JsonResponse({
+            'success': True,
+            'total_commandes': total_commandes,
+            'total_commandes_fmt': format_number_fr(total_commandes),
+            'nb_livrees': nb_commandes_livrees,
+            'nb_livrees_fmt': format_number_fr(nb_commandes_livrees),
+            'taux_livraison': round(taux_livraison, 2),
+            'taux_livraison_fmt': f"{round(taux_livraison, 2)}%"
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Erreur dans taux_livraison_data: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+@login_required
+def delai_moyen_livraison_data(request):
+    """API pour calculer le délai moyen de livraison des commandes
+
+    Calcule le délai moyen (en jours) entre la date de création de la commande
+    et la date de livraison effective pour toutes les commandes livrées
+    """
+    try:
+        from datetime import timedelta
+        from django.db.models import Avg, F, ExpressionWrapper, DurationField
+
+        logger.info("📊 Calcul du délai moyen de livraison...")
+
+        # Filtrer les commandes livrées avec Date_livraison non nulle
+        commandes_livrees = Commande.objects.filter(
+            Q(etats__enum_etat__libelle__icontains='livr'),
+            Date_livraison__isnull=False
+        ).distinct()
+
+        nb_commandes_livrees = commandes_livrees.count()
+
+        if nb_commandes_livrees == 0:
+            return JsonResponse({
+                'success': True,
+                'nb_commandes_livrees': 0,
+                'nb_commandes_livrees_fmt': '0',
+                'delai_moyen_jours': 0,
+                'delai_moyen_jours_fmt': '0',
+                'delai_moyen_heures': 0,
+                'delai_moyen_formatted': '0 jours'
+            })
+
+        # Calculer le délai pour chaque commande et faire la moyenne
+        total_secondes = 0
+        count = 0
+
+        for commande in commandes_livrees:
+            if commande.Date_livraison and commande.date_creation:
+                delai = commande.Date_livraison - commande.date_creation
+                total_secondes += delai.total_seconds()
+                count += 1
+
+        if count == 0:
+            jours = 0
+            heures = 0
+            minutes = 0
+        else:
+            # Calculer la moyenne en secondes
+            moyenne_secondes = total_secondes / count
+
+            # Convertir en jours, heures et minutes
+            jours = int(moyenne_secondes // 86400)  # 86400 secondes = 1 jour
+            reste_secondes = moyenne_secondes % 86400
+            heures = int(reste_secondes // 3600)  # 3600 secondes = 1 heure
+            reste_secondes = reste_secondes % 3600
+            minutes = int(reste_secondes // 60)  # 60 secondes = 1 minute
+
+        # Formater l'affichage: "X jours Y heures Z minutes"
+        parts = []
+        if jours > 0:
+            parts.append(f"{jours}j")
+        if heures > 0 or jours > 0:  # Afficher les heures si on a des jours ou des heures
+            parts.append(f"{heures}h")
+        if minutes > 0 or (jours == 0 and heures == 0):  # Afficher les minutes si < 1h ou si on a rien d'autre
+            parts.append(f"{minutes}min")
+
+        delai_formatted = " ".join(parts) if parts else "0min"
+
+        logger.info(f"✅ Délai moyen de livraison: {delai_formatted} ({nb_commandes_livrees} commandes)")
+
+        return JsonResponse({
+            'success': True,
+            'nb_commandes_livrees': nb_commandes_livrees,
+            'nb_commandes_livrees_fmt': format_number_fr(nb_commandes_livrees),
+            'delai_jours': jours,
+            'delai_heures': heures,
+            'delai_minutes': minutes,
+            'delai_moyen_formatted': delai_formatted
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Erreur dans delai_moyen_livraison_data: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)

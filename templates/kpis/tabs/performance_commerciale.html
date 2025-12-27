@@ -3,43 +3,16 @@
 
 <div class="space-y-6">
   <!-- En-tête -->
-  <div class="flex items-center justify-between">
-    <div>
-      <h2 class="text-2xl font-bold text-gray-900">Performance Commerciale</h2>
-      <div class="flex items-center gap-2 mt-1">
-        <p class="text-gray-600">Suivi des performances commerciales et indicateurs clés</p>
-        <span
-          class="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-700 text-xs font-medium rounded-full"
-          title="Indicateurs de performance commerciale">
-          <i class="fas fa-chart-line"></i>
-          <span>KPIs Commerciaux</span>
-        </span>
-      </div>
-    </div>
-    <div class="flex gap-2 items-center">
-      <!-- Boutons de sélection de période -->
-      <div class="flex gap-1 bg-gray-100 rounded-lg p-1">
-        <button onclick="window.yoozakKPI.changePeriodePerformance('7j')"
-          class="periode-performance-btn text-xs px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"
-          data-period="7j">
-          7 jours
-        </button>
-        <button onclick="window.yoozakKPI.changePeriodePerformance('30j')"
-          class="periode-performance-btn text-xs px-3 py-1.5 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 transition-colors"
-          data-period="30j">
-          30 jours
-        </button>
-        <button onclick="window.yoozakKPI.changePeriodePerformance('90j')"
-          class="periode-performance-btn text-xs px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"
-          data-period="90j">
-          90 jours
-        </button>
-        <button onclick="window.yoozakKPI.changePeriodePerformance('mois')"
-          class="periode-performance-btn text-xs px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"
-          data-period="mois">
-          Ce mois
-        </button>
-      </div>
+  <div>
+    <h2 class="text-2xl font-bold text-gray-900">Performance Global</h2>
+    <div class="flex items-center gap-2 mt-1">
+      <p class="text-gray-600">Suivi des performances commerciales et indicateurs clés</p>
+      <span
+        class="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-700 text-xs font-medium rounded-full"
+        title="Indicateurs de performance commerciale">
+        <i class="fas fa-chart-line"></i>
+        <span>KPIs Commerciaux</span>
+      </span>
     </div>
   </div>
 
@@ -64,224 +37,165 @@
 
   <!-- Contenu principal (masqué initialement) -->
   <div id="performance-main-content" class="hidden space-y-6">
-    <!-- KPIs Performance Principaux -->
-    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-      <!-- Taux de Conversion -->
+    <!-- Métriques Additionnelles -->
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-6">
+      <!-- Taux de Doublons -->
       <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-        <div class="flex items-center justify-between">
-          <div class="flex-1">
-            <div class="flex items-center gap-2 mb-2">
-              <i class="fas fa-percentage text-purple-600"></i>
-              <h3 class="text-sm font-medium text-gray-600"> Taux de Doublon  </h3>
-            </div>
-            <div class="flex items-baseline gap-2">
-              <span data-kpi="taux_conversion" class="text-3xl font-bold text-gray-900">-</span>
-              <span data-kpi-unite="taux_conversion" class="text-sm text-gray-600">%</span>
-            </div>
-            <p data-kpi-sub="taux_conversion" class="text-xs text-gray-500 mt-1"></p>
-          </div>
-          <div class="text-right">
-            <div data-kpi-trend="taux_conversion" class="inline-flex items-center gap-1 text-sm font-medium">
-              <i class="fas fa-arrow-up text-green-600"></i>
-              <span class="text-green-600">-</span>
-            </div>
-            <div data-kpi-vs="taux_conversion" class="text-xs text-gray-500">vs...</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Nombre de Clients Actifs -->
-      <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-        <div class="flex items-center justify-between">
-          <div class="flex-1">
-            <div class="flex items-center gap-2 mb-2">
-              <i class="fas fa-users text-blue-600"></i>
-              <h3 class="text-sm font-medium text-gray-600">Clients Actifs</h3>
-            </div>
-            <div class="flex items-baseline gap-2">
-              <span data-kpi="clients_actifs" class="text-3xl font-bold text-gray-900">-</span>
-              <span data-kpi-unite="clients_actifs" class="text-sm text-gray-600">clients</span>
-            </div>
-            <p data-kpi-sub="clients_actifs" class="text-xs text-gray-500 mt-1">Ce mois</p>
-          </div>
-          <div class="text-right">
-            <div data-kpi-trend="clients_actifs" class="inline-flex items-center gap-1 text-sm font-medium">
-              <i class="fas fa-arrow-up text-green-600"></i>
-              <span class="text-green-600">-</span>
-            </div>
-            <div data-kpi-vs="clients_actifs" class="text-xs text-gray-500">vs...</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Taux de Rétention -->
-      <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-        <div class="flex items-center justify-between">
-          <div class="flex-1">
-            <div class="flex items-center gap-2 mb-2">
-              <i class="fas fa-sync-alt text-green-600"></i>
-              <h3 class="text-sm font-medium text-gray-600">Taux de Rétention</h3>
-            </div>
-            <div class="flex items-baseline gap-2">
-              <span data-kpi="taux_retention" class="text-3xl font-bold text-gray-900">-</span>
-              <span data-kpi-unite="taux_retention" class="text-sm text-gray-600">%</span>
-            </div>
-            <p data-kpi-sub="taux_retention" class="text-xs text-gray-500 mt-1">Ce mois</p>
-          </div>
-          <div class="text-right">
-            <div data-kpi-trend="taux_retention" class="inline-flex items-center gap-1 text-sm font-medium">
-              <i class="fas fa-arrow-up text-green-600"></i>
-              <span class="text-green-600">-</span>
-            </div>
-            <div data-kpi-vs="taux_retention" class="text-xs text-gray-500">vs...</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- KPIs Secondaires Performance -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <!-- Top 3 Vendeurs -->
-      <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-        <div class="flex items-center gap-2 mb-4">
-          <i class="fas fa-medal text-yellow-600"></i>
-          <h3 class="text-sm font-medium text-gray-600">Top 3 Vendeurs</h3>
-        </div>
-
-        <!-- Liste des vendeurs (sera remplie dynamiquement) -->
-        <div id="top-vendeurs-list" class="space-y-2">
-          <!-- État de chargement -->
-          <div class="flex items-center justify-center py-4 text-gray-400">
-            <i class="fas fa-spinner fa-spin mr-2"></i>
-            <span class="text-xs">Chargement...</span>
-          </div>
-        </div>
-
-        <!-- Message si pas de données -->
-        <div id="top-vendeurs-empty" class="hidden text-center py-4">
-          <i class="fas fa-user-tie text-gray-300 text-2xl mb-2"></i>
-          <p class="text-xs text-gray-500">Aucun vendeur actif</p>
-        </div>
-      </div>
-
-      <!-- Top 3 Sources de Trafic -->
-      <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-        <div class="flex items-center gap-2 mb-4">
-          <i class="fas fa-network-wired text-blue-600"></i>
-          <h3 class="text-sm font-medium text-gray-600">Top 3 Sources Trafic</h3>
-        </div>
-
-        <!-- Liste des sources (sera remplie dynamiquement) -->
-        <div id="top-sources-list" class="space-y-2">
-          <!-- État de chargement -->
-          <div class="flex items-center justify-center py-4 text-gray-400">
-            <i class="fas fa-spinner fa-spin mr-2"></i>
-            <span class="text-xs">Chargement...</span>
-          </div>
-        </div>
-
-        <!-- Message si pas de données -->
-        <div id="top-sources-empty" class="hidden text-center py-4">
-          <i class="fas fa-globe text-gray-300 text-2xl mb-2"></i>
-          <p class="text-xs text-gray-500">Données de trafic manquantes</p>
-        </div>
-      </div>
-
-      <!-- Performance par Canal -->
-      <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-        <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center justify-between mb-2">
           <div class="flex items-center gap-2">
-            <i class="fas fa-store text-orange-600"></i>
-            <h3 class="text-sm font-medium text-gray-600">Top 3 Canaux</h3>
+            <i class="fas fa-clone text-orange-600"></i>
+            <h3 class="text-sm font-medium text-gray-600">Taux de Doublons</h3>
           </div>
-          <div class="text-xs text-gray-500">Par performance</div>
+          <span class="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-700 text-[10px] font-medium rounded" title="Toutes les commandes de la base">
+            <i class="fas fa-database"></i>
+            <span>Global</span>
+          </span>
         </div>
-
-        <!-- Liste des canaux -->
-        <div id="top-canaux-list" class="space-y-2">
-          <!-- Les canaux seront injectés ici par JavaScript -->
+        <div class="flex items-baseline gap-2">
+          <span id="taux-doublons-value" class="text-2xl font-bold text-gray-900">-</span>
+          <span class="text-sm text-gray-600">%</span>
         </div>
+        <p id="taux-doublons-sub" class="text-xs text-gray-500 mt-1">Sur <span id="taux-doublons-total">-</span> commandes</p>
 
-        <!-- État vide -->
-        <div id="top-canaux-empty" class="hidden text-center py-4">
-          <i class="fas fa-shopping-bag text-gray-300 text-2xl mb-2"></i>
-          <p class="text-xs text-gray-500">Aucun canal actif</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Graphiques Principaux -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <!-- Evolution Taux de Conversion -->
-      <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100 evolution-conversion-container">
-        <!-- En-tête -->
-        <div class="mb-4">
-          <h3 class="text-lg font-semibold text-gray-900">📊 Evolution du Taux de Conversion</h3>
-          <p id="periode-conversion-indicator" class="text-sm text-purple-600 font-medium">Période: 30 derniers jours
-          </p>
-        </div>
-
-        <!-- Container du graphique -->
-        <div class="relative">
-          <!-- État de chargement initial -->
-          <div id="evolution-conversion-initial-loading"
-            class="h-64 bg-gray-50 rounded-lg flex items-center justify-center">
-            <div class="text-center">
-              <i class="fas fa-spinner fa-spin text-purple-600 text-2xl mb-2"></i>
-              <p class="text-gray-500">Chargement évolution conversion...</p>
-            </div>
-          </div>
-
-          <!-- Canvas pour le graphique (masqué initialement) -->
-          <canvas id="performance-evolution-conversion-chart" class="hidden" width="400" height="200"></canvas>
-
-          <!-- Loading overlay pour changements de période -->
-          <div id="evolution-conversion-loading"
-            class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center hidden">
-            <i class="fas fa-spinner fa-spin text-purple-600"></i>
-          </div>
-
-          <!-- État vide (masqué initialement) -->
-          <div id="evolution-conversion-empty"
-            class="hidden h-64 bg-purple-50 border-2 border-dashed border-purple-200 rounded-lg flex items-center justify-center">
-            <div class="text-center">
-              <i class="fas fa-chart-line text-purple-400 text-3xl mb-3"></i>
-              <h4 class="text-lg font-semibold text-purple-900 mb-2">Aucune donnée de conversion</h4>
-              <p class="text-purple-700 text-sm">Aucune donnée sur la période sélectionnée</p>
-              <p class="text-purple-600 text-xs mt-1">Les données apparaîtront dès qu'il y aura des conversions</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Panneau de statistiques -->
-        <div id="evolution-conversion-stats"
-          class="mt-4 grid grid-cols-3 gap-3 p-3 bg-purple-50 rounded-lg border border-purple-200">
-          <div class="text-center">
-            <p class="text-xs text-gray-600 mb-1">Conversion Moy.</p>
-            <p class="font-bold text-purple-900 text-sm" id="stat-conversion-moy">-</p>
-          </div>
-          <div class="text-center">
-            <p class="text-xs text-gray-600 mb-1">Meilleure</p>
-            <p class="font-bold text-purple-900 text-sm" id="stat-conversion-max">-</p>
-          </div>
-          <div class="text-center">
-            <p class="text-xs text-gray-600 mb-1">Tendance</p>
-            <p class="font-bold text-sm" id="stat-conversion-tendance">-</p>
+        <!-- Détails doublons -->
+        <div id="doublons-details" class="mt-3 pt-3 border-t border-gray-200 hidden">
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-gray-600">Commandes marquées doublon:</span>
+            <span id="nb-doublons" class="font-semibold text-orange-600">-</span>
           </div>
         </div>
       </div>
 
-      <!-- Répartition Clients par Segment -->
-      <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100 segments-clients-container">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-lg font-semibold text-gray-900">🎯 Segmentation Clients</h3>
-          <div class="text-xs text-gray-500">Nouveaux, Réguliers, VIP</div>
+      <!-- Taux de Commandes Erronées -->
+      <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <i class="fas fa-exclamation-circle text-red-600"></i>
+            <h3 class="text-sm font-medium text-gray-600">Taux Erronées</h3>
+          </div>
+          <span class="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 text-[10px] font-medium rounded" title="Toutes les commandes de la base">
+            <i class="fas fa-database"></i>
+            <span>Global</span>
+          </span>
         </div>
-        <div class="relative" style="height: 300px;">
-          <canvas id="repartition-segments-chart"></canvas>
-          <div id="segments-clients-loading"
-            class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center">
-            <i class="fas fa-spinner fa-spin text-purple-600"></i>
+        <div class="flex items-baseline gap-2">
+          <span id="taux-erronees-value" class="text-2xl font-bold text-gray-900">-</span>
+          <span class="text-sm text-gray-600">%</span>
+        </div>
+        <p id="taux-erronees-sub" class="text-xs text-gray-500 mt-1">Sur <span id="taux-erronees-total">-</span> commandes</p>
+
+        <!-- Détails erronées -->
+        <div id="erronees-details" class="mt-3 pt-3 border-t border-gray-200 hidden">
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-gray-600">Commandes erronées:</span>
+            <span id="nb-erronees" class="font-semibold text-red-600">-</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Taux de Commandes Retournées -->
+      <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <i class="fas fa-undo text-purple-600"></i>
+            <h3 class="text-sm font-medium text-gray-600">Taux Retournées</h3>
+          </div>
+          <span class="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-700 text-[10px] font-medium rounded" title="Toutes les commandes de la base">
+            <i class="fas fa-database"></i>
+            <span>Global</span>
+          </span>
+        </div>
+        <div class="flex items-baseline gap-2">
+          <span id="taux-retournees-value" class="text-2xl font-bold text-gray-900">-</span>
+          <span class="text-sm text-gray-600">%</span>
+        </div>
+        <p id="taux-retournees-sub" class="text-xs text-gray-500 mt-1">Sur <span id="taux-retournees-total">-</span> commandes</p>
+
+        <!-- Détails retournées -->
+        <div id="retournees-details" class="mt-3 pt-3 border-t border-gray-200 hidden">
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-gray-600">Commandes retournées:</span>
+            <span id="nb-retournees" class="font-semibold text-purple-600">-</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Taux de Commandes Annulées -->
+      <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <i class="fas fa-ban text-gray-600"></i>
+            <h3 class="text-sm font-medium text-gray-600">Taux Annulées</h3>
+          </div>
+          <span class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-700 text-[10px] font-medium rounded" title="Toutes les commandes de la base">
+            <i class="fas fa-database"></i>
+            <span>Global</span>
+          </span>
+        </div>
+        <div class="flex items-baseline gap-2">
+          <span id="taux-annulees-value" class="text-2xl font-bold text-gray-900">-</span>
+          <span class="text-sm text-gray-600">%</span>
+        </div>
+        <p id="taux-annulees-sub" class="text-xs text-gray-500 mt-1">Sur <span id="taux-annulees-total">-</span> commandes</p>
+
+        <!-- Détails annulées -->
+        <div id="annulees-details" class="mt-3 pt-3 border-t border-gray-200 hidden">
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-gray-600">Commandes annulées:</span>
+            <span id="nb-annulees" class="font-semibold text-gray-600">-</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Taux de Livraison -->
+      <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <i class="fas fa-truck text-green-600"></i>
+            <h3 class="text-sm font-medium text-gray-600">Taux de Livraison</h3>
+          </div>
+          <span class="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 text-[10px] font-medium rounded" title="Toutes les commandes de la base">
+            <i class="fas fa-database"></i>
+            <span>Global</span>
+          </span>
+        </div>
+        <div class="flex items-baseline gap-2">
+          <span id="taux-livraison-value" class="text-2xl font-bold text-gray-900">-</span>
+          <span class="text-sm text-gray-600">%</span>
+        </div>
+        <p id="taux-livraison-sub" class="text-xs text-gray-500 mt-1">Sur <span id="taux-livraison-total">-</span> commandes</p>
+
+        <!-- Détails livraison -->
+        <div id="livraison-details" class="mt-3 pt-3 border-t border-gray-200 hidden">
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-gray-600">Commandes livrées:</span>
+            <span id="nb-livrees" class="font-semibold text-green-600">-</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Délai Moyen de Livraison -->
+      <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <i class="fas fa-clock text-blue-600"></i>
+            <h3 class="text-sm font-medium text-gray-600">Délai Moyen Livraison</h3>
+          </div>
+          <span class="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 text-[10px] font-medium rounded" title="Toutes les commandes livrées">
+            <i class="fas fa-database"></i>
+            <span>Global</span>
+          </span>
+        </div>
+        <div class="flex flex-col gap-1">
+          <span id="delai-moyen-value" class="text-xl font-bold text-gray-900">-</span>
+        </div>
+        <p id="delai-moyen-sub" class="text-xs text-gray-500 mt-1">Sur <span id="delai-moyen-total">-</span> commandes</p>
+
+        <!-- Détails délai -->
+        <div id="delai-details" class="mt-3 pt-3 border-t border-gray-200 hidden">
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-gray-600">Commandes analysées:</span>
+            <span id="nb-commandes-delai" class="font-semibold text-blue-600">-</span>
           </div>
         </div>
       </div>
@@ -356,176 +270,6 @@
         <div class="text-center">
           <p class="text-xs text-gray-600 mb-1">% Principale</p>
           <p class="font-bold text-blue-900 text-sm" id="stat-sources-percent">-</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Métriques Additionnelles -->
-    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-      <!-- Taux de Doublons -->
-      <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-        <div class="flex items-center justify-between mb-2">
-          <div class="flex items-center gap-2">
-            <i class="fas fa-clone text-orange-600"></i>
-            <h3 class="text-sm font-medium text-gray-600">Taux de Doublons</h3>
-          </div>
-          <span class="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-700 text-[10px] font-medium rounded" title="Toutes les commandes de la base">
-            <i class="fas fa-database"></i>
-            <span>Global</span>
-          </span>
-        </div>
-        <div class="flex items-baseline gap-2">
-          <span id="taux-doublons-value" class="text-2xl font-bold text-gray-900">-</span>
-          <span class="text-sm text-gray-600">%</span>
-        </div>
-        <p id="taux-doublons-sub" class="text-xs text-gray-500 mt-1">Sur <span id="taux-doublons-total">-</span> commandes</p>
-
-        <!-- Détails doublons -->
-        <div id="doublons-details" class="mt-3 pt-3 border-t border-gray-200 hidden">
-          <div class="flex items-center justify-between text-xs">
-            <span class="text-gray-600">Commandes marquées doublon:</span>
-            <span id="nb-doublons" class="font-semibold text-orange-600">-</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Taux de Commandes Erronées -->
-      <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-        <div class="flex items-center justify-between mb-2">
-          <div class="flex items-center gap-2">
-            <i class="fas fa-exclamation-circle text-red-600"></i>
-            <h3 class="text-sm font-medium text-gray-600">Taux Erronées</h3>
-          </div>
-          <span class="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 text-[10px] font-medium rounded" title="Toutes les commandes de la base">
-            <i class="fas fa-database"></i>
-            <span>Global</span>
-          </span>
-        </div>
-        <div class="flex items-baseline gap-2">
-          <span id="taux-erronees-value" class="text-2xl font-bold text-gray-900">-</span>
-          <span class="text-sm text-gray-600">%</span>
-        </div>
-        <p id="taux-erronees-sub" class="text-xs text-gray-500 mt-1">Sur <span id="taux-erronees-total">-</span> commandes</p>
-
-        <!-- Détails erronées -->
-        <div id="erronees-details" class="mt-3 pt-3 border-t border-gray-200 hidden">
-          <div class="flex items-center justify-between text-xs">
-            <span class="text-gray-600">Commandes erronées:</span>
-            <span id="nb-erronees" class="font-semibold text-red-600">-</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Coût d'Acquisition Client (CAC) -->
-      <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-        <div class="flex items-center gap-2 mb-2">
-          <i class="fas fa-bullseye text-red-600"></i>
-          <h3 class="text-sm font-medium text-gray-600">Coût Acquisition</h3>
-        </div>
-        <div class="flex items-baseline gap-2">
-          <span data-kpi="cac" class="text-2xl font-bold text-gray-900">-</span>
-          <span data-kpi-unite="cac" class="text-sm text-gray-600">DH</span>
-        </div>
-        <p data-kpi-sub="cac" class="text-xs text-gray-500 mt-1">Par client</p>
-      </div>
-
-      <!-- Taux de Satisfaction -->
-      <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-        <div class="flex items-center gap-2 mb-2">
-          <i class="fas fa-smile text-yellow-600"></i>
-          <h3 class="text-sm font-medium text-gray-600">Taux Satisfaction</h3>
-        </div>
-        <div class="flex items-baseline gap-2">
-          <span data-kpi="satisfaction" class="text-2xl font-bold text-gray-900">-</span>
-          <span data-kpi-unite="satisfaction" class="text-sm text-gray-600">%</span>
-        </div>
-        <p data-kpi-sub="satisfaction" class="text-xs text-gray-500 mt-1">Ce mois</p>
-      </div>
-
-      <!-- Taux de Réclamation -->
-      <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-        <div class="flex items-center gap-2 mb-2">
-          <i class="fas fa-exclamation-triangle text-orange-600"></i>
-          <h3 class="text-sm font-medium text-gray-600">Taux Réclamation</h3>
-        </div>
-        <div class="flex items-baseline gap-2">
-          <span data-kpi="reclamation" class="text-2xl font-bold text-gray-900">-</span>
-          <span data-kpi-unite="reclamation" class="text-sm text-gray-600">%</span>
-        </div>
-        <p data-kpi-sub="reclamation" class="text-xs text-gray-500 mt-1">Ce mois</p>
-      </div>
-    </div>
-
-    <!-- Section Performance par Équipe -->
-    <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="text-lg font-semibold text-gray-900">👥 Performance par Équipe</h3>
-        <div class="text-xs text-gray-500">Comparaison des équipes</div>
-      </div>
-
-      <div class="relative" style="height: 350px;">
-        <!-- Canvas pour graphique en barres -->
-        <canvas id="performance-equipe-chart"></canvas>
-
-        <!-- État de chargement -->
-        <div id="performance-equipe-loading"
-          class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center">
-          <i class="fas fa-spinner fa-spin text-purple-600"></i>
-        </div>
-
-        <!-- État vide -->
-        <div id="performance-equipe-empty"
-          class="hidden h-full bg-gray-50 border-2 border-dashed border-gray-200 rounded-lg flex items-center justify-center">
-          <div class="text-center">
-            <i class="fas fa-users text-gray-300 text-3xl mb-3"></i>
-            <p class="text-gray-500 text-sm">Aucune donnée d'équipe disponible</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Section supplémentaire: Objectifs vs Réalisations -->
-    <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="text-lg font-semibold text-gray-900">🎯 Objectifs vs Réalisations</h3>
-        <div class="text-xs text-gray-500">Progression mensuelle</div>
-      </div>
-
-      <div class="space-y-4">
-        <!-- Objectif CA -->
-        <div>
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-sm font-medium text-gray-700">Objectif CA</span>
-            <span class="text-sm font-bold text-gray-900" id="objectif-ca-percent">-</span>
-          </div>
-          <div class="w-full bg-gray-200 rounded-full h-3">
-            <div id="objectif-ca-bar" class="bg-blue-600 h-3 rounded-full transition-all duration-500"
-              style="width: 0%"></div>
-          </div>
-        </div>
-
-        <!-- Objectif Commandes -->
-        <div>
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-sm font-medium text-gray-700">Objectif Commandes</span>
-            <span class="text-sm font-bold text-gray-900" id="objectif-cmd-percent">-</span>
-          </div>
-          <div class="w-full bg-gray-200 rounded-full h-3">
-            <div id="objectif-cmd-bar" class="bg-green-600 h-3 rounded-full transition-all duration-500"
-              style="width: 0%"></div>
-          </div>
-        </div>
-
-        <!-- Objectif Nouveaux Clients -->
-        <div>
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-sm font-medium text-gray-700">Objectif Nouveaux Clients</span>
-            <span class="text-sm font-bold text-gray-900" id="objectif-clients-percent">-</span>
-          </div>
-          <div class="w-full bg-gray-200 rounded-full h-3">
-            <div id="objectif-clients-bar" class="bg-purple-600 h-3 rounded-full transition-all duration-500"
-              style="width: 0%"></div>
-          </div>
         </div>
       </div>
     </div>

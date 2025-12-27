@@ -24,6 +24,10 @@ urlpatterns = [
     path('api/segmentation-clients/', views_commerciale.segmentation_clients_data, name='segmentation_clients_data'),
     path('api/taux-doublons/', views_commerciale.taux_doublons_data, name='taux_doublons_data'),
     path('api/taux-erronees/', views_commerciale.taux_erronees_data, name='taux_erronees_data'),
+    path('api/taux-retournees/', views_commerciale.taux_retournees_data, name='taux_retournees_data'),
+    path('api/taux-annulees/', views_commerciale.taux_annulees_data, name='taux_annulees_data'),
+    path('api/taux-livraison/', views_commerciale.taux_livraison_data, name='taux_livraison_data'),
+    path('api/delai-moyen-livraison/', views_commerciale.delai_moyen_livraison_data, name='delai_moyen_livraison_data'),
 
     # APIs pour données KPIs - Clients et autres
     path('api/clients/', views.clients_data, name='clients_data'),

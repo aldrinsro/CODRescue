@@ -1974,6 +1974,254 @@ class YoozakKPIManager {
     }
   }
 
+  // Récupérer les données du taux de commandes retournées depuis l'API
+  async fetchTauxRetourneesData() {
+    const url = `${this.apiEndpoint}taux-retournees/`;
+    console.log(`🔍 Fetch taux retournées (toutes périodes): ${url}`);
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Erreur API: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('📊 Données taux retournées reçues:', data);
+
+    return data;
+  }
+
+  // Mettre à jour l'affichage du taux de commandes retournées
+  async updateTauxRetournees() {
+    console.log(`📊 Mise à jour du taux de commandes retournées...`);
+
+    try {
+      const data = await this.fetchTauxRetourneesData();
+
+      if (!data.success) {
+        console.log('⚠️ Erreur lors de la récupération du taux de commandes retournées');
+        return;
+      }
+
+      const tauxValue = document.getElementById('taux-retournees-value');
+      const tauxTotal = document.getElementById('taux-retournees-total');
+      const nbRetournees = document.getElementById('nb-retournees');
+      const details = document.getElementById('retournees-details');
+
+      if (tauxValue) {
+        tauxValue.textContent = data.taux_retournees;
+
+        if (data.taux_retournees > 10) {
+          tauxValue.classList.add('text-red-600');
+          tauxValue.classList.remove('text-orange-600', 'text-green-600', 'text-gray-900');
+        } else if (data.taux_retournees > 5) {
+          tauxValue.classList.add('text-orange-600');
+          tauxValue.classList.remove('text-red-600', 'text-green-600', 'text-gray-900');
+        } else if (data.taux_retournees > 0) {
+          tauxValue.classList.add('text-green-600');
+          tauxValue.classList.remove('text-red-600', 'text-orange-600', 'text-gray-900');
+        } else {
+          tauxValue.classList.remove('text-red-600', 'text-orange-600', 'text-green-600');
+        }
+      }
+
+      if (tauxTotal) tauxTotal.textContent = data.total_commandes_fmt;
+      if (nbRetournees) nbRetournees.textContent = data.nb_retournees_fmt;
+      if (details && data.nb_retournees > 0) details.classList.remove('hidden');
+
+      console.log(`✅ Taux de commandes retournées mis à jour: ${data.taux_retournees}%`);
+
+    } catch (error) {
+      console.error('❌ Erreur lors de la mise à jour du taux de commandes retournées:', error);
+    }
+  }
+
+  // Récupérer les données du taux de commandes annulées depuis l'API
+  async fetchTauxAnnuleesData() {
+    const url = `${this.apiEndpoint}taux-annulees/`;
+    console.log(`🔍 Fetch taux annulées (toutes périodes): ${url}`);
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Erreur API: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('📊 Données taux annulées reçues:', data);
+
+    return data;
+  }
+
+  // Mettre à jour l'affichage du taux de commandes annulées
+  async updateTauxAnnulees() {
+    console.log(`📊 Mise à jour du taux de commandes annulées...`);
+
+    try {
+      const data = await this.fetchTauxAnnuleesData();
+
+      if (!data.success) {
+        console.log('⚠️ Erreur lors de la récupération du taux de commandes annulées');
+        return;
+      }
+
+      const tauxValue = document.getElementById('taux-annulees-value');
+      const tauxTotal = document.getElementById('taux-annulees-total');
+      const nbAnnulees = document.getElementById('nb-annulees');
+      const details = document.getElementById('annulees-details');
+
+      if (tauxValue) {
+        tauxValue.textContent = data.taux_annulees;
+
+        if (data.taux_annulees > 10) {
+          tauxValue.classList.add('text-red-600');
+          tauxValue.classList.remove('text-orange-600', 'text-green-600', 'text-gray-900');
+        } else if (data.taux_annulees > 5) {
+          tauxValue.classList.add('text-orange-600');
+          tauxValue.classList.remove('text-red-600', 'text-green-600', 'text-gray-900');
+        } else if (data.taux_annulees > 0) {
+          tauxValue.classList.add('text-green-600');
+          tauxValue.classList.remove('text-red-600', 'text-orange-600', 'text-gray-900');
+        } else {
+          tauxValue.classList.remove('text-red-600', 'text-orange-600', 'text-green-600');
+        }
+      }
+
+      if (tauxTotal) tauxTotal.textContent = data.total_commandes_fmt;
+      if (nbAnnulees) nbAnnulees.textContent = data.nb_annulees_fmt;
+      if (details && data.nb_annulees > 0) details.classList.remove('hidden');
+
+      console.log(`✅ Taux de commandes annulées mis à jour: ${data.taux_annulees}%`);
+
+    } catch (error) {
+      console.error('❌ Erreur lors de la mise à jour du taux de commandes annulées:', error);
+    }
+  }
+
+  // Récupérer les données du taux de livraison depuis l'API
+  async fetchTauxLivraisonData() {
+    const url = `${this.apiEndpoint}taux-livraison/`;
+    console.log(`🔍 Fetch taux livraison (toutes périodes): ${url}`);
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Erreur API: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('📊 Données taux livraison reçues:', data);
+
+    return data;
+  }
+
+  // Mettre à jour l'affichage du taux de livraison
+  async updateTauxLivraison() {
+    console.log(`📊 Mise à jour du taux de livraison...`);
+
+    try {
+      const data = await this.fetchTauxLivraisonData();
+
+      if (!data.success) {
+        console.log('⚠️ Erreur lors de la récupération du taux de livraison');
+        return;
+      }
+
+      const tauxValue = document.getElementById('taux-livraison-value');
+      const tauxTotal = document.getElementById('taux-livraison-total');
+      const nbLivrees = document.getElementById('nb-livrees');
+      const details = document.getElementById('livraison-details');
+
+      if (tauxValue) {
+        tauxValue.textContent = data.taux_livraison;
+
+        // Pour le taux de livraison, plus c'est élevé, mieux c'est
+        if (data.taux_livraison >= 80) {
+          tauxValue.classList.add('text-green-600');
+          tauxValue.classList.remove('text-orange-600', 'text-red-600', 'text-gray-900');
+        } else if (data.taux_livraison >= 60) {
+          tauxValue.classList.add('text-orange-600');
+          tauxValue.classList.remove('text-green-600', 'text-red-600', 'text-gray-900');
+        } else if (data.taux_livraison > 0) {
+          tauxValue.classList.add('text-red-600');
+          tauxValue.classList.remove('text-green-600', 'text-orange-600', 'text-gray-900');
+        } else {
+          tauxValue.classList.remove('text-green-600', 'text-orange-600', 'text-red-600');
+        }
+      }
+
+      if (tauxTotal) tauxTotal.textContent = data.total_commandes_fmt;
+      if (nbLivrees) nbLivrees.textContent = data.nb_livrees_fmt;
+      if (details && data.nb_livrees > 0) details.classList.remove('hidden');
+
+      console.log(`✅ Taux de livraison mis à jour: ${data.taux_livraison}%`);
+
+    } catch (error) {
+      console.error('❌ Erreur lors de la mise à jour du taux de livraison:', error);
+    }
+  }
+
+  // Récupérer les données du délai moyen de livraison depuis l'API
+  async fetchDelaiMoyenLivraisonData() {
+    const url = `${this.apiEndpoint}delai-moyen-livraison/`;
+    console.log(`🔍 Fetch délai moyen de livraison (toutes périodes): ${url}`);
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Erreur API: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('📊 Données délai moyen de livraison reçues:', data);
+
+    return data;
+  }
+
+  // Mettre à jour l'affichage du délai moyen de livraison
+  async updateDelaiMoyenLivraison() {
+    console.log(`📊 Mise à jour du délai moyen de livraison...`);
+
+    try {
+      const data = await this.fetchDelaiMoyenLivraisonData();
+
+      if (!data.success) {
+        console.log('⚠️ Erreur lors de la récupération du délai moyen de livraison');
+        return;
+      }
+
+      const delaiValue = document.getElementById('delai-moyen-value');
+      const delaiTotal = document.getElementById('delai-moyen-total');
+      const nbCommandesDelai = document.getElementById('nb-commandes-delai');
+      const details = document.getElementById('delai-details');
+
+      if (delaiValue) {
+        // Afficher le délai formaté complet (jours, heures, minutes)
+        delaiValue.textContent = data.delai_moyen_formatted;
+
+        // Colorier selon le délai en jours (plus court = mieux)
+        const totalJours = data.delai_jours;
+        if (totalJours <= 2) {
+          delaiValue.classList.add('text-green-600');
+          delaiValue.classList.remove('text-orange-600', 'text-red-600', 'text-gray-900');
+        } else if (totalJours <= 5) {
+          delaiValue.classList.add('text-orange-600');
+          delaiValue.classList.remove('text-green-600', 'text-red-600', 'text-gray-900');
+        } else if (totalJours > 5) {
+          delaiValue.classList.add('text-red-600');
+          delaiValue.classList.remove('text-green-600', 'text-orange-600', 'text-gray-900');
+        } else {
+          delaiValue.classList.remove('text-green-600', 'text-orange-600', 'text-red-600');
+        }
+      }
+
+      if (delaiTotal) delaiTotal.textContent = data.nb_commandes_livrees_fmt;
+      if (nbCommandesDelai) nbCommandesDelai.textContent = data.nb_commandes_livrees_fmt;
+      if (details && data.nb_commandes_livrees > 0) details.classList.remove('hidden');
+
+      console.log(`✅ Délai moyen de livraison mis à jour: ${data.delai_moyen_formatted}`);
+
+    } catch (error) {
+      console.error('❌ Erreur lors de la mise à jour du délai moyen de livraison:', error);
+    }
+  }
+
   async loadPerformanceCommercialeData() {
     console.log('📊 Chargement des données Performance Commerciale...');
 
@@ -2002,6 +2250,18 @@ class YoozakKPIManager {
 
       // Charger le taux de commandes erronées (sans filtre de période)
       await this.updateTauxErronees();
+
+      // Charger le taux de commandes retournées (sans filtre de période)
+      await this.updateTauxRetournees();
+
+      // Charger le taux de commandes annulées (sans filtre de période)
+      await this.updateTauxAnnulees();
+
+      // Charger le taux de livraison (sans filtre de période)
+      await this.updateTauxLivraison();
+
+      // Charger le délai moyen de livraison (sans filtre de période)
+      await this.updateDelaiMoyenLivraison();
 
       console.log('✅ Données Performance Commerciale chargées');
 
