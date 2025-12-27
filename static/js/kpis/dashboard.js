@@ -1641,6 +1641,339 @@ class YoozakKPIManager {
     }
   }
 
+  // Récupérer les données des commandes par source depuis l'API
+  // SANS FILTRE DE PÉRIODE - affiche toutes les commandes
+  async fetchCommandesParSourceData() {
+    const url = `${this.apiEndpoint}commandes-par-source/`;
+    console.log(`🔍 Fetch commandes par source (toutes périodes): ${url}`);
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Erreur API: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('📊 Données commandes par source reçues:', data);
+
+    return data;
+  }
+
+  // Mettre à jour le graphique des commandes par source (bar chart)
+  // SANS FILTRE DE PÉRIODE
+  async updateCommandesParSourceChart() {
+    console.log(`📊 Mise à jour graphique Commandes par Source (toutes périodes)...`);
+
+    const canvas = document.getElementById('commandes-par-source-chart');
+    const loadingInitial = document.getElementById('commandes-sources-initial-loading');
+    const loadingOverlay = document.getElementById('commandes-sources-loading');
+    const emptyState = document.getElementById('commandes-sources-empty');
+    const statsPanel = document.getElementById('commandes-sources-stats');
+
+    if (!canvas) {
+      console.warn('⚠️ Canvas commandes-par-source-chart non trouvé');
+      return;
+    }
+
+    try {
+      // Afficher le loading (overlay si graphique existe déjà, sinon initial loading)
+      if (canvas.classList.contains('hidden')) {
+        if (loadingInitial) loadingInitial.classList.remove('hidden');
+      } else {
+        if (loadingOverlay) loadingOverlay.classList.remove('hidden');
+      }
+      if (emptyState) emptyState.classList.add('hidden');
+
+      // Récupérer les données (sans filtre de période)
+      const data = await this.fetchCommandesParSourceData();
+
+      // Vérifier si on a des données
+      if (!data.success || !data.labels || data.labels.length === 0) {
+        console.log('⚠️ Aucune donnée de commandes par source');
+
+        // Masquer le canvas et afficher l'état vide
+        if (canvas) canvas.classList.add('hidden');
+        if (loadingInitial) loadingInitial.classList.add('hidden');
+        if (loadingOverlay) loadingOverlay.classList.add('hidden');
+        if (emptyState) emptyState.classList.remove('hidden');
+        if (statsPanel) statsPanel.classList.add('hidden');
+
+        return;
+      }
+
+      // Détruire le graphique existant si présent
+      const existingChart = this.charts.get('commandes-par-source');
+      if (existingChart) {
+        console.log('🗑️ Destruction du graphique commandes par source existant');
+        existingChart.destroy();
+        this.charts.delete('commandes-par-source');
+      }
+
+      // Créer le nouveau graphique
+      const ctx = canvas.getContext('2d');
+
+      const chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: data.labels,
+          datasets: [{
+            label: 'Nombre de commandes',
+            data: data.values,
+            backgroundColor: data.colors,
+            borderColor: data.colors.map(color => color.replace('0.8', '1')),
+            borderWidth: 2,
+            borderRadius: 6,
+            barThickness: 'flex',
+            maxBarThickness: 80
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false
+            },
+            tooltip: {
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+              padding: 12,
+              titleFont: {
+                size: 14,
+                weight: 'bold'
+              },
+              bodyFont: {
+                size: 13
+              },
+              callbacks: {
+                label: function (context) {
+                  const index = context.dataIndex;
+                  const nbCommandes = context.parsed.y;
+                  const total = data.values.reduce((a, b) => a + b, 0);
+                  const percent = total > 0 ? ((nbCommandes / total) * 100).toFixed(1) : 0;
+
+                  return [
+                    `Commandes: ${nbCommandes.toLocaleString('fr-FR')}`,
+                    `Part: ${percent}%`
+                  ];
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: {
+                display: false
+              },
+              ticks: {
+                font: {
+                  size: 12,
+                  weight: '500'
+                },
+                color: '#4B5563'
+              }
+            },
+            y: {
+              beginAtZero: true,
+              grid: {
+                color: 'rgba(156, 163, 175, 0.1)',
+                drawBorder: false
+              },
+              ticks: {
+                font: {
+                  size: 11
+                },
+                color: '#6B7280',
+                callback: function (value) {
+                  return value.toLocaleString('fr-FR');
+                }
+              }
+            }
+          }
+        }
+      });
+
+      // Sauvegarder le graphique
+      this.charts.set('commandes-par-source', chart);
+
+      // Afficher le canvas et masquer le loading
+      if (canvas) canvas.classList.remove('hidden');
+      if (loadingInitial) loadingInitial.classList.add('hidden');
+      if (loadingOverlay) loadingOverlay.classList.add('hidden');
+
+      // Mettre à jour les statistiques
+      if (statsPanel) {
+        statsPanel.classList.remove('hidden');
+        document.getElementById('stat-sources-total').textContent = data.stats.total_commandes_fmt;
+        document.getElementById('stat-sources-nb').textContent = data.stats.nb_sources;
+        document.getElementById('stat-sources-principale').textContent = data.stats.source_principale;
+        document.getElementById('stat-sources-percent').textContent = data.stats.source_principale_percent_fmt;
+      }
+
+      console.log('✅ Graphique Commandes par Source mis à jour');
+
+    } catch (error) {
+      console.error('❌ Erreur lors de la mise à jour du graphique commandes par source:', error);
+
+      // Afficher l'état vide en cas d'erreur
+      if (canvas) canvas.classList.add('hidden');
+      if (loadingInitial) loadingInitial.classList.add('hidden');
+      if (loadingOverlay) loadingOverlay.classList.add('hidden');
+      if (emptyState) emptyState.classList.remove('hidden');
+      if (statsPanel) statsPanel.classList.add('hidden');
+    }
+  }
+
+  // Récupérer les données du taux de doublons depuis l'API
+  // SANS FILTRE DE PÉRIODE - analyse toute la base
+  async fetchTauxDoublonsData() {
+    const url = `${this.apiEndpoint}taux-doublons/`;
+    console.log(`🔍 Fetch taux doublons (toutes périodes): ${url}`);
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Erreur API: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('📊 Données taux doublons reçues:', data);
+
+    return data;
+  }
+
+  // Mettre à jour l'affichage du taux de doublons
+  async updateTauxDoublons() {
+    console.log(`📊 Mise à jour du taux de doublons...`);
+
+    try {
+      // Récupérer les données
+      const data = await this.fetchTauxDoublonsData();
+
+      // Vérifier si on a des données
+      if (!data.success) {
+        console.log('⚠️ Erreur lors de la récupération du taux de doublons');
+        return;
+      }
+
+      // Mettre à jour l'affichage
+      const tauxValue = document.getElementById('taux-doublons-value');
+      const tauxTotal = document.getElementById('taux-doublons-total');
+      const nbDoublons = document.getElementById('nb-doublons');
+      const details = document.getElementById('doublons-details');
+
+      if (tauxValue) {
+        tauxValue.textContent = data.taux_doublons;
+
+        // Changer la couleur selon le taux
+        if (data.taux_doublons > 10) {
+          tauxValue.classList.add('text-red-600');
+          tauxValue.classList.remove('text-orange-600', 'text-green-600', 'text-gray-900');
+        } else if (data.taux_doublons > 5) {
+          tauxValue.classList.add('text-orange-600');
+          tauxValue.classList.remove('text-red-600', 'text-green-600', 'text-gray-900');
+        } else if (data.taux_doublons > 0) {
+          tauxValue.classList.add('text-green-600');
+          tauxValue.classList.remove('text-red-600', 'text-orange-600', 'text-gray-900');
+        } else {
+          // Si taux = 0, garder la couleur grise par défaut
+          tauxValue.classList.remove('text-red-600', 'text-orange-600', 'text-green-600');
+        }
+      }
+
+      if (tauxTotal) {
+        tauxTotal.textContent = data.total_commandes_fmt;
+      }
+
+      if (nbDoublons) {
+        nbDoublons.textContent = data.nb_doublons_fmt;
+      }
+
+      // Afficher les détails si taux > 0
+      if (details && data.nb_doublons > 0) {
+        details.classList.remove('hidden');
+      }
+
+      console.log(`✅ Taux de doublons mis à jour: ${data.taux_doublons}%`);
+
+    } catch (error) {
+      console.error('❌ Erreur lors de la mise à jour du taux de doublons:', error);
+    }
+  }
+
+  // Récupérer les données du taux de commandes erronées depuis l'API
+  // SANS FILTRE DE PÉRIODE - analyse toute la base
+  async fetchTauxErroneesData() {
+    const url = `${this.apiEndpoint}taux-erronees/`;
+    console.log(`🔍 Fetch taux erronées (toutes périodes): ${url}`);
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Erreur API: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('📊 Données taux erronées reçues:', data);
+
+    return data;
+  }
+
+  // Mettre à jour l'affichage du taux de commandes erronées
+  async updateTauxErronees() {
+    console.log(`📊 Mise à jour du taux de commandes erronées...`);
+
+    try {
+      // Récupérer les données
+      const data = await this.fetchTauxErroneesData();
+
+      // Vérifier si on a des données
+      if (!data.success) {
+        console.log('⚠️ Erreur lors de la récupération du taux de commandes erronées');
+        return;
+      }
+
+      // Mettre à jour l'affichage
+      const tauxValue = document.getElementById('taux-erronees-value');
+      const tauxTotal = document.getElementById('taux-erronees-total');
+      const nbErronees = document.getElementById('nb-erronees');
+      const details = document.getElementById('erronees-details');
+
+      if (tauxValue) {
+        tauxValue.textContent = data.taux_erronees;
+
+        // Changer la couleur selon le taux
+        if (data.taux_erronees > 10) {
+          tauxValue.classList.add('text-red-600');
+          tauxValue.classList.remove('text-orange-600', 'text-green-600', 'text-gray-900');
+        } else if (data.taux_erronees > 5) {
+          tauxValue.classList.add('text-orange-600');
+          tauxValue.classList.remove('text-red-600', 'text-green-600', 'text-gray-900');
+        } else if (data.taux_erronees > 0) {
+          tauxValue.classList.add('text-green-600');
+          tauxValue.classList.remove('text-red-600', 'text-orange-600', 'text-gray-900');
+        } else {
+          // Si taux = 0, garder la couleur grise par défaut
+          tauxValue.classList.remove('text-red-600', 'text-orange-600', 'text-green-600');
+        }
+      }
+
+      if (tauxTotal) {
+        tauxTotal.textContent = data.total_commandes_fmt;
+      }
+
+      if (nbErronees) {
+        nbErronees.textContent = data.nb_erronees_fmt;
+      }
+
+      // Afficher les détails si taux > 0
+      if (details && data.nb_erronees > 0) {
+        details.classList.remove('hidden');
+      }
+
+      console.log(`✅ Taux de commandes erronées mis à jour: ${data.taux_erronees}%`);
+
+    } catch (error) {
+      console.error('❌ Erreur lors de la mise à jour du taux de commandes erronées:', error);
+    }
+  }
+
   async loadPerformanceCommercialeData() {
     console.log('📊 Chargement des données Performance Commerciale...');
 
@@ -1654,21 +1987,23 @@ class YoozakKPIManager {
     if (emptyState) emptyState.classList.add('hidden');
 
     try {
-      // TODO: Remplacer par un vrai appel API
-      // const response = await fetch(this.apiEndpoint + `performance-commerciale/?period=${this.selectedPeriodPerformance || '30j'}`);
-      // const data = await response.json();
+      // Masquer loading, afficher contenu
+      if (loading) loading.classList.add('hidden');
+      if (content) content.classList.remove('hidden');
 
-      // Pour l'instant, simuler des données
-      setTimeout(() => {
-        // Masquer loading, afficher contenu
-        if (loading) loading.classList.add('hidden');
-        if (content) content.classList.remove('hidden');
+      // Mettre à jour les textes "vs"
+      this.updateVsPeriodTextsPerformance(this.selectedPeriodPerformance || '30j');
 
-        // Mettre à jour les textes "vs"
-        this.updateVsPeriodTextsPerformance(this.selectedPeriodPerformance || '30j');
+      // Charger le graphique des commandes par source (sans filtre de période)
+      await this.updateCommandesParSourceChart();
 
-        console.log('✅ Données Performance Commerciale chargées (simulation)');
-      }, 500);
+      // Charger le taux de doublons (sans filtre de période)
+      await this.updateTauxDoublons();
+
+      // Charger le taux de commandes erronées (sans filtre de période)
+      await this.updateTauxErronees();
+
+      console.log('✅ Données Performance Commerciale chargées');
 
     } catch (error) {
       console.error('❌ Erreur chargement Performance Commerciale:', error);

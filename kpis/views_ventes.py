@@ -163,7 +163,7 @@ def ventes_data(request):
                     'tendance': ca_data['tendance_pourcent'],
                     'unite': 'DH',
                     'label': 'CA Total',
-                    'sub_value': f"Ce mois vs {format_number_fr(ca_data['ca_precedent'])} DH mois dernier"
+                    
                 },
                 'panier_moyen': {
                     'valeur': panier_moyen_actuel,
@@ -171,7 +171,7 @@ def ventes_data(request):
                     'tendance': round(tendance_panier, 1),
                     'unite': 'DH',
                     'label': 'Panier Moyen',
-                    'sub_value': f"Ce mois vs {format_number_fr(panier_moyen_precedent)} DH mois dernier"
+                    
                 },
                 'nb_commandes': {
                     'valeur': ca_data['nb_commandes_actuel'],
@@ -183,7 +183,7 @@ def ventes_data(request):
                     ),
                     'unite': 'commandes',
                     'label': 'Nb Commandes',
-                    'sub_value': f"Ce mois vs {ca_data['nb_commandes_precedent']} mois dernier"
+                    
                 }
             },
 

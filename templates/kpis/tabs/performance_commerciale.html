@@ -72,13 +72,13 @@
           <div class="flex-1">
             <div class="flex items-center gap-2 mb-2">
               <i class="fas fa-percentage text-purple-600"></i>
-              <h3 class="text-sm font-medium text-gray-600">Taux de Conversion</h3>
+              <h3 class="text-sm font-medium text-gray-600"> Taux de Doublon  </h3>
             </div>
             <div class="flex items-baseline gap-2">
               <span data-kpi="taux_conversion" class="text-3xl font-bold text-gray-900">-</span>
               <span data-kpi-unite="taux_conversion" class="text-sm text-gray-600">%</span>
             </div>
-            <p data-kpi-sub="taux_conversion" class="text-xs text-gray-500 mt-1">Ce mois</p>
+            <p data-kpi-sub="taux_conversion" class="text-xs text-gray-500 mt-1"></p>
           </div>
           <div class="text-right">
             <div data-kpi-trend="taux_conversion" class="inline-flex items-center gap-1 text-sm font-medium">
@@ -287,19 +287,133 @@
       </div>
     </div>
 
+    <!-- Graphique Commandes par Source -->
+    <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">📊 Commandes par Source</h3>
+          <p class="text-xs text-gray-500 mt-1">Répartition de toutes les commandes par source (tous états)</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 text-[10px] font-medium rounded" title="Toutes les commandes de la base de données">
+            <i class="fas fa-database"></i>
+            <span>Toutes périodes</span>
+          </span>
+          <div class="text-xs text-gray-500">
+            <i class="fas fa-chart-bar mr-1"></i>
+            Analyse par source
+          </div>
+        </div>
+      </div>
+
+      <!-- Container du graphique -->
+      <div class="relative" style="height: 350px;">
+        <!-- État de chargement initial -->
+        <div id="commandes-sources-initial-loading"
+          class="h-full bg-gray-50 rounded-lg flex items-center justify-center">
+          <div class="text-center">
+            <i class="fas fa-spinner fa-spin text-blue-600 text-2xl mb-2"></i>
+            <p class="text-gray-500">Chargement des données par source...</p>
+          </div>
+        </div>
+
+        <!-- Canvas pour le graphique (masqué initialement) -->
+        <canvas id="commandes-par-source-chart" class="hidden"></canvas>
+
+        <!-- Loading overlay pour changements de période -->
+        <div id="commandes-sources-loading"
+          class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center hidden">
+          <i class="fas fa-spinner fa-spin text-blue-600"></i>
+        </div>
+
+        <!-- État vide (masqué initialement) -->
+        <div id="commandes-sources-empty"
+          class="hidden h-full bg-blue-50 border-2 border-dashed border-blue-200 rounded-lg flex items-center justify-center">
+          <div class="text-center">
+            <i class="fas fa-database text-blue-400 text-3xl mb-3"></i>
+            <h4 class="text-lg font-semibold text-blue-900 mb-2">Aucune donnée de source</h4>
+            <p class="text-blue-700 text-sm">Aucune commande avec source identifiée dans la base de données</p>
+            <p class="text-blue-600 text-xs mt-1">Vérifiez que les commandes ont bien une source assignée</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panneau de statistiques -->
+      <div id="commandes-sources-stats"
+        class="mt-4 grid grid-cols-4 gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+        <div class="text-center">
+          <p class="text-xs text-gray-600 mb-1">Total Commandes</p>
+          <p class="font-bold text-blue-900 text-sm" id="stat-sources-total">-</p>
+        </div>
+        <div class="text-center">
+          <p class="text-xs text-gray-600 mb-1">Nb Sources</p>
+          <p class="font-bold text-blue-900 text-sm" id="stat-sources-nb">-</p>
+        </div>
+        <div class="text-center">
+          <p class="text-xs text-gray-600 mb-1">Source Principale</p>
+          <p class="font-bold text-blue-900 text-sm" id="stat-sources-principale">-</p>
+        </div>
+        <div class="text-center">
+          <p class="text-xs text-gray-600 mb-1">% Principale</p>
+          <p class="font-bold text-blue-900 text-sm" id="stat-sources-percent">-</p>
+        </div>
+      </div>
+    </div>
+
     <!-- Métriques Additionnelles -->
     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-      <!-- Valeur Vie Client (CLV) -->
+      <!-- Taux de Doublons -->
       <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-        <div class="flex items-center gap-2 mb-2">
-          <i class="fas fa-gem text-indigo-600"></i>
-          <h3 class="text-sm font-medium text-gray-600">Valeur Vie Client</h3>
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <i class="fas fa-clone text-orange-600"></i>
+            <h3 class="text-sm font-medium text-gray-600">Taux de Doublons</h3>
+          </div>
+          <span class="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-700 text-[10px] font-medium rounded" title="Toutes les commandes de la base">
+            <i class="fas fa-database"></i>
+            <span>Global</span>
+          </span>
         </div>
         <div class="flex items-baseline gap-2">
-          <span data-kpi="clv" class="text-2xl font-bold text-gray-900">-</span>
-          <span data-kpi-unite="clv" class="text-sm text-gray-600">DH</span>
+          <span id="taux-doublons-value" class="text-2xl font-bold text-gray-900">-</span>
+          <span class="text-sm text-gray-600">%</span>
         </div>
-        <p data-kpi-sub="clv" class="text-xs text-gray-500 mt-1">Moyenne</p>
+        <p id="taux-doublons-sub" class="text-xs text-gray-500 mt-1">Sur <span id="taux-doublons-total">-</span> commandes</p>
+
+        <!-- Détails doublons -->
+        <div id="doublons-details" class="mt-3 pt-3 border-t border-gray-200 hidden">
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-gray-600">Commandes marquées doublon:</span>
+            <span id="nb-doublons" class="font-semibold text-orange-600">-</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Taux de Commandes Erronées -->
+      <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <i class="fas fa-exclamation-circle text-red-600"></i>
+            <h3 class="text-sm font-medium text-gray-600">Taux Erronées</h3>
+          </div>
+          <span class="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 text-[10px] font-medium rounded" title="Toutes les commandes de la base">
+            <i class="fas fa-database"></i>
+            <span>Global</span>
+          </span>
+        </div>
+        <div class="flex items-baseline gap-2">
+          <span id="taux-erronees-value" class="text-2xl font-bold text-gray-900">-</span>
+          <span class="text-sm text-gray-600">%</span>
+        </div>
+        <p id="taux-erronees-sub" class="text-xs text-gray-500 mt-1">Sur <span id="taux-erronees-total">-</span> commandes</p>
+
+        <!-- Détails erronées -->
+        <div id="erronees-details" class="mt-3 pt-3 border-t border-gray-200 hidden">
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-gray-600">Commandes erronées:</span>
+            <span id="nb-erronees" class="font-semibold text-red-600">-</span>
+          </div>
+        </div>
       </div>
 
       <!-- Coût d'Acquisition Client (CAC) -->

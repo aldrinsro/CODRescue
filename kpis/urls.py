@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from . import views_ventes
+from . import views_commerciale
 
 app_name = 'kpis'
 
@@ -14,6 +15,15 @@ urlpatterns = [
     path('api/top-modeles/', views_ventes.top_modeles_data, name='top_modeles_data'),
     path('api/repartition-sources/', views_ventes.repartition_sources_data, name='repartition_sources_data'),
     path('api/performance-regions/', views_ventes.performance_regions_data, name='performance_regions_data'),
+
+    # APIs pour données KPIs - Performance Commerciale
+    path('api/commandes-par-source/', views_commerciale.commandes_par_source_data, name='commandes_par_source_data'),
+    path('api/top-sources-trafic/', views_commerciale.top_sources_trafic_data, name='top_sources_trafic_data'),
+    path('api/top-canaux/', views_commerciale.top_canaux_data, name='top_canaux_data'),
+    path('api/evolution-conversion/', views_commerciale.evolution_conversion_data, name='evolution_conversion_data'),
+    path('api/segmentation-clients/', views_commerciale.segmentation_clients_data, name='segmentation_clients_data'),
+    path('api/taux-doublons/', views_commerciale.taux_doublons_data, name='taux_doublons_data'),
+    path('api/taux-erronees/', views_commerciale.taux_erronees_data, name='taux_erronees_data'),
 
     # APIs pour données KPIs - Clients et autres
     path('api/clients/', views.clients_data, name='clients_data'),
