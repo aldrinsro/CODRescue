@@ -1,8 +1,8 @@
 from django.urls import path
-from . import views
+from .views import views
 from .service_apres_vente import views as sav_views
 from .barre_recherche_globale import views as search_views
-from . import articles_retournes_views
+from .views import articles_retournes_views
 
 app_name = 'operatLogistic'
 
