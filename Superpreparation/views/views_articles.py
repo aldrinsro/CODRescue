@@ -22,9 +22,9 @@ import qrcode
 import csv
 from article.models import Article, MouvementStock, VarianteArticle
 from commande.models import Envoi
-from .forms import ArticleForm, AjusterStockForm
-from .utils import creer_mouvement_stock
-from .decorators import superviseur_preparation_required, superviseur_only_required, preparation_team_required
+from ..forms import ArticleForm, AjusterStockForm
+from ..utils import creer_mouvement_stock
+from ..decorators import superviseur_preparation_required, superviseur_only_required, preparation_team_required
 from article.models import Article, Promotion, VarianteArticle, Categorie, Genre, Couleur, Pointure
 from django.views.decorators.http import require_POST
 from article.forms import PromotionForm

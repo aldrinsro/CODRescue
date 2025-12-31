@@ -1,6 +1,8 @@
 from django.urls import path
 from django.shortcuts import redirect
-from . import views, views_retournee,views_articles
+
+from .views import views_articles, views_retournee
+from .views import views
 from .barre_recherche_globale import views as search_views
 from operatConfirme import views as view_modif 
 

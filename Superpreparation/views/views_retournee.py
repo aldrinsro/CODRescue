@@ -14,7 +14,7 @@ from django.utils import timezone
 
 from parametre.models import Operateur
 from commande.models import Commande, ArticleRetourne
-from .decorators import superviseur_preparation_required
+from ..decorators import superviseur_preparation_required
 
 
 @superviseur_preparation_required
