@@ -1,6 +1,6 @@
 from django.urls import path
-from . import views, views_etiquettes
-from . import views_search
+from .views import views
+from .views import views_etiquettes, views_search
 
 app_name = 'commande'
  

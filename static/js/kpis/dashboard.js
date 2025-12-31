@@ -2222,6 +2222,277 @@ class YoozakKPIManager {
     }
   }
 
+  // Récupérer les données des motifs d'annulation depuis l'API
+  async fetchMotifsAnnulationData() {
+    const url = `${this.apiEndpoint}motifs-annulation/`;
+    console.log(`🔍 Fetch motifs d'annulation: ${url}`);
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Erreur API: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('📊 Données motifs d\'annulation reçues:', data);
+
+    return data;
+  }
+
+  // Mettre à jour le graphique camembert des motifs d'annulation
+  async updateMotifsAnnulationChart() {
+    console.log(`📊 Mise à jour du graphique motifs d'annulation...`);
+
+    try {
+      const data = await this.fetchMotifsAnnulationData();
+
+      if (!data.success) {
+        console.log('⚠️ Erreur lors de la récupération des motifs d\'annulation');
+        return;
+      }
+
+      const initialLoading = document.getElementById('motifs-annulation-initial-loading');
+      const canvas = document.getElementById('motifs-annulation-chart');
+      const emptyState = document.getElementById('motifs-annulation-empty');
+      const statTotal = document.getElementById('stat-motifs-total');
+      const statNb = document.getElementById('stat-motifs-nb');
+
+      // Vérifier s'il y a des données
+      if (!data.labels || data.labels.length === 0) {
+        if (initialLoading) initialLoading.classList.add('hidden');
+        if (canvas) canvas.classList.add('hidden');
+        if (emptyState) emptyState.classList.remove('hidden');
+        console.log('ℹ️ Aucun motif d\'annulation trouvé');
+        return;
+      }
+
+      // Masquer le loading, afficher le canvas
+      if (initialLoading) initialLoading.classList.add('hidden');
+      if (canvas) canvas.classList.remove('hidden');
+      if (emptyState) emptyState.classList.add('hidden');
+
+      // Mettre à jour les statistiques
+      if (statTotal) statTotal.textContent = data.total_annulees_fmt;
+      if (statNb) statNb.textContent = data.nb_motifs;
+
+      // Détruire le graphique existant s'il existe
+      if (this.motifsAnnulationChart) {
+        this.motifsAnnulationChart.destroy();
+      }
+
+      // Palette de couleurs pour le pie chart (tons rouges/oranges pour annulation)
+      const colors = [
+        '#EF4444', // red-500
+        '#F97316', // orange-500
+        '#DC2626', // red-600
+        '#EA580C', // orange-600
+        '#B91C1C', // red-700
+        '#C2410C', // orange-700
+        '#991B1B', // red-800
+        '#9A3412', // orange-800
+        '#7F1D1D', // red-900
+        '#7C2D12'  // orange-900
+      ];
+
+      // Créer le graphique
+      const ctx = canvas.getContext('2d');
+      this.motifsAnnulationChart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+          labels: data.labels,
+          datasets: [{
+            data: data.values,
+            backgroundColor: colors.slice(0, data.labels.length),
+            borderColor: '#ffffff',
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                padding: 15,
+                font: {
+                  size: 11
+                },
+                boxWidth: 12,
+                generateLabels: (chart) => {
+                  const chartData = chart.data;
+                  if (chartData.labels.length && chartData.datasets.length) {
+                    const total = chartData.datasets[0].data.reduce((sum, val) => sum + val, 0);
+                    return chartData.labels.map((label, i) => {
+                      const value = chartData.datasets[0].data[i];
+                      const percentage = ((value / total) * 100).toFixed(1);
+                      return {
+                        text: `${label} (${percentage}%)`,
+                        fillStyle: chartData.datasets[0].backgroundColor[i],
+                        hidden: false,
+                        index: i
+                      };
+                    });
+                  }
+                  return [];
+                }
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: (context) => {
+                  const label = context.label || '';
+                  const value = context.parsed || 0;
+                  const percentage = data.percentages[context.dataIndex];
+                  return [
+                    `${label}`,
+                    `Commandes: ${value.toLocaleString('fr-FR')}`,
+                    `Pourcentage: ${percentage}%`
+                  ];
+                }
+              }
+            }
+          }
+        }
+      });
+
+      console.log(`✅ Graphique motifs d'annulation créé avec ${data.labels.length} motifs`);
+
+    } catch (error) {
+      console.error('❌ Erreur lors de la mise à jour du graphique motifs d\'annulation:', error);
+    }
+  }
+
+  // Récupérer les données du taux de confirmation avec 1 opération
+  async fetchTauxConfirmation1OpData() {
+    const url = `${this.apiEndpoint}taux-confirmation-une-operation/`;
+    console.log(`🔍 Fetch taux confirmation 1 opération: ${url}`);
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Erreur API: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('📊 Données taux confirmation 1 op reçues:', data);
+
+    return data;
+  }
+
+  // Mettre à jour l'affichage du taux de confirmation 1 opération
+  async updateTauxConfirmation1Op() {
+    console.log(`📊 Mise à jour du taux de confirmation 1 opération...`);
+
+    try {
+      const data = await this.fetchTauxConfirmation1OpData();
+
+      if (!data.success) {
+        console.log('⚠️ Erreur lors de la récupération du taux de confirmation 1 op');
+        return;
+      }
+
+      const tauxValue = document.getElementById('taux-confirmation-1op-value');
+      const totalConfirmees = document.getElementById('taux-confirmation-total');
+      const nbUneOp = document.getElementById('nb-confirmation-1op');
+      const details = document.getElementById('confirmation-1op-details');
+
+      if (tauxValue) {
+        tauxValue.textContent = data.taux_une_operation;
+
+        // Colorier selon le taux (plus élevé = mieux)
+        if (data.taux_une_operation >= 70) {
+          tauxValue.classList.add('text-green-600');
+          tauxValue.classList.remove('text-orange-600', 'text-red-600', 'text-gray-900');
+        } else if (data.taux_une_operation >= 50) {
+          tauxValue.classList.add('text-orange-600');
+          tauxValue.classList.remove('text-green-600', 'text-red-600', 'text-gray-900');
+        } else if (data.taux_une_operation > 0) {
+          tauxValue.classList.add('text-red-600');
+          tauxValue.classList.remove('text-green-600', 'text-orange-600', 'text-gray-900');
+        } else {
+          tauxValue.classList.remove('text-green-600', 'text-orange-600', 'text-red-600');
+        }
+      }
+
+      if (totalConfirmees) totalConfirmees.textContent = data.total_confirmees_fmt;
+      if (nbUneOp) nbUneOp.textContent = data.nb_une_operation_fmt;
+      if (details && data.nb_une_operation > 0) details.classList.remove('hidden');
+
+      console.log(`✅ Taux confirmation 1 op mis à jour: ${data.taux_une_operation}%`);
+
+    } catch (error) {
+      console.error('❌ Erreur lors de la mise à jour du taux de confirmation 1 op:', error);
+    }
+  }
+
+  // Récupérer les données du délai moyen de confirmation
+  async fetchDelaiMoyenConfirmationData() {
+    const url = `${this.apiEndpoint}delai-moyen-confirmation/`;
+    console.log(`🔍 Fetch délai moyen de confirmation: ${url}`);
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Erreur API: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('📊 Données délai moyen de confirmation reçues:', data);
+
+    return data;
+  }
+
+  // Mettre à jour l'affichage du délai moyen de confirmation
+  async updateDelaiMoyenConfirmation() {
+    console.log(`📊 Mise à jour du délai moyen de confirmation...`);
+
+    try {
+      const data = await this.fetchDelaiMoyenConfirmationData();
+
+      if (!data.success) {
+        console.log('⚠️ Erreur lors de la récupération du délai moyen de confirmation');
+        return;
+      }
+
+      const delaiValue = document.getElementById('delai-confirmation-value');
+      const delaiTotal = document.getElementById('delai-confirmation-total');
+      const nbDelaiConfirmation = document.getElementById('nb-delai-confirmation');
+      const details = document.getElementById('delai-confirmation-details');
+
+      if (delaiValue) {
+        // Afficher le délai formaté complet (jours, heures, minutes)
+        delaiValue.textContent = data.delai_moyen_formatted;
+
+        // Colorier selon le délai (plus court = mieux)
+        const totalJours = data.delai_jours;
+        const totalHeures = data.delai_heures;
+
+        if (totalJours === 0 && totalHeures < 6) {
+          // Moins de 6 heures - excellent
+          delaiValue.classList.add('text-green-600');
+          delaiValue.classList.remove('text-orange-600', 'text-red-600', 'text-gray-900');
+        } else if (totalJours === 0 && totalHeures < 24) {
+          // Moins de 24 heures - bon
+          delaiValue.classList.add('text-orange-600');
+          delaiValue.classList.remove('text-green-600', 'text-red-600', 'text-gray-900');
+        } else if (totalJours > 0) {
+          // Plus d'un jour - à améliorer
+          delaiValue.classList.add('text-red-600');
+          delaiValue.classList.remove('text-green-600', 'text-orange-600', 'text-gray-900');
+        } else {
+          delaiValue.classList.remove('text-green-600', 'text-orange-600', 'text-red-600');
+        }
+      }
+
+      if (delaiTotal) delaiTotal.textContent = data.nb_commandes_fmt;
+      if (nbDelaiConfirmation) nbDelaiConfirmation.textContent = data.nb_commandes_fmt;
+      if (details && data.nb_commandes > 0) details.classList.remove('hidden');
+
+      console.log(`✅ Délai moyen de confirmation mis à jour: ${data.delai_moyen_formatted}`);
+
+    } catch (error) {
+      console.error('❌ Erreur lors de la mise à jour du délai moyen de confirmation:', error);
+    }
+  }
+
   async loadPerformanceCommercialeData() {
     console.log('📊 Chargement des données Performance Commerciale...');
 
@@ -2262,6 +2533,13 @@ class YoozakKPIManager {
 
       // Charger le délai moyen de livraison (sans filtre de période)
       await this.updateDelaiMoyenLivraison();
+
+      // Charger le graphique des motifs d'annulation
+      await this.updateMotifsAnnulationChart();
+
+      // Charger les métriques de confirmation
+      await this.updateTauxConfirmation1Op();
+      await this.updateDelaiMoyenConfirmation();
 
       console.log('✅ Données Performance Commerciale chargées');
 

@@ -25,7 +25,7 @@ from reportlab.graphics.shapes import Drawing
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 
 # Models
-from .models import Commande, Panier, EtiquetteTemplate
+from ..models import Commande, Panier, EtiquetteTemplate
 from article.models import Article
 from client.models import Client
 

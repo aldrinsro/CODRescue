@@ -57,7 +57,6 @@ INSTALLED_APPS = [
     'commande',
     'article',
     'client',
-    'livraison',
     'parametre',
     'operatConfirme',
     'operatLogistic',

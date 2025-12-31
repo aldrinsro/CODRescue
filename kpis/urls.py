@@ -28,6 +28,9 @@ urlpatterns = [
     path('api/taux-annulees/', views_commerciale.taux_annulees_data, name='taux_annulees_data'),
     path('api/taux-livraison/', views_commerciale.taux_livraison_data, name='taux_livraison_data'),
     path('api/delai-moyen-livraison/', views_commerciale.delai_moyen_livraison_data, name='delai_moyen_livraison_data'),
+    path('api/motifs-annulation/', views_commerciale.motifs_annulation_data, name='motifs_annulation_data'),
+    path('api/taux-confirmation-une-operation/', views_commerciale.taux_confirmation_une_operation_data, name='taux_confirmation_une_operation_data'),
+    path('api/delai-moyen-confirmation/', views_commerciale.delai_moyen_confirmation_data, name='delai_moyen_confirmation_data'),
 
     # APIs pour données KPIs - Clients et autres
     path('api/clients/', views.clients_data, name='clients_data'),

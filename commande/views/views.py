@@ -11,7 +11,7 @@ from django.core import serializers
 from django.http import JsonResponse, HttpResponse # Import HttpResponse for partial rendering
 import json
 import re
-from .models import Commande, Panier, EnumEtatCmd, EtatCommande, Operation
+from commande.models import Commande, Panier, EnumEtatCmd, EtatCommande, Operation
 from client.models import Client
 from parametre.models import Ville, Operateur, Region # Import Region
 from article.models import Article
@@ -216,7 +216,7 @@ def liste_commandes(request):
     page_obj = paginator.get_page(page_number)
 
     # Calculer les statistiques des états de commandes
-    from .models import EtatCommande
+    from commande.models import EtatCommande
     
     # Compter les commandes par état - utiliser distinct() pour éviter les doublons
     commandes_non_affectees = Commande.objects.filter(
@@ -846,7 +846,7 @@ def gestion_etats(request):
     from django.core.paginator import Paginator
     from django.template.loader import render_to_string
     from django.http import JsonResponse
-    from .models import EtatCommande
+    from commande.models import EtatCommande
     
     # Récupérer tous les états définis pour les statistiques
     etats_definis_all = EnumEtatCmd.objects.all().order_by('ordre', 'libelle')
@@ -1037,7 +1037,7 @@ def descendre_etat(request, etat_id):
 @login_required
 def commandes_affectees(request):
     """Page des commandes affectées"""
-    from .models import EtatCommande
+    from commande.models import EtatCommande
     
     # Récupérer SEULEMENT les commandes avec un état "Affectée" exact et actuel
     # ✅ Optimisation : select_related pour éviter les N+1 queries
@@ -1204,7 +1204,7 @@ def commandes_affectees(request):
 @login_required
 def commandes_annulees(request):
     """Page des commandes annulées"""
-    from .models import EtatCommande
+    from commande.models import EtatCommande
     
     # ✅ Optimisation : Récupérer les commandes avec un état "Annulée" actuel
     # Avec select_related pour éviter les N+1 queries
@@ -1343,7 +1343,7 @@ def commandes_annulees(request):
 @login_required
 def commandes_non_affectees(request):
     """Page des commandes non affectées"""
-    from .models import EtatCommande
+    from commande.models import EtatCommande
     from django.db.models import Q, OuterRef, Exists
     
     # ✅ Optimisation : Requête unifiée avec subquery pour les commandes non affectées
@@ -1385,7 +1385,7 @@ def commandes_non_affectees(request):
         )
 
     # Appliquer les filtres réutilisables (date, sync, order)
-    from .utils import apply_commande_filters
+    from commande.utils import apply_commande_filters
     commandes_non_affectees = apply_commande_filters(commandes_non_affectees, request)
 
     # Pagination flexible pour les administrateurs
@@ -1474,7 +1474,7 @@ def commandes_non_affectees(request):
     ).count()
     
     # Préparer le contexte avec les filtres réutilisables
-    from .utils import get_filter_context
+    from commande.utils import get_filter_context
     context = {
         'page_obj': page_obj,
         'search_query': search_query,
@@ -1532,7 +1532,7 @@ def commandes_non_affectees(request):
 @login_required
 def commandes_a_traiter(request):
     """Page des commandes à traiter (doublons et erronées)"""
-    from .models import EtatCommande
+    from commande.models import EtatCommande
     
     # Récupérer les commandes avec état "Doublon" ou "Erronée" actuel
     commandes_a_traiter = Commande.objects.filter(
@@ -1771,7 +1771,7 @@ def affecter_commandes(request):
                     etat_actuel.terminer_etat(operateur)
                 
                 # Créer le nouvel état "Affectée"
-                from .models import EtatCommande
+                from commande.models import EtatCommande
                 EtatCommande.objects.create(
                     commande=commande,
                     enum_etat=etat_affectee,
@@ -1818,7 +1818,7 @@ def changer_statut_commandes(request):
                     etat_actuel.terminer_etat(request.user.operateur if hasattr(request.user, 'operateur') else None)
                 
                 # Créer le nouvel état
-                from .models import EtatCommande
+                from commande.models import EtatCommande
                 EtatCommande.objects.create(
                     commande=commande,
                     enum_etat=nouvel_etat,
@@ -1883,7 +1883,7 @@ def changer_statut_commande_unique(request, commande_id):
             etat_actuel.terminer_etat(request.user.operateur if hasattr(request.user, 'operateur') else None)
         
         # Créer le nouvel état
-        from .models import EtatCommande
+        from commande.models import EtatCommande
         EtatCommande.objects.create(
             commande=commande,
             enum_etat=nouvel_etat,
@@ -1927,7 +1927,7 @@ def desaffecter_commande_unique(request, commande_id):
         etat_actuel.terminer_etat(request.user.operateur if hasattr(request.user, 'operateur') else None)
         
         # Créer le nouvel état "Non affectée"
-        from .models import EtatCommande
+        from commande.models import EtatCommande
         EtatCommande.objects.create(
             commande=commande,
             enum_etat=etat_non_affectee,
@@ -1984,7 +1984,7 @@ def reaffecter_commande(request, commande_id):
         etat_actuel.terminer_etat(request.user.operateur if hasattr(request.user, 'operateur') else None)
 
         # Créer le nouvel état avec le MÊME état mais le NOUVEL opérateur
-        from .models import EtatCommande
+        from commande.models import EtatCommande
         commentaire_base = f"Commande réaffectée de {ancien_operateur.get_full_name()} à {nouvel_operateur.get_full_name()}"
         if motif:
             commentaire_complet = f"{commentaire_base}\nMotif: {motif}"
@@ -2061,7 +2061,7 @@ def reaffecter_commandes_multiple(request):
                 etat_actuel.terminer_etat(request.user.operateur if hasattr(request.user, 'operateur') else None)
 
                 # Créer le nouvel état avec le MÊME état mais le NOUVEL opérateur
-                from .models import EtatCommande
+                from commande.models import EtatCommande
                 commentaire_base = f"Réaffectation de {ancien_operateur.get_full_name()} à {nouvel_operateur.get_full_name()}"
                 if motif:
                     commentaire_complet = f"{commentaire_base}\nMotif: {motif}"
@@ -2123,7 +2123,7 @@ def desaffecter_commandes(request):
                     etat_actuel.terminer_etat(request.user.operateur if hasattr(request.user, 'operateur') else None)
                     
                     # Créer le nouvel état "En attente"
-                    from .models import EtatCommande
+                    from commande.models import EtatCommande
                     EtatCommande.objects.create(
                         commande=commande,
                         enum_etat=etat_en_attente,
@@ -2241,7 +2241,7 @@ def liste_paniers(request):
     total_valeur = paniers_non_pagines.aggregate(total=Sum('sous_total'))['total'] or 0
     
     # Statistiques par état pour les filtres rapides
-    from .models import EtatCommande
+    from commande.models import EtatCommande
     stats_etats = {
         'non_affectees': Panier.objects.filter(
             commande__etats__enum_etat__libelle__exact='Non affectée',
@@ -2360,7 +2360,7 @@ def nettoyer_etats_doublons(request):
     if request.method == 'POST':
         try:
             from django.db.models import Count
-            from .models import EtatCommande
+            from commande.models import EtatCommande
             
             # Trouver les commandes avec plusieurs états actifs
             commandes_doublons = EtatCommande.objects.filter(
@@ -2395,7 +2395,7 @@ def nettoyer_etats_doublons(request):
     
     # Statistiques pour la page de maintenance
     from django.db.models import Count
-    from .models import EtatCommande
+    from commande.models import EtatCommande
     
     # Compter les doublons
     doublons_count = EtatCommande.objects.filter(
@@ -2453,7 +2453,7 @@ def annuler_commande(request, pk):
             etat_actuel.terminer_etat(request.user.operateur if hasattr(request.user, 'operateur') else None)
         
         # Créer le nouvel état "Annulée"
-        from .models import EtatCommande
+        from commande.models import EtatCommande
         EtatCommande.objects.create(
             commande=commande,
             enum_etat=etat_annulee,
@@ -2475,7 +2475,7 @@ def annuler_commande(request, pk):
         
         # Créer une opération d'annulation (seulement si un opérateur existe)
         if hasattr(request.user, 'operateur') and request.user.operateur:
-            from .models import Operation
+            from commande.models import Operation
             Operation.objects.create(
                 commande=commande,
                 type_operation='ANNULATION',
@@ -2498,7 +2498,7 @@ def repartition_automatique_commandes():
     Répartit automatiquement les commandes préparées aux opérateurs logistiques
     selon un algorithme de répartition par ville/région
     """
-    from .models import EnumEtatCmd, EtatCommande
+    from commande.models import EnumEtatCmd, EtatCommande
     from parametre.models import Operateur
     from django.db.models import Count
     
@@ -2567,7 +2567,7 @@ def gerer_changement_etat_automatique(commande, nouvel_etat_libelle, operateur=N
     Gère automatiquement le changement d'état d'une commande
     Retourne l'URL de redirection appropriée selon le nouvel état
     """
-    from .models import EnumEtatCmd, EtatCommande
+    from commande.models import EnumEtatCmd, EtatCommande
     try:
         # Récupérer ou créer l'état cible
         if nouvel_etat_libelle.lower() == 'non affectée':
@@ -2614,7 +2614,7 @@ def gerer_changement_etat_automatique(commande, nouvel_etat_libelle, operateur=N
             etat_actuel.terminer_etat(operateur)
         
         # Créer le nouvel état
-        from .models import EtatCommande
+        from commande.models import EtatCommande
         EtatCommande.objects.create(
             commande=commande,
             enum_etat=nouvel_etat,
@@ -3202,7 +3202,7 @@ def affecter_preparation(request, commande_id):
                 etat_actuel.terminer_etat(operateur=operateur_admin)
                 
                 # Créer le nouvel état "En préparation"
-                from .models import EtatCommande
+                from commande.models import EtatCommande
                 nouvel_etat = EtatCommande.objects.create(
                     commande=commande,
                     enum_etat=etat_preparation,
@@ -3416,7 +3416,7 @@ def affecter_preparation_multiple(request):
                             except Exception:
                                 etat_en_prep_actif.date_fin = timezone.now()
                                 etat_en_prep_actif.save(update_fields=['date_fin'])
-                            from .models import EtatCommande
+                            from commande.models import EtatCommande
                             EtatCommande.objects.create(
                                 commande=commande,
                                 enum_etat=etat_preparation,
@@ -3432,7 +3432,7 @@ def affecter_preparation_multiple(request):
                             except Exception:
                                 etat_a_imprimer_actif.date_fin = timezone.now()
                                 etat_a_imprimer_actif.save(update_fields=['date_fin'])
-                        from .models import EtatCommande
+                        from commande.models import EtatCommande
                         EtatCommande.objects.create(
                             commande=commande,
                             enum_etat=etat_preparation,

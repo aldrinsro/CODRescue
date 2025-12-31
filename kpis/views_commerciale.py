@@ -711,6 +711,7 @@ def delai_moyen_livraison_data(request):
 
     Calcule le délai moyen (en jours) entre la date de création de la commande
     et la date de livraison effective pour toutes les commandes livrées
+    (incluant "Livrée" et "Livrée partiellement")
     """
     try:
         from datetime import timedelta
@@ -718,9 +719,9 @@ def delai_moyen_livraison_data(request):
 
         logger.info("📊 Calcul du délai moyen de livraison...")
 
-        # Filtrer les commandes livrées avec Date_livraison non nulle
+        # Filtrer les commandes livrées (Livrée ET Livrée partiellement) avec Date_livraison non nulle
         commandes_livrees = Commande.objects.filter(
-            Q(etats__enum_etat__libelle__icontains='livr'),
+            Q(etats__enum_etat__libelle__icontains='livr'),  # Capture "Livrée" et "Livrée partiellement"
             Date_livraison__isnull=False
         ).distinct()
 
@@ -787,6 +788,214 @@ def delai_moyen_livraison_data(request):
 
     except Exception as e:
         logger.error(f"❌ Erreur dans delai_moyen_livraison_data: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+@login_required
+def motifs_annulation_data(request):
+    """API pour récupérer les motifs d'annulation des commandes
+
+    Analyse toutes les commandes annulées et compte les différents motifs d'annulation
+    """
+    try:
+        from django.db.models import Count
+
+        logger.info("📊 Récupération des motifs d'annulation...")
+
+        # Filtrer les commandes annulées avec un motif d'annulation
+        commandes_annulees = Commande.objects.filter(
+            Q(etats__enum_etat__libelle__icontains='annul'),
+            motif_annulation__isnull=False
+        ).exclude(motif_annulation='').distinct()
+
+        # Grouper par motif d'annulation et compter
+        motifs = commandes_annulees.values('motif_annulation').annotate(
+            count=Count('id')
+        ).order_by('-count')
+
+        # Total des commandes annulées avec motif
+        total_annulees = sum(motif['count'] for motif in motifs)
+
+        # Préparer les données pour le graphique
+        labels = []
+        values = []
+        percentages = []
+
+        for motif in motifs:
+            motif_text = motif['motif_annulation']
+            count = motif['count']
+            percentage = (count / total_annulees * 100) if total_annulees > 0 else 0
+
+            # Tronquer le texte si trop long
+            if len(motif_text) > 50:
+                motif_text = motif_text[:47] + '...'
+
+            labels.append(motif_text)
+            values.append(count)
+            percentages.append(round(percentage, 1))
+
+        logger.info(f"✅ {len(labels)} motifs d'annulation trouvés ({total_annulees} commandes)")
+
+        return JsonResponse({
+            'success': True,
+            'labels': labels,
+            'values': values,
+            'percentages': percentages,
+            'total_annulees': total_annulees,
+            'total_annulees_fmt': format_number_fr(total_annulees),
+            'nb_motifs': len(labels)
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Erreur dans motifs_annulation_data: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+@login_required
+def taux_confirmation_une_operation_data(request):
+    """API pour calculer le taux de confirmation avec une seule opération
+
+    Calcule le pourcentage de commandes confirmées qui ont nécessité une seule opération
+    """
+    try:
+        from django.db.models import Count
+
+        logger.info("📊 Calcul du taux de confirmation avec une seule opération...")
+
+        # Total des commandes confirmées
+        commandes_confirmees = Commande.objects.filter(
+            Q(etats__enum_etat__libelle__icontains='confirm')
+        ).distinct()
+
+        total_confirmees = commandes_confirmees.count()
+
+        if total_confirmees == 0:
+            return JsonResponse({
+                'success': True,
+                'total_confirmees': 0,
+                'total_confirmees_fmt': '0',
+                'nb_une_operation': 0,
+                'nb_une_operation_fmt': '0',
+                'taux_une_operation': 0,
+                'taux_une_operation_fmt': '0%'
+            })
+
+        # Compter les commandes confirmées avec exactement 1 opération
+        commandes_avec_operations = commandes_confirmees.annotate(
+            nb_operations=Count('operations')
+        )
+
+        nb_une_operation = commandes_avec_operations.filter(nb_operations=1).count()
+
+        # Calculer le taux
+        taux_une_operation = (nb_une_operation / total_confirmees * 100) if total_confirmees > 0 else 0
+
+        logger.info(f"✅ Taux confirmation 1 opération: {taux_une_operation:.2f}% ({nb_une_operation}/{total_confirmees})")
+
+        return JsonResponse({
+            'success': True,
+            'total_confirmees': total_confirmees,
+            'total_confirmees_fmt': format_number_fr(total_confirmees),
+            'nb_une_operation': nb_une_operation,
+            'nb_une_operation_fmt': format_number_fr(nb_une_operation),
+            'taux_une_operation': round(taux_une_operation, 2),
+            'taux_une_operation_fmt': f"{round(taux_une_operation, 2)}%"
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Erreur dans taux_confirmation_une_operation_data: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+@login_required
+def delai_moyen_confirmation_data(request):
+    """API pour calculer le délai moyen de confirmation d'une commande
+
+    Calcule le délai moyen entre la date de création de la commande
+    et la date où elle a été confirmée (premier état "Confirmée")
+    """
+    try:
+        logger.info("📊 Calcul du délai moyen de confirmation...")
+
+        # Filtrer les commandes confirmées
+        commandes_confirmees = Commande.objects.filter(
+            Q(etats__enum_etat__libelle__icontains='confirm')
+        ).distinct()
+
+        nb_commandes = commandes_confirmees.count()
+
+        if nb_commandes == 0:
+            return JsonResponse({
+                'success': True,
+                'nb_commandes': 0,
+                'nb_commandes_fmt': '0',
+                'delai_jours': 0,
+                'delai_heures': 0,
+                'delai_minutes': 0,
+                'delai_moyen_formatted': '0min'
+            })
+
+        # Calculer le délai pour chaque commande
+        total_secondes = 0
+        count = 0
+
+        for commande in commandes_confirmees:
+            # Trouver le premier état "Confirmée"
+            etat_confirmee = commande.etats.filter(
+                Q(enum_etat__libelle__icontains='confirm')
+            ).order_by('date_debut').first()
+
+            if etat_confirmee and etat_confirmee.date_debut and commande.date_creation:
+                delai = etat_confirmee.date_debut - commande.date_creation
+                total_secondes += delai.total_seconds()
+                count += 1
+
+        if count == 0:
+            jours = 0
+            heures = 0
+            minutes = 0
+        else:
+            # Calculer la moyenne en secondes
+            moyenne_secondes = total_secondes / count
+
+            # Convertir en jours, heures et minutes
+            jours = int(moyenne_secondes // 86400)
+            reste_secondes = moyenne_secondes % 86400
+            heures = int(reste_secondes // 3600)
+            reste_secondes = reste_secondes % 3600
+            minutes = int(reste_secondes // 60)
+
+        # Formater l'affichage: "X jours Y heures Z minutes"
+        parts = []
+        if jours > 0:
+            parts.append(f"{jours}j")
+        if heures > 0 or jours > 0:
+            parts.append(f"{heures}h")
+        if minutes > 0 or (jours == 0 and heures == 0):
+            parts.append(f"{minutes}min")
+
+        delai_formatted = " ".join(parts) if parts else "0min"
+
+        logger.info(f"✅ Délai moyen de confirmation: {delai_formatted} ({count} commandes)")
+
+        return JsonResponse({
+            'success': True,
+            'nb_commandes': count,
+            'nb_commandes_fmt': format_number_fr(count),
+            'delai_jours': jours,
+            'delai_heures': heures,
+            'delai_minutes': minutes,
+            'delai_moyen_formatted': delai_formatted
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Erreur dans delai_moyen_confirmation_data: {str(e)}", exc_info=True)
         return JsonResponse({
             'success': False,
             'error': str(e)

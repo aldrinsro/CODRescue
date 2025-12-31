@@ -1,8 +1,8 @@
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET
 from django.contrib.auth.decorators import login_required
-from .models import Commande
-from .utils import search_commandes_by_date
+from ..models import Commande
+from ..utils import search_commandes_by_date
 
 @login_required
 @require_GET
