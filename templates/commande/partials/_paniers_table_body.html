@@ -39,16 +39,22 @@
     </td>
     <td class="px-4 py-3 text-center border-r border-b border-gray-200">
         <div class="flex justify-center space-x-2">
-            <a href="{% url 'commande:detail' panier.commande.pk %}" 
-               class="text-blue-600 hover:text-blue-800 transition-colors" 
+            <a href="{% url 'commande:detail' panier.commande.pk %}"
+               class="text-blue-600 hover:text-blue-800 transition-colors"
                title="Voir la commande">
                 <i class="fas fa-eye"></i>
             </a>
-            <a href="{% url 'commande:modifier' panier.commande.pk %}" 
-               class="text-green-600 hover:text-green-800 transition-colors" 
-               title="Modifier la commande">
-                <i class="fas fa-edit"></i>
-            </a>
+            {% if panier.commande.etat_actuel and panier.commande.etat_actuel.enum_etat.libelle in "Livrée,Retournée,Livrée Partiellement" %}
+                <span class="text-gray-400 cursor-not-allowed" title="Modification non autorisée pour cet état">
+                    <i class="fas fa-edit"></i>
+                </span>
+            {% else %}
+                <a href="{% url 'commande:modifier' panier.commande.pk %}"
+                   class="text-green-600 hover:text-green-800 transition-colors"
+                   title="Modifier la commande">
+                    <i class="fas fa-edit"></i>
+                </a>
+            {% endif %}
         </div>
     </td>
 </tr>

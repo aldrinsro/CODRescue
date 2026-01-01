@@ -304,6 +304,7 @@ def detail_commande(request, pk):
     commande = get_object_or_404(Commande, pk=pk)
     paniers = Panier.objects.filter(commande=commande)
     historique_etats = commande.historique_etats.all()
+    operations = commande.operations.all().select_related('operateur').order_by('-date_operation')
     etats_non_modifiables = ["Livrée", "Livrée Partiellement", "Retournée"]
 
     # Calculer le cycle de vie pour les commandes livrées
@@ -384,6 +385,7 @@ def detail_commande(request, pk):
         'commande': commande,
         'paniers': paniers,
         'historique_etats': historique_etats,
+        'operations': operations,
         'etats_non_modifiables': etats_non_modifiables,
         'cycle_vie': cycle_vie
     }
