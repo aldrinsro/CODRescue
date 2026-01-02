@@ -56,13 +56,35 @@ urlpatterns = [
     path('api/commande/<int:commande_id>/panier/', views.api_panier_commande, name='api_panier_commande'),
     path('rechercher-client-telephone/', views.rechercher_client_telephone, name='rechercher_client_telephone'),
 
-    # API Gestion des articles et remises
+    # API Gestion des articles et remises (legacy - conservées pour compatibilité)
     path('api/modifier-quantite/<int:panier_id>/', views.api_modifier_quantite_panier_commande, name='api_modifier_quantite_panier_commande'),
     path('api/supprimer-article/<int:panier_id>/', views.api_supprimer_article_commande, name='api_supprimer_article_commande'),
     path('api/appliquer-remise/<int:panier_id>/', views.api_appliquer_remise_commande, name='api_appliquer_remise_commande'),
     path('api/retirer-remise/<int:panier_id>/', views.api_retirer_remise_commande, name='api_retirer_remise_commande'),
     path('api/calculer-remise-preview/<int:panier_id>/', views.api_calculer_remise_preview_commande, name='api_calculer_remise_preview_commande'),
     path('api/ajouter-article/<int:commande_id>/', views.api_ajouter_article_commande, name='api_ajouter_article_commande'),
+
+    # API Articles - Utilisant les modules globaux (common/api/)
+    path('api/articles-disponibles/',
+         views.api_articles_disponibles_view,
+         name='api_articles_disponibles'),
+    path('get-article-variants/<int:article_id>/',
+         views.get_article_variants_view,
+         name='get_article_variants'),
+    path('api/commande/<int:commande_id>/rafraichir-articles/',
+         views.rafraichir_articles_view,
+         name='rafraichir_articles'),
+
+    # API Remises - Utilisant les modules globaux (common/api/)
+    path('calculer-remise-preview/<int:panier_id>/',
+         views.calculer_remise_preview_view_global,
+         name='calculer_remise_preview'),
+    path('appliquer-remise/<int:panier_id>/',
+         views.appliquer_remise_view_global,
+         name='appliquer_remise'),
+    path('retirer-remise/<int:panier_id>/',
+         views.retirer_remise_view_global,
+         name='retirer_remise'),
 
     # Étiquettes professionnelles
     path('etiquettes/', views_etiquettes.EtiquetteGeneratorView.as_view(), name='etiquettes_generator'),

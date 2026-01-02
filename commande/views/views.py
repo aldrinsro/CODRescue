@@ -20,6 +20,23 @@ from django.utils import timezone
 from datetime import timedelta, datetime
 from django.template.loader import render_to_string # Import render_to_string
 
+# Import des handlers globaux depuis common/views/
+from common.views.article_handlers import (
+    handle_add_article,
+    handle_delete_article,
+    handle_update_quantity
+)
+from common.views.client_livraison_handlers import (
+    handle_save_client_info,
+    handle_save_livraison,
+    handle_toggle_frais_livraison
+)
+from common.views.operation_handlers import (
+    handle_create_operation,
+    handle_update_operation,
+    handle_delete_operation
+)
+
 
 @login_required
 def liste_commandes(request):
@@ -597,11 +614,49 @@ def creer_commande(request):
 @login_required
 def modifier_commande(request, pk):
     commande = get_object_or_404(Commande, pk=pk)
+
+    # Traitement des requêtes AJAX avec les handlers globaux
     if request.method == 'POST':
+        action = request.POST.get('action', 'update_info')
+
+        # Récupérer l'opérateur (si disponible)
+        operateur = None
+        try:
+            operateur = Operateur.objects.get(user=request.user)
+        except Operateur.DoesNotExist:
+            pass
+
+        # ===== GESTION DES ACTIONS AJAX AVEC HANDLERS GLOBAUX =====
+        if action == 'add_article':
+            return handle_add_article(request, commande, operateur)
+
+        elif action == 'delete_panier':
+            return handle_delete_article(request, commande, operateur)
+
+        elif action == 'update_quantity':
+            return handle_update_quantity(request, commande, operateur)
+
+        elif action == 'save_client_info':
+            return handle_save_client_info(request, commande, operateur)
+
+        elif action == 'save_livraison':
+            return handle_save_livraison(request, commande, operateur)
+
+        elif action == 'toggle_frais_livraison':
+            return handle_toggle_frais_livraison(request, commande, operateur)
+
+        elif action == 'create_operation':
+            return handle_create_operation(request, commande, operateur)
+
+        elif action == 'update_operation':
+            return handle_update_operation(request, commande, operateur)
+
+        elif action == 'delete_operation':
+            return handle_delete_operation(request, commande, operateur)
+
+        # ===== GESTION DES ACTIONS FORMULAIRES CLASSIQUES =====
         try:
             with transaction.atomic():
-                action = request.POST.get('action', 'update_info')
-                
                 if action == 'update_client':
                     # === MISE À JOUR DU TÉLÉPHONE CLIENT UNIQUEMENT ===
                     if 'telephone_client' in request.POST and request.POST.get('telephone_client'):
@@ -4527,3 +4582,78 @@ def api_ajouter_article_commande(request, commande_id):
             'success': False,
             'error': f'Erreur: {str(e)}'
         }, status=500)
+
+
+# ==============================================================================
+# WRAPPERS POUR LES APIs GLOBALES (common/api/)
+# ==============================================================================
+
+"""
+Ces wrappers permettent d'utiliser les APIs globales du module common
+tout en injectant l'opérateur depuis la session utilisateur.
+"""
+
+# Import des APIs globales
+from common.api.article_api import (
+    api_articles_disponibles,
+    get_article_variants,
+    rafraichir_articles_section
+)
+from common.api.remise_api import (
+    appliquer_remise_panier,
+    retirer_remise_panier,
+    calculer_remise_panier_preview
+)
+
+@login_required
+def api_articles_disponibles_view(request):
+    """Wrapper pour l'API articles disponibles"""
+    return api_articles_disponibles(request)
+
+
+@login_required
+def get_article_variants_view(request, article_id):
+    """Wrapper pour l'API variantes d'articles"""
+    return get_article_variants(request, article_id)
+
+
+@login_required
+def rafraichir_articles_view(request, commande_id):
+    """Wrapper pour l'API rafraîchissement articles"""
+    # Optionnel: spécifier un template custom
+    # return rafraichir_articles_section(
+    #     request,
+    #     commande_id,
+    #     template_path='commande/partials/_articles_section.html'
+    # )
+    return rafraichir_articles_section(request, commande_id)
+
+
+@login_required
+def calculer_remise_preview_view_global(request, panier_id):
+    """Wrapper pour l'API preview remise (global)"""
+    return calculer_remise_panier_preview(request, panier_id)
+
+
+@login_required
+def appliquer_remise_view_global(request, panier_id):
+    """Wrapper pour l'API application remise (global)"""
+    # Récupérer l'opérateur depuis la session
+    try:
+        operateur = Operateur.objects.get(user=request.user)
+    except Operateur.DoesNotExist:
+        operateur = None
+
+    return appliquer_remise_panier(request, panier_id, operateur)
+
+
+@login_required
+def retirer_remise_view_global(request, panier_id):
+    """Wrapper pour l'API retrait remise (global)"""
+    # Récupérer l'opérateur depuis la session
+    try:
+        operateur = Operateur.objects.get(user=request.user)
+    except Operateur.DoesNotExist:
+        operateur = None
+
+    return retirer_remise_panier(request, panier_id, operateur)

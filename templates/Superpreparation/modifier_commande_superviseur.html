@@ -600,43 +600,10 @@
         {% csrf_token %}
 
         <script>
-        // ⚠️ Définir l'URL pour récupérer les variantes (spécifique à Superpreparation)
-        window.API_GET_VARIANTS_URL = "{% url 'Superpreparation:get_article_variants' article_id=0 %}".replace('/0/', '/{id}/');
-        console.log('🔧 API URL pour variantes définie:', window.API_GET_VARIANTS_URL);
-
-        // ⚠️ Définir l'ID de la commande globalement pour l'accès depuis les modals
-        window.commandeId = {{ commande.id }};
-        console.log('🔧 commandeId défini globalement:', window.commandeId);
-
-        // Définition IMMÉDIATE de la fonction avant les boutons
-        window.ouvrirModalAjoutArticle = function(event) {
-            console.log('🎯 ouvrirModalAjoutArticle appelée (définie en haut)');
-            if (event) {
-                event.preventDefault();
-                event.stopPropagation();
-            }
-            const modal = document.getElementById('articleModal');
-            if (modal) {
-                modal.classList.remove('hidden');
-                modal.style.display = 'flex';
-                modal.style.visibility = 'visible';
-                modal.style.opacity = '1';
-                console.log('✅ Modal ouvert');
-
-                // Charger les articles avec un léger délai pour s'assurer que toutes les fonctions sont chargées
-                setTimeout(function() {
-                    if (typeof window.chargerArticlesDisponibles === 'function') {
-                        console.log('🔄 Appel de window.chargerArticlesDisponibles');
-                        window.chargerArticlesDisponibles('tous');
-                    } else {
-                        console.error('❌ window.chargerArticlesDisponibles non définie');
-                    }
-                }, 100);
-            } else {
-                console.error('❌ Modal articleModal non trouvé');
-            }
-        };
-        console.log('✅ window.ouvrirModalAjoutArticle définie AVANT les boutons');
+        // ⚠️ SUPPRIMÉ - Toutes les configurations ont été déplacées vers block extra_js
+        // - window.API_GET_VARIANTS_URL → window.urlGetVariants
+        // - window.commandeId → défini dans configuration globale
+        // - window.ouvrirModalAjoutArticle → fourni par module global gestion_articles.js
 
         // ========== FONCTIONS GLOBALES POUR LA GESTION DES ARTICLES ==========
         // Définies ici pour être accessibles AVANT le chargement du HTML des articles
@@ -1000,59 +967,16 @@
                 </div>
             </div>
 
-            <!-- Panier avec fonctionnalités améliorées et logique upsell -->
-            <div class="bg-white rounded-xl shadow-lg p-4 animate-slideInUp">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-lg font-semibold section-title">
-                    <i class="fas fa-box mr-3"></i>Articles du Panier
-                        <span class="text-sm font-normal text-gray-600 ml-2">
-                            (<span id="articles-count">{{ paniers.count }}</span> article<span id="articles-plural">{{ paniers.count|pluralize }}</span>)
-                        </span>
-                        {% if commande.compteur > 0 %}
-                        <span class="inline-flex items-center px-2 py-1 upsell-badge rounded-full text-sm font-medium ml-2">
-                            <i class="fas fa-arrow-up mr-1"></i>Upsell Niveau {{ commande.compteur }}
-                        </span>
-                        {% endif %}
-                        
-                </h3>
-                    <div class="flex gap-2">
-                        <button type="button" class="btn-prepa px-3 py-2 rounded text-sm" onclick="ouvrirModalAjoutArticle()">
-                            <i class="fas fa-plus mr-1"></i>Ajouter
-                        </button>
-                    </div>
-                </div>
-
-            <!-- Section des articles avec support des remises -->
-            <div id="articles-container" class="space-y-3">
-                {% include 'Superpreparation/partials/_articles_section.html' %}
-            </div>
+            {% include 'common/commande/section_articles.html' with commande=commande articles_partial='Superpreparation/partials/_articles_section.html' show_add_button=True animation_delay='0.8s' %}
 
 
-            <!-- Script pour la gestion des remises - Version Superviseur -->
-            <script src="{% static 'js/Superpreparation/Remise.js' %}"></script>
+            <!-- Script pour la gestion des remises - Module global -->
+            <script src="{% static 'js/Commande/remise.js' %}"></script>
 
 
                 
                 <div class="flex justify-between items-center mt-4 p-4 bg-gray-50 rounded-lg">
-                    <div class="text-sm text-gray-600">
-                        <i class="fas fa-info-circle mr-1"></i>
-                        <span id="articles-count-bottom">{{ paniers.count }}</span> article<span id="articles-plural-bottom">{{ paniers.count|pluralize }}</span> dans le panier
-                        {% if commande.compteur > 0 %}
-                            <span class="ml-2 text-purple-600 font-medium" id="upsell-badge-container">
-                                <i class="fas fa-arrow-up mr-1"></i>
-                                Upsell niveau <span id="niveau-upsell-dashboard">{{ commande.compteur }}</span>
-                            </span>
-                        {% endif %}
-                    </div>
-                    <div class="text-right">
-                        <div class="text-sm text-gray-600">Total articles</div>
-                        <div class="text-2xl font-bold text-blue-600 total-commande" id="sous-total-articles">{{ commande.sous_total_articles|floatformat:2 }} DH</div>
-                        {% if commande.frais_livraison %}
-                        <div class="text-sm text-gray-500 total-livraison" id="frais-livraison-display">+ {{ commande.ville.frais_livraison|default:0|floatformat:2 }} DH livraison</div>
-                        {% endif %}
-                        <div class="text-lg font-bold text-green-600 total-final-commande" id="total-commande">{{ commande.total_cmd|floatformat:2 }} DH</div>
-                        
-                    </div>
+                
                 </div>
             </div>
 
@@ -1088,6 +1012,85 @@
 
 {% include 'common/modal_ajout_articles.html' %}
 
+<!-- Modal de remise -->
+<div id="remiseModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 items-center justify-center z-50" style="backdrop-filter: blur(8px); display: none;">
+    <div class="bg-white rounded-xl p-6 w-full max-w-lg mx-4 shadow-2xl">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
+            <div class="flex items-center">
+                <i class="fas fa-tag text-green-500 mr-3"></i>
+                Appliquer une remise
+            </div>
+            <span class="text-gray-500 hover:text-gray-700 cursor-pointer transition-colors" onclick="fermerModalRemise()">
+                <i class="fas fa-times text-xl"></i>
+            </span>
+        </h3>
+
+        <div class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div class="text-sm text-gray-700">
+                <strong>Article:</strong> <span id="remiseArticleNom">-</span>
+            </div>
+            <div class="text-sm text-gray-700 mt-1">
+                <strong>Sous-total actuel:</strong> <span id="remiseSousTotalActuel">0.00</span> DH
+            </div>
+        </div>
+
+        <input type="hidden" id="remisePanierId" value="">
+
+        <div class="space-y-4">
+            <!-- Type de remise -->
+            <div>
+                <label for="typeRemise" class="block text-sm font-medium text-gray-700 mb-2">
+                    Type de remise
+                </label>
+                <select id="typeRemise" disabled onchange="calculerApercu()"
+                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                    <option value="POURCENTAGE">Pourcentage (%)</option>
+                </select>
+            </div>
+
+            <!-- Valeur de la remise -->
+            <div>
+                <label for="valeurRemise" class="block text-sm font-medium text-gray-700 mb-2">
+                    Valeur de la remise
+                </label>
+                <input type="number" id="valeurRemise" step="0.01" min="0.01" placeholder="Ex: 10"
+                       oninput="calculerApercu()"
+                       class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+            </div>
+
+            <!-- Raison de la remise (optionnel) -->
+            <div>
+                <label for="raisonRemise" class="block text-sm font-medium text-gray-700 mb-2">
+                    Raison de la remise (optionnel)
+                </label>
+                <select id="raisonRemise" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                    <option value="">-- Sélectionnez une raison --</option>
+                    <option value="Client fidèle">Client fidèle</option>
+                    <option value="Produit endommagé">Produit endommagé</option>
+                    <option value="Erreur de préparation">Erreur de préparation</option>
+                    <option value="Geste commercial">Geste commercial</option>
+                    <option value="Retard de livraison">Retard de livraison</option>
+                </select>
+            </div>
+
+            <!-- Aperçu de la remise -->
+            <div id="remisePreview" style="display: none;">
+                <!-- Le contenu sera généré dynamiquement par JavaScript -->
+            </div>
+        </div>
+
+        <div class="flex justify-end space-x-3 mt-6">
+            <button type="button" onclick="fermerModalRemise()"
+                    class="px-4 py-2 rounded-lg font-medium transition-all bg-gray-100 hover:bg-gray-200 text-gray-700">
+                <i class="fas fa-times mr-1"></i>Annuler
+            </button>
+            <button type="button" onclick="appliquerRemise()"
+                    class="px-4 py-2 rounded-lg font-medium transition-all bg-green-600 hover:bg-green-700 text-white">
+                <i class="fas fa-check mr-2"></i>Appliquer la remise
+            </button>
+        </div>
+    </div>
+</div>
 
 <!-- Modales d'information sur les calculs -->
 <div id="modalInfoPrix" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
@@ -1340,10 +1343,106 @@
 {% block extra_js %}
 {{ block.super }}
 
-<script src="{% static 'js/modal_ajout_articles.js' %}"></script>
+<!-- ✅ CONFIGURATION GLOBALE POUR LES JAVASCRIPT -->
+<script>
+    // Configuration pour les fichiers JavaScript globaux
+    window.commandeId = {{ commande.id }};
+    window.urlModifier = "{% url 'Superpreparation:modifier_commande_superviseur' commande.pk %}";
+
+    // APIs Articles
+    window.urlApiArticles = "{% url 'Superpreparation:api_articles_disponibles_prepa' %}";
+    window.urlGetVariants = "{% url 'Superpreparation:get_article_variants' article_id=0 %}".replace('/0/', '/{id}/');
+    window.urlRafraichir = '/Superpreparation/api/commande/{{ commande.id }}/rafraichir-articles/';
+
+    // APIs Remises
+    window.urlCalculerRemisePreview = '/Superpreparation/calculer-remise-preview/';
+    window.urlAppliquerRemise = '/Superpreparation/appliquer-remise/';
+    window.urlRetirerRemise = '/Superpreparation/retirer-remise/';
+
+    window.appName = 'Superpreparation';
+
+    // ========== FONCTIONS UTILITAIRES POUR LES FILTRES ==========
+
+    /**
+     * Vérifie si un article correspond au filtre spécifié
+     */
+    function correspondAuFiltre(article, typeFiltre) {
+        switch (typeFiltre) {
+            case 'promo':
+                return Boolean(article.has_promo_active);
+            case 'liquidation':
+                return article.phase === 'LIQUIDATION';
+            case 'test':
+                return article.phase === 'EN_TEST';
+            case 'upsell':
+                return Boolean(article.isUpsell);
+            case 'all':
+            default:
+                return true;
+        }
+    }
+
+    /**
+     * Compte le nombre d'articles par type de filtre
+     */
+    function compterArticlesParType(typeFiltre) {
+        if (!window.articlesDisponibles || window.articlesDisponibles.length === 0) {
+            return 0;
+        }
+
+        if (typeFiltre === 'all') {
+            return window.articlesDisponibles.length;
+        }
+
+        return window.articlesDisponibles.filter(article => correspondAuFiltre(article, typeFiltre)).length;
+    }
+
+    /**
+     * Met à jour les compteurs sur les badges de filtre
+     */
+    function mettreAJourCompteursFiltre() {
+        const types = ['all', 'promo', 'liquidation', 'test', 'upsell'];
+
+        types.forEach(type => {
+            const badge = document.getElementById(`filter-${type}`);
+            if (badge) {
+                const compteur = compterArticlesParType(type);
+
+                // Supprimer l'ancien compteur s'il existe
+                const ancienCompteur = badge.querySelector('.article-count');
+                if (ancienCompteur) {
+                    ancienCompteur.remove();
+                }
+
+                // Ajouter le nouveau compteur
+                if (compteur > 0) {
+                    const compteurElement = document.createElement('span');
+                    compteurElement.className = 'article-count';
+                    compteurElement.textContent = `(${compteur})`;
+                    badge.appendChild(compteurElement);
+                }
+            }
+        });
+    }
+</script>
+
+<!-- Module global de gestion des articles -->
+<script src="{% static 'js/Commande/gestion_articles.js' %}"></script>
 
 <script>
-// ⚠️ DÉFINIR LA FONCTION AJAX APRÈS le chargement de modal_ajout_articles.js
+// ========== ALIAS POUR COMPATIBILITÉ ==========
+// Créer un alias pour ouvrirModalAjoutArticle qui appelle la fonction globale
+window.ouvrirModalAjoutArticle = function() {
+    console.log('🔄 Redirection vers ajouterNouvelArticle (module global)');
+    if (typeof ajouterNouvelArticle === 'function') {
+        ajouterNouvelArticle();
+    } else {
+        console.error('❌ ajouterNouvelArticle non disponible');
+    }
+};
+console.log('✅ Alias ouvrirModalAjoutArticle → ajouterNouvelArticle créé');
+
+// ⚠️ DÉFINIR LA FONCTION AJAX APRÈS le chargement de gestion_articles.js
 // pour que afficherArticles soit disponible quand l'AJAX se termine
 console.log('🔧 Définition de window.chargerArticlesDisponibles (version AJAX)');
 window.chargerArticlesDisponibles = function(filterType = 'tous') {
