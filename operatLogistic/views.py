@@ -39,15 +39,15 @@ def dashboard(request):
 
 
     #Taux de livraison sur le nombre total de commande de manière générale
-    if total_commandes > 0 :
-        Taux_livraison_generale = round(((livrees / total_commandes)*100),2)  
+    if total_commandes > 0:
+        Taux_livraison_generale = round(((livrees / total_commandes) * 100), 2)
     else:
-        return 0
-    
-    if commandes_distribution > 0 :
-        Taux_livraison_sur_distribution = round(((livrees/commandes_distribution)*100),2)  
+        Taux_livraison_generale = 0
+
+    if commandes_distribution > 0:
+        Taux_livraison_sur_distribution = round(((livrees / commandes_distribution) * 100), 2)
     else:
-        return 0
+        Taux_livraison_sur_distribution = 0
 
 
     #Taux de livraison sur les commandes mise en distributions

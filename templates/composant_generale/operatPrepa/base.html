@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}YZ-CMD - Opérateur de Préparation{% endblock %}</title>
+    <title>{% block title %}COD$uite - Opérateur de Préparation{% endblock %}</title>
     
     <!-- Token CSRF pour les requêtes AJAX -->
     {% csrf_token %}
@@ -26,6 +26,7 @@
             --preparation-text-light: #F0F8F8; /* Texte très clair */
             --preparation-border-accent: #9a6a4d; /* Accent (doré/orangé terreux) */
             --preparation-hover-bg: #412a34; /* Arrière-plan au survol */
+            --chatbot-color: #361f27; /* Couleur chatbot (même que primary) */
         }
 
         /* --- Sidebar --- */
@@ -148,7 +149,14 @@
     </style>
     {% endblock %}
 </head>
-<body class="bg-gray-100 font-sans">
+<body class="bg-gray-100 font-sans"
+      data-interface="preparation"
+      {% if request.user.is_authenticated and request.user.profil_operateur %}
+      data-user-type="{{ request.user.profil_operateur.type_operateur }}"
+      data-user-name="{{ request.user.profil_operateur.nom_complet }}"
+      data-user-id="{{ request.user.id }}"
+      {% endif %}>
+
     <div class="relative flex h-screen overflow-x-hidden">
         <!-- Sidebar -->
         {% include 'composant_generale/operatPrepa/sidebar.html' %}
@@ -452,6 +460,9 @@
 
     <!-- Overlay pour fermer les résultats -->
     <div id="searchOverlay" class="fixed inset-0 bg-black bg-opacity-25 hidden" style="z-index: 1000 !important; position: fixed !important;"></div>
+
+    <!-- Modal Chatbot IA -->
+    {% include 'chatbot/modal.html' %}
 
 </body>
 </html> 

@@ -536,7 +536,7 @@ Enregistrements importés: {{ log.records_imported|default:0 }}
 ID du log: {{ log.id }}
 {% if log.sheet_config %}ID de configuration: {{ log.sheet_config.id }}{% endif %}
 Généré le: ${new Date().toLocaleString()}
-Système: YZ-CMD - Gestion de Commandes`;
+Système: COD$uite - Gestion de Commandes`;
 
             // Créer et télécharger le fichier
             const blob = new Blob([logContent], { type: 'text/plain; charset=utf-8' });

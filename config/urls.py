@@ -50,6 +50,7 @@ urlpatterns = [
     path('synchronisation/', include('synchronisation.urls')),
     path('kpis/', include('kpis.urls')),
     # Notifications app supprimée
+    path('chatbot/', include('chatbot.urls')),  # Routes de l'API chatbot
     
     # Pages 404 personnalisées par interface
     path('404/admin/', include('parametre.404.admin.urls')),
