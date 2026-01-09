@@ -22,6 +22,9 @@
         </div>
     </div>
 
+    <!-- Filtres globaux de commandes -->
+    {% include 'common/commande-filters.html' %}
+
     <!-- Tableau des commandes -->
     <div class="overflow-x-auto mb-8 bg-white rounded-xl shadow-lg">
         <table class="min-w-full divide-y divide-gray-200">
@@ -1242,4 +1245,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+
+<!-- Script pour les filtres globaux de commandes -->
+<script src="{% static 'js/common/commande-filters.js' %}"></script>
 {% endblock %}

@@ -168,39 +168,43 @@
         </div>
     </div>
 
-    <!-- Barre de recherche et actions -->
+    <!-- Barre de recherche et filtres -->
     <div class="bg-white rounded-xl shadow-md border p-6 mb-8" style="border-color: var(--admin-light-accent);">
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <form method="get" class="flex-grow flex gap-4">
+        <form method="get" class="w-full">
+            <!-- Recherche -->
+            <div class="flex flex-col md:flex-row gap-4 mb-6">
                 <div class="flex-grow">
                     <div class="relative">
-                        <input type="text" name="search" value="{{ search_query|default:'' }}" 
-                               class="w-full pl-10 pr-4 py-2 rounded-lg border focus:ring-2 focus:ring-offset-2 transition-all" 
+                        <input type="text" name="search" value="{{ search_query|default:'' }}"
+                               class="w-full pl-10 pr-4 py-2 rounded-lg border focus:ring-2 focus:ring-offset-2 transition-all"
                                style="border-color: var(--admin-accent-color); focus:ring-color: var(--admin-color);"
                                placeholder="Rechercher par N° commande, client, ville...">
                         <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
                     </div>
                 </div>
-                <button type="submit" class="px-6 py-2 rounded-lg text-white font-medium transition-all shadow-md hover:shadow-lg transform hover:scale-105" 
+                <button type="submit" class="px-6 py-2 rounded-lg text-white font-medium transition-all shadow-md hover:shadow-lg transform hover:scale-105"
                         style="background-color: var(--admin-color);">
                     Rechercher
                 </button>
-                {% if search_query %}
+                {% if search_query or date_filter or request.GET.date_start or request.GET.date_end or date_cmd_filter or request.GET.date_cmd_start or request.GET.date_cmd_end or sync_filter or request.GET.sync_date_start or request.GET.sync_date_end or order_by %}
                 <a href="{% url 'commande:non_affectees' %}" class="px-6 py-2 rounded-lg bg-gray-500 text-white font-medium transition-all shadow-md hover:shadow-lg transform hover:scale-105">
                     Réinitialiser
                 </a>
                 {% endif %}
-            </form>
-
-            <!-- Actions en masse -->
-            <div class="flex gap-2">
-                <button id="bulkAffectBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-sm opacity-50 cursor-not-allowed" disabled>
-                    <i class="fas fa-user-plus mr-2"></i> Affecter sélection
-                </button>
-                <a href="{% url 'commande:paniers' %}" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-sm">
-                    <i class="fas fa-shopping-cart mr-2"></i> Voir tous les paniers
-                </a>
             </div>
+
+            <!-- Filtres réutilisables depuis common -->
+            {% include 'common/filters.html' %}
+        </form>
+
+        <!-- Actions en masse -->
+        <div class="flex gap-2 mt-6 pt-4 border-t border-gray-200">
+            <button id="bulkAffectBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-sm opacity-50 cursor-not-allowed" disabled>
+                <i class="fas fa-user-plus mr-2"></i> Affecter sélection
+            </button>
+            <a href="{% url 'commande:paniers' %}" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-sm">
+                <i class="fas fa-shopping-cart mr-2"></i> Voir tous les paniers
+            </a>
         </div>
     </div>
 
@@ -237,7 +241,8 @@
                     <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider border-r border-b border-gray-200">Client</th>
                     <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider border-r border-b border-gray-200">Téléphone</th>
                     <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider border-r border-b border-gray-200">Ville</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider border-r border-b border-gray-200">Date</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider border-r border-b border-gray-200">Date Création</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider border-r border-b border-gray-200">Date Sync</th>
                     <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider border-r border-b border-gray-200">Total</th>
                     <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider border-r border-b border-gray-200">État</th>
                     <th class="px-4 py-3 text-center text-xs font-medium text-white uppercase tracking-wider border-r border-b border-gray-200">Panier</th>
@@ -346,50 +351,9 @@
 </div>
 
 <!-- Modal d'affectation -->
-<div id="affectationModal" class="fixed inset-0 flex items-center justify-center z-50 hidden" style="background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(8px);">
-    <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <div class="p-6 border-b">
-            <div class="flex justify-between items-center">
-                <h3 class="text-2xl font-bold text-gray-800">Affecter la commande</h3>
-                <button id="closeAffectationModal" class="text-gray-400 hover:text-gray-600">
-                    <i class="fas fa-times text-2xl"></i>
-                </button>
-            </div>
-            <p class="text-gray-600 mt-2">Commande: <span id="affectationCommandeId" class="font-semibold"></span></p>
-        </div>
-        <div class="p-6">
-            <!-- Information sur le type d'opérateur -->
-            <div class="mb-6">
-                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <div class="flex items-center">
-                        <i class="fas fa-info-circle text-blue-500 mr-2"></i>
-                        <span class="text-sm font-medium text-blue-800">
-                            Affectation aux opérateurs de confirmation uniquement
-                        </span>
-                    </div>
-                </div>
-            </div>
+{% include 'commande/modal/Affectation_commandes.html' %}
 
-            <!-- Liste des opérateurs -->
-            <div class="mb-6">
-                <label class="block text-sm font-medium text-gray-700 mb-3">Sélectionner un opérateur</label>
-                <div id="operateursList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <!-- Les cartes d'opérateurs seront chargées ici -->
-                </div>
-            </div>
 
-            <!-- Actions -->
-            <div class="flex justify-end gap-4">
-                <button id="cancelAffectationBtn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-3 px-6 rounded-lg transition duration-300">
-                    Annuler
-                </button>
-                <button id="confirmAffectationBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 opacity-50 cursor-not-allowed" disabled>
-                    Affecter
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
 
 
 
@@ -432,6 +396,10 @@
 {% block extra_js %}
 {{ block.super }}
 {% csrf_token %}
+
+<!-- Inclusion du fichier JS global pour les filtres -->
+<script src="{% static 'js/commande_filters.js' %}"></script>
+
 <script>
 let currentCommandeId = null;
 let selectedOperateurId = null;
@@ -702,8 +670,10 @@ function changePage(page) {
 }
 
 
+// Les filtres sont gérés par le fichier commande_filters.js
 // Exécuté une seule fois au chargement initial de la page
 document.addEventListener('DOMContentLoaded', function() {
+
     // Gestion de la sélection multiple pour l'affectation (initialisation DOMContentLoaded)
     const bulkAffectBtn = document.getElementById('bulkAffectBtn');
     if (bulkAffectBtn) {
@@ -720,12 +690,12 @@ document.addEventListener('DOMContentLoaded', function() {
     if (itemsPerPageSelect) {
         itemsPerPageSelect.addEventListener('change', function() {
             const selectedValue = this.value;
-            loadNonAffecteesData({
-                'items_per_page': selectedValue,
-                'start_range': '',
-                'end_range': '',
-                'page': '1' // Toujours revenir à la première page lors du changement d'éléments par page
-            });
+            const url = new URL(window.location.href);
+            url.searchParams.set('items_per_page', selectedValue);
+            url.searchParams.delete('start_range');
+            url.searchParams.delete('end_range');
+            url.searchParams.set('page', '1');
+            window.location.href = url.toString();
         });
     }
 
@@ -734,50 +704,48 @@ document.addEventListener('DOMContentLoaded', function() {
         applyRangeBtn.addEventListener('click', function() {
             const startRange = startRangeInput.value.trim();
             const endRange = endRangeInput.value.trim();
-            
+
             if (!startRange || !endRange) {
                 showToast('Veuillez remplir les deux champs de plage', 'warning');
                 return;
             }
-            
+
             const start = parseInt(startRange);
             const end = parseInt(endRange);
-            
+
             if (isNaN(start) || isNaN(end)) {
                 showToast('Veuillez entrer des nombres valides', 'warning');
                 return;
             }
-            
+
             if (start <= 0 || end <= 0) {
                 showToast('Les valeurs doivent être supérieures à 0', 'warning');
                 return;
             }
-            
+
             if (start > end) {
                 showToast('La valeur de début doit être inférieure à la valeur de fin', 'warning');
                 return;
             }
-            
-            loadNonAffecteesData({
-                'start_range': start,
-                'end_range': end,
-                'items_per_page': '10', // Réinitialiser à 10 pour la plage personnalisée
-                'page': '1' // Toujours revenir à la première page lors de l'application de la plage
-            });
+
+            const url = new URL(window.location.href);
+            url.searchParams.set('start_range', start);
+            url.searchParams.set('end_range', end);
+            url.searchParams.set('items_per_page', '10');
+            url.searchParams.set('page', '1');
+            window.location.href = url.toString();
         });
     }
 
     // Gestion de l'effacement de la plage personnalisée
     if (clearRangeBtn) {
         clearRangeBtn.addEventListener('click', function() {
-            startRangeInput.value = '';
-            endRangeInput.value = '';
-            loadNonAffecteesData({
-                'start_range': '',
-                'end_range': '',
-                'items_per_page': '10',
-                'page': '1'
-            });
+            const url = new URL(window.location.href);
+            url.searchParams.delete('start_range');
+            url.searchParams.delete('end_range');
+            url.searchParams.set('items_per_page', '10');
+            url.searchParams.set('page', '1');
+            window.location.href = url.toString();
         });
     }
 
@@ -820,20 +788,13 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-                // Event listener for search input for dynamic updates, with a debounce for performance
-            let searchTimeout;
-            if (searchInput) {
-                searchInput.addEventListener('keyup', () => {
-                    clearTimeout(searchTimeout);
-                    searchTimeout = setTimeout(() => {
-                        loadNonAffecteesData({ 'page': '1' }); // Reset to page 1 on search change
-                    }, 300); // Même délai que dans Liste des Commandes
-                });
-            }
-    
-    // Initialiser les checkboxes et attacher les event listeners au chargement initial
+    // La recherche utilise maintenant la soumission normale du formulaire
+    // Le comportement AJAX est désactivé pour permettre aux filtres de fonctionner correctement
+    // La pagination utilise également des liens normaux maintenant
+
+    // Initialiser les checkboxes au chargement initial
     initializeCheckboxes();
-    attachPaginationListeners();
+    // attachPaginationListeners() est désactivé pour permettre aux liens de pagination de fonctionner normalement
 });
 
 // Fonctions pour les actions

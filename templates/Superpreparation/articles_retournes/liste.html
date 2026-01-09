@@ -654,6 +654,110 @@
         height: 2px;
         background: linear-gradient(90deg, var(--preparation-primary), var(--preparation-light));
     }
+
+    /* Indicateur de filtrage actif */
+    .filter-active-indicator {
+        position: fixed;
+        top: 80px;
+        right: 20px;
+        background: linear-gradient(135deg, var(--preparation-primary) 0%, var(--preparation-light) 100%);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        box-shadow: 0 4px 12px rgba(7, 15, 43, 0.3);
+        z-index: 1000;
+        display: none;
+        align-items: center;
+        gap: 8px;
+        animation: slideInRight 0.3s ease-out;
+    }
+
+    .filter-active-indicator.show {
+        display: flex;
+    }
+
+    /* Indicateur de recherche actif */
+    .search-active-indicator {
+        position: fixed;
+        top: 140px;
+        right: 20px;
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        color: white;
+        padding: 12px 20px;
+        border-radius: 24px;
+        font-size: 0.875rem;
+        box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+        z-index: 1000;
+        display: none;
+        animation: slideInRight 0.3s ease-out;
+        max-width: 320px;
+    }
+
+    .search-active-indicator.show {
+        display: block;
+    }
+
+    /* Highlight des lignes correspondant à la recherche */
+    .search-match-highlight {
+        background: linear-gradient(90deg, rgba(59, 130, 246, 0.08) 0%, rgba(147, 197, 253, 0.12) 100%) !important;
+        border-left: 4px solid #3b82f6 !important;
+        animation: highlightPulse 1.5s ease-in-out;
+    }
+
+    @keyframes highlightPulse {
+        0%, 100% {
+            box-shadow: 0 0 0 rgba(59, 130, 246, 0);
+        }
+        50% {
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+        }
+    }
+
+    .search-match-highlight:hover {
+        background: linear-gradient(90deg, rgba(59, 130, 246, 0.15) 0%, rgba(147, 197, 253, 0.2) 100%) !important;
+        transform: translateX(4px);
+    }
+
+    @keyframes slideInRight {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    /* Badge des onglets - style amélioré */
+    .tab-button .badge {
+        transition: all 0.3s ease;
+    }
+
+    .tab-button.tab-active .badge {
+        animation: badgePulse 0.5s ease-out;
+    }
+
+    @keyframes badgePulse {
+        0%, 100% {
+            transform: scale(1);
+        }
+        50% {
+            transform: scale(1.15);
+        }
+    }
+
+    /* Transition douce pour les lignes filtrées */
+    .article-retourne-row {
+        transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+
+    .article-retourne-row[data-filter-hidden="true"] {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
 </style>
 {% endblock %}
 
@@ -662,6 +766,29 @@
 <div class="main-content transition-all duration-300 compact-page" id="mainContent">
     <!-- Toast notifications container -->
     <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Indicateur de filtre actif -->
+    <div class="filter-active-indicator" id="filterIndicator">
+        <i class="fas fa-filter"></i>
+        <span id="filterIndicatorText">Filtre: En attente</span>
+    </div>
+
+    <!-- Indicateur de recherche actif -->
+    <div class="search-active-indicator" id="searchIndicator">
+        <div class="flex items-center gap-3">
+            <div class="bg-white bg-opacity-20 rounded-full p-2">
+                <i class="fas fa-search text-lg"></i>
+            </div>
+            <div>
+                <p class="text-xs opacity-90">Recherche active</p>
+                <p class="font-bold text-sm" id="searchIndicatorText">-</p>
+            </div>
+            <div class="bg-white bg-opacity-30 px-3 py-1 rounded-full">
+                <span class="font-bold text-lg" id="searchIndicatorCount">0</span>
+                <span class="text-xs ml-1">résultat(s)</span>
+            </div>
+        </div>
+    </div>
 
     <!-- En-tête de la page -->
     <div class="page-header">
@@ -737,10 +864,10 @@
         </div>
     </div>
 
-   
 
-    <!-- Barre de recherche intelligente -->
-{% include 'Superpreparation/includes/smart-search-toolbar.html' %}
+
+    <!-- Barre de recherche intelligente pour articles retournés -->
+{% include 'Superpreparation/articles_retournes/search-toolbar-articles-retournes.html' %}
 
     <!-- Onglets de filtrage -->
     <div class="mb-6">
@@ -822,7 +949,10 @@
     </div>
 
     <!-- Pagination (client) -->
-    <div data-superprep-pagination data-items-selector="tbody tr" data-container-selector="table" data-per-page="25"></div>
+    <div data-superprep-pagination
+         data-items-selector=".article-retourne-row"
+         data-container-selector="table"
+         data-per-page="10"></div>
 </div>
 
 <script>
@@ -912,34 +1042,77 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-<!-- Modale de sélection de raison pour traitement -->
+<!-- Modale de traitement d'article retourné (simplifiée) -->
 <div id="modaleRaisonTraitement" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
     <div class="relative top-20 mx-auto p-6 border w-full max-w-2xl shadow-lg rounded-lg bg-white">
         <div class="flex justify-between items-start mb-6">
             <div>
-                <h3 class="text-xl font-bold text-gray-900 flex items-center">
-                    <i class="fas fa-edit mr-2 text-blue-600"></i>
+                <h3 class="text-xl font-bold text-gray-900 flex items-center" id="modaleTitle">
+                    <i class="fas fa-edit mr-2 text-blue-600" id="modaleTitleIcon"></i>
                     Traitement d'article retourné
                 </h3>
-                <p class="text-sm text-gray-600 mt-1" id="raisonModalSubtitle">Sélectionnez la raison du traitement</p>
+                <p class="text-sm text-gray-600 mt-1" id="raisonModalSubtitle">Spécifiez la quantité à traiter</p>
             </div>
             <button onclick="fermerModaleRaisonTraitement()" class="text-gray-400 hover:text-gray-600 transition-colors">
                 <i class="fas fa-times text-2xl"></i>
             </button>
         </div>
 
-        <!-- Formulaire de sélection de raison -->
+        <!-- Formulaire simplifié -->
         <form id="formRaisonTraitement">
+            <!-- Badge d'action -->
+            <div class="mb-4 p-4 rounded-lg" id="actionBadge">
+                <div class="flex items-center justify-center gap-2">
+                    <i id="actionIcon" class="text-2xl"></i>
+                    <span id="actionText" class="text-lg font-bold"></span>
+                </div>
+            </div>
+
+            <!-- Affichage de la quantité disponible -->
+            <div class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <i class="fas fa-box text-blue-600 mr-2"></i>
+                        <span class="text-sm font-medium text-blue-900">Quantité retournée :</span>
+                    </div>
+                    <span id="quantiteDisponible" class="text-lg font-bold text-blue-700">-</span>
+                </div>
+            </div>
+
+            <!-- Sélection de la quantité à traiter -->
             <div class="mb-6">
-                <label for="selectRaisonTraitement" class="block text-sm font-medium text-gray-700 mb-2">
-                    Type de traitement <span class="text-red-500">*</span>
+                <label for="quantiteTraitement" class="block text-sm font-medium text-gray-700 mb-2">
+                    Quantité à traiter
                 </label>
-                <select id="selectRaisonTraitement" name="raison_traitement"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                    <option value="">Sélectionnez le type de traitement...</option>
-                    <option value="Article vérifié et réintégré au stock">Article vérifié et réintégré au stock</option>
-                    <option value="Article non réintégrable, commande traité">Article non réintégrable, commande traité</option>
-                </select>
+                <div class="flex items-center gap-3">
+                    <input type="number"
+                           id="quantiteTraitement"
+                           name="quantite"
+                           min="1"
+                           class="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="Entrez la quantité">
+                    <button type="button"
+                            onclick="remplirQuantiteMax()"
+                            class="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors text-sm font-medium">
+                        <i class="fas fa-fill mr-1"></i>Tout
+                    </button>
+                </div>
+                <p class="mt-1 text-xs text-gray-500">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Laissez vide pour traiter toute la quantité
+                </p>
+            </div>
+
+            <!-- Commentaire optionnel -->
+            <div class="mb-6">
+                <label for="commentaireTraitement" class="block text-sm font-medium text-gray-700 mb-2">
+                    Commentaire (optionnel)
+                </label>
+                <textarea id="commentaireTraitement"
+                          name="commentaire"
+                          rows="3"
+                          class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="Ajoutez un commentaire si nécessaire..."></textarea>
             </div>
         </form>
 
@@ -951,8 +1124,8 @@ document.addEventListener('DOMContentLoaded', function() {
             </button>
             <button onclick="confirmerTraitementArticle()"
                     id="btnConfirmerTraitement"
-                    class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
-                <i class="fas fa-check mr-2"></i>Confirmer le traitement
+                    class="px-6 py-2 text-white rounded-md transition-colors shadow-lg">
+                <i class="fas fa-check mr-2"></i>Confirmer
             </button>
         </div>
     </div>
@@ -995,66 +1168,141 @@ document.addEventListener('DOMContentLoaded', function() {
 
 {% block extra_js %}
 {{ block.super }}
-<!-- Script de recherche intelligente -->
-<script src="{% static 'js/Superpreparation/Suivi_des_Commandes/suivi-commandes-smart-search.js' %}"></script>
+<!-- Script de pagination intelligente -->
+<script src="{% static 'js/Superpreparation/smart-pagination.js' %}"></script>
+<!-- Script de recherche intelligente pour articles retournés intégré dans le template search-toolbar-articles-retournes.html -->
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    if (typeof initSuiviCommandesSearch === 'function') {
-        initSuiviCommandesSearch('livrees_partiellement');
-    }
-});
 
 // === GESTION DES ARTICLES RETOURNÉS ===
+//
+// SYSTÈME DE FILTRAGE STABLE - Version améliorée avec pagination
+// ==============================================================
+//
+// Fonctionnalités :
+// - ✅ Persistence de l'état du filtre (localStorage + URL)
+// - ✅ Compteurs dynamiques mis à jour en temps réel
+// - ✅ Compatibilité avec la recherche et la pagination
+// - ✅ Indicateur visuel du filtre actif
+// - ✅ Navigation navigateur (back/forward) supportée
+// - ✅ Transitions CSS douces
+// - ✅ Pagination synchronisée avec les filtres
+// - ✅ Réinitialisation automatique de la pagination
+//
+// Architecture :
+// - changerOnglet() : Point d'entrée principal pour changer de filtre
+// - filtrerTableauParStatut() : Applique le filtre aux lignes du tableau
+// - mettreAJourCompteursOnglets() : Recalcule les badges dynamiquement
+// - initialiserOnglet() : Initialise l'état au chargement (URL > localStorage > défaut)
+// - mettreAJourIndicateurFiltre() : Affiche un indicateur visuel temporaire
+// - mettreAJourPaginationApresFiltrage() : Synchronise la pagination avec le filtre actif
+// - reinitialiserPagination() : Réinitialise la pagination (filtre + recherche)
+//
+// Attributs data utilisés :
+// - data-statut : Statut de l'article (en_attente, reintegre_stock, defectueux, traite)
+// - data-filter-onglet : État du filtre pour cette ligne (visible/hidden)
+// - data-filter-hidden : Marqueur si la ligne est cachée par le filtre
+// - data-search-hidden : Marqueur si la ligne est cachée par la recherche
+//
+// Intégration avec la pagination :
+// Le système utilise SuperprepSmartPagination.filterItems() pour ne paginer
+// que les éléments qui passent le filtre actif. À chaque changement de filtre,
+// la pagination se réinitialise à la page 1 avec uniquement les éléments visibles.
+//
+// ==============================================================
 
 
 // Variables globales pour le traitement
 let articleIdEnCours = null;
 let actionEnCours = null;
+let quantiteMaxArticle = 0;
 
-function traiterArticle(articleId, action) {
+function traiterArticle(articleId, action, quantiteMax = null) {
     // Stocker les informations pour la confirmation
     articleIdEnCours = articleId;
     actionEnCours = action;
 
-    const actions = {
-        'reintegrer_stock': 'réintégrer en stock',
-        'marquer_defectueux': 'marquer comme défectueux',
-        'marquer_traite': 'marquer comme traité'
-    };
-
-    // Mettre à jour le titre de la modale
-    const subtitle = document.getElementById('raisonModalSubtitle');
-    if (subtitle) {
-        subtitle.textContent = `Action: ${actions[action]}`;
+    // Récupérer la quantité depuis l'élément du tableau si pas fournie
+    if (quantiteMax === null) {
+        const ligne = document.querySelector(`.article-retourne-row[data-id="${articleId}"]`);
+        if (ligne) {
+            quantiteMax = parseInt(ligne.getAttribute('data-quantite')) || 1;
+        } else {
+            quantiteMax = 1;
+        }
     }
 
-    // Pré-sélectionner des options selon l'action
-    const select = document.getElementById('selectRaisonTraitement');
-    if (select) {
-        select.value = ''; // Reset
+    quantiteMaxArticle = quantiteMax;
 
-        // Suggestions selon l'action
-        if (action === 'reintegrer_stock') {
-            // Pré-sélectionner une option appropriée pour la réintégration
-            setTimeout(() => {
-                const optionStock = select.querySelector('option[value="Article en bon état - réintégration stock"]');
-                if (optionStock) {
-                    optionStock.selected = true;
-                }
-            }, 100);
-        } else if (action === 'marquer_defectueux') {
-            // Pré-sélectionner une option appropriée pour défectueux
-            setTimeout(() => {
-                const optionDefaut = select.querySelector('option[value="Article défectueux détecté"]');
-                if (optionDefaut) {
-                    optionDefaut.selected = true;
-                }
-            }, 100);
-        }
+    // Configuration de la modale selon l'action
+    const actionBadge = document.getElementById('actionBadge');
+    const actionIcon = document.getElementById('actionIcon');
+    const actionText = document.getElementById('actionText');
+    const btnConfirmer = document.getElementById('btnConfirmerTraitement');
+    const modaleTitleIcon = document.getElementById('modaleTitleIcon');
+
+    if (action === 'reintegrer_stock') {
+        // Style pour réintégration
+        actionBadge.className = 'mb-4 p-4 rounded-lg bg-green-50 border-2 border-green-200';
+        actionIcon.className = 'fas fa-check-circle text-2xl text-green-600';
+        actionText.className = 'text-lg font-bold text-green-700';
+        actionText.textContent = 'Réintégrer en stock';
+
+        btnConfirmer.className = 'px-6 py-2 text-white rounded-md transition-colors shadow-lg bg-green-600 hover:bg-green-700';
+        modaleTitleIcon.className = 'fas fa-check-circle mr-2 text-green-600';
+
+    } else if (action === 'marquer_defectueux') {
+        // Style pour défectueux
+        actionBadge.className = 'mb-4 p-4 rounded-lg bg-red-50 border-2 border-red-200';
+        actionIcon.className = 'fas fa-times-circle text-2xl text-red-600';
+        actionText.className = 'text-lg font-bold text-red-700';
+        actionText.textContent = 'Marquer comme défectueux';
+
+        btnConfirmer.className = 'px-6 py-2 text-white rounded-md transition-colors shadow-lg bg-red-600 hover:bg-red-700';
+        modaleTitleIcon.className = 'fas fa-times-circle mr-2 text-red-600';
+
+    } else if (action === 'marquer_traite') {
+        // Style pour traité
+        actionBadge.className = 'mb-4 p-4 rounded-lg bg-blue-50 border-2 border-blue-200';
+        actionIcon.className = 'fas fa-check text-2xl text-blue-600';
+        actionText.className = 'text-lg font-bold text-blue-700';
+        actionText.textContent = 'Marquer comme traité';
+
+        btnConfirmer.className = 'px-6 py-2 text-white rounded-md transition-colors shadow-lg bg-blue-600 hover:bg-blue-700';
+        modaleTitleIcon.className = 'fas fa-check mr-2 text-blue-600';
+    }
+
+    // Mettre à jour l'affichage de la quantité disponible
+    const quantiteDisplay = document.getElementById('quantiteDisponible');
+    if (quantiteDisplay) {
+        quantiteDisplay.textContent = quantiteMaxArticle;
+    }
+
+    // Réinitialiser et configurer le champ de quantité
+    const quantiteInput = document.getElementById('quantiteTraitement');
+    if (quantiteInput) {
+        quantiteInput.value = '';
+        quantiteInput.max = quantiteMaxArticle;
+        quantiteInput.placeholder = `1 à ${quantiteMaxArticle}`;
+    }
+
+    // Réinitialiser le commentaire
+    const commentaire = document.getElementById('commentaireTraitement');
+    if (commentaire) {
+        commentaire.value = '';
     }
 
     // Ouvrir la modale
     ouvrirModaleRaisonTraitement();
+}
+
+/**
+ * Remplit le champ quantité avec la valeur maximale
+ */
+function remplirQuantiteMax() {
+    const quantiteInput = document.getElementById('quantiteTraitement');
+    if (quantiteInput) {
+        quantiteInput.value = quantiteMaxArticle;
+    }
 }
 
 function ouvrirModaleRaisonTraitement() {
@@ -1083,34 +1331,47 @@ function fermerModaleRaisonTraitement() {
 
 function confirmerTraitementArticle() {
     // Validation
-    const select = document.getElementById('selectRaisonTraitement');
-    const commentaireComp = document.getElementById('commentaireComplementaire');
-
-    if (!select) {
-        alert('❌ Erreur: Élément de sélection non trouvé');
-        return;
-    }
-
-    if (!select.value) {
-        alert('⚠️ Veuillez sélectionner une raison de traitement');
-        select.focus();
-        return;
-    }
+    const quantiteInput = document.getElementById('quantiteTraitement');
+    const commentaireInput = document.getElementById('commentaireTraitement');
 
     if (!articleIdEnCours || !actionEnCours) {
         alert('❌ Erreur: Informations de traitement manquantes');
         return;
     }
 
-    // Construire le commentaire final
-    let commentaireFinal = select.value;
-    if (commentaireComp && commentaireComp.value.trim()) {
-        commentaireFinal += ` - ${commentaireComp.value.trim()}`;
+    // Valider la quantité si renseignée
+    let quantite = null;
+    if (quantiteInput && quantiteInput.value) {
+        quantite = parseInt(quantiteInput.value);
+        if (isNaN(quantite) || quantite <= 0 || quantite > quantiteMaxArticle) {
+            alert(`⚠️ Quantité invalide. Doit être entre 1 et ${quantiteMaxArticle}`);
+            quantiteInput.focus();
+            return;
+        }
     }
-    commentaireFinal += ` (Traité le ${new Date().toLocaleString()})`;
+
+    // Récupérer le commentaire
+    let commentaireFinal = commentaireInput ? commentaireInput.value.trim() : '';
+
+    // Ajouter les informations de traitement au commentaire
+    const actionLabels = {
+        'reintegrer_stock': 'Réintégration en stock',
+        'marquer_defectueux': 'Marqué comme défectueux',
+        'marquer_traite': 'Traité manuellement'
+    };
+
+    const actionLabel = actionLabels[actionEnCours] || 'Traitement';
+
+    if (quantite) {
+        commentaireFinal = `${actionLabel} - ${quantite}/${quantiteMaxArticle} unité(s)${commentaireFinal ? ' - ' + commentaireFinal : ''}`;
+    } else {
+        commentaireFinal = `${actionLabel}${commentaireFinal ? ' - ' + commentaireFinal : ''}`;
+    }
 
     // Désactiver le bouton pendant le traitement
     const btnConfirmer = document.getElementById('btnConfirmerTraitement');
+    const btnOriginalHTML = btnConfirmer ? btnConfirmer.innerHTML : '';
+
     if (btnConfirmer) {
         btnConfirmer.disabled = true;
         btnConfirmer.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Traitement...';
@@ -1121,8 +1382,19 @@ function confirmerTraitementArticle() {
     formData.append('action', actionEnCours);
     formData.append('commentaire', commentaireFinal);
 
+    // Ajouter la quantité si spécifiée
+    if (quantite) {
+        formData.append('quantite', quantite);
+    }
+
     const url = `{% url "Superpreparation:service_traiter_article_retourne" 0 %}`.replace('0', articleIdEnCours);
-    console.log('Fetching URL:', url);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('📤 ENVOI DE LA REQUÊTE');
+    console.log('URL:', url);
+    console.log('Action:', actionEnCours);
+    console.log('Quantité:', quantite || 'Toute la quantité (' + quantiteMaxArticle + ')');
+    console.log('Commentaire:', commentaireFinal);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
     fetch(url, {
         method: 'POST',
@@ -1133,31 +1405,41 @@ function confirmerTraitementArticle() {
         }
     })
     .then(response => {
-        console.log('Response status:', response.status);
+        console.log('📥 Response status:', response.status);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         return response.json();
     })
     .then(data => {
+        console.log('📦 Données reçues:', data);
+
         if (data.success) {
-            showToast(data.message, 'success');
+            // Afficher le message avec informations sur le traitement partiel
+            let messageDetail = data.message;
+
+            if (data.partial) {
+                messageDetail += `\n\n📦 Quantité traitée: ${data.quantite_traitee}\n⏳ Quantité restante: ${data.quantite_restante}`;
+            }
+
+            showToast(messageDetail, 'success', 5000);
             fermerModaleRaisonTraitement();
+
             // Recharger la page pour mettre à jour les données
-            location.reload();
+            setTimeout(() => location.reload(), 1500);
         } else {
             showToast(`Erreur: ${data.error}`, 'error');
         }
     })
     .catch(error => {
-        console.error('Erreur:', error);
+        console.error('❌ Erreur:', error);
         showToast('Erreur de réseau lors du traitement', 'error');
     })
     .finally(() => {
         // Restaurer le bouton
         if (btnConfirmer) {
             btnConfirmer.disabled = false;
-            btnConfirmer.innerHTML = '<i class="fas fa-check mr-2"></i>Confirmer le traitement';
+            btnConfirmer.innerHTML = btnOriginalHTML || '<i class="fas fa-check mr-2"></i>Confirmer';
         }
     });
 }
@@ -1209,15 +1491,28 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
-// === GESTION DES ONGLETS ===
+// === GESTION DES ONGLETS (VERSION STABLE) ===
 
-let ongletActuel = '{{ statut_filter|default:"en_attente" }}';
+// Clé de stockage pour persister l'onglet actif
+const STORAGE_KEY_ONGLET = 'yz.articles_retournes.onglet_actif';
+let ongletActuel = null;
 
+/**
+ * Change l'onglet actif et filtre les articles
+ * @param {string} statut - Le statut à filtrer (tous, en_attente, traites, reintegre_stock, defectueux)
+ */
 function changerOnglet(statut) {
-    console.log('Changement vers l\'onglet:', statut);
+    console.log('📌 Changement vers l\'onglet:', statut);
 
     // Mettre à jour l'onglet actuel
     ongletActuel = statut;
+
+    // Persister dans localStorage
+    try {
+        localStorage.setItem(STORAGE_KEY_ONGLET, statut);
+    } catch (e) {
+        console.warn('Impossible de sauvegarder l\'onglet dans localStorage:', e);
+    }
 
     // Mettre à jour les styles des onglets
     document.querySelectorAll('.tab-button').forEach(btn => {
@@ -1240,34 +1535,122 @@ function changerOnglet(statut) {
         url.searchParams.set('statut', statut);
     }
     window.history.pushState({}, '', url);
+
+    // Mettre à jour les compteurs des badges
+    mettreAJourCompteursOnglets();
+
+    // Mettre à jour l'indicateur visuel
+    mettreAJourIndicateurFiltre(statut);
+
+    // Déclencher un événement personnalisé pour que la pagination se mette à jour
+    document.dispatchEvent(new CustomEvent('ongletChange', { detail: { statut } }));
 }
 
+/**
+ * Met à jour l'indicateur visuel du filtre actif
+ */
+function mettreAJourIndicateurFiltre(statut) {
+    const indicator = document.getElementById('filterIndicator');
+    const indicatorText = document.getElementById('filterIndicatorText');
+
+    if (!indicator || !indicatorText) return;
+
+    const labels = {
+        'tous': 'Tous les articles',
+        'en_attente': 'En attente',
+        'traites': 'Traités',
+        'reintegre_stock': 'Réintégrés en stock',
+        'defectueux': 'Défectueux'
+    };
+
+    indicatorText.textContent = `Filtre: ${labels[statut] || statut}`;
+
+    // Afficher l'indicateur pendant 3 secondes
+    indicator.classList.add('show');
+    setTimeout(() => {
+        indicator.classList.remove('show');
+    }, 3000);
+}
+
+/**
+ * Filtre le tableau selon le statut sélectionné
+ * Utilise des attributs data-filter-* pour distinguer du filtrage par recherche
+ */
 function filtrerTableauParStatut(statut) {
     const lignes = document.querySelectorAll('.article-retourne-row');
     let visibleCount = 0;
 
     lignes.forEach(ligne => {
         const statutLigne = ligne.dataset.statut;
-        let visible = false;
+        let matchFiltre = false;
 
+        // Déterminer si la ligne correspond au filtre
         if (statut === 'tous') {
-            visible = true;
+            matchFiltre = true;
         } else if (statut === 'traites') {
             // Traités = tous sauf en_attente
-            visible = statutLigne !== 'en_attente';
+            matchFiltre = statutLigne !== 'en_attente';
         } else {
-            visible = statutLigne === statut;
+            matchFiltre = statutLigne === statut;
         }
 
-        if (visible) {
+        // Marquer la ligne avec un attribut data pour indiquer si elle passe le filtre d'onglet
+        ligne.setAttribute('data-filter-onglet', matchFiltre ? 'visible' : 'hidden');
+
+        // La ligne est visible seulement si elle passe à la fois le filtre d'onglet ET n'est pas cachée par la recherche
+        const cacheeParRecherche = ligne.style.display === 'none' && ligne.getAttribute('data-search-hidden') === 'true';
+
+        if (matchFiltre && !cacheeParRecherche) {
             ligne.style.display = '';
+            ligne.removeAttribute('data-filter-hidden');
             visibleCount++;
         } else {
             ligne.style.display = 'none';
+            if (!matchFiltre) {
+                ligne.setAttribute('data-filter-hidden', 'true');
+            }
         }
     });
 
     // Afficher/masquer le message vide
+    gererMessageVide(statut, visibleCount);
+
+    // Mettre à jour la pagination avec les éléments filtrés
+    mettreAJourPaginationApresFiltrage();
+
+    console.log(`✅ Articles visibles pour le statut "${statut}": ${visibleCount}`);
+}
+
+/**
+ * Met à jour la pagination après filtrage
+ * Collecte uniquement les lignes visibles et les passe à la pagination
+ */
+function mettreAJourPaginationApresFiltrage() {
+    // Vérifier si le système de pagination est disponible
+    if (typeof window.SuperprepSmartPagination === 'undefined') {
+        console.warn('⚠️ SuperprepSmartPagination non disponible');
+        return;
+    }
+
+    // Collecter uniquement les lignes visibles (qui passent le filtre d'onglet)
+    const lignesVisibles = document.querySelectorAll('.article-retourne-row[data-filter-onglet="visible"]');
+
+    // Créer un tableau d'objets compatible avec le système de pagination
+    const itemsFiltres = Array.from(lignesVisibles).map(el => ({
+        element: el,
+        data: el.dataset
+    }));
+
+    console.log(`🔄 Mise à jour pagination: ${itemsFiltres.length} éléments visibles`);
+
+    // Mettre à jour la pagination avec les éléments filtrés
+    window.SuperprepSmartPagination.filterItems(itemsFiltres);
+}
+
+/**
+ * Gère l'affichage du message d'état vide
+ */
+function gererMessageVide(statut, visibleCount) {
     const emptyState = document.querySelector('.empty-state');
     const parentTr = emptyState ? emptyState.closest('tr') : null;
 
@@ -1279,44 +1662,177 @@ function filtrerTableauParStatut(statut) {
             const description = emptyState.querySelector('p');
 
             if (title && description) {
-                switch(statut) {
-                    case 'en_attente':
-                        title.textContent = 'Aucun article en attente';
-                        description.textContent = 'Tous les articles retournés ont été traités.';
-                        break;
-                    case 'traites':
-                        title.textContent = 'Aucun article traité';
-                        description.textContent = 'Aucun article n\'a encore été traité.';
-                        break;
-                    case 'reintegre_stock':
-                        title.textContent = 'Aucun article réintégré';
-                        description.textContent = 'Aucun article n\'a été réintégré en stock.';
-                        break;
-                    case 'defectueux':
-                        title.textContent = 'Aucun article défectueux';
-                        description.textContent = 'Aucun article n\'a été marqué comme défectueux.';
-                        break;
-                    default:
-                        title.textContent = 'Aucun article trouvé';
-                        description.textContent = 'Aucun article ne correspond à ce filtre.';
-                }
+                const messages = {
+                    'tous': {
+                        title: 'Aucun article trouvé',
+                        description: 'Aucun article retourné n\'est disponible.'
+                    },
+                    'en_attente': {
+                        title: 'Aucun article en attente',
+                        description: 'Tous les articles retournés ont été traités.'
+                    },
+                    'traites': {
+                        title: 'Aucun article traité',
+                        description: 'Aucun article n\'a encore été traité.'
+                    },
+                    'reintegre_stock': {
+                        title: 'Aucun article réintégré',
+                        description: 'Aucun article n\'a été réintégré en stock.'
+                    },
+                    'defectueux': {
+                        title: 'Aucun article défectueux',
+                        description: 'Aucun article n\'a été marqué comme défectueux.'
+                    }
+                };
+
+                const msg = messages[statut] || messages['tous'];
+                title.textContent = msg.title;
+                description.textContent = msg.description;
             }
         } else {
             parentTr.style.display = 'none';
         }
     }
+}
 
-    console.log(`Articles visibles pour le statut "${statut}": ${visibleCount}`);
+/**
+ * Met à jour les compteurs dans les badges des onglets
+ */
+function mettreAJourCompteursOnglets() {
+    const lignes = document.querySelectorAll('.article-retourne-row');
+
+    const compteurs = {
+        'tous': 0,
+        'en_attente': 0,
+        'traites': 0,
+        'reintegre_stock': 0,
+        'defectueux': 0
+    };
+
+    lignes.forEach(ligne => {
+        const statut = ligne.dataset.statut;
+        compteurs['tous']++;
+
+        if (statut === 'en_attente') {
+            compteurs['en_attente']++;
+        } else {
+            compteurs['traites']++;
+        }
+
+        if (statut === 'reintegre_stock') {
+            compteurs['reintegre_stock']++;
+        }
+
+        if (statut === 'defectueux') {
+            compteurs['defectueux']++;
+        }
+    });
+
+    // Mettre à jour les badges
+    Object.keys(compteurs).forEach(statut => {
+        const badge = document.querySelector(`#tab-${statut} .badge`);
+        if (badge) {
+            badge.textContent = compteurs[statut];
+        }
+    });
+}
+
+/**
+ * Initialise l'onglet au chargement de la page
+ * Priorité : URL > localStorage > défaut (en_attente)
+ */
+function initialiserOnglet() {
+    // 1. Vérifier l'URL
+    const urlParams = new URLSearchParams(window.location.search);
+    let statutInitial = urlParams.get('statut');
+
+    // 2. Si pas dans l'URL, vérifier localStorage
+    if (!statutInitial) {
+        try {
+            statutInitial = localStorage.getItem(STORAGE_KEY_ONGLET);
+        } catch (e) {
+            console.warn('Impossible de lire localStorage:', e);
+        }
+    }
+
+    // 3. Défaut si toujours rien
+    if (!statutInitial) {
+        statutInitial = 'en_attente';
+    }
+
+    // Activer l'onglet
+    changerOnglet(statutInitial);
+
+    console.log('🚀 Onglet initialisé:', statutInitial);
+}
+
+/**
+ * Gère la compatibilité avec le système de recherche
+ * Appelé quand la recherche filtre les résultats
+ */
+function onSearchFilter() {
+    console.log('🔍 Recherche effectuée, réapplication des filtres...');
+
+    // Réappliquer le filtre d'onglet après la recherche
+    if (ongletActuel) {
+        filtrerTableauParStatut(ongletActuel);
+    }
+}
+
+/**
+ * Fonction globale pour réinitialiser la pagination
+ * Utilisée quand on change de filtre ou après une recherche
+ */
+function reinitialiserPagination() {
+    if (typeof window.SuperprepSmartPagination !== 'undefined') {
+        // Collecter toutes les lignes visibles (filtre + recherche)
+        const lignesVisibles = Array.from(document.querySelectorAll('.article-retourne-row'))
+            .filter(ligne => {
+                // Une ligne est visible si :
+                // 1. Elle passe le filtre d'onglet (data-filter-onglet="visible")
+                // 2. Elle n'est pas cachée par la recherche (pas de data-search-hidden="true")
+                const passeFiltreOnglet = ligne.getAttribute('data-filter-onglet') === 'visible';
+                const passeRecherche = ligne.getAttribute('data-search-hidden') !== 'true';
+
+                return passeFiltreOnglet && passeRecherche && ligne.style.display !== 'none';
+            })
+            .map(el => ({
+                element: el,
+                data: el.dataset
+            }));
+
+        console.log(`🔄 Réinitialisation pagination: ${lignesVisibles.length} éléments visibles`);
+        window.SuperprepSmartPagination.filterItems(lignesVisibles);
+    }
 }
 
 // Initialiser l'onglet au chargement de la page
 document.addEventListener('DOMContentLoaded', function() {
-    // Récupérer le statut depuis l'URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const statutUrl = urlParams.get('statut') || 'en_attente';
+    console.log('🚀 Initialisation de la page articles retournés...');
 
-    // Activer l'onglet correspondant
-    changerOnglet(statutUrl);
+    // Attendre que la pagination soit initialisée
+    setTimeout(() => {
+        initialiserOnglet();
+        mettreAJourCompteursOnglets();
+
+        // S'assurer que la pagination est synchronisée
+        mettreAJourPaginationApresFiltrage();
+    }, 100);
+});
+
+// Gérer le bouton retour/avant du navigateur
+window.addEventListener('popstate', function() {
+    initialiserOnglet();
+
+    // Mettre à jour la pagination après navigation
+    setTimeout(() => {
+        mettreAJourPaginationApresFiltrage();
+    }, 100);
+});
+
+// Écouter l'événement personnalisé de changement d'onglet pour autres composants
+document.addEventListener('ongletChange', function(e) {
+    console.log('📢 Événement ongletChange reçu:', e.detail);
 });
 </script>
 {% endblock %}

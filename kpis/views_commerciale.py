@@ -1,0 +1,1002 @@
+# -*- coding: utf-8 -*-
+"""
+Module de gestion des KPIs Performance Commerciale
+Fonctions liées à l'analyse des performances commerciales, sources, canaux
+"""
+
+from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+from django.utils import timezone
+from datetime import timedelta, datetime
+import logging
+
+from commande.models import Commande, Client
+from article.models import Article
+from django.db.models import Q, Sum, Count, F, Case, When, IntegerField
+from django.db.models.functions import TruncDate
+
+logger = logging.getLogger(__name__)
+
+
+def format_number_fr(number, decimals=0):
+    """Formate un nombre selon les standards français (espace comme séparateur de milliers)"""
+    if number is None or (isinstance(number, (int, float)) and number == 0):
+        return "0"
+
+    if isinstance(number, (int, float)):
+        if decimals == 0:
+            # Pour les entiers, utiliser un format sans décimales
+            return f"{number:,.0f}".replace(",", " ")
+        else:
+            # Pour les décimales
+            return f"{number:,.{decimals}f}".replace(",", " ")
+
+    return str(number)
+
+
+@login_required
+def commandes_par_source_data(request):
+    """API pour récupérer les données des commandes par source (bar chart)
+
+    TOUTES LES COMMANDES de la base de données (tous états confondus)
+    Affiche uniquement le nombre de commandes par source (pas de CA)
+
+    Retourne:
+        - labels: Liste des sources
+        - values: Nombre de commandes par source
+        - stats: Statistiques globales
+    """
+    try:
+        logger.info(f"📊 Commandes par source - TOUTES LES COMMANDES (tous états)")
+
+        # Récupérer TOUTES les commandes avec leur source
+        # IMPORTANT: Aucun filtre - toutes les commandes de la base
+        commandes_par_source = Commande.objects.values('source').annotate(
+            nb_commandes=Count('id')
+        ).order_by('-nb_commandes')  # Trier par nombre de commandes décroissant
+
+        logger.info(f"🔍 Nombre de sources trouvées: {len(commandes_par_source)}")
+
+        # Construire les données pour le graphique
+        labels = []
+        values = []
+        colors = []
+
+        # Palette de couleurs pour les sources
+        color_palette = [
+            'rgba(59, 130, 246, 0.8)',   # Bleu
+            'rgba(16, 185, 129, 0.8)',   # Vert
+            'rgba(245, 158, 11, 0.8)',   # Orange
+            'rgba(139, 92, 246, 0.8)',   # Violet
+            'rgba(236, 72, 153, 0.8)',   # Rose
+            'rgba(239, 68, 68, 0.8)',    # Rouge
+            'rgba(14, 165, 233, 0.8)',   # Cyan
+            'rgba(168, 85, 247, 0.8)',   # Pourpre
+        ]
+
+        for idx, item in enumerate(commandes_par_source):
+            source_name = item['source'] or 'Non définie'
+            nb_cmd = item['nb_commandes'] or 0
+
+            labels.append(source_name)
+            values.append(nb_cmd)
+            colors.append(color_palette[idx % len(color_palette)])
+
+            logger.info(f"  - {source_name}: {nb_cmd} commandes")
+
+        # Calculer les statistiques
+        total_commandes = sum(values)
+        nb_sources = len(labels)
+
+        if nb_sources > 0:
+            source_principale = labels[0]
+            nb_principale = values[0]
+            percent_principale = (nb_principale / total_commandes * 100) if total_commandes > 0 else 0
+        else:
+            source_principale = "-"
+            nb_principale = 0
+            percent_principale = 0
+
+        stats = {
+            'total_commandes': total_commandes,
+            'total_commandes_fmt': format_number_fr(total_commandes),
+            'nb_sources': nb_sources,
+            'source_principale': source_principale,
+            'source_principale_nb': nb_principale,
+            'source_principale_percent': round(percent_principale, 1),
+            'source_principale_percent_fmt': f"{round(percent_principale, 1)}%"
+        }
+
+        logger.info(f"📈 Stats: {total_commandes} commandes, {nb_sources} sources, principale: {source_principale} ({percent_principale:.1f}%)")
+
+        return JsonResponse({
+            'success': True,
+            'labels': labels,
+            'values': values,
+            'colors': colors,
+            'stats': stats
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Erreur dans commandes_par_source_data: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+def top_sources_trafic_data(request):
+    """API pour récupérer le TOP 3 des sources de trafic (basé sur le champ source)
+
+    Retourne le TOP 3 des sources avec:
+        - nom: Nom de la source
+        - nb_commandes: Nombre de commandes
+        - ca_total: CA généré
+        - badge_color: Couleur du badge (or, argent, bronze)
+    """
+    try:
+        # Paramètres
+        periode = request.GET.get('period', '30j')
+
+        # Calcul des dates
+        aujourd_hui = timezone.now().date()
+
+        if periode == 'mois':
+            debut_periode = aujourd_hui.replace(day=1)
+        elif periode == '7j':
+            debut_periode = aujourd_hui - timedelta(days=6)
+        elif periode == '90j':
+            debut_periode = aujourd_hui - timedelta(days=89)
+        else:  # 30j par défaut
+            debut_periode = aujourd_hui - timedelta(days=29)
+
+        logger.info(f"🏆 Top sources trafic - Période: {periode} ({debut_periode} à {aujourd_hui})")
+
+        # Récupérer le TOP 3 des sources par nombre de commandes
+        top_sources = Commande.objects.filter(
+            Q(etats__enum_etat__libelle__icontains='livr'),
+            etats__date_debut__date__gte=debut_periode,
+            etats__date_debut__date__lte=aujourd_hui
+        ).values('source').annotate(
+            nb_commandes=Count('id', distinct=True),
+            ca_total=Sum('total_cmd')
+        ).order_by('-nb_commandes')[:3]
+
+        # Couleurs des badges pour le podium
+        badge_colors = ['yellow', 'gray', 'orange']  # Or, Argent, Bronze
+
+        top_sources_list = []
+        for idx, source in enumerate(top_sources):
+            source_name = source['source'] or 'Non définie'
+            nb_cmd = source['nb_commandes'] or 0
+            ca = source['ca_total'] or 0
+
+            top_sources_list.append({
+                'nom': source_name,
+                'nb_commandes': nb_cmd,
+                'nb_commandes_fmt': format_number_fr(nb_cmd),
+                'ca_total': float(ca),
+                'ca_total_fmt': format_number_fr(ca, 2),
+                'badge_color': badge_colors[idx],
+                'rank': idx + 1
+            })
+
+            logger.info(f"  #{idx + 1} - {source_name}: {nb_cmd} commandes, CA: {ca:.2f} DH")
+
+        return JsonResponse({
+            'success': True,
+            'top_sources': top_sources_list
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Erreur dans top_sources_trafic_data: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+def top_canaux_data(request):
+    """API pour récupérer le TOP 3 des canaux de vente (basé sur le champ origine)
+
+    Retourne le TOP 3 des canaux avec:
+        - nom: Nom du canal
+        - nb_commandes: Nombre de commandes
+        - ca_total: CA généré
+    """
+    try:
+        # Paramètres
+        periode = request.GET.get('period', '30j')
+
+        # Calcul des dates
+        aujourd_hui = timezone.now().date()
+
+        if periode == 'mois':
+            debut_periode = aujourd_hui.replace(day=1)
+        elif periode == '7j':
+            debut_periode = aujourd_hui - timedelta(days=6)
+        elif periode == '90j':
+            debut_periode = aujourd_hui - timedelta(days=89)
+        else:  # 30j par défaut
+            debut_periode = aujourd_hui - timedelta(days=29)
+
+        logger.info(f"🏪 Top canaux - Période: {periode} ({debut_periode} à {aujourd_hui})")
+
+        # Récupérer le TOP 3 des canaux par CA
+        top_canaux = Commande.objects.filter(
+            Q(etats__enum_etat__libelle__icontains='livr'),
+            etats__date_debut__date__gte=debut_periode,
+            etats__date_debut__date__lte=aujourd_hui
+        ).values('origine').annotate(
+            nb_commandes=Count('id', distinct=True),
+            ca_total=Sum('total_cmd')
+        ).order_by('-ca_total')[:3]
+
+        badge_colors = ['yellow', 'gray', 'orange']
+
+        top_canaux_list = []
+        for idx, canal in enumerate(top_canaux):
+            canal_name = canal['origine'] or 'Non défini'
+            nb_cmd = canal['nb_commandes'] or 0
+            ca = canal['ca_total'] or 0
+
+            top_canaux_list.append({
+                'nom': canal_name,
+                'nb_commandes': nb_cmd,
+                'nb_commandes_fmt': format_number_fr(nb_cmd),
+                'ca_total': float(ca),
+                'ca_total_fmt': format_number_fr(ca, 2),
+                'badge_color': badge_colors[idx],
+                'rank': idx + 1
+            })
+
+            logger.info(f"  #{idx + 1} - {canal_name}: {nb_cmd} commandes, CA: {ca:.2f} DH")
+
+        return JsonResponse({
+            'success': True,
+            'top_canaux': top_canaux_list
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Erreur dans top_canaux_data: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+def evolution_conversion_data(request):
+    """API pour l'évolution du taux de conversion sur une période
+
+    Retourne:
+        - labels: Dates
+        - values: Taux de conversion par jour (%)
+        - stats: Statistiques (moyenne, max, tendance)
+    """
+    try:
+        # Paramètres
+        periode = request.GET.get('period', '30j')
+
+        # Calcul des dates
+        aujourd_hui = timezone.now().date()
+
+        if periode == 'mois':
+            debut_periode = aujourd_hui.replace(day=1)
+        elif periode == '7j':
+            debut_periode = aujourd_hui - timedelta(days=6)
+        elif periode == '90j':
+            debut_periode = aujourd_hui - timedelta(days=89)
+        else:  # 30j par défaut
+            debut_periode = aujourd_hui - timedelta(days=29)
+
+        logger.info(f"📈 Evolution conversion - Période: {periode} ({debut_periode} à {aujourd_hui})")
+
+        # Pour le taux de conversion, nous devons calculer:
+        # Taux = (Commandes livrées / Total commandes) * 100
+
+        # Récupérer toutes les commandes par jour (groupées par date de création)
+        commandes_totales_par_jour = Commande.objects.filter(
+            date_cmd__gte=debut_periode,
+            date_cmd__lte=aujourd_hui
+        ).annotate(
+            date=TruncDate('date_cmd')
+        ).values('date').annotate(
+            total=Count('id')
+        ).order_by('date')
+
+        # Récupérer les commandes livrées par jour
+        commandes_livrees_par_jour = Commande.objects.filter(
+            Q(etats__enum_etat__libelle__icontains='livr'),
+            etats__date_debut__date__gte=debut_periode,
+            etats__date_debut__date__lte=aujourd_hui
+        ).annotate(
+            date=TruncDate('etats__date_debut')
+        ).values('date').annotate(
+            livrees=Count('id', distinct=True)
+        ).order_by('date')
+
+        # Créer un dictionnaire pour faciliter le lookup
+        livrees_dict = {item['date']: item['livrees'] for item in commandes_livrees_par_jour}
+
+        labels = []
+        values = []
+
+        for item in commandes_totales_par_jour:
+            date = item['date']
+            total = item['total'] or 0
+            livrees = livrees_dict.get(date, 0)
+
+            # Calculer le taux de conversion
+            taux = (livrees / total * 100) if total > 0 else 0
+
+            labels.append(date.strftime('%d/%m'))
+            values.append(round(taux, 2))
+
+        # Calculer les statistiques
+        if len(values) > 0:
+            conversion_moyenne = round(sum(values) / len(values), 2)
+            conversion_max = round(max(values), 2)
+
+            # Tendance: comparer première moitié vs deuxième moitié
+            mid = len(values) // 2
+            if mid > 0:
+                premiere_moitie = sum(values[:mid]) / mid
+                deuxieme_moitie = sum(values[mid:]) / (len(values) - mid)
+                tendance = "hausse" if deuxieme_moitie > premiere_moitie else "baisse"
+                tendance_value = round(((deuxieme_moitie - premiere_moitie) / premiere_moitie * 100) if premiere_moitie > 0 else 0, 1)
+            else:
+                tendance = "stable"
+                tendance_value = 0
+        else:
+            conversion_moyenne = 0
+            conversion_max = 0
+            tendance = "stable"
+            tendance_value = 0
+
+        stats = {
+            'conversion_moyenne': conversion_moyenne,
+            'conversion_moyenne_fmt': f"{conversion_moyenne}%",
+            'conversion_max': conversion_max,
+            'conversion_max_fmt': f"{conversion_max}%",
+            'tendance': tendance,
+            'tendance_value': tendance_value,
+            'tendance_fmt': f"{tendance_value:+.1f}%"
+        }
+
+        logger.info(f"📊 Stats conversion: Moyenne: {conversion_moyenne}%, Max: {conversion_max}%, Tendance: {tendance} ({tendance_value:+.1f}%)")
+
+        return JsonResponse({
+            'success': True,
+            'labels': labels,
+            'values': values,
+            'stats': stats
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Erreur dans evolution_conversion_data: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+def segmentation_clients_data(request):
+    """API pour la répartition des clients par segment (Nouveaux, Réguliers, VIP)
+
+    Segments:
+        - Nouveaux: 1 commande
+        - Réguliers: 2-4 commandes
+        - VIP: 5+ commandes
+
+    Retourne:
+        - labels: Segments
+        - values: Nombre de clients par segment
+        - colors: Couleurs pour le pie chart
+    """
+    try:
+        # Paramètres
+        periode = request.GET.get('period', '30j')
+
+        # Calcul des dates
+        aujourd_hui = timezone.now().date()
+
+        if periode == 'mois':
+            debut_periode = aujourd_hui.replace(day=1)
+        elif periode == '7j':
+            debut_periode = aujourd_hui - timedelta(days=6)
+        elif periode == '90j':
+            debut_periode = aujourd_hui - timedelta(days=89)
+        else:  # 30j par défaut
+            debut_periode = aujourd_hui - timedelta(days=29)
+
+        logger.info(f"🎯 Segmentation clients - Période: {periode} ({debut_periode} à {aujourd_hui})")
+
+        # Compter le nombre de commandes par client sur la période
+        clients_avec_commandes = Commande.objects.filter(
+            Q(etats__enum_etat__libelle__icontains='livr'),
+            etats__date_debut__date__gte=debut_periode,
+            etats__date_debut__date__lte=aujourd_hui
+        ).values('client').annotate(
+            nb_commandes=Count('id', distinct=True)
+        )
+
+        # Segmenter les clients
+        nouveaux = 0
+        reguliers = 0
+        vip = 0
+
+        for item in clients_avec_commandes:
+            nb_cmd = item['nb_commandes']
+            if nb_cmd == 1:
+                nouveaux += 1
+            elif 2 <= nb_cmd <= 4:
+                reguliers += 1
+            else:  # 5+
+                vip += 1
+
+        labels = ['Nouveaux', 'Réguliers', 'VIP']
+        values = [nouveaux, reguliers, vip]
+        colors = [
+            'rgba(59, 130, 246, 0.8)',   # Bleu pour nouveaux
+            'rgba(16, 185, 129, 0.8)',   # Vert pour réguliers
+            'rgba(245, 158, 11, 0.8)'    # Orange pour VIP
+        ]
+
+        logger.info(f"📊 Segmentation: Nouveaux: {nouveaux}, Réguliers: {reguliers}, VIP: {vip}")
+
+        return JsonResponse({
+            'success': True,
+            'labels': labels,
+            'values': values,
+            'colors': colors,
+            'total_clients': nouveaux + reguliers + vip
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Erreur dans segmentation_clients_data: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+def taux_doublons_data(request):
+    """API pour calculer le taux de doublons dans toutes les commandes
+
+    Un doublon est une commande ayant l'état "Doublon" dans EnumEtatCmd
+
+    SANS FILTRE DE PÉRIODE - Analyse toute la base de données
+
+    Retourne:
+        - total_commandes: Nombre total de commandes
+        - nb_doublons: Nombre de commandes marquées comme doublon
+        - taux_doublons: Taux de doublons (%)
+    """
+    try:
+        logger.info(f"🔍 Calcul du taux de doublons - TOUTE LA BASE")
+
+        # Récupérer TOUTES les commandes
+        total_commandes = Commande.objects.count()
+
+        # Compter les commandes avec l'état "Doublon"
+        # Utiliser icontains pour gérer les variations possibles (Doublon, doublon, etc.)
+        nb_commandes_doublons = Commande.objects.filter(
+            Q(etats__enum_etat__libelle__icontains='doublon')
+        ).distinct().count()
+
+        # Calculer le taux de doublons
+        taux_doublons = (nb_commandes_doublons / total_commandes * 100) if total_commandes > 0 else 0
+
+        logger.info(f"📊 Doublons: {nb_commandes_doublons}/{total_commandes} commandes ({taux_doublons:.2f}%)")
+
+        return JsonResponse({
+            'success': True,
+            'total_commandes': total_commandes,
+            'total_commandes_fmt': format_number_fr(total_commandes),
+            'nb_doublons': nb_commandes_doublons,
+            'nb_doublons_fmt': format_number_fr(nb_commandes_doublons),
+            'nb_groupes': 0,  # Pas de notion de groupes ici
+            'nb_groupes_fmt': '-',
+            'taux_doublons': round(taux_doublons, 2),
+            'taux_doublons_fmt': f"{round(taux_doublons, 2)}%"
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Erreur dans taux_doublons_data: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+def taux_erronees_data(request):
+    """API pour calculer le taux de commandes erronées dans toutes les commandes
+
+    Une commande erronée est une commande ayant l'état "Erronée" dans EnumEtatCmd
+
+    SANS FILTRE DE PÉRIODE - Analyse toute la base de données
+
+    Retourne:
+        - total_commandes: Nombre total de commandes
+        - nb_erronees: Nombre de commandes marquées comme erronées
+        - taux_erronees: Taux de commandes erronées (%)
+    """
+    try:
+        logger.info(f"🔍 Calcul du taux de commandes erronées - TOUTE LA BASE")
+
+        # Récupérer TOUTES les commandes
+        total_commandes = Commande.objects.count()
+
+        # Compter les commandes avec l'état "Erronée"
+        # Utiliser icontains pour gérer les variations possibles (Erronée, erronee, erronnee, etc.)
+        nb_commandes_erronees = Commande.objects.filter(
+            Q(etats__enum_etat__libelle__icontains='erron')
+        ).distinct().count()
+
+        # Calculer le taux de commandes erronées
+        taux_erronees = (nb_commandes_erronees / total_commandes * 100) if total_commandes > 0 else 0
+
+        logger.info(f"📊 Erronées: {nb_commandes_erronees}/{total_commandes} commandes ({taux_erronees:.2f}%)")
+
+        return JsonResponse({
+            'success': True,
+            'total_commandes': total_commandes,
+            'total_commandes_fmt': format_number_fr(total_commandes),
+            'nb_erronees': nb_commandes_erronees,
+            'nb_erronees_fmt': format_number_fr(nb_commandes_erronees),
+            'taux_erronees': round(taux_erronees, 2),
+            'taux_erronees_fmt': f"{round(taux_erronees, 2)}%"
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Erreur dans taux_erronees_data: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+def taux_retournees_data(request):
+    """API pour calculer le taux de commandes retournées dans toutes les commandes
+
+    Une commande retournée est une commande ayant l'état "Retournée" dans EnumEtatCmd
+
+    SANS FILTRE DE PÉRIODE - Analyse toute la base de données
+
+    Retourne:
+        - total_commandes: Nombre total de commandes
+        - nb_retournees: Nombre de commandes marquées comme retournées
+        - taux_retournees: Taux de commandes retournées (%)
+    """
+    try:
+        logger.info(f"🔍 Calcul du taux de commandes retournées - TOUTE LA BASE")
+
+        # Récupérer TOUTES les commandes
+        total_commandes = Commande.objects.count()
+
+        # Compter les commandes avec l'état "Retournée"
+        # Utiliser icontains pour gérer les variations possibles (Retournée, retournee, etc.)
+        nb_commandes_retournees = Commande.objects.filter(
+            Q(etats__enum_etat__libelle__icontains='retour')
+        ).distinct().count()
+
+        # Calculer le taux de commandes retournées
+        taux_retournees = (nb_commandes_retournees / total_commandes * 100) if total_commandes > 0 else 0
+
+        logger.info(f"📊 Retournées: {nb_commandes_retournees}/{total_commandes} commandes ({taux_retournees:.2f}%)")
+
+        return JsonResponse({
+            'success': True,
+            'total_commandes': total_commandes,
+            'total_commandes_fmt': format_number_fr(total_commandes),
+            'nb_retournees': nb_commandes_retournees,
+            'nb_retournees_fmt': format_number_fr(nb_commandes_retournees),
+            'taux_retournees': round(taux_retournees, 2),
+            'taux_retournees_fmt': f"{round(taux_retournees, 2)}%"
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Erreur dans taux_retournees_data: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+def taux_annulees_data(request):
+    """API pour calculer le taux de commandes annulées dans toutes les commandes
+
+    Une commande annulée est une commande ayant l'état "Annulée" dans EnumEtatCmd
+
+    SANS FILTRE DE PÉRIODE - Analyse toute la base de données
+
+    Retourne:
+        - total_commandes: Nombre total de commandes
+        - nb_annulees: Nombre de commandes marquées comme annulées
+        - taux_annulees: Taux de commandes annulées (%)
+    """
+    try:
+        logger.info(f"🔍 Calcul du taux de commandes annulées - TOUTE LA BASE")
+
+        # Récupérer TOUTES les commandes
+        total_commandes = Commande.objects.count()
+
+        # Compter les commandes avec l'état "Annulée"
+        # Utiliser icontains pour gérer les variations possibles (Annulée, annulee, etc.)
+        nb_commandes_annulees = Commande.objects.filter(
+            Q(etats__enum_etat__libelle__icontains='annul')
+        ).distinct().count()
+
+        # Calculer le taux de commandes annulées
+        taux_annulees = (nb_commandes_annulees / total_commandes * 100) if total_commandes > 0 else 0
+
+        logger.info(f"📊 Annulées: {nb_commandes_annulees}/{total_commandes} commandes ({taux_annulees:.2f}%)")
+
+        return JsonResponse({
+            'success': True,
+            'total_commandes': total_commandes,
+            'total_commandes_fmt': format_number_fr(total_commandes),
+            'nb_annulees': nb_commandes_annulees,
+            'nb_annulees_fmt': format_number_fr(nb_commandes_annulees),
+            'taux_annulees': round(taux_annulees, 2),
+            'taux_annulees_fmt': f"{round(taux_annulees, 2)}%"
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Erreur dans taux_annulees_data: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+def taux_livraison_data(request):
+    """API pour calculer le taux de livraison dans toutes les commandes
+
+    Une commande livrée est une commande ayant l'état "Livrée" ou "Livrée Partiellement" dans EnumEtatCmd
+
+    SANS FILTRE DE PÉRIODE - Analyse toute la base de données
+
+    Retourne:
+        - total_commandes: Nombre total de commandes
+        - nb_livrees: Nombre de commandes livrées (totalement ou partiellement)
+        - taux_livraison: Taux de livraison (%)
+    """
+    try:
+        logger.info(f"🔍 Calcul du taux de livraison - TOUTE LA BASE")
+
+        # Récupérer TOUTES les commandes
+        total_commandes = Commande.objects.count()
+
+        # Compter les commandes avec l'état "Livrée" ou "Livrée Partiellement"
+        # Utiliser icontains pour gérer les variations possibles
+        nb_commandes_livrees = Commande.objects.filter(
+            Q(etats__enum_etat__libelle__icontains='livr')
+        ).distinct().count()
+
+        # Calculer le taux de livraison
+        taux_livraison = (nb_commandes_livrees / total_commandes * 100) if total_commandes > 0 else 0
+
+        logger.info(f"📊 Livrées: {nb_commandes_livrees}/{total_commandes} commandes ({taux_livraison:.2f}%)")
+
+        return JsonResponse({
+            'success': True,
+            'total_commandes': total_commandes,
+            'total_commandes_fmt': format_number_fr(total_commandes),
+            'nb_livrees': nb_commandes_livrees,
+            'nb_livrees_fmt': format_number_fr(nb_commandes_livrees),
+            'taux_livraison': round(taux_livraison, 2),
+            'taux_livraison_fmt': f"{round(taux_livraison, 2)}%"
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Erreur dans taux_livraison_data: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+@login_required
+def delai_moyen_livraison_data(request):
+    """API pour calculer le délai moyen de livraison des commandes
+
+    Calcule le délai moyen (en jours) entre la date de création de la commande
+    et la date de livraison effective pour toutes les commandes livrées
+    (incluant "Livrée" et "Livrée partiellement")
+    """
+    try:
+        from datetime import timedelta
+        from django.db.models import Avg, F, ExpressionWrapper, DurationField
+
+        logger.info("📊 Calcul du délai moyen de livraison...")
+
+        # Filtrer les commandes livrées (Livrée ET Livrée partiellement) avec Date_livraison non nulle
+        commandes_livrees = Commande.objects.filter(
+            Q(etats__enum_etat__libelle__icontains='livr'),  # Capture "Livrée" et "Livrée partiellement"
+            Date_livraison__isnull=False
+        ).distinct()
+
+        nb_commandes_livrees = commandes_livrees.count()
+
+        if nb_commandes_livrees == 0:
+            return JsonResponse({
+                'success': True,
+                'nb_commandes_livrees': 0,
+                'nb_commandes_livrees_fmt': '0',
+                'delai_moyen_jours': 0,
+                'delai_moyen_jours_fmt': '0',
+                'delai_moyen_heures': 0,
+                'delai_moyen_formatted': '0 jours'
+            })
+
+        # Calculer le délai pour chaque commande et faire la moyenne
+        total_secondes = 0
+        count = 0
+
+        for commande in commandes_livrees:
+            if commande.Date_livraison and commande.date_creation:
+                delai = commande.Date_livraison - commande.date_creation
+                total_secondes += delai.total_seconds()
+                count += 1
+
+        if count == 0:
+            jours = 0
+            heures = 0
+            minutes = 0
+        else:
+            # Calculer la moyenne en secondes
+            moyenne_secondes = total_secondes / count
+
+            # Convertir en jours, heures et minutes
+            jours = int(moyenne_secondes // 86400)  # 86400 secondes = 1 jour
+            reste_secondes = moyenne_secondes % 86400
+            heures = int(reste_secondes // 3600)  # 3600 secondes = 1 heure
+            reste_secondes = reste_secondes % 3600
+            minutes = int(reste_secondes // 60)  # 60 secondes = 1 minute
+
+        # Formater l'affichage: "X jours Y heures Z minutes"
+        parts = []
+        if jours > 0:
+            parts.append(f"{jours}j")
+        if heures > 0 or jours > 0:  # Afficher les heures si on a des jours ou des heures
+            parts.append(f"{heures}h")
+        if minutes > 0 or (jours == 0 and heures == 0):  # Afficher les minutes si < 1h ou si on a rien d'autre
+            parts.append(f"{minutes}min")
+
+        delai_formatted = " ".join(parts) if parts else "0min"
+
+        logger.info(f"✅ Délai moyen de livraison: {delai_formatted} ({nb_commandes_livrees} commandes)")
+
+        return JsonResponse({
+            'success': True,
+            'nb_commandes_livrees': nb_commandes_livrees,
+            'nb_commandes_livrees_fmt': format_number_fr(nb_commandes_livrees),
+            'delai_jours': jours,
+            'delai_heures': heures,
+            'delai_minutes': minutes,
+            'delai_moyen_formatted': delai_formatted
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Erreur dans delai_moyen_livraison_data: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+@login_required
+def motifs_annulation_data(request):
+    """API pour récupérer les motifs d'annulation des commandes
+
+    Analyse toutes les commandes annulées et compte les différents motifs d'annulation
+    """
+    try:
+        from django.db.models import Count
+
+        logger.info("📊 Récupération des motifs d'annulation...")
+
+        # Filtrer les commandes annulées avec un motif d'annulation
+        commandes_annulees = Commande.objects.filter(
+            Q(etats__enum_etat__libelle__icontains='annul'),
+            motif_annulation__isnull=False
+        ).exclude(motif_annulation='').distinct()
+
+        # Grouper par motif d'annulation et compter
+        motifs = commandes_annulees.values('motif_annulation').annotate(
+            count=Count('id')
+        ).order_by('-count')
+
+        # Total des commandes annulées avec motif
+        total_annulees = sum(motif['count'] for motif in motifs)
+
+        # Préparer les données pour le graphique
+        labels = []
+        values = []
+        percentages = []
+
+        for motif in motifs:
+            motif_text = motif['motif_annulation']
+            count = motif['count']
+            percentage = (count / total_annulees * 100) if total_annulees > 0 else 0
+
+            # Tronquer le texte si trop long
+            if len(motif_text) > 50:
+                motif_text = motif_text[:47] + '...'
+
+            labels.append(motif_text)
+            values.append(count)
+            percentages.append(round(percentage, 1))
+
+        logger.info(f"✅ {len(labels)} motifs d'annulation trouvés ({total_annulees} commandes)")
+
+        return JsonResponse({
+            'success': True,
+            'labels': labels,
+            'values': values,
+            'percentages': percentages,
+            'total_annulees': total_annulees,
+            'total_annulees_fmt': format_number_fr(total_annulees),
+            'nb_motifs': len(labels)
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Erreur dans motifs_annulation_data: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+@login_required
+def taux_confirmation_une_operation_data(request):
+    """API pour calculer le taux de confirmation avec une seule opération
+
+    Calcule le pourcentage de commandes confirmées qui ont nécessité une seule opération
+    """
+    try:
+        from django.db.models import Count
+
+        logger.info("📊 Calcul du taux de confirmation avec une seule opération...")
+
+        # Total des commandes confirmées
+        commandes_confirmees = Commande.objects.filter(
+            Q(etats__enum_etat__libelle__icontains='confirm')
+        ).distinct()
+
+        total_confirmees = commandes_confirmees.count()
+
+        if total_confirmees == 0:
+            return JsonResponse({
+                'success': True,
+                'total_confirmees': 0,
+                'total_confirmees_fmt': '0',
+                'nb_une_operation': 0,
+                'nb_une_operation_fmt': '0',
+                'taux_une_operation': 0,
+                'taux_une_operation_fmt': '0%'
+            })
+
+        # Compter les commandes confirmées avec exactement 1 opération
+        commandes_avec_operations = commandes_confirmees.annotate(
+            nb_operations=Count('operations')
+        )
+
+        nb_une_operation = commandes_avec_operations.filter(nb_operations=1).count()
+
+        # Calculer le taux
+        taux_une_operation = (nb_une_operation / total_confirmees * 100) if total_confirmees > 0 else 0
+
+        logger.info(f"✅ Taux confirmation 1 opération: {taux_une_operation:.2f}% ({nb_une_operation}/{total_confirmees})")
+
+        return JsonResponse({
+            'success': True,
+            'total_confirmees': total_confirmees,
+            'total_confirmees_fmt': format_number_fr(total_confirmees),
+            'nb_une_operation': nb_une_operation,
+            'nb_une_operation_fmt': format_number_fr(nb_une_operation),
+            'taux_une_operation': round(taux_une_operation, 2),
+            'taux_une_operation_fmt': f"{round(taux_une_operation, 2)}%"
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Erreur dans taux_confirmation_une_operation_data: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+@login_required
+def delai_moyen_confirmation_data(request):
+    """API pour calculer le délai moyen de confirmation d'une commande
+
+    Calcule le délai moyen entre la date de création de la commande
+    et la date où elle a été confirmée (premier état "Confirmée")
+    """
+    try:
+        logger.info("📊 Calcul du délai moyen de confirmation...")
+
+        # Filtrer les commandes confirmées
+        commandes_confirmees = Commande.objects.filter(
+            Q(etats__enum_etat__libelle__icontains='confirm')
+        ).distinct()
+
+        nb_commandes = commandes_confirmees.count()
+
+        if nb_commandes == 0:
+            return JsonResponse({
+                'success': True,
+                'nb_commandes': 0,
+                'nb_commandes_fmt': '0',
+                'delai_jours': 0,
+                'delai_heures': 0,
+                'delai_minutes': 0,
+                'delai_moyen_formatted': '0min'
+            })
+
+        # Calculer le délai pour chaque commande
+        total_secondes = 0
+        count = 0
+
+        for commande in commandes_confirmees:
+            # Trouver le premier état "Confirmée"
+            etat_confirmee = commande.etats.filter(
+                Q(enum_etat__libelle__icontains='confirm')
+            ).order_by('date_debut').first()
+
+            if etat_confirmee and etat_confirmee.date_debut and commande.date_creation:
+                delai = etat_confirmee.date_debut - commande.date_creation
+                total_secondes += delai.total_seconds()
+                count += 1
+
+        if count == 0:
+            jours = 0
+            heures = 0
+            minutes = 0
+        else:
+            # Calculer la moyenne en secondes
+            moyenne_secondes = total_secondes / count
+
+            # Convertir en jours, heures et minutes
+            jours = int(moyenne_secondes // 86400)
+            reste_secondes = moyenne_secondes % 86400
+            heures = int(reste_secondes // 3600)
+            reste_secondes = reste_secondes % 3600
+            minutes = int(reste_secondes // 60)
+
+        # Formater l'affichage: "X jours Y heures Z minutes"
+        parts = []
+        if jours > 0:
+            parts.append(f"{jours}j")
+        if heures > 0 or jours > 0:
+            parts.append(f"{heures}h")
+        if minutes > 0 or (jours == 0 and heures == 0):
+            parts.append(f"{minutes}min")
+
+        delai_formatted = " ".join(parts) if parts else "0min"
+
+        logger.info(f"✅ Délai moyen de confirmation: {delai_formatted} ({count} commandes)")
+
+        return JsonResponse({
+            'success': True,
+            'nb_commandes': count,
+            'nb_commandes_fmt': format_number_fr(count),
+            'delai_jours': jours,
+            'delai_heures': heures,
+            'delai_minutes': minutes,
+            'delai_moyen_formatted': delai_formatted
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Erreur dans delai_moyen_confirmation_data: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)

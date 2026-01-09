@@ -1,17 +1,38 @@
 from django.urls import path
 from . import views
+from . import views_ventes
+from . import views_commerciale
 
 app_name = 'kpis'
 
 urlpatterns = [
     # Dashboard principal
     path('', views.dashboard, name='dashboard'),
-    
-    # APIs pour données KPIs
-    path('api/ventes/', views.ventes_data, name='ventes_data'),
-    path('api/evolution-ca/', views.evolution_ca_data, name='evolution_ca_data'),
-    path('api/top-modeles/', views.top_modeles_data, name='top_modeles_data'),
-    path('api/performance-regions/', views.performance_regions_data, name='performance_regions_data'),
+
+    # APIs pour données KPIs - Ventes
+    path('api/ventes/', views_ventes.ventes_data, name='ventes_data'),
+    path('api/evolution-ca/', views_ventes.evolution_ca_data, name='evolution_ca_data'),
+    path('api/top-modeles/', views_ventes.top_modeles_data, name='top_modeles_data'),
+    path('api/repartition-sources/', views_ventes.repartition_sources_data, name='repartition_sources_data'),
+    path('api/performance-regions/', views_ventes.performance_regions_data, name='performance_regions_data'),
+
+    # APIs pour données KPIs - Performance Commerciale
+    path('api/commandes-par-source/', views_commerciale.commandes_par_source_data, name='commandes_par_source_data'),
+    path('api/top-sources-trafic/', views_commerciale.top_sources_trafic_data, name='top_sources_trafic_data'),
+    path('api/top-canaux/', views_commerciale.top_canaux_data, name='top_canaux_data'),
+    path('api/evolution-conversion/', views_commerciale.evolution_conversion_data, name='evolution_conversion_data'),
+    path('api/segmentation-clients/', views_commerciale.segmentation_clients_data, name='segmentation_clients_data'),
+    path('api/taux-doublons/', views_commerciale.taux_doublons_data, name='taux_doublons_data'),
+    path('api/taux-erronees/', views_commerciale.taux_erronees_data, name='taux_erronees_data'),
+    path('api/taux-retournees/', views_commerciale.taux_retournees_data, name='taux_retournees_data'),
+    path('api/taux-annulees/', views_commerciale.taux_annulees_data, name='taux_annulees_data'),
+    path('api/taux-livraison/', views_commerciale.taux_livraison_data, name='taux_livraison_data'),
+    path('api/delai-moyen-livraison/', views_commerciale.delai_moyen_livraison_data, name='delai_moyen_livraison_data'),
+    path('api/motifs-annulation/', views_commerciale.motifs_annulation_data, name='motifs_annulation_data'),
+    path('api/taux-confirmation-une-operation/', views_commerciale.taux_confirmation_une_operation_data, name='taux_confirmation_une_operation_data'),
+    path('api/delai-moyen-confirmation/', views_commerciale.delai_moyen_confirmation_data, name='delai_moyen_confirmation_data'),
+
+    # APIs pour données KPIs - Clients et autres
     path('api/clients/', views.clients_data, name='clients_data'),
     path('api/vue-quantitative/', views.vue_quantitative_data, name='vue_quantitative_data'),
     path('performance-operateurs-data/', views.performance_operateurs_data, name='performance_operateurs_data'),

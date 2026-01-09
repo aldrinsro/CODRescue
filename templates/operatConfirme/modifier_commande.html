@@ -55,7 +55,7 @@
                                    class="w-full p-3 bg-gray-100 border rounded-lg text-gray-600">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Numéro Externe (Non modifiable)</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Numéro Commande (Non modifiable)</label>
                             <input type="text" value="{{ commande.num_cmd }}" readonly
                                    class="w-full p-3 bg-gray-100 border rounded-lg text-gray-600">
                         </div>
@@ -65,8 +65,8 @@
                                    class="w-full p-3 bg-gray-100 border rounded-lg text-gray-600">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Total (Non modifiable)</label>
-                            <input type="text" value="{{ commande.total_cmd|floatformat:2 }} DH" readonly
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Source </label>
+                            <input type="text" value="{{commande.source}}" readonly
                                    class="w-full p-3 bg-gray-100 border rounded-lg text-gray-600">
                         </div>
                     </div>
@@ -124,54 +124,146 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                             
                         <div>
-                            <label for="ville-select" class="block text-sm font-medium text-gray-700 mb-2">Ville de livraison</label>
-                            <div class="mb-2">
-                                <input type="text" id="ville-search" placeholder="Tapez pour filtrer les villes..."
-                                       class="w-full p-3 border rounded-lg focus:ring-2 transition-all"
-                                       style="border-color: #f7d9c4; focus:ring-color: #6d4b3b;">
+                            <label for="ville-select" class="block text-sm font-medium text-gray-700 mb-2">
+                                Ville de livraison
+                                <span class="text-xs text-gray-500 ml-2">(Tapez pour rechercher)</span>
+                            </label>
+                            <div class="relative">
+                                <!-- Input de recherche avec icônes -->
+                                <div class="relative mb-2">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <i class="fas fa-search text-gray-400"></i>
+                                    </div>
+                                    <input type="text" id="ville-search"
+                                           placeholder="Rechercher une ville (ex: Casablanca, Rabat)..."
+                                           autocomplete="off"
+                                           class="w-full pl-10 pr-10 p-3 border rounded-lg focus:ring-2 transition-all"
+                                           style="border-color: #f7d9c4; focus:ring-color: #6d4b3b;">
+                                    <div id="search-clear" class="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer hidden">
+                                        <i class="fas fa-times text-gray-400 hover:text-gray-600"></i>
+                                    </div>
+                                </div>
+
+                                <!-- Counter de résultats -->
+                                <div id="search-counter" class="text-xs text-gray-500 mb-1 hidden">
+                                    <span id="counter-text"></span>
+                                </div>
+
+                                <!-- Select avec scroll amélioré -->
+                                <select name="ville_livraison" id="ville-select" onchange="chargerRegionEtFrais()"
+                                        class="w-full p-3 border rounded-lg focus:ring-2 transition-all"
+                                        style="border-color: #f7d9c4; focus:ring-color: #6d4b3b; max-height: 200px;">
+                                    <option value="">-- Sélectionner une ville --</option>
+                                    {% for ville in villes %}
+                                        <option value="{{ ville.id }}"
+                                                data-region="{{ ville.region.nom_region }}"
+                                                data-frais="{{ ville.frais_livraison|default:0 }}"
+                                                data-delai-min="{{ ville.Delai_livraison_min|default:0 }}"
+                                                data-delai-max="{{ ville.Delai_livraison_max|default:0 }}"
+                                                data-search="{{ ville.nom|lower }} {{ ville.region.nom_region|lower }}"
+                                                {% if commande.ville.id == ville.id %}selected{% endif %}>
+                                            {{ ville.nom }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
                             </div>
-                            <select name="ville_livraison" id="ville-select" onchange="chargerRegionEtFrais()"
-                                    class="w-full p-3 border rounded-lg focus:ring-2 transition-all" 
-                                    style="border-color: #f7d9c4; focus:ring-color: #6d4b3b;">
-                                <option value="">-- Sélectionner une ville --</option>
-                                {% for ville in villes %}
-                                    <option value="{{ ville.id }}" 
-                                            data-region="{{ ville.region.nom_region }}" 
-                                            data-frais="{{ ville.frais_livraison|default:0 }}"
-                                            data-delai-min="{{ ville.Delai_livraison_min|default:0 }}"
-                                            data-delai-max="{{ ville.Delai_livraison_max|default:0 }}"
-                                            {% if commande.ville.id == ville.id %}selected{% endif %}>
-                                        {{ ville.nom }}
-                                    </option>
-                                {% endfor %}
-                            </select>
 
                             <script>
                                 document.addEventListener('DOMContentLoaded', function () {
                                     const searchInput = document.getElementById('ville-search');
                                     const select = document.getElementById('ville-select');
+                                    const clearBtn = document.getElementById('search-clear');
+                                    const counter = document.getElementById('search-counter');
+                                    const counterText = document.getElementById('counter-text');
+
                                     if (!searchInput || !select) return;
-                                
+
+                                    // Fonction pour normaliser le texte (enlever les accents)
+                                    function normalizeText(text) {
+                                        return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+                                    }
+
                                     function filterOptions(query) {
-                                        const q = (query || '').trim().toLowerCase();
+                                        const q = normalizeText(query || '').trim();
                                         const options = Array.from(select.options);
+                                        let visibleCount = 0;
+
                                         options.forEach(function (option) {
-                                            if (option.value === '') { // conserver l'option vide
+                                            if (option.value === '') {
                                                 option.style.display = '';
                                                 return;
                                             }
-                                            const match = option.textContent.toLowerCase().includes(q);
+
+                                            // Recherche dans le nom de la ville ET la région
+                                            const searchText = option.getAttribute('data-search') || '';
+                                            const match = normalizeText(searchText).includes(q);
+
                                             option.style.display = match ? '' : 'none';
+                                            if (match) visibleCount++;
                                         });
+
+                                        // Afficher le compteur de résultats
+                                        if (q) {
+                                            counter.classList.remove('hidden');
+                                            counterText.textContent = visibleCount + ' ville(s) trouvée(s)';
+                                            clearBtn.classList.remove('hidden');
+                                        } else {
+                                            counter.classList.add('hidden');
+                                            clearBtn.classList.add('hidden');
+                                        }
+
+                                        // Auto-sélectionner si un seul résultat
+                                        if (visibleCount === 1 && q.length >= 3) {
+                                            const firstVisible = options.find(opt => opt.value !== '' && opt.style.display !== 'none');
+                                            if (firstVisible) {
+                                                select.value = firstVisible.value;
+                                                // Déclencher l'événement onchange
+                                                chargerRegionEtFrais();
+                                                // Highlight visuel
+                                                select.style.borderColor = '#10b981';
+                                                setTimeout(() => {
+                                                    select.style.borderColor = '#f7d9c4';
+                                                }, 500);
+                                            }
+                                        }
                                     }
-                                
+
+                                    // Debounce pour la performance
                                     let debounceTimer;
                                     searchInput.addEventListener('input', function () {
                                         clearTimeout(debounceTimer);
                                         const value = this.value;
                                         debounceTimer = setTimeout(function () {
                                             filterOptions(value);
-                                        }, 120);
+                                        }, 100);
+                                    });
+
+                                    // Bouton clear
+                                    clearBtn.addEventListener('click', function () {
+                                        searchInput.value = '';
+                                        filterOptions('');
+                                        searchInput.focus();
+                                    });
+
+                                    // Raccourcis clavier
+                                    searchInput.addEventListener('keydown', function (e) {
+                                        if (e.key === 'Escape') {
+                                            this.value = '';
+                                            filterOptions('');
+                                        } else if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            select.focus();
+                                        } else if (e.key === 'ArrowDown') {
+                                            e.preventDefault();
+                                            select.focus();
+                                        }
+                                    });
+
+                                    // Focus sur le select ouvre automatiquement la recherche
+                                    select.addEventListener('focus', function () {
+                                        if (!searchInput.value) {
+                                            searchInput.focus();
+                                        }
                                     });
                                 });
                             </script>
@@ -276,6 +368,9 @@
                                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                     <i class="fas fa-comment mr-1"></i>Commentaire
                                                 </th>
+                                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    <i class="fas fa-tools mr-1"></i>Actions
+                                                </th>
                                             </tr>
                                         </thead>
                                         <tbody id="operations-table-body" class="bg-white divide-y divide-gray-200">
@@ -370,107 +465,17 @@
                 </div>
 
                         <!-- Section 4: Articles de la commande (largeur complète) -->
-                <div class="verification-item bg-white rounded-xl shadow-lg p-4 animate-slideInUp" style="animation-delay: 0.8s;">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-lg font-semibold" style="color: #4B352A;">
-                            <i class="fas fa-box mr-3" style="color: #6d4b3b;"></i>Articles de la Commande (<span id="articles-count">{{ commande.paniers.count }}</span> article<span id="articles-plural">{{ commande.paniers.count|pluralize }}</span>) 
-                        {% if commande.compteur > 0 %}
-                        <span class="inline-flex items-center px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-sm font-medium ml-2">
-                            <i class="fas fa-arrow-up mr-1"></i>Upsell Niveau {{ commande.compteur }}
-                        </span>
-                        {% endif %}
-                      
-                          
-                    {% if commande.produit_init %}
-                <div class="mt-4">
-                            <p class="block text-sm font-medium text-gray-700 mb-2">Produit Initial (Sheets)</p>
-                            <div class="w-full p-3 bg-blue-50 border border-blue-200 rounded-lg text-gray-700 whitespace-pre-line">
-                    {{ commande.produit_init }}
-                            </div>
-                    </div>
-                    {% endif %}
-                        
-                        </h3>
-                        <div class="flex space-x-3">
-                            <button type="button" onclick="ajouterNouvelArticle()" 
-                                    class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-all">
-                                <i class="fas fa-plus mr-2"></i>Ajouter un article
-                            </button>
-                      
-                        </div>
-                    </div>
-                    
-                    <!-- Liste des articles existants -->
-                    <div id="articles-container" class="space-y-3 mb-6">
-                        {% include 'operatConfirme/partials/_articles_section.html' %}
-                    </div>
-
-                    <!-- Résumé total avec détail -->
-                    <div class="bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg p-6 border border-gray-200">
-                  
-                        <div class="space-y-3">
-                            <!-- Sous-total du panier (sans frais) -->
-                            <div class="flex justify-between items-center">
-                                <span class="text-gray-700 font-medium">
-                                    <i class="fas fa-shopping-cart mr-2"></i>Sous-total panier:
-                                </span>
-                                <span id="sous-total-panier" class="font-semibold text-gray-800">
-                                    {% if commande.frais_livraison %}
-                                        {{ commande.total_cmd|subtract:commande.montant_frais_livraison|floatformat:2 }} DH
-                                    {% else %}
-                                        {{ commande.total_cmd|floatformat:2 }} DH
-                                    {% endif %}
-                                </span>
-                            </div>
-
-                            <!-- Frais de livraison -->
-                            {% if commande.frais_livraison %}
-                            <div class="flex justify-between items-center">
-                                <span class="text-gray-600">
-                                    <i class="fas fa-shipping-fast mr-2"></i>Frais de livraison:
-                                </span>
-                                <span id="frais-display-resume" class="font-medium text-gray-800">
-                                    {{ commande.montant_frais_livraison|floatformat:2 }} DH
-                                </span>
-                            </div>
-                            {% else %}
-                            <div class="flex justify-between items-center">
-                                <span class="text-gray-500 text-sm italic">
-                                    <i class="fas fa-shipping-fast mr-2"></i>Frais de livraison:
-                                </span>
-                                <span class="text-gray-500 text-sm italic">
-                                    Non inclus
-                                </span>
-                            </div>
-                            {% endif %}
-
-                            <hr class="border-gray-300">
-                        </div>
-
-                        <!-- Total final -->
-                        <div class="flex justify-between items-center mt-4">
-                            <div class="text-lg font-semibold text-gray-700 flex items-center">
-                                <i class="fas fa-calculator mr-2"></i>Total de la commande:
-                            </div>
-                            <div class="text-2xl font-bold" style="color: #4B352A;" id="total-commande">
-                                {{ commande.total_cmd|floatformat:2 }} DH
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Bouton supprimé - Section articles-commande -->
-
-                </div>
+                {% include 'common/commande/section_articles.html' with commande=commande %}
             </div>
 
         <!-- Boutons d'action -->
         <div class="flex justify-between items-center mt-6 p-4 bg-white rounded-xl shadow-lg">
             <div class="flex gap-4">
-                <a href="{% url 'operatConfirme:confirmation' %}" 
+                <button type="button" onclick="window.history.back()"
                    class="px-6 py-3 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-medium transition-all">
                     <i class="fas fa-arrow-left mr-2"></i>
-                    Retour à la confirmation
-                </a>
+                    Retour
+                </button>
 
             </div>
             
@@ -570,8 +575,14 @@
                 <label for="raisonRemise" class="block text-sm font-medium text-gray-700 mb-2">
                     Raison de la remise (optionnel)
                 </label>
-                <textarea id="raisonRemise" rows="2" placeholder="Ex: Client fidèle, Produit endommagé..."
-                          class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"></textarea>
+                <select id="raisonRemise" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                    <option value="">-- Sélectionnez une raison --</option>
+                    <option value="Client fidèle">Client fidèle</option>
+                    <option value="Produit endommagé">Produit endommagé</option>
+                    <option value="Erreur de préparation">Erreur de préparation</option>
+                    <option value="Geste commercial">Geste commercial</option>
+                    <option value="Retard de livraison">Retard de livraison</option>
+                </select>
             </div>
 
             <!-- Aperçu de la remise -->
@@ -617,11 +628,11 @@
         </div>
         
         <div class="flex justify-end space-x-3">
-            <button onclick="closeCommentModal()" 
+            <button type="button" onclick="closeCommentModal()"
                     class="px-4 py-2 rounded-lg font-medium transition-all bg-gray-100 hover:bg-gray-200 text-gray-700">
-                <i class="fas fa-times mr-1"></i>Annuler
+                <i class="fas fa-times mr-1"></i>Fermer
             </button>
-            <button onclick="saveComment()" 
+            <button type="button" onclick="saveComment()"
                     class="px-4 py-2 rounded-lg font-medium transition-all bg-blue-600 hover:bg-blue-700 text-white">
                 <i class="fas fa-save mr-1"></i>Enregistrer
             </button>

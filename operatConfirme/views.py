@@ -133,6 +133,7 @@ def liste_commandes(request):
     from django.core.paginator import Paginator
     from django.db.models import Q, Count, Sum
     from commande.models import Commande, EtatCommande
+    from common.filter_utils import apply_all_filters, get_filter_context
     
     try:
         # Récupérer le profil opérateur de l'utilisateur connecté
@@ -165,7 +166,10 @@ def liste_commandes(request):
             Q(ville__nom__icontains=search_query) |
             Q(adresse__icontains=search_query)
         )
-    
+
+    # Appliquer les filtres (date, synchronisation, tri)
+    commandes_list = apply_all_filters(commandes_list, request)
+
     # Statistiques pour l'affichage des onglets/badges
     stats = {
         'en_attente': Commande.objects.filter(
@@ -237,7 +241,8 @@ def liste_commandes(request):
         'current_tab_display_name': current_tab_display_name,
         'dates_report': dates_report,
     }
-    
+    context.update(get_filter_context(request))
+
     return render(request, 'operatConfirme/liste_commande.html', context)
 
 @login_required
@@ -320,10 +325,15 @@ def confirmer_commande_ajax(request, commande_id):
             except Exception as e:
                 print(f"⚠️ DEBUG: Erreur lors de la sauvegarde des infos de livraison: {str(e)}")
             
-            # Vérifier le stock et décrémenter les articles
-            articles_decrémentes = []
+            # ========================================
+            # PHASE 1 : VÉRIFICATION DES STOCKS
+            # Vérifier TOUS les stocks AVANT toute décrémentation
+            # ========================================
             stock_insuffisant = []
-            
+            paniers_valides = []  # Stocke les infos des paniers à décrémenter
+
+            print(f"🔍 DEBUG: PHASE 1 - Vérification des stocks pour tous les articles")
+
             for panier in commande.paniers.all():
                 article = panier.article
                 variante = panier.variante
@@ -360,10 +370,10 @@ def confirmer_commande_ajax(request, commande_id):
                     stock_disponible = article.qte_disponible
                     nom_article = article.nom
                     print(f"📦 DEBUG: Article {nom_article} (ID:{article.id})")
-                
+
                 print(f"   - Stock actuel: {stock_disponible}")
                 print(f"   - Quantité commandée: {quantite_commandee}")
-                
+
                 # Vérifier si le stock est suffisant
                 if stock_disponible < quantite_commandee:
                     stock_insuffisant.append({
@@ -373,49 +383,73 @@ def confirmer_commande_ajax(request, commande_id):
                     })
                     print(f"❌ DEBUG: Stock insuffisant pour {nom_article}")
                 else:
-                    # Décrémentation directe et simple du stock
-                    ancien_stock = stock_disponible
-
-                    # Décrémenter directement le stock sur la variante ou l'article
-                    if variante:
-                        # Décrémenter sur la variante
-                        variante.qte_disponible = max(0, variante.qte_disponible - quantite_commandee)
-                        variante.save()
-                        nouveau_stock = variante.qte_disponible
-                        print(f"✅ DEBUG: Stock variante mis à jour: {ancien_stock} → {nouveau_stock}")
-                    else:
-                        # Décrémenter sur l'article principal
-                        article.qte_disponible = max(0, article.qte_disponible - quantite_commandee)
-                        article.save()
-                        nouveau_stock = article.qte_disponible
-                        print(f"✅ DEBUG: Stock article mis à jour: {ancien_stock} → {nouveau_stock}")
-
-                    articles_decrémentes.append({
-                        'article': nom_article,
-                        'ancien_stock': ancien_stock,
-                        'nouveau_stock': nouveau_stock,
-                        'quantite_decrémententée': quantite_commandee
+                    # Stocker les informations pour la décrémentation ultérieure
+                    paniers_valides.append({
+                        'panier': panier,
+                        'article': article,
+                        'variante': variante,
+                        'nom_article': nom_article,
+                        'quantite': quantite_commandee,
+                        'stock_actuel': stock_disponible
                     })
-                    
-                    print(f"✅ DEBUG: Stock mis à jour pour {nom_article}")
-                    print(f"   - Ancien stock: {ancien_stock}")
-                    print(f"   - Nouveau stock: {nouveau_stock}")
-            
-            # Si il y a des problèmes de stock, annuler la transaction
+                    print(f"✅ DEBUG: Stock suffisant pour {nom_article}")
+
+            # Si UN SEUL article manque de stock, ANNULER sans décrémenter quoi que ce soit
             if stock_insuffisant:
                 error_msg = f"Stock insuffisant pour : "
                 for item in stock_insuffisant:
                     error_msg += f"\n• {item['article']}: Stock={item['stock_actuel']}, Demandé={item['quantite_demandee']}"
-                
-                print(f"❌ DEBUG: Confirmation annulée - problèmes de stock")
+
+                print(f"❌ DEBUG: Confirmation annulée - problèmes de stock détectés")
+                print(f"⚠️ IMPORTANT: AUCUN article n'a été décrémenté (logique tout ou rien)")
                 for item in stock_insuffisant:
                     print(f"   - {item['article']}: {item['stock_actuel']}/{item['quantite_demandee']}")
-                
+
                 return JsonResponse({
-                    'success': False, 
+                    'success': False,
                     'message': error_msg,
                     'stock_insuffisant': stock_insuffisant
                 })
+
+            # ========================================
+            # PHASE 2 : DÉCRÉMENTATION DES STOCKS
+            # Tous les stocks sont suffisants, on peut décrémenter en toute sécurité
+            # ========================================
+            articles_decrémentes = []
+
+            print(f"✅ DEBUG: PHASE 2 - Tous les stocks sont suffisants, début de la décrémentation")
+
+            for item in paniers_valides:
+                article = item['article']
+                variante = item['variante']
+                nom_article = item['nom_article']
+                quantite_commandee = item['quantite']
+                ancien_stock = item['stock_actuel']
+
+                # Décrémenter directement le stock sur la variante ou l'article
+                if variante:
+                    # Décrémenter sur la variante
+                    variante.qte_disponible = max(0, variante.qte_disponible - quantite_commandee)
+                    variante.save()
+                    nouveau_stock = variante.qte_disponible
+                    print(f"✅ DEBUG: Stock variante mis à jour: {ancien_stock} → {nouveau_stock}")
+                else:
+                    # Décrémenter sur l'article principal
+                    article.qte_disponible = max(0, article.qte_disponible - quantite_commandee)
+                    article.save()
+                    nouveau_stock = article.qte_disponible
+                    print(f"✅ DEBUG: Stock article mis à jour: {ancien_stock} → {nouveau_stock}")
+
+                articles_decrémentes.append({
+                    'article': nom_article,
+                    'ancien_stock': ancien_stock,
+                    'nouveau_stock': nouveau_stock,
+                    'quantite_decrémententée': quantite_commandee
+                })
+
+                print(f"✅ DEBUG: Stock mis à jour pour {nom_article}")
+                print(f"   - Ancien stock: {ancien_stock}")
+                print(f"   - Nouveau stock: {nouveau_stock}")
             
             # Déterminer l'état suivant: toujours "Confirmée"
             enum_suivant = EnumEtatCmd.objects.get(libelle='Confirmée')
@@ -881,6 +915,9 @@ def confirmation(request):
     from commande.models import Commande, EtatCommande, EnumEtatCmd
     from django.http import JsonResponse
     from django.utils import timezone
+    from django.core.paginator import Paginator
+    from django.db.models import Q
+    from common.filter_utils import apply_all_filters, get_filter_context
     
     try:
         # Récupérer l'opérateur
@@ -907,12 +944,36 @@ def confirmation(request):
     ).prefetch_related(
         'paniers__article', 'etats__enum_etat'
     ).distinct().order_by('-date_cmd', '-date_creation')
-    
+
+    # Recherche
+    search_query = request.GET.get('search', '').strip()
+    if search_query:
+        commandes_a_confirmer = commandes_a_confirmer.filter(
+            Q(id_yz__icontains=search_query) |
+            Q(num_cmd__icontains=search_query) |
+            Q(client__nom__icontains=search_query) |
+            Q(client__prenom__icontains=search_query) |
+            Q(client__numero_tel__icontains=search_query) |
+            Q(ville__nom__icontains=search_query) |
+            Q(adresse__icontains=search_query)
+        )
+
+    # Appliquer les filtres (date, synchronisation, tri)
+    commandes_a_confirmer = apply_all_filters(commandes_a_confirmer, request)
+
+    # Pagination
+    paginator = Paginator(commandes_a_confirmer, 15)  # 15 commandes par page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
     context = {
         'operateur': operateur,
         'commandes_a_confirmer': commandes_a_confirmer,
+        'page_obj': page_obj,
+        'search_query': search_query,
     }
-    
+    context.update(get_filter_context(request))
+
     return render(request, 'operatConfirme/confirmation.html', context)
 
 @login_required
@@ -1882,7 +1943,7 @@ def _handle_add_article(request, commande, operateur):
             print(f"➕ Nouvel article ajouté: ID={article.id}, quantité={quantite}, type_prix_gele={type_prix}")
         
         # ========== 5. RECALCUL DU COMPTEUR UPSELL ==========
-        if article.isUpsell and hasattr(article, 'prix_upsell_1') and article.prix_upsell_1 is not None:
+        if article.isUpsell:
             _recalculer_compteur_upsell(commande)
         
         # ========== 6. RECALCUL DU TOTAL AVEC FRAIS ==========
@@ -2348,6 +2409,91 @@ def _handle_create_operation(request, commande, operateur):
         })
 
 
+def _handle_delete_operation(request, commande, operateur):
+    """
+    Gère la suppression d'une opération via AJAX.
+
+    Args:
+        request: L'objet HttpRequest contenant les données POST
+        commande: L'instance de la commande à modifier
+        operateur: L'opérateur effectuant l'action
+
+    Returns:
+        JsonResponse avec le statut de l'opération
+    """
+    from commande.models import Operation
+    import logging
+
+    logger = logging.getLogger(__name__)
+
+    # ========== 1. RÉCUPÉRATION ET VALIDATION DES DONNÉES ==========
+    operation_id = request.POST.get('operation_id')
+
+    print(f"🗑️ Suppression opération {operation_id} pour commande {commande.id}")
+
+    if not operation_id:
+        print(f"❌ Données manquantes - operation_id: '{operation_id}'")
+        return JsonResponse({
+            'success': False,
+            'error': 'ID opération requis'
+        })
+
+    try:
+        # ========== 2. RÉCUPÉRATION DE L'OPÉRATION ==========
+        try:
+            operation = Operation.objects.get(
+                id=operation_id,
+                commande=commande
+            )
+            print(f"✅ Opération {operation_id} trouvée: {operation.type_operation}")
+        except Operation.DoesNotExist:
+            print(f"❌ Opération {operation_id} introuvable pour commande {commande.id}")
+            return JsonResponse({
+                'success': False,
+                'error': 'Opération introuvable'
+            })
+
+        # ========== 3. SAUVEGARDE DES INFORMATIONS AVANT SUPPRESSION ==========
+        operation_info = {
+            'id': operation.id,
+            'type_operation': operation.type_operation,
+            'conclusion': operation.conclusion,
+            'date_operation': operation.date_operation.strftime('%d/%m/%Y %H:%M')
+        }
+
+        print(f"📋 Informations de l'opération à supprimer:")
+        print(f"   - Type: {operation_info['type_operation']}")
+        print(f"   - Conclusion: {operation_info['conclusion']}")
+        print(f"   - Date: {operation_info['date_operation']}")
+
+        # ========== 4. SUPPRESSION DE L'OPÉRATION ==========
+        operation.delete()
+        print(f"✅ Opération {operation_id} supprimée avec succès")
+
+        # ========== 5. VÉRIFICATION POST-SUPPRESSION ==========
+        operations_restantes = Operation.objects.filter(commande=commande)
+        print(f"📊 {operations_restantes.count()} opération(s) restante(s) pour cette commande")
+
+        # ========== 6. RÉPONSE JSON ==========
+        return JsonResponse({
+            'success': True,
+            'message': f'Opération {operation_info["type_operation"]} supprimée avec succès',
+            'operation_deleted': operation_info,
+            'debug_info': {
+                'total_operations_restantes': operations_restantes.count(),
+            }
+        })
+
+    except Exception as e:
+        print(f"❌ Erreur suppression opération: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur serveur: {str(e)}'
+        })
+
+
 def _handle_save_livraison(request, commande, operateur):
     """
     Gère la sauvegarde des informations de livraison via AJAX.
@@ -2520,7 +2666,7 @@ def modifier_commande(request, commande_id):
             if is_ajax and not action:
                 return JsonResponse({'success': False, 'error': 'Action non spécifiée'})
             
-            if is_ajax and action not in ['add_article', 'update_ville', 'toggle_frais_livraison', 'remove_article', 'update_article_complet', 'save_livraison', 'update_quantity', 'delete_panier', 'save_client_info', 'update_operation', 'create_operation']:
+            if is_ajax and action not in ['add_article', 'update_ville', 'toggle_frais_livraison', 'remove_article', 'update_article_complet', 'save_livraison', 'update_quantity', 'delete_panier', 'save_client_info', 'update_operation', 'create_operation', 'delete_operation']:
                 return JsonResponse({'success': False, 'error': f'Action non reconnue: {action}'})
             
             # ================ ACTIONS AJAX INDIVIDUELLES ================
@@ -2548,7 +2694,11 @@ def modifier_commande(request, commande_id):
             elif action == 'create_operation':
                 # Déléguer à la fonction spécialisée
                 return _handle_create_operation(request, commande, operateur)
-            
+
+            elif action == 'delete_operation':
+                # Déléguer à la fonction spécialisée
+                return _handle_delete_operation(request, commande, operateur)
+
             elif action == 'save_livraison':
                 # Déléguer à la fonction spécialisée
                 return _handle_save_livraison(request, commande, operateur)
@@ -2753,10 +2903,10 @@ def modifier_commande(request, commande_id):
             'reference': str(article.reference or ''),
             'prix_actuel': float(article.prix_actuel) if article.prix_actuel else 0.0,
             'prix_unitaire': float(article.prix_unitaire) if article.prix_unitaire else 0.0,
-            'prix_upsell_1': float(article.prix_upsell_1) if article.prix_upsell_1 else 0.0,
             'prix_upsell_2': float(article.prix_upsell_2) if article.prix_upsell_2 else 0.0,
             'prix_upsell_3': float(article.prix_upsell_3) if article.prix_upsell_3 else 0.0,
             'prix_upsell_4': float(article.prix_upsell_4) if article.prix_upsell_4 else 0.0,
+            'prix_gros': float(article.prix_gros) if hasattr(article, 'prix_gros') and article.prix_gros else 0.0,
             'qte_disponible': int(article.get_total_qte_disponible()),
             'couleur': str(article.couleur or ''),
             'pointure': str(article.pointure or ''),
@@ -2882,10 +3032,10 @@ def api_articles_disponibles(request):
                 'categorie': (str(article.categorie) if article.categorie else ''),
                 'prix_unitaire': float(article.prix_unitaire),
                 'prix_actuel': float(article.prix_actuel or article.prix_unitaire),
-                'prix_upsell_1': float(article.prix_upsell_1) if article.prix_upsell_1 else None,
                 'prix_upsell_2': float(article.prix_upsell_2) if article.prix_upsell_2 else None,
                 'prix_upsell_3': float(article.prix_upsell_3) if article.prix_upsell_3 else None,
                 'prix_upsell_4': float(article.prix_upsell_4) if article.prix_upsell_4 else None,
+                'prix_gros': float(article.prix_gros) if hasattr(article, 'prix_gros') and article.prix_gros else None,
                 'qte_disponible': stock,
                 'isUpsell': bool(article.isUpsell),
                 'phase': article.phase,

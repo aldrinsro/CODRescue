@@ -13,7 +13,8 @@ class YoozakKPIManager {
     this.filters = {};
     this.activeTab = 'ventes';
     this.isLoading = false;
-    this.selectedPeriod = '30j'; // Persistance de la période sélectionnée
+    this.selectedPeriodVentes = '30j'; // Persistance de la période pour les KPIs Ventes
+    this.selectedPeriodPerformance = '30j'; // Persistance de la période pour Performance Commerciale
 
     this.init();
   }
@@ -34,9 +35,29 @@ class YoozakKPIManager {
     const periodeLabels = {
       '7j': '7 derniers jours',
       '30j': '30 derniers jours',
-      '90j': '90 derniers jours'
+      '90j': '90 derniers jours',
+      'mois': 'mois en cours'
     };
     return periodeLabels[period] || period;
+  }
+
+  // Fonction pour mettre à jour les textes "vs" en fonction de la période
+  updateVsPeriodTexts(period) {
+    const periodLabel = this.getPeriodLabel(period);
+    const elements = document.querySelectorAll('[data-kpi-vs]');
+
+    console.log(`🔄 Mise à jour des textes "vs" pour la période: ${period} (${periodLabel})`);
+    console.log(`   Nombre d'éléments trouvés: ${elements.length}`);
+
+    elements.forEach((element, index) => {
+      const kpiId = element.getAttribute('data-kpi-vs');
+      element.textContent = `vs ${periodLabel}`;
+      console.log(`   ✅ [${index + 1}] ${kpiId}: "${element.textContent}"`);
+    });
+
+    if (elements.length === 0) {
+      console.warn(`   ⚠️ Aucun élément [data-kpi-vs] trouvé dans le DOM`);
+    }
   }
 
   init() {
@@ -53,11 +74,11 @@ class YoozakKPIManager {
         const button = e.currentTarget;
         const btnText = button.querySelector('.btn-text');
         const loadingText = button.querySelector('.loading-text');
-        
+
         // Afficher l'état de chargement
         btnText.classList.add('hidden');
         loadingText.classList.remove('hidden');
-        
+
         // Réactiver le bouton après le téléchargement
         setTimeout(() => {
           btnText.classList.remove('hidden');
@@ -122,7 +143,7 @@ class YoozakKPIManager {
         break;
       default:
         console.log('⚠️ Onglet non implémenté, chargement des données par défaut');
-        // Pas de chargement par défaut, les données seront chargées lors du changement d'onglet
+      // Pas de chargement par défaut, les données seront chargées lors du changement d'onglet
     }
   }
 
@@ -370,7 +391,7 @@ class YoozakKPIManager {
     try {
       console.log('📊 Chargement complet des données Ventes...');
 
-      const response = await fetch(this.apiEndpoint + 'ventes/', {
+      const response = await fetch(this.apiEndpoint + `ventes/?period=${this.selectedPeriodVentes}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -447,73 +468,81 @@ class YoozakKPIManager {
   }
 
   async updateVentesEvolutionCAChart(data) {
+    console.log('🎨 Début de updateVentesEvolutionCAChart');
+    console.log('   selectedPeriodVentes:', this.selectedPeriodVentes);
+
     const chartId = 'ventes-evolution-ca-chart';
-    let canvasElement = document.getElementById(chartId);
+    const canvasElement = document.getElementById(chartId);
+    const initialLoading = document.getElementById('evolution-ca-initial-loading');
+    const emptyState = document.getElementById('evolution-ca-empty');
+
+    console.log('   Elements trouvés:', {
+      canvas: !!canvasElement,
+      initialLoading: !!initialLoading,
+      emptyState: !!emptyState
+    });
 
     if (!canvasElement) {
-      const container = document.querySelector('.evolution-ca-container');
-      if (!container) return;
-
-      // Créer le HTML avec la période persistée
-      container.innerHTML = `
-        <div class="flex items-center justify-between mb-4">
-          <div>
-          <h3 class="text-lg font-semibold text-gray-900">📈 Evolution du CA</h3>
-            <p id="periode-indicator" class="text-sm text-blue-600 font-medium">Période: ${this.getPeriodLabel(this.selectedPeriod)}</p>
-          </div>
-          <div class="flex gap-2">
-            <button onclick="window.yoozakKPI.changeEvolutionPeriod('7j')" class="text-xs px-3 py-1.5 ${this.selectedPeriod === '7j' ? 'bg-blue-100 text-blue-600 font-medium' : 'bg-gray-100 text-gray-600'} rounded-lg period-btn hover:bg-blue-50 transition-colors" data-period="7j">7 jours</button>
-            <button onclick="window.yoozakKPI.changeEvolutionPeriod('30j')" class="text-xs px-3 py-1.5 ${this.selectedPeriod === '30j' ? 'bg-blue-100 text-blue-600 font-medium' : 'bg-gray-100 text-gray-600'} rounded-lg period-btn hover:bg-blue-50 transition-colors" data-period="30j">30 jours</button>
-            <button onclick="window.yoozakKPI.changeEvolutionPeriod('90j')" class="text-xs px-3 py-1.5 ${this.selectedPeriod === '90j' ? 'bg-blue-100 text-blue-600 font-medium' : 'bg-gray-100 text-gray-600'} rounded-lg period-btn hover:bg-blue-50 transition-colors" data-period="90j">90 jours</button>
-          </div>
-        </div>
-        <div class="relative">
-          <canvas id="${chartId}" width="400" height="200"></canvas>
-          <div id="evolution-ca-loading" class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center hidden">
-            <i class="fas fa-spinner fa-spin text-blue-600"></i>
-          </div>
-        </div>
-      `;
-      canvasElement = document.getElementById(chartId);
+      console.error('❌ Canvas element not found');
+      return;
     }
 
     try {
-      // Utiliser la période sélectionnée au lieu de '30j' en dur
-      const evolutionData = await this.fetchEvolutionCAData(this.selectedPeriod);
+      // CORRECTION: Utiliser selectedPeriodVentes (filtre global) au lieu de selectedPeriod (filtre local)
+      console.log('📞 Appel fetchEvolutionCAData...');
+      const evolutionData = await this.fetchEvolutionCAData(this.selectedPeriodVentes);
+      console.log('✅ fetchEvolutionCAData terminé:', evolutionData);
+
+      // Mettre à jour l'indicateur de période
+      const periodeIndicator = document.getElementById('periode-indicator');
+      if (periodeIndicator) {
+        periodeIndicator.textContent = `Période: ${this.getPeriodLabel(this.selectedPeriodVentes)}`;
+      }
 
       // Vérifier s'il y a des données
-      if (!evolutionData || !evolutionData.values || evolutionData.values.length === 0 || evolutionData.values.every(val => val === 0)) {
-        const container = document.querySelector('.evolution-ca-container');
-        if (container) {
-          container.innerHTML = `
-            <div class="flex items-center justify-between mb-4">
-              <div>
-                <h3 class="text-lg font-semibold text-gray-900">📈 Evolution du CA</h3>
-                <p class="text-sm text-blue-600 font-medium">Période: ${this.getPeriodLabel(this.selectedPeriod)}</p>
-              </div>
-              <div class="flex gap-2">
-                <button onclick="window.yoozakKPI.changeEvolutionPeriod('7j')" class="text-xs px-3 py-1.5 ${this.selectedPeriod === '7j' ? 'bg-blue-100 text-blue-600 font-medium' : 'bg-gray-100 text-gray-600'} rounded-lg period-btn hover:bg-blue-50 transition-colors" data-period="7j">7 jours</button>
-                <button onclick="window.yoozakKPI.changeEvolutionPeriod('30j')" class="text-xs px-3 py-1.5 ${this.selectedPeriod === '30j' ? 'bg-blue-100 text-blue-600 font-medium' : 'bg-gray-100 text-gray-600'} rounded-lg period-btn hover:bg-blue-50 transition-colors" data-period="30j">30 jours</button>
-                <button onclick="window.yoozakKPI.changeEvolutionPeriod('90j')" class="text-xs px-3 py-1.5 ${this.selectedPeriod === '90j' ? 'bg-blue-100 text-blue-600 font-medium' : 'bg-gray-100 text-gray-600'} rounded-lg period-btn hover:bg-blue-50 transition-colors" data-period="90j">90 jours</button>
-              </div>
-            </div>
-            <div class="h-64 bg-blue-50 border-2 border-dashed border-blue-200 rounded-lg flex items-center justify-center">
-              <div class="text-center">
-                <i class="fas fa-chart-line text-blue-400 text-3xl mb-3"></i>
-                <h4 class="text-lg font-semibold text-blue-900 mb-2">Aucune donnée de ventes</h4>
-                <p class="text-blue-700 text-sm">Aucune commande livrée sur la période sélectionnée</p>
-                <p class="text-blue-600 text-xs mt-1">Les données apparaîtront dès qu'il y aura des livraisons</p>
-              </div>
-            </div>
-          `;
-        }
+      console.log('🔍 Vérification des données:', {
+        hasData: !!evolutionData,
+        hasValues: !!evolutionData?.values,
+        valuesLength: evolutionData?.values?.length,
+        allZeros: evolutionData?.values?.every(val => val === 0)
+      });
+
+      // CORRECTION: Afficher le graphique même si toutes les valeurs sont à 0
+      // On affiche l'état vide seulement s'il n'y a PAS de données du tout
+      if (!evolutionData || !evolutionData.values || evolutionData.values.length === 0) {
+        console.warn('⚠️ Aucune donnée - Affichage de l\'état vide');
+        // Afficher l'état vide
+        if (initialLoading) initialLoading.classList.add('hidden');
+        if (canvasElement) canvasElement.classList.add('hidden');
+        if (emptyState) emptyState.classList.remove('hidden');
+
+        // Réinitialiser les statistiques
+        document.getElementById('stat-ca-total').textContent = '0 DH';
+        document.getElementById('stat-ca-moyen').textContent = '0 DH';
+        document.getElementById('stat-tendance').textContent = '0%';
+        document.getElementById('stat-tendance').className = 'font-bold text-sm text-gray-400';
+
         return;
       }
 
+      // Masquer l'état initial et l'état vide, afficher le canvas
+      console.log('✅ Données valides - Affichage du graphique');
+      if (initialLoading) initialLoading.classList.add('hidden');
+      if (emptyState) emptyState.classList.add('hidden');
+      if (canvasElement) canvasElement.classList.remove('hidden');
+
+      // Détruire l'ancien graphique si existant
       if (this.charts.has(chartId)) {
+        console.log('🗑️ Destruction de l\'ancien graphique');
         this.charts.get(chartId).destroy();
       }
 
+      // Vérifier que Chart.js est chargé
+      if (typeof Chart === 'undefined') {
+        throw new Error('Chart.js n\'est pas chargé');
+      }
+
+      console.log('🎨 Création du graphique Chart.js...');
       const ctx = canvasElement.getContext('2d');
       const chart = new Chart(ctx, {
         type: 'line',
@@ -563,7 +592,15 @@ class YoozakKPIManager {
               },
               ticks: {
                 color: '#6b7280',
-                font: { size: 11 }
+                font: { size: 11 },
+                // CORRECTION: Pour 7 jours, afficher TOUS les jours
+                // Pour 30 jours, limiter à 10 labels
+                // Pour 90 jours, limiter à 12 labels
+                maxTicksLimit: evolutionData.values.length <= 7 ? 7 :
+                  evolutionData.values.length <= 30 ? 10 : 12,
+                autoSkip: evolutionData.values.length <= 7 ? false : true,  // Ne pas sauter de labels pour 7j
+                maxRotation: 45,
+                minRotation: 0
               }
             },
             y: {
@@ -594,114 +631,166 @@ class YoozakKPIManager {
       this.charts.set(chartId, chart);
       console.log('✅ Graphique Evolution CA mis à jour');
 
+      // Mettre à jour les statistiques
+      this.updateEvolutionStats(evolutionData.resume);
+
     } catch (error) {
       console.error('❌ Erreur création graphique Evolution CA:', error);
-      canvasElement.parentElement.innerHTML = '<div class="h-64 flex items-center justify-center text-gray-500"><i class="fas fa-exclamation-triangle mr-2"></i>Erreur de chargement</div>';
+      // En cas d'erreur, afficher l'état vide
+      if (initialLoading) initialLoading.classList.add('hidden');
+      if (canvasElement) canvasElement.classList.add('hidden');
+      if (emptyState) {
+        emptyState.classList.remove('hidden');
+        emptyState.querySelector('h4').textContent = 'Erreur de chargement';
+        emptyState.querySelector('p').textContent = 'Impossible de charger les données. Veuillez réessayer.';
+      }
     }
   }
 
+  // Fonction pour mettre à jour les statistiques d'évolution du CA
+  updateEvolutionStats(resume) {
+    if (!resume) return;
+
+    // Formater les valeurs
+    const formatNumber = (num) => {
+      if (!num || num === 0) return '0 DH';
+      return `${Math.round(num).toLocaleString('fr-FR')} DH`;
+    };
+
+    const formatTendance = (tendance) => {
+      if (!tendance || tendance === 0) return { text: '0%', color: 'text-gray-600' };
+      const signe = tendance > 0 ? '+' : '';
+      const color = tendance > 0 ? 'text-green-600' : 'text-red-600';
+      const icon = tendance > 0 ? '↗' : '↘';
+      return { text: `${signe}${tendance.toFixed(1)}% ${icon}`, color };
+    };
+
+    // Mise à jour du DOM
+    const caTotal = document.getElementById('stat-ca-total');
+    const caMoyen = document.getElementById('stat-ca-moyen');
+    const tendance = document.getElementById('stat-tendance');
+
+    if (caTotal) caTotal.textContent = formatNumber(resume.ca_total);
+    if (caMoyen) caMoyen.textContent = formatNumber(resume.ca_moyen);
+
+    if (tendance) {
+      const tendanceFormatee = formatTendance(resume.tendance);
+      tendance.textContent = tendanceFormatee.text;
+      tendance.className = `font-bold text-sm ${tendanceFormatee.color}`;
+    }
+
+    console.log('✅ Statistiques d\'évolution mises à jour:', resume);
+  }
+
   async updateTopModelesChart(modeles = null) {
-    const chartId = 'top-modeles-chart';
+    console.log('🎨 Début de updateTopModelesChart');
+
+    const chartId = 'repartition-sources-chart';
     let canvasElement = document.getElementById(chartId);
+    const container = document.querySelector('.top-modeles-container');
+
+    if (!container) {
+      console.error('❌ Container .top-modeles-container introuvable');
+      return;
+    }
+
+    console.log('✅ Container trouvé');
 
     if (!canvasElement) {
-      const container = document.querySelector('.top-modeles-container');
-      if (!container) return;
-
+      console.warn('⚠️ Canvas non trouvé, création du conteneur');
       container.innerHTML = `
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-lg font-semibold text-gray-900">🏆 Top Modèles (CA)</h3>
-          <div class="text-xs text-gray-500">Top 5 par chiffre d'affaires</div>
+          <h3 class="text-lg font-semibold text-gray-900">📊 Répartition par Source</h3>
+          <div class="text-xs text-gray-500">Youcan, Shopify, Autres</div>
         </div>
-        <div class="relative">
-          <canvas id="${chartId}" width="400" height="200"></canvas>
+        <div class="relative" style="height: 300px;">
+          <canvas id="${chartId}"></canvas>
           <div id="top-modeles-loading" class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center hidden">
             <i class="fas fa-spinner fa-spin text-blue-600"></i>
           </div>
         </div>
       `;
       canvasElement = document.getElementById(chartId);
+
+      if (!canvasElement) {
+        console.error('❌ Impossible de créer le canvas pour le graphique');
+        return;
+      }
+    } else {
+      console.log('✅ Canvas trouvé:', chartId);
     }
 
     try {
-      // Si pas de données passées, récupérer depuis l'API
-      if (!modeles) {
-        document.getElementById('top-modeles-loading').classList.remove('hidden');
-        modeles = await this.fetchTopModelesData();
-        document.getElementById('top-modeles-loading').classList.add('hidden');
+      // Charger les données depuis la nouvelle API avec la période sélectionnée
+      document.getElementById('top-modeles-loading')?.classList.remove('hidden');
+      const sources = await this.fetchRepartitionSourcesData(this.selectedPeriodVentes || '30j');
+      document.getElementById('top-modeles-loading')?.classList.add('hidden');
+
+      if (!sources || sources.length === 0) {
+        console.warn('⚠️ Aucune donnée de sources disponible');
+        container.innerHTML = `
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-gray-900">📊 Répartition par Source</h3>
+            <div class="text-xs text-gray-500">Youcan, Shopify, Autres</div>
+          </div>
+          <div class="h-64 bg-yellow-50 border-2 border-dashed border-yellow-200 rounded-lg flex items-center justify-center">
+            <div class="text-center">
+              <i class="fas fa-chart-pie text-yellow-400 text-3xl mb-3"></i>
+              <h4 class="text-lg font-semibold text-yellow-900 mb-2">Aucune donnée disponible</h4>
+              <p class="text-yellow-700 text-sm">Aucune commande livrée pour cette période</p>
+              <p class="text-yellow-600 text-xs mt-1">La répartition apparaîtra dès qu'il y aura des livraisons</p>
+            </div>
+          </div>
+        `;
+        return;
       }
 
-      if (!modeles || modeles.length === 0) {
-        const container = document.querySelector('.top-modeles-container');
-        if (container) {
-          container.innerHTML = `
-            <div class="flex items-center justify-between mb-4">
-              <h3 class="text-lg font-semibold text-gray-900">🏆 Top Modèles (CA)</h3>
-              <div class="text-xs text-gray-500">Top 5 par chiffre d'affaires</div>
-            </div>
-            <div class="h-64 bg-yellow-50 border-2 border-dashed border-yellow-200 rounded-lg flex items-center justify-center">
-              <div class="text-center">
-                <i class="fas fa-crown text-yellow-400 text-3xl mb-3"></i>
-                <h4 class="text-lg font-semibold text-yellow-900 mb-2">Aucun modèle vendu</h4>
-                <p class="text-yellow-700 text-sm">Aucune commande livrée pour cette période</p>
-                <p class="text-yellow-600 text-xs mt-1">Le classement apparaîtra dès qu'il y aura des livraisons</p>
-              </div>
-            </div>
-          `;
+      // Valider la structure des données
+      if (!Array.isArray(sources)) {
+        throw new Error('Format de données invalide: sources n\'est pas un tableau');
+      }
+
+      // Vérifier que chaque source a les propriétés requises
+      for (const source of sources) {
+        if (!source.source || source.ca === undefined || !source.couleur) {
+          throw new Error(`Données source incomplètes: ${JSON.stringify(source)}`);
         }
-        return;
       }
 
       if (this.charts.has(chartId)) {
+        console.log('🗑️ Destruction de l\'ancien graphique');
         this.charts.get(chartId).destroy();
       }
 
-      // Prendre seulement les 5 premiers et valider
-      const topModeles = Array.isArray(modeles) ? modeles.slice(0, 5) : [];
-      
-      // Vérifier qu'il y a des données valides
-      if (topModeles.length === 0) {
-        const container = document.querySelector('.top-modeles-container');
-        if (container) {
-          container.innerHTML = `
-            <div class="flex items-center justify-between mb-4">
-              <h3 class="text-lg font-semibold text-gray-900">🏆 Top Modèles (CA)</h3>
-              <div class="text-xs text-gray-500">Top 5 par chiffre d'affaires</div>
-            </div>
-            <div class="h-64 bg-yellow-50 border-2 border-dashed border-yellow-200 rounded-lg flex items-center justify-center">
-              <div class="text-center">
-                <i class="fas fa-crown text-yellow-400 text-3xl mb-3"></i>
-                <h4 class="text-lg font-semibold text-yellow-900 mb-2">Aucun modèle vendu</h4>
-                <p class="text-yellow-700 text-sm">Aucune commande livrée pour cette période</p>
-                <p class="text-yellow-600 text-xs mt-1">Le classement apparaîtra dès qu'il y aura des livraisons</p>
-              </div>
-            </div>
-          `;
-        }
-        return;
+      // Vérifier que Chart.js est chargé
+      if (typeof Chart === 'undefined') {
+        throw new Error('Chart.js n\'est pas chargé. Veuillez inclure la bibliothèque Chart.js dans votre page.');
       }
 
-      const labels = topModeles.map(model =>
-        model && model.nom ? (model.nom.length > 15 ? model.nom.substring(0, 15) + '...' : model.nom) : 'Sans nom'
-      );
-      const values = topModeles.map(model => model && typeof model.ca === 'number' ? model.ca : 0);
-      const backgroundColors = topModeles.map(model => model && model.couleur ? model.couleur : '#3b82f6');
+      // Préparer les données pour le Pie Chart
+      const labels = sources.map(s => s.source);
+      const values = sources.map(s => s.ca);
+      const backgroundColors = sources.map(s => s.couleur);
+
+      console.log('📊 Données du graphique:', {
+        labels,
+        values,
+        backgroundColors,
+        sourceCount: sources.length
+      });
 
       const ctx = canvasElement.getContext('2d');
+      console.log('🎨 Contexte canvas obtenu:', !!ctx);
+
       const chart = new Chart(ctx, {
-        type: 'bar',
+        type: 'pie',
         data: {
           labels: labels,
           datasets: [{
-            label: 'Chiffre d\'Affaires (DH)',
             data: values,
-            backgroundColor: backgroundColors.map(color => (color || '#3b82f6') + '20'),
-            borderColor: backgroundColors,
-            borderWidth: 2,
-            borderRadius: 6,
-            borderSkipped: false,
-            barThickness: 'flex',
-            maxBarThickness: 60
+            backgroundColor: backgroundColors,
+            borderColor: '#ffffff',
+            borderWidth: 2
           }]
         },
         options: {
@@ -709,7 +798,15 @@ class YoozakKPIManager {
           maintainAspectRatio: false,
           plugins: {
             legend: {
-              display: false
+              display: true,
+              position: 'right',
+              labels: {
+                color: '#374151',
+                font: { size: 11 },
+                padding: 10,
+                usePointStyle: true,
+                pointStyle: 'circle'
+              }
             },
             tooltip: {
               backgroundColor: 'rgba(0, 0, 0, 0.8)',
@@ -718,44 +815,15 @@ class YoozakKPIManager {
               borderColor: '#3b82f6',
               borderWidth: 1,
               cornerRadius: 6,
-              displayColors: false,
               callbacks: {
-                title: function (context) {
-                  return topModeles[context[0].dataIndex].nom;
-                },
                 label: function (context) {
-                  const model = topModeles[context.dataIndex];
+                  const source = sources[context.dataIndex];
                   return [
-                    `CA: ${context.parsed.y.toLocaleString('fr-FR')} DH`,
-                    `Ventes: ${model.nb_ventes} unités`,
-                    `Réf: ${model.reference}`
+                    `${source.source}`,
+                    `CA: ${source.ca_formate} DH`,
+                    `Commandes: ${source.nb_commandes}`,
+                    `Part: ${source.pourcentage}%`
                   ];
-                }
-              }
-            }
-          },
-          scales: {
-            x: {
-              grid: {
-                display: false
-              },
-              ticks: {
-                color: '#6b7280',
-                font: { size: 11 },
-                maxRotation: 45,
-                minRotation: 0
-              }
-            },
-            y: {
-              beginAtZero: true,
-              grid: {
-                color: 'rgba(0, 0, 0, 0.05)'
-              },
-              ticks: {
-                color: '#6b7280',
-                font: { size: 11 },
-                callback: function (value) {
-                  return value.toLocaleString('fr-FR') + ' DH';
                 }
               }
             }
@@ -768,11 +836,74 @@ class YoozakKPIManager {
       });
 
       this.charts.set(chartId, chart);
-      console.log('✅ Graphique Top Modèles créé avec succès');
+      console.log('✅ Graphique Répartition Sources créé avec succès');
 
     } catch (error) {
-      console.error('❌ Erreur création graphique Top Modèles:', error);
-      canvasElement.parentElement.innerHTML = '<div class="h-64 flex items-center justify-center text-gray-500"><i class="fas fa-exclamation-triangle mr-2"></i>Erreur de chargement</div>';
+      console.error('❌ Erreur création graphique Répartition Sources:', error);
+      console.error('Détails de l\'erreur:', error.message, error.stack);
+
+      // Utiliser le container au lieu de canvasElement.parentElement pour éviter les erreurs
+      if (container) {
+        container.innerHTML = `
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-gray-900">📊 Répartition par Source</h3>
+            <div class="text-xs text-gray-500">Erreur de chargement</div>
+          </div>
+          <div class="h-64 bg-red-50 border-2 border-dashed border-red-200 rounded-lg flex items-center justify-center">
+            <div class="text-center">
+              <i class="fas fa-exclamation-triangle text-red-400 text-3xl mb-3"></i>
+              <h4 class="text-lg font-semibold text-red-900 mb-2">Erreur de chargement</h4>
+              <p class="text-red-700 text-sm">${error.message || 'Erreur inconnue'}</p>
+              <button onclick="window.yoozakKPI.updateTopModelesChart()" class="mt-3 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm">
+                Réessayer
+              </button>
+            </div>
+          </div>
+        `;
+      }
+    }
+  }
+
+  async fetchRepartitionSourcesData(period = '30j') {
+    console.log(`📊 Chargement répartition sources pour période: ${period}`);
+
+    try {
+      const url = `${this.apiEndpoint}repartition-sources/?period=${period}`;
+      console.log(`🔗 URL API: ${url}`);
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      });
+
+      console.log(`📡 Réponse HTTP: ${response.status} ${response.statusText}`);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Réponse d\'erreur du serveur:', errorText);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('📦 Données reçues:', data);
+
+      if (data.success) {
+        console.log(`✅ ${data.sources?.length || 0} sources trouvées`);
+        return data.sources || [];
+      } else {
+        throw new Error(data.message || 'Erreur lors du chargement de la répartition par sources');
+      }
+
+    } catch (error) {
+      console.error('❌ Erreur récupération répartition sources:', error);
+      console.error('Type d\'erreur:', error.name);
+      console.error('Message:', error.message);
+
+      // Re-throw l'erreur pour qu'elle soit gérée par updateTopModelesChart
+      throw error;
     }
   }
 
@@ -800,21 +931,18 @@ class YoozakKPIManager {
 
     } catch (error) {
       console.error('❌ Erreur récupération top modèles:', error);
-
-      // Données de fallback
-      return [
-        { nom: 'Classic Leather Boot', ca: 25000, nb_ventes: 45, reference: 'CLB-001', couleur: '#3b82f6' },
-        { nom: 'Summer Sandal Pro', ca: 18500, nb_ventes: 62, reference: 'SSP-002', couleur: '#10b981' },
-        { nom: 'Sport Runner Elite', ca: 15200, nb_ventes: 38, reference: 'SRE-003', couleur: '#f59e0b' },
-        { nom: 'Casual Comfort Walk', ca: 12800, nb_ventes: 41, reference: 'CCW-004', couleur: '#8b5cf6' },
-        { nom: 'Urban Style Sneaker', ca: 11400, nb_ventes: 29, reference: 'USS-005', couleur: '#ef4444' }
-      ];
+      return [];
     }
   }
 
   async fetchEvolutionCAData(period = '30j') {
+    console.log(`📈 Chargement évolution CA pour période: ${period}`);
+
     try {
-      const response = await fetch(`${this.apiEndpoint}evolution-ca/?period=${period}`, {
+      const url = `${this.apiEndpoint}evolution-ca/?period=${period}`;
+      console.log(`🔗 URL API: ${url}`);
+
+      const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -822,17 +950,25 @@ class YoozakKPIManager {
         }
       });
 
+      console.log(`📡 Réponse HTTP: ${response.status} ${response.statusText}`);
+
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Réponse d\'erreur du serveur:', errorText);
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
       const data = await response.json();
+      console.log('📦 Données évolution CA reçues:', data);
 
       if (data.success) {
         // Vérifier que data.evolution est un tableau
         if (!Array.isArray(data.evolution)) {
+          console.error('❌ data.evolution n\'est pas un tableau:', typeof data.evolution);
           throw new Error('Format de données d\'évolution invalide');
         }
+
+        console.log(`✅ ${data.evolution.length} jours de données trouvés`);
 
         // Transformer les données API en format Chart.js
         const chartData = {
@@ -841,108 +977,36 @@ class YoozakKPIManager {
           raw: data.evolution,
           resume: data.resume || { ca_total: 0, ca_moyen: 0, tendance: 0 }
         };
+
+        console.log('📊 Données chart préparées:', {
+          nbLabels: chartData.labels.length,
+          nbValues: chartData.values.length,
+          valuesSum: chartData.values.reduce((a, b) => a + b, 0),
+          resume: chartData.resume
+        });
+
         return chartData;
       } else {
+        console.error('❌ API a retourné success=false:', data.message);
         throw new Error(data.message || 'Erreur lors du chargement des données d\'évolution');
       }
 
     } catch (error) {
       console.error('❌ Erreur récupération données évolution CA:', error);
+      console.error('Type d\'erreur:', error.name);
+      console.error('Message:', error.message);
 
-      // Données de fallback
-      const days = parseInt(period.replace('j', ''));
-      const fallbackData = {
+      // Retourner des données vides au lieu de données aléatoires
+      return {
         labels: [],
         values: [],
         raw: [],
         resume: { ca_total: 0, ca_moyen: 0, tendance: 0 }
       };
-
-      for (let i = days - 1; i >= 0; i--) {
-        const date = new Date();
-        date.setDate(date.getDate() - i);
-        const ca = Math.floor(Math.random() * 50000) + 10000;
-
-        fallbackData.labels.push(date.toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' }));
-        fallbackData.values.push(ca);
-        fallbackData.raw.push({
-          date: date.toISOString().split('T')[0],
-          date_formatee: date.toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' }),
-          ca: ca,
-          ca_formate: `${ca.toLocaleString('fr-FR')} DH`
-        });
-      }
-
-      fallbackData.resume.ca_total = fallbackData.values.reduce((a, b) => a + b, 0);
-      fallbackData.resume.ca_moyen = fallbackData.resume.ca_total / fallbackData.values.length;
-
-      return fallbackData;
     }
   }
 
-  async changeEvolutionPeriod(period) {
-    console.log(`🔄 Changement période évolution CA: ${period}`);
-
-    // Persister la période sélectionnée
-    this.selectedPeriod = period;
-
-    // Mise à jour visuelle des boutons
-    document.querySelectorAll('.period-btn').forEach(btn => {
-      btn.classList.remove('bg-blue-100', 'text-blue-600', 'font-medium');
-      btn.classList.add('bg-gray-100', 'text-gray-600');
-    });
-
-    const activeBtn = document.querySelector(`[data-period="${period}"]`);
-    if (activeBtn) {
-      activeBtn.classList.remove('bg-gray-100', 'text-gray-600');
-      activeBtn.classList.add('bg-blue-100', 'text-blue-600', 'font-medium');
-    }
-
-    // Mise à jour de l'indicateur de période
-    const periodeIndicator = document.getElementById('periode-indicator');
-    if (periodeIndicator) {
-      periodeIndicator.textContent = `Période: ${this.getPeriodLabel(period)}`;
-    }
-
-    // Affichage du loading
-    const loadingElement = document.getElementById('evolution-ca-loading');
-    if (loadingElement) {
-      loadingElement.classList.remove('hidden');
-    }
-
-    try {
-      const evolutionData = await this.fetchEvolutionCAData(period);
-
-      const chartId = 'ventes-ca-evolution-chart';
-      if (this.charts.has(chartId)) {
-        const chart = this.charts.get(chartId);
-        chart.data.labels = evolutionData.labels;
-        chart.data.datasets[0].data = evolutionData.values;
-        chart.update('active');
-      }
-
-      console.log('✅ Période mise à jour avec succès:', period);
-
-    } catch (error) {
-      console.error('❌ Erreur changement période:', error);
-
-      // Notification d'erreur à l'utilisateur
-      if (periodeIndicator) {
-        const originalText = periodeIndicator.textContent;
-        periodeIndicator.textContent = '❌ Erreur lors du changement de période';
-        periodeIndicator.classList.add('text-red-600');
-
-        setTimeout(() => {
-          periodeIndicator.textContent = originalText;
-          periodeIndicator.classList.remove('text-red-600');
-        }, 3000);
-      }
-    } finally {
-      if (loadingElement) {
-        loadingElement.classList.add('hidden');
-      }
-    }
-  }
+  // SUPPRIMÉ: changeEvolutionPeriod() - Utilise maintenant le filtre global changePeriodeVentes()
 
   handleFilterChange(filterElement) {
     const filterName = filterElement.name;
@@ -954,6 +1018,31 @@ class YoozakKPIManager {
     this.refreshData();
   }
 
+  async changePeriodeVentes(period) {
+    console.log(`🔄 Changement période Ventes: ${period}`);
+
+    // Persister la période sélectionnée
+    this.selectedPeriodVentes = period;
+
+    // Mise à jour visuelle des boutons
+    document.querySelectorAll('.periode-ventes-btn').forEach(btn => {
+      btn.classList.remove('bg-blue-600', 'text-white', 'font-medium');
+      btn.classList.add('bg-gray-100', 'text-gray-600');
+    });
+
+    const activeBtn = document.querySelector(`.periode-ventes-btn[data-period="${period}"]`);
+    if (activeBtn) {
+      activeBtn.classList.remove('bg-gray-100', 'text-gray-600');
+      activeBtn.classList.add('bg-blue-600', 'text-white', 'font-medium');
+    }
+
+    // Mettre à jour les textes "vs" pour tous les KPIs
+    this.updateVsPeriodTexts(period);
+
+    // Recharger toutes les données avec la nouvelle période
+    await this.loadVentesData();
+  }
+
   updateVentesKPIs(data) {
     console.log('🔄 Mise à jour des KPIs Ventes...', data);
 
@@ -961,6 +1050,9 @@ class YoozakKPIManager {
       // Afficher le contenu principal et masquer le loading
       document.getElementById('ventes-loading')?.classList.add('hidden');
       document.getElementById('ventes-main-content')?.classList.remove('hidden');
+
+      // Mettre à jour les textes "vs" IMMÉDIATEMENT après l'affichage du contenu
+      this.updateVsPeriodTexts(this.selectedPeriodVentes);
 
       // KPIs principaux
       if (data.kpis_principaux) {
@@ -971,39 +1063,25 @@ class YoozakKPIManager {
 
       // KPIs secondaires
       if (data.kpis_secondaires) {
-        // Top modèle avec vérification des données
-        if (data.kpis_secondaires.top_modele && data.kpis_secondaires.top_modele.nom) {
-          this.updateVentesKPICard('top_modele', {
-            nom: data.kpis_secondaires.top_modele.nom,
-            valeur_formatee: data.kpis_secondaires.top_modele.nom,
-            sub_value: data.kpis_secondaires.top_modele.ca ? `${data.kpis_secondaires.top_modele.ca.toLocaleString('fr-FR')} DH` : 'N/A',
-            tendance: data.kpis_secondaires.top_modele.pourcentage || 0,
-            pourcentage: data.kpis_secondaires.top_modele.pourcentage || 0,
-            unite: ''
-          });
+        // Top 3 modèles avec vérification des données
+        if (data.kpis_secondaires.top_modeles_kpi && data.kpis_secondaires.top_modeles_kpi.length > 0) {
+          this.updateTopModelesCard(data.kpis_secondaires.top_modeles_kpi);
+        } else {
+          this.showTopModelesEmpty();
         }
 
-        // Top région avec vérification des données
-        if (data.kpis_secondaires.top_region && data.kpis_secondaires.top_region.nom) {
-          this.updateVentesKPICard('top_region', {
-            nom: data.kpis_secondaires.top_region.nom,
-            valeur_formatee: data.kpis_secondaires.top_region.nom,
-            sub_value: data.kpis_secondaires.top_region.ca ? `${data.kpis_secondaires.top_region.ca.toLocaleString('fr-FR')} DH` : 'N/A',
-            tendance: data.kpis_secondaires.top_region.pourcentage || 0,
-            pourcentage: data.kpis_secondaires.top_region.pourcentage || 0,
-            unite: '',
-            est_donnees_manquantes: data.kpis_secondaires.top_region.est_donnees_manquantes || false
-          });
+        // Top 3 villes avec vérification des données
+        if (data.kpis_secondaires.top_villes && data.kpis_secondaires.top_villes.length > 0) {
+          this.updateTopVillesCard(data.kpis_secondaires.top_villes);
+        } else {
+          this.showTopVillesEmpty();
         }
 
-        // Commande max avec vérification des données
-        if (data.kpis_secondaires.commande_max && data.kpis_secondaires.commande_max.valeur_formatee) {
-          this.updateVentesKPICard('commande_max', {
-            valeur_formatee: data.kpis_secondaires.commande_max.valeur_formatee,
-            sub_value: 'Record ce mois',
-            tendance: 0,
-            unite: 'DH'
-        });
+        // TOP 3 Commandes max avec vérification des données
+        if (data.kpis_secondaires.top_commandes_max && data.kpis_secondaires.top_commandes_max.length > 0) {
+          this.updateTopCommandesCard(data.kpis_secondaires.top_commandes_max);
+        } else {
+          this.showTopCommandesEmpty();
         }
       }
 
@@ -1011,6 +1089,175 @@ class YoozakKPIManager {
     } catch (error) {
       console.error('❌ Erreur lors de la mise à jour des KPIs Ventes:', error);
     }
+  }
+
+  // Nouvelle fonction pour mettre à jour le Top 3 des modèles
+  updateTopModelesCard(modeles) {
+    const container = document.getElementById('top-modeles-list');
+    const emptyState = document.getElementById('top-modeles-empty');
+
+    if (!container) return;
+
+    // Masquer l'état vide
+    if (emptyState) emptyState.classList.add('hidden');
+
+    // Couleurs et icônes pour chaque rang (similaire aux villes mais thème produit)
+    const rangs = [
+      { couleur: 'yellow', icon: 'fa-crown', bg: 'bg-yellow-50', text: 'text-yellow-600', border: 'border-yellow-200' },
+      { couleur: 'purple', icon: 'fa-star', bg: 'bg-purple-50', text: 'text-purple-600', border: 'border-purple-200' },
+      { couleur: 'orange', icon: 'fa-gem', bg: 'bg-orange-50', text: 'text-orange-600', border: 'border-orange-200' }
+    ];
+
+    // Construire le HTML
+    let html = '';
+    modeles.forEach((modele, index) => {
+      const rang = rangs[index] || rangs[2]; // Fallback sur la 3ème couleur
+
+      html += `
+        <div class="flex items-center justify-between p-3 ${rang.bg} border ${rang.border} rounded-lg hover:shadow-sm transition-shadow">
+          <div class="flex items-center gap-3 flex-1">
+            <div class="flex items-center justify-center w-8 h-8 ${rang.bg} ${rang.text} rounded-full border ${rang.border}">
+              <i class="fas ${rang.icon} text-xs"></i>
+            </div>
+            <div class="flex-1">
+              <p class="font-semibold text-gray-900 text-sm" title="${modele.nom}">${modele.nom.length > 25 ? modele.nom.substring(0, 25) + '...' : modele.nom}</p>
+              <p class="text-xs text-gray-500">${modele.ca_formate} • ${modele.quantite} unités</p>
+            </div>
+          </div>
+          <div class="text-right">
+            <div class="inline-flex items-center gap-1 px-2 py-1 ${rang.bg} ${rang.text} rounded-full">
+              <span class="text-xs font-bold">${modele.pourcentage}%</span>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+
+    container.innerHTML = html;
+    console.log('✅ Top 3 modèles mis à jour:', modeles);
+  }
+
+  // Fonction pour afficher l'état vide pour les modèles
+  showTopModelesEmpty() {
+    const container = document.getElementById('top-modeles-list');
+    const emptyState = document.getElementById('top-modeles-empty');
+
+    if (container) container.innerHTML = '';
+    if (emptyState) emptyState.classList.remove('hidden');
+
+    console.log('⚠️ Aucune donnée de modèles disponible');
+  }
+
+  // Nouvelle fonction pour mettre à jour le Top 3 des villes
+  updateTopVillesCard(villes) {
+    const container = document.getElementById('top-villes-list');
+    const emptyState = document.getElementById('top-villes-empty');
+
+    if (!container) return;
+
+    // Masquer l'état vide
+    if (emptyState) emptyState.classList.add('hidden');
+
+    // Couleurs et icônes pour chaque rang
+    const rangs = [
+      { couleur: 'yellow', icon: 'fa-trophy', bg: 'bg-yellow-50', text: 'text-yellow-600', border: 'border-yellow-200' },
+      { couleur: 'blue', icon: 'fa-medal', bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-200' },
+      { couleur: 'green', icon: 'fa-award', bg: 'bg-green-50', text: 'text-green-600', border: 'border-green-200' }
+    ];
+
+    // Construire le HTML
+    let html = '';
+    villes.forEach((ville, index) => {
+      const rang = rangs[index] || rangs[2]; // Fallback sur la 3ème couleur
+
+      html += `
+        <div class="flex items-center justify-between p-3 ${rang.bg} border ${rang.border} rounded-lg hover:shadow-sm transition-shadow">
+          <div class="flex items-center gap-3 flex-1">
+            <div class="flex items-center justify-center w-8 h-8 ${rang.bg} ${rang.text} rounded-full border ${rang.border}">
+              <i class="fas ${rang.icon} text-xs"></i>
+            </div>
+            <div class="flex-1">
+              <p class="font-semibold text-gray-900 text-sm">${ville.nom}</p>
+              <p class="text-xs text-gray-500">${ville.ca_formate}</p>
+            </div>
+          </div>
+          <div class="text-right">
+            <div class="inline-flex items-center gap-1 px-2 py-1 ${rang.bg} ${rang.text} rounded-full">
+              <span class="text-xs font-bold">${ville.pourcentage}%</span>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+
+    container.innerHTML = html;
+    console.log('✅ Top 3 villes mis à jour:', villes);
+  }
+
+  // Fonction pour afficher l'état vide pour les villes
+  showTopVillesEmpty() {
+    const container = document.getElementById('top-villes-list');
+    const emptyState = document.getElementById('top-villes-empty');
+
+    if (container) container.innerHTML = '';
+    if (emptyState) emptyState.classList.remove('hidden');
+
+    console.log('⚠️ Aucune donnée de villes disponible');
+  }
+
+  // Nouvelle fonction pour mettre à jour le TOP 3 des commandes
+  updateTopCommandesCard(commandes) {
+    const container = document.getElementById('top-commandes-list');
+    const emptyState = document.getElementById('top-commandes-empty');
+
+    if (!container) return;
+
+    // Masquer l'état vide
+    if (emptyState) emptyState.classList.add('hidden');
+
+    // Couleurs et icônes pour chaque rang (thème trophée)
+    const rangs = [
+      { couleur: 'orange', icon: 'fa-trophy', bg: 'bg-orange-50', text: 'text-orange-600', border: 'border-orange-200' },
+      { couleur: 'yellow', icon: 'fa-medal', bg: 'bg-yellow-50', text: 'text-yellow-600', border: 'border-yellow-200' },
+      { couleur: 'gray', icon: 'fa-award', bg: 'bg-gray-50', text: 'text-gray-600', border: 'border-gray-200' }
+    ];
+
+    // Construire le HTML
+    let html = '';
+    commandes.forEach((commande, index) => {
+      const rang = rangs[index] || rangs[2]; // Fallback sur la 3ème couleur
+
+      html += `
+        <div class="flex items-center justify-between p-3 ${rang.bg} border ${rang.border} rounded-lg hover:shadow-sm transition-shadow">
+          <div class="flex items-center gap-3 flex-1">
+            <div class="flex items-center justify-center w-8 h-8 ${rang.bg} ${rang.text} rounded-full border ${rang.border}">
+              <i class="fas ${rang.icon} text-xs"></i>
+            </div>
+            <div class="flex-1">
+              <p class="font-semibold text-gray-900 text-sm">Nº${commande.id_yz || 'N/A'}</p>
+              <p class="text-xs text-gray-500">${commande.client} • ${commande.date}</p>
+            </div>
+          </div>
+          <div class="text-right">
+            <div class="font-bold ${rang.text} text-sm">${commande.montant_formate} DH</div>
+          </div>
+        </div>
+      `;
+    });
+
+    container.innerHTML = html;
+    console.log('✅ TOP 3 commandes mis à jour:', commandes);
+  }
+
+  // Fonction pour afficher l'état vide pour les commandes
+  showTopCommandesEmpty() {
+    const container = document.getElementById('top-commandes-list');
+    const emptyState = document.getElementById('top-commandes-empty');
+
+    if (container) container.innerHTML = '';
+    if (emptyState) emptyState.classList.remove('hidden');
+
+    console.log('⚠️ Aucune donnée de commandes disponible');
   }
 
   // Nouvelle fonction pour mettre à jour les KPIs avec la structure des cartes Ventes
@@ -1023,45 +1270,11 @@ class YoozakKPIManager {
       return;
     }
 
-    // Gestion spéciale pour les KPIs secondaires avec données manquantes
-    if (kpiId === 'top_region' && kpiData.est_donnees_manquantes) {
-      // Cas spécial : affichage simple pour données géographiques manquantes
-      const valueElement = document.querySelector(`[data-kpi="${kpiId}"]`);
-      const subValueElement = document.querySelector(`[data-kpi-sub="${kpiId}"]`);
-      const trendElement = document.querySelector(`[data-kpi-trend="${kpiId}"]`);
-      const uniteElement = document.querySelector(`[data-kpi-unite="${kpiId}"]`);
-
-      if (valueElement) {
-        valueElement.textContent = kpiData.nom || 'Données manquantes';
-        valueElement.className = valueElement.className.replace('text-gray-900', 'text-orange-600');
-        valueElement.style.fontSize = '14px';
-      }
-      if (subValueElement) {
-        subValueElement.style.display = 'none'; // Masquer complètement
-      }
-      if (uniteElement) {
-        uniteElement.style.display = 'none'; // Masquer complètement
-      }
-      if (trendElement) {
-        // Masquer complètement toute la section tendance
-        const trendParent = trendElement.closest('.text-right');
-        if (trendParent) {
-          trendParent.style.display = 'none';
-        }
-      }
-      return;
-    }
-
     // Mettre à jour la valeur principale
     const valueElement = document.querySelector(`[data-kpi="${kpiId}"]`);
     if (valueElement) {
-      if (kpiId === 'top_modele' || kpiId === 'top_region') {
-        // Pour les KPIs secondaires, afficher le nom
-        valueElement.textContent = kpiData.nom || kpiData.valeur_formatee || kpiData.valeur || '-';
-      } else {
-        // Pour les KPIs principaux, afficher la valeur formatée
-        valueElement.textContent = kpiData.valeur_formatee || kpiData.valeur || '-';
-      }
+      // Pour tous les KPIs, afficher la valeur formatée
+      valueElement.textContent = kpiData.valeur_formatee || kpiData.valeur || '-';
       console.log(`✅ Valeur mise à jour pour ${kpiId}: ${valueElement.textContent}`);
     } else {
       console.warn(`❌ Élément [data-kpi="${kpiId}"] introuvable`);
@@ -1095,12 +1308,7 @@ class YoozakKPIManager {
       // Mettre à jour le texte de la tendance
       const spanElement = trendElement.querySelector('span');
       if (spanElement) {
-        // Pour les KPIs secondaires, on affiche le pourcentage
-        if (kpiId === 'top_modele' || kpiId === 'top_region') {
-          spanElement.textContent = kpiData.pourcentage ? `${kpiData.pourcentage}%` : '-';
-        } else {
-          spanElement.textContent = isPositive ? `+${trend}%` : `${trend}%`;
-        }
+        spanElement.textContent = isPositive ? `+${trend}%` : `${trend}%`;
         spanElement.className = isPositive ? 'text-green-600' : isNegative ? 'text-red-600' : 'text-gray-600';
       }
     }
@@ -1116,7 +1324,7 @@ class YoozakKPIManager {
       // Ajouter un timeout pour éviter les blocages
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 secondes max
-      
+
       const response = await fetch(this.apiEndpoint + 'clients/', {
         signal: controller.signal,
         headers: {
@@ -1135,13 +1343,13 @@ class YoozakKPIManager {
       if (!data.success) {
         throw new Error(data.message || 'Erreur API');
       }
-      
+
       // Vérifier si les données sont vides
       if (data.empty) {
         this.showClientsEmpty();
         return;
       }
-      
+
       // Mettre à jour l'interface avec les données
       this.updateClientsKPIs(data);
       this.updateClientsAnalyses(data);
@@ -1151,14 +1359,14 @@ class YoozakKPIManager {
 
     } catch (error) {
       console.error('❌ Erreur chargement Clients:', error);
-      
+
       // Gestion spécifique des erreurs de timeout
       if (error.name === 'AbortError') {
         this.showErrorState('clients', 'Le chargement des données clients a pris trop de temps. Veuillez réessayer.');
       } else {
         this.showErrorState('clients', 'Erreur lors du chargement des données clients');
       }
-      
+
       // Afficher l'état vide pour éviter une interface bloquée
       this.showClientsEmpty();
     }
@@ -1361,7 +1569,7 @@ class YoozakKPIManager {
     if (loading) loading.style.display = 'none';
     if (content) content.style.display = 'block';
     if (emptyState) emptyState.style.display = 'none';
-    
+
     // Initialiser les graphiques clients une fois que le contenu est visible
     if (window.kpiCharts) {
       // Utiliser setTimeout pour s'assurer que le DOM est bien mis à jour avant de créer les graphiques
@@ -1381,21 +1589,978 @@ class YoozakKPIManager {
       case 'clients':
         this.loadClientsData();
         break;
+      case 'performance-commerciale':
+        this.loadPerformanceCommercialeData();
+        break;
       default:
         console.log('Onglet non encore implémenté:', tabName);
+    }
+  }
+
+  // ===== MÉTHODES PERFORMANCE COMMERCIALE =====
+  async changePeriodePerformance(period) {
+    console.log(`🔄 Changement période Performance Commerciale: ${period}`);
+
+    // Persister la période sélectionnée
+    this.selectedPeriodPerformance = period;
+
+    // Mise à jour visuelle des boutons
+    document.querySelectorAll('.periode-perf-btn').forEach(btn => {
+      btn.classList.remove('bg-blue-600', 'text-white', 'font-medium');
+      btn.classList.add('bg-gray-100', 'text-gray-600');
+    });
+
+    const activeBtn = document.querySelector(`.periode-perf-btn[data-period="${period}"]`);
+    if (activeBtn) {
+      activeBtn.classList.remove('bg-gray-100', 'text-gray-600');
+      activeBtn.classList.add('bg-blue-600', 'text-white', 'font-medium');
+    }
+
+    // Mettre à jour les textes "vs" pour tous les KPIs de performance
+    this.updateVsPeriodTextsPerformance(period);
+
+    // Recharger toutes les données avec la nouvelle période
+    await this.loadPerformanceCommercialeData();
+  }
+
+  updateVsPeriodTextsPerformance(period) {
+    const periodLabel = this.getPeriodLabel(period);
+    const elements = document.querySelectorAll('#performance-commerciale-content [data-kpi-vs]');
+
+    console.log(`🔄 Mise à jour des textes "vs" Performance pour la période: ${period} (${periodLabel})`);
+    console.log(`   Nombre d'éléments trouvés: ${elements.length}`);
+
+    elements.forEach((element, index) => {
+      const kpiId = element.getAttribute('data-kpi-vs');
+      element.textContent = `vs ${periodLabel}`;
+      console.log(`   ✅ [${index + 1}] ${kpiId}: "${element.textContent}"`);
+    });
+
+    if (elements.length === 0) {
+      console.warn(`   ⚠️ Aucun élément [data-kpi-vs] trouvé dans Performance Commerciale`);
+    }
+  }
+
+  // Récupérer les données des commandes par source depuis l'API
+  // SANS FILTRE DE PÉRIODE - affiche toutes les commandes
+  async fetchCommandesParSourceData() {
+    const url = `${this.apiEndpoint}commandes-par-source/`;
+    console.log(`🔍 Fetch commandes par source (toutes périodes): ${url}`);
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Erreur API: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('📊 Données commandes par source reçues:', data);
+
+    return data;
+  }
+
+  // Mettre à jour le graphique des commandes par source (bar chart)
+  // SANS FILTRE DE PÉRIODE
+  async updateCommandesParSourceChart() {
+    console.log(`📊 Mise à jour graphique Commandes par Source (toutes périodes)...`);
+
+    const canvas = document.getElementById('commandes-par-source-chart');
+    const loadingInitial = document.getElementById('commandes-sources-initial-loading');
+    const loadingOverlay = document.getElementById('commandes-sources-loading');
+    const emptyState = document.getElementById('commandes-sources-empty');
+    const statsPanel = document.getElementById('commandes-sources-stats');
+
+    if (!canvas) {
+      console.warn('⚠️ Canvas commandes-par-source-chart non trouvé');
+      return;
+    }
+
+    try {
+      // Afficher le loading (overlay si graphique existe déjà, sinon initial loading)
+      if (canvas.classList.contains('hidden')) {
+        if (loadingInitial) loadingInitial.classList.remove('hidden');
+      } else {
+        if (loadingOverlay) loadingOverlay.classList.remove('hidden');
+      }
+      if (emptyState) emptyState.classList.add('hidden');
+
+      // Récupérer les données (sans filtre de période)
+      const data = await this.fetchCommandesParSourceData();
+
+      // Vérifier si on a des données
+      if (!data.success || !data.labels || data.labels.length === 0) {
+        console.log('⚠️ Aucune donnée de commandes par source');
+
+        // Masquer le canvas et afficher l'état vide
+        if (canvas) canvas.classList.add('hidden');
+        if (loadingInitial) loadingInitial.classList.add('hidden');
+        if (loadingOverlay) loadingOverlay.classList.add('hidden');
+        if (emptyState) emptyState.classList.remove('hidden');
+        if (statsPanel) statsPanel.classList.add('hidden');
+
+        return;
+      }
+
+      // Détruire le graphique existant si présent
+      const existingChart = this.charts.get('commandes-par-source');
+      if (existingChart) {
+        console.log('🗑️ Destruction du graphique commandes par source existant');
+        existingChart.destroy();
+        this.charts.delete('commandes-par-source');
+      }
+
+      // Créer le nouveau graphique
+      const ctx = canvas.getContext('2d');
+
+      const chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: data.labels,
+          datasets: [{
+            label: 'Nombre de commandes',
+            data: data.values,
+            backgroundColor: data.colors,
+            borderColor: data.colors.map(color => color.replace('0.8', '1')),
+            borderWidth: 2,
+            borderRadius: 6,
+            barThickness: 'flex',
+            maxBarThickness: 80
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false
+            },
+            tooltip: {
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+              padding: 12,
+              titleFont: {
+                size: 14,
+                weight: 'bold'
+              },
+              bodyFont: {
+                size: 13
+              },
+              callbacks: {
+                label: function (context) {
+                  const index = context.dataIndex;
+                  const nbCommandes = context.parsed.y;
+                  const total = data.values.reduce((a, b) => a + b, 0);
+                  const percent = total > 0 ? ((nbCommandes / total) * 100).toFixed(1) : 0;
+
+                  return [
+                    `Commandes: ${nbCommandes.toLocaleString('fr-FR')}`,
+                    `Part: ${percent}%`
+                  ];
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: {
+                display: false
+              },
+              ticks: {
+                font: {
+                  size: 12,
+                  weight: '500'
+                },
+                color: '#4B5563'
+              }
+            },
+            y: {
+              beginAtZero: true,
+              grid: {
+                color: 'rgba(156, 163, 175, 0.1)',
+                drawBorder: false
+              },
+              ticks: {
+                font: {
+                  size: 11
+                },
+                color: '#6B7280',
+                callback: function (value) {
+                  return value.toLocaleString('fr-FR');
+                }
+              }
+            }
+          }
+        }
+      });
+
+      // Sauvegarder le graphique
+      this.charts.set('commandes-par-source', chart);
+
+      // Afficher le canvas et masquer le loading
+      if (canvas) canvas.classList.remove('hidden');
+      if (loadingInitial) loadingInitial.classList.add('hidden');
+      if (loadingOverlay) loadingOverlay.classList.add('hidden');
+
+      // Mettre à jour les statistiques
+      if (statsPanel) {
+        statsPanel.classList.remove('hidden');
+        document.getElementById('stat-sources-total').textContent = data.stats.total_commandes_fmt;
+        document.getElementById('stat-sources-nb').textContent = data.stats.nb_sources;
+        document.getElementById('stat-sources-principale').textContent = data.stats.source_principale;
+        document.getElementById('stat-sources-percent').textContent = data.stats.source_principale_percent_fmt;
+      }
+
+      console.log('✅ Graphique Commandes par Source mis à jour');
+
+    } catch (error) {
+      console.error('❌ Erreur lors de la mise à jour du graphique commandes par source:', error);
+
+      // Afficher l'état vide en cas d'erreur
+      if (canvas) canvas.classList.add('hidden');
+      if (loadingInitial) loadingInitial.classList.add('hidden');
+      if (loadingOverlay) loadingOverlay.classList.add('hidden');
+      if (emptyState) emptyState.classList.remove('hidden');
+      if (statsPanel) statsPanel.classList.add('hidden');
+    }
+  }
+
+  // Récupérer les données du taux de doublons depuis l'API
+  // SANS FILTRE DE PÉRIODE - analyse toute la base
+  async fetchTauxDoublonsData() {
+    const url = `${this.apiEndpoint}taux-doublons/`;
+    console.log(`🔍 Fetch taux doublons (toutes périodes): ${url}`);
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Erreur API: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('📊 Données taux doublons reçues:', data);
+
+    return data;
+  }
+
+  // Mettre à jour l'affichage du taux de doublons
+  async updateTauxDoublons() {
+    console.log(`📊 Mise à jour du taux de doublons...`);
+
+    try {
+      // Récupérer les données
+      const data = await this.fetchTauxDoublonsData();
+
+      // Vérifier si on a des données
+      if (!data.success) {
+        console.log('⚠️ Erreur lors de la récupération du taux de doublons');
+        return;
+      }
+
+      // Mettre à jour l'affichage
+      const tauxValue = document.getElementById('taux-doublons-value');
+      const tauxTotal = document.getElementById('taux-doublons-total');
+      const nbDoublons = document.getElementById('nb-doublons');
+      const details = document.getElementById('doublons-details');
+
+      if (tauxValue) {
+        tauxValue.textContent = data.taux_doublons;
+
+        // Changer la couleur selon le taux
+        if (data.taux_doublons > 10) {
+          tauxValue.classList.add('text-red-600');
+          tauxValue.classList.remove('text-orange-600', 'text-green-600', 'text-gray-900');
+        } else if (data.taux_doublons > 5) {
+          tauxValue.classList.add('text-orange-600');
+          tauxValue.classList.remove('text-red-600', 'text-green-600', 'text-gray-900');
+        } else if (data.taux_doublons > 0) {
+          tauxValue.classList.add('text-green-600');
+          tauxValue.classList.remove('text-red-600', 'text-orange-600', 'text-gray-900');
+        } else {
+          // Si taux = 0, garder la couleur grise par défaut
+          tauxValue.classList.remove('text-red-600', 'text-orange-600', 'text-green-600');
+        }
+      }
+
+      if (tauxTotal) {
+        tauxTotal.textContent = data.total_commandes_fmt;
+      }
+
+      if (nbDoublons) {
+        nbDoublons.textContent = data.nb_doublons_fmt;
+      }
+
+      // Afficher les détails si taux > 0
+      if (details && data.nb_doublons > 0) {
+        details.classList.remove('hidden');
+      }
+
+      console.log(`✅ Taux de doublons mis à jour: ${data.taux_doublons}%`);
+
+    } catch (error) {
+      console.error('❌ Erreur lors de la mise à jour du taux de doublons:', error);
+    }
+  }
+
+  // Récupérer les données du taux de commandes erronées depuis l'API
+  // SANS FILTRE DE PÉRIODE - analyse toute la base
+  async fetchTauxErroneesData() {
+    const url = `${this.apiEndpoint}taux-erronees/`;
+    console.log(`🔍 Fetch taux erronées (toutes périodes): ${url}`);
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Erreur API: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('📊 Données taux erronées reçues:', data);
+
+    return data;
+  }
+
+  // Mettre à jour l'affichage du taux de commandes erronées
+  async updateTauxErronees() {
+    console.log(`📊 Mise à jour du taux de commandes erronées...`);
+
+    try {
+      // Récupérer les données
+      const data = await this.fetchTauxErroneesData();
+
+      // Vérifier si on a des données
+      if (!data.success) {
+        console.log('⚠️ Erreur lors de la récupération du taux de commandes erronées');
+        return;
+      }
+
+      // Mettre à jour l'affichage
+      const tauxValue = document.getElementById('taux-erronees-value');
+      const tauxTotal = document.getElementById('taux-erronees-total');
+      const nbErronees = document.getElementById('nb-erronees');
+      const details = document.getElementById('erronees-details');
+
+      if (tauxValue) {
+        tauxValue.textContent = data.taux_erronees;
+
+        // Changer la couleur selon le taux
+        if (data.taux_erronees > 10) {
+          tauxValue.classList.add('text-red-600');
+          tauxValue.classList.remove('text-orange-600', 'text-green-600', 'text-gray-900');
+        } else if (data.taux_erronees > 5) {
+          tauxValue.classList.add('text-orange-600');
+          tauxValue.classList.remove('text-red-600', 'text-green-600', 'text-gray-900');
+        } else if (data.taux_erronees > 0) {
+          tauxValue.classList.add('text-green-600');
+          tauxValue.classList.remove('text-red-600', 'text-orange-600', 'text-gray-900');
+        } else {
+          // Si taux = 0, garder la couleur grise par défaut
+          tauxValue.classList.remove('text-red-600', 'text-orange-600', 'text-green-600');
+        }
+      }
+
+      if (tauxTotal) {
+        tauxTotal.textContent = data.total_commandes_fmt;
+      }
+
+      if (nbErronees) {
+        nbErronees.textContent = data.nb_erronees_fmt;
+      }
+
+      // Afficher les détails si taux > 0
+      if (details && data.nb_erronees > 0) {
+        details.classList.remove('hidden');
+      }
+
+      console.log(`✅ Taux de commandes erronées mis à jour: ${data.taux_erronees}%`);
+
+    } catch (error) {
+      console.error('❌ Erreur lors de la mise à jour du taux de commandes erronées:', error);
+    }
+  }
+
+  // Récupérer les données du taux de commandes retournées depuis l'API
+  async fetchTauxRetourneesData() {
+    const url = `${this.apiEndpoint}taux-retournees/`;
+    console.log(`🔍 Fetch taux retournées (toutes périodes): ${url}`);
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Erreur API: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('📊 Données taux retournées reçues:', data);
+
+    return data;
+  }
+
+  // Mettre à jour l'affichage du taux de commandes retournées
+  async updateTauxRetournees() {
+    console.log(`📊 Mise à jour du taux de commandes retournées...`);
+
+    try {
+      const data = await this.fetchTauxRetourneesData();
+
+      if (!data.success) {
+        console.log('⚠️ Erreur lors de la récupération du taux de commandes retournées');
+        return;
+      }
+
+      const tauxValue = document.getElementById('taux-retournees-value');
+      const tauxTotal = document.getElementById('taux-retournees-total');
+      const nbRetournees = document.getElementById('nb-retournees');
+      const details = document.getElementById('retournees-details');
+
+      if (tauxValue) {
+        tauxValue.textContent = data.taux_retournees;
+
+        if (data.taux_retournees > 10) {
+          tauxValue.classList.add('text-red-600');
+          tauxValue.classList.remove('text-orange-600', 'text-green-600', 'text-gray-900');
+        } else if (data.taux_retournees > 5) {
+          tauxValue.classList.add('text-orange-600');
+          tauxValue.classList.remove('text-red-600', 'text-green-600', 'text-gray-900');
+        } else if (data.taux_retournees > 0) {
+          tauxValue.classList.add('text-green-600');
+          tauxValue.classList.remove('text-red-600', 'text-orange-600', 'text-gray-900');
+        } else {
+          tauxValue.classList.remove('text-red-600', 'text-orange-600', 'text-green-600');
+        }
+      }
+
+      if (tauxTotal) tauxTotal.textContent = data.total_commandes_fmt;
+      if (nbRetournees) nbRetournees.textContent = data.nb_retournees_fmt;
+      if (details && data.nb_retournees > 0) details.classList.remove('hidden');
+
+      console.log(`✅ Taux de commandes retournées mis à jour: ${data.taux_retournees}%`);
+
+    } catch (error) {
+      console.error('❌ Erreur lors de la mise à jour du taux de commandes retournées:', error);
+    }
+  }
+
+  // Récupérer les données du taux de commandes annulées depuis l'API
+  async fetchTauxAnnuleesData() {
+    const url = `${this.apiEndpoint}taux-annulees/`;
+    console.log(`🔍 Fetch taux annulées (toutes périodes): ${url}`);
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Erreur API: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('📊 Données taux annulées reçues:', data);
+
+    return data;
+  }
+
+  // Mettre à jour l'affichage du taux de commandes annulées
+  async updateTauxAnnulees() {
+    console.log(`📊 Mise à jour du taux de commandes annulées...`);
+
+    try {
+      const data = await this.fetchTauxAnnuleesData();
+
+      if (!data.success) {
+        console.log('⚠️ Erreur lors de la récupération du taux de commandes annulées');
+        return;
+      }
+
+      const tauxValue = document.getElementById('taux-annulees-value');
+      const tauxTotal = document.getElementById('taux-annulees-total');
+      const nbAnnulees = document.getElementById('nb-annulees');
+      const details = document.getElementById('annulees-details');
+
+      if (tauxValue) {
+        tauxValue.textContent = data.taux_annulees;
+
+        if (data.taux_annulees > 10) {
+          tauxValue.classList.add('text-red-600');
+          tauxValue.classList.remove('text-orange-600', 'text-green-600', 'text-gray-900');
+        } else if (data.taux_annulees > 5) {
+          tauxValue.classList.add('text-orange-600');
+          tauxValue.classList.remove('text-red-600', 'text-green-600', 'text-gray-900');
+        } else if (data.taux_annulees > 0) {
+          tauxValue.classList.add('text-green-600');
+          tauxValue.classList.remove('text-red-600', 'text-orange-600', 'text-gray-900');
+        } else {
+          tauxValue.classList.remove('text-red-600', 'text-orange-600', 'text-green-600');
+        }
+      }
+
+      if (tauxTotal) tauxTotal.textContent = data.total_commandes_fmt;
+      if (nbAnnulees) nbAnnulees.textContent = data.nb_annulees_fmt;
+      if (details && data.nb_annulees > 0) details.classList.remove('hidden');
+
+      console.log(`✅ Taux de commandes annulées mis à jour: ${data.taux_annulees}%`);
+
+    } catch (error) {
+      console.error('❌ Erreur lors de la mise à jour du taux de commandes annulées:', error);
+    }
+  }
+
+  // Récupérer les données du taux de livraison depuis l'API
+  async fetchTauxLivraisonData() {
+    const url = `${this.apiEndpoint}taux-livraison/`;
+    console.log(`🔍 Fetch taux livraison (toutes périodes): ${url}`);
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Erreur API: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('📊 Données taux livraison reçues:', data);
+
+    return data;
+  }
+
+  // Mettre à jour l'affichage du taux de livraison
+  async updateTauxLivraison() {
+    console.log(`📊 Mise à jour du taux de livraison...`);
+
+    try {
+      const data = await this.fetchTauxLivraisonData();
+
+      if (!data.success) {
+        console.log('⚠️ Erreur lors de la récupération du taux de livraison');
+        return;
+      }
+
+      const tauxValue = document.getElementById('taux-livraison-value');
+      const tauxTotal = document.getElementById('taux-livraison-total');
+      const nbLivrees = document.getElementById('nb-livrees');
+      const details = document.getElementById('livraison-details');
+
+      if (tauxValue) {
+        tauxValue.textContent = data.taux_livraison;
+
+        // Pour le taux de livraison, plus c'est élevé, mieux c'est
+        if (data.taux_livraison >= 80) {
+          tauxValue.classList.add('text-green-600');
+          tauxValue.classList.remove('text-orange-600', 'text-red-600', 'text-gray-900');
+        } else if (data.taux_livraison >= 60) {
+          tauxValue.classList.add('text-orange-600');
+          tauxValue.classList.remove('text-green-600', 'text-red-600', 'text-gray-900');
+        } else if (data.taux_livraison > 0) {
+          tauxValue.classList.add('text-red-600');
+          tauxValue.classList.remove('text-green-600', 'text-orange-600', 'text-gray-900');
+        } else {
+          tauxValue.classList.remove('text-green-600', 'text-orange-600', 'text-red-600');
+        }
+      }
+
+      if (tauxTotal) tauxTotal.textContent = data.total_commandes_fmt;
+      if (nbLivrees) nbLivrees.textContent = data.nb_livrees_fmt;
+      if (details && data.nb_livrees > 0) details.classList.remove('hidden');
+
+      console.log(`✅ Taux de livraison mis à jour: ${data.taux_livraison}%`);
+
+    } catch (error) {
+      console.error('❌ Erreur lors de la mise à jour du taux de livraison:', error);
+    }
+  }
+
+  // Récupérer les données du délai moyen de livraison depuis l'API
+  async fetchDelaiMoyenLivraisonData() {
+    const url = `${this.apiEndpoint}delai-moyen-livraison/`;
+    console.log(`🔍 Fetch délai moyen de livraison (toutes périodes): ${url}`);
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Erreur API: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('📊 Données délai moyen de livraison reçues:', data);
+
+    return data;
+  }
+
+  // Mettre à jour l'affichage du délai moyen de livraison
+  async updateDelaiMoyenLivraison() {
+    console.log(`📊 Mise à jour du délai moyen de livraison...`);
+
+    try {
+      const data = await this.fetchDelaiMoyenLivraisonData();
+
+      if (!data.success) {
+        console.log('⚠️ Erreur lors de la récupération du délai moyen de livraison');
+        return;
+      }
+
+      const delaiValue = document.getElementById('delai-moyen-value');
+      const delaiTotal = document.getElementById('delai-moyen-total');
+      const nbCommandesDelai = document.getElementById('nb-commandes-delai');
+      const details = document.getElementById('delai-details');
+
+      if (delaiValue) {
+        // Afficher le délai formaté complet (jours, heures, minutes)
+        delaiValue.textContent = data.delai_moyen_formatted;
+
+        // Colorier selon le délai en jours (plus court = mieux)
+        const totalJours = data.delai_jours;
+        if (totalJours <= 2) {
+          delaiValue.classList.add('text-green-600');
+          delaiValue.classList.remove('text-orange-600', 'text-red-600', 'text-gray-900');
+        } else if (totalJours <= 5) {
+          delaiValue.classList.add('text-orange-600');
+          delaiValue.classList.remove('text-green-600', 'text-red-600', 'text-gray-900');
+        } else if (totalJours > 5) {
+          delaiValue.classList.add('text-red-600');
+          delaiValue.classList.remove('text-green-600', 'text-orange-600', 'text-gray-900');
+        } else {
+          delaiValue.classList.remove('text-green-600', 'text-orange-600', 'text-red-600');
+        }
+      }
+
+      if (delaiTotal) delaiTotal.textContent = data.nb_commandes_livrees_fmt;
+      if (nbCommandesDelai) nbCommandesDelai.textContent = data.nb_commandes_livrees_fmt;
+      if (details && data.nb_commandes_livrees > 0) details.classList.remove('hidden');
+
+      console.log(`✅ Délai moyen de livraison mis à jour: ${data.delai_moyen_formatted}`);
+
+    } catch (error) {
+      console.error('❌ Erreur lors de la mise à jour du délai moyen de livraison:', error);
+    }
+  }
+
+  // Récupérer les données des motifs d'annulation depuis l'API
+  async fetchMotifsAnnulationData() {
+    const url = `${this.apiEndpoint}motifs-annulation/`;
+    console.log(`🔍 Fetch motifs d'annulation: ${url}`);
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Erreur API: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('📊 Données motifs d\'annulation reçues:', data);
+
+    return data;
+  }
+
+  // Mettre à jour le graphique camembert des motifs d'annulation
+  async updateMotifsAnnulationChart() {
+    console.log(`📊 Mise à jour du graphique motifs d'annulation...`);
+
+    try {
+      const data = await this.fetchMotifsAnnulationData();
+
+      if (!data.success) {
+        console.log('⚠️ Erreur lors de la récupération des motifs d\'annulation');
+        return;
+      }
+
+      const initialLoading = document.getElementById('motifs-annulation-initial-loading');
+      const canvas = document.getElementById('motifs-annulation-chart');
+      const emptyState = document.getElementById('motifs-annulation-empty');
+      const statTotal = document.getElementById('stat-motifs-total');
+      const statNb = document.getElementById('stat-motifs-nb');
+
+      // Vérifier s'il y a des données
+      if (!data.labels || data.labels.length === 0) {
+        if (initialLoading) initialLoading.classList.add('hidden');
+        if (canvas) canvas.classList.add('hidden');
+        if (emptyState) emptyState.classList.remove('hidden');
+        console.log('ℹ️ Aucun motif d\'annulation trouvé');
+        return;
+      }
+
+      // Masquer le loading, afficher le canvas
+      if (initialLoading) initialLoading.classList.add('hidden');
+      if (canvas) canvas.classList.remove('hidden');
+      if (emptyState) emptyState.classList.add('hidden');
+
+      // Mettre à jour les statistiques
+      if (statTotal) statTotal.textContent = data.total_annulees_fmt;
+      if (statNb) statNb.textContent = data.nb_motifs;
+
+      // Détruire le graphique existant s'il existe
+      if (this.motifsAnnulationChart) {
+        this.motifsAnnulationChart.destroy();
+      }
+
+      // Palette de couleurs pour le pie chart (tons rouges/oranges pour annulation)
+      const colors = [
+        '#EF4444', // red-500
+        '#F97316', // orange-500
+        '#DC2626', // red-600
+        '#EA580C', // orange-600
+        '#B91C1C', // red-700
+        '#C2410C', // orange-700
+        '#991B1B', // red-800
+        '#9A3412', // orange-800
+        '#7F1D1D', // red-900
+        '#7C2D12'  // orange-900
+      ];
+
+      // Créer le graphique
+      const ctx = canvas.getContext('2d');
+      this.motifsAnnulationChart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+          labels: data.labels,
+          datasets: [{
+            data: data.values,
+            backgroundColor: colors.slice(0, data.labels.length),
+            borderColor: '#ffffff',
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                padding: 15,
+                font: {
+                  size: 11
+                },
+                boxWidth: 12,
+                generateLabels: (chart) => {
+                  const chartData = chart.data;
+                  if (chartData.labels.length && chartData.datasets.length) {
+                    const total = chartData.datasets[0].data.reduce((sum, val) => sum + val, 0);
+                    return chartData.labels.map((label, i) => {
+                      const value = chartData.datasets[0].data[i];
+                      const percentage = ((value / total) * 100).toFixed(1);
+                      return {
+                        text: `${label} (${percentage}%)`,
+                        fillStyle: chartData.datasets[0].backgroundColor[i],
+                        hidden: false,
+                        index: i
+                      };
+                    });
+                  }
+                  return [];
+                }
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: (context) => {
+                  const label = context.label || '';
+                  const value = context.parsed || 0;
+                  const percentage = data.percentages[context.dataIndex];
+                  return [
+                    `${label}`,
+                    `Commandes: ${value.toLocaleString('fr-FR')}`,
+                    `Pourcentage: ${percentage}%`
+                  ];
+                }
+              }
+            }
+          }
+        }
+      });
+
+      console.log(`✅ Graphique motifs d'annulation créé avec ${data.labels.length} motifs`);
+
+    } catch (error) {
+      console.error('❌ Erreur lors de la mise à jour du graphique motifs d\'annulation:', error);
+    }
+  }
+
+  // Récupérer les données du taux de confirmation avec 1 opération
+  async fetchTauxConfirmation1OpData() {
+    const url = `${this.apiEndpoint}taux-confirmation-une-operation/`;
+    console.log(`🔍 Fetch taux confirmation 1 opération: ${url}`);
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Erreur API: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('📊 Données taux confirmation 1 op reçues:', data);
+
+    return data;
+  }
+
+  // Mettre à jour l'affichage du taux de confirmation 1 opération
+  async updateTauxConfirmation1Op() {
+    console.log(`📊 Mise à jour du taux de confirmation 1 opération...`);
+
+    try {
+      const data = await this.fetchTauxConfirmation1OpData();
+
+      if (!data.success) {
+        console.log('⚠️ Erreur lors de la récupération du taux de confirmation 1 op');
+        return;
+      }
+
+      const tauxValue = document.getElementById('taux-confirmation-1op-value');
+      const totalConfirmees = document.getElementById('taux-confirmation-total');
+      const nbUneOp = document.getElementById('nb-confirmation-1op');
+      const details = document.getElementById('confirmation-1op-details');
+
+      if (tauxValue) {
+        tauxValue.textContent = data.taux_une_operation;
+
+        // Colorier selon le taux (plus élevé = mieux)
+        if (data.taux_une_operation >= 70) {
+          tauxValue.classList.add('text-green-600');
+          tauxValue.classList.remove('text-orange-600', 'text-red-600', 'text-gray-900');
+        } else if (data.taux_une_operation >= 50) {
+          tauxValue.classList.add('text-orange-600');
+          tauxValue.classList.remove('text-green-600', 'text-red-600', 'text-gray-900');
+        } else if (data.taux_une_operation > 0) {
+          tauxValue.classList.add('text-red-600');
+          tauxValue.classList.remove('text-green-600', 'text-orange-600', 'text-gray-900');
+        } else {
+          tauxValue.classList.remove('text-green-600', 'text-orange-600', 'text-red-600');
+        }
+      }
+
+      if (totalConfirmees) totalConfirmees.textContent = data.total_confirmees_fmt;
+      if (nbUneOp) nbUneOp.textContent = data.nb_une_operation_fmt;
+      if (details && data.nb_une_operation > 0) details.classList.remove('hidden');
+
+      console.log(`✅ Taux confirmation 1 op mis à jour: ${data.taux_une_operation}%`);
+
+    } catch (error) {
+      console.error('❌ Erreur lors de la mise à jour du taux de confirmation 1 op:', error);
+    }
+  }
+
+  // Récupérer les données du délai moyen de confirmation
+  async fetchDelaiMoyenConfirmationData() {
+    const url = `${this.apiEndpoint}delai-moyen-confirmation/`;
+    console.log(`🔍 Fetch délai moyen de confirmation: ${url}`);
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Erreur API: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('📊 Données délai moyen de confirmation reçues:', data);
+
+    return data;
+  }
+
+  // Mettre à jour l'affichage du délai moyen de confirmation
+  async updateDelaiMoyenConfirmation() {
+    console.log(`📊 Mise à jour du délai moyen de confirmation...`);
+
+    try {
+      const data = await this.fetchDelaiMoyenConfirmationData();
+
+      if (!data.success) {
+        console.log('⚠️ Erreur lors de la récupération du délai moyen de confirmation');
+        return;
+      }
+
+      const delaiValue = document.getElementById('delai-confirmation-value');
+      const delaiTotal = document.getElementById('delai-confirmation-total');
+      const nbDelaiConfirmation = document.getElementById('nb-delai-confirmation');
+      const details = document.getElementById('delai-confirmation-details');
+
+      if (delaiValue) {
+        // Afficher le délai formaté complet (jours, heures, minutes)
+        delaiValue.textContent = data.delai_moyen_formatted;
+
+        // Colorier selon le délai (plus court = mieux)
+        const totalJours = data.delai_jours;
+        const totalHeures = data.delai_heures;
+
+        if (totalJours === 0 && totalHeures < 6) {
+          // Moins de 6 heures - excellent
+          delaiValue.classList.add('text-green-600');
+          delaiValue.classList.remove('text-orange-600', 'text-red-600', 'text-gray-900');
+        } else if (totalJours === 0 && totalHeures < 24) {
+          // Moins de 24 heures - bon
+          delaiValue.classList.add('text-orange-600');
+          delaiValue.classList.remove('text-green-600', 'text-red-600', 'text-gray-900');
+        } else if (totalJours > 0) {
+          // Plus d'un jour - à améliorer
+          delaiValue.classList.add('text-red-600');
+          delaiValue.classList.remove('text-green-600', 'text-orange-600', 'text-gray-900');
+        } else {
+          delaiValue.classList.remove('text-green-600', 'text-orange-600', 'text-red-600');
+        }
+      }
+
+      if (delaiTotal) delaiTotal.textContent = data.nb_commandes_fmt;
+      if (nbDelaiConfirmation) nbDelaiConfirmation.textContent = data.nb_commandes_fmt;
+      if (details && data.nb_commandes > 0) details.classList.remove('hidden');
+
+      console.log(`✅ Délai moyen de confirmation mis à jour: ${data.delai_moyen_formatted}`);
+
+    } catch (error) {
+      console.error('❌ Erreur lors de la mise à jour du délai moyen de confirmation:', error);
+    }
+  }
+
+  async loadPerformanceCommercialeData() {
+    console.log('📊 Chargement des données Performance Commerciale...');
+
+    // Afficher le loading
+    const loading = document.getElementById('performance-loading');
+    const content = document.getElementById('performance-main-content');
+    const emptyState = document.getElementById('performance-empty-state');
+
+    if (loading) loading.classList.remove('hidden');
+    if (content) content.classList.add('hidden');
+    if (emptyState) emptyState.classList.add('hidden');
+
+    try {
+      // Masquer loading, afficher contenu
+      if (loading) loading.classList.add('hidden');
+      if (content) content.classList.remove('hidden');
+
+      // Mettre à jour les textes "vs"
+      this.updateVsPeriodTextsPerformance(this.selectedPeriodPerformance || '30j');
+
+      // Charger le graphique des commandes par source (sans filtre de période)
+      await this.updateCommandesParSourceChart();
+
+      // Charger le taux de doublons (sans filtre de période)
+      await this.updateTauxDoublons();
+
+      // Charger le taux de commandes erronées (sans filtre de période)
+      await this.updateTauxErronees();
+
+      // Charger le taux de commandes retournées (sans filtre de période)
+      await this.updateTauxRetournees();
+
+      // Charger le taux de commandes annulées (sans filtre de période)
+      await this.updateTauxAnnulees();
+
+      // Charger le taux de livraison (sans filtre de période)
+      await this.updateTauxLivraison();
+
+      // Charger le délai moyen de livraison (sans filtre de période)
+      await this.updateDelaiMoyenLivraison();
+
+      // Charger le graphique des motifs d'annulation
+      await this.updateMotifsAnnulationChart();
+
+      // Charger les métriques de confirmation
+      await this.updateTauxConfirmation1Op();
+      await this.updateDelaiMoyenConfirmation();
+
+      console.log('✅ Données Performance Commerciale chargées');
+
+    } catch (error) {
+      console.error('❌ Erreur chargement Performance Commerciale:', error);
+      if (loading) loading.classList.add('hidden');
+      if (emptyState) emptyState.classList.remove('hidden');
     }
   }
 }
 
 // Initialisation au chargement du DOM
 document.addEventListener('DOMContentLoaded', () => {
-    window.kpiManager = new YoozakKPIManager();
+  window.kpiManager = new YoozakKPIManager();
   window.yoozakKPI = window.kpiManager; // Alias pour compatibilité avec le HTML généré
-    window.kpiCharts = new KPICharts();
+  window.kpiCharts = new KPICharts();
 
   // Vérification de l'attachement pour debug
   console.log('🔗 window.yoozakKPI attaché:', !!window.yoozakKPI);
   console.log('🔗 changeEvolutionPeriod disponible:', typeof window.yoozakKPI.changeEvolutionPeriod);
+  console.log('🔗 changePeriodeVentes disponible:', typeof window.yoozakKPI.changePeriodeVentes);
 });
 
 // Export pour utilisation dans d'autres modules

@@ -78,41 +78,53 @@
         </nav>
     </div>
 
-    <!-- Barre de recherche intelligente et actions -->
+    <!-- Barre de recherche et filtres -->
     <div class="bg-white rounded-xl shadow-md border p-6 mb-8">
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <!-- Barre de recherche intelligente -->
-            <div class="flex-grow max-w-md">
+        <form method="get" class="w-full">
+            <!-- Préserver le tab actif -->
+            {% if current_tab %}<input type="hidden" name="tab" value="{{ current_tab }}">{% endif %}
+
+            <!-- Recherche et actions -->
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                <!-- Barre de recherche -->
+                <div class="flex-grow max-w-md">
                     <div class="relative">
-                    <input type="text" 
-                           id="searchInput" 
-                               class="w-full pl-10 pr-4 py-2 rounded-lg border focus:ring-2 transition-all" 
+                        <input type="text"
+                               name="search"
+                               value="{{ search_query|default:'' }}"
+                               class="w-full pl-10 pr-4 py-2 rounded-lg border focus:ring-2 transition-all"
                                style="border-color: #f7d9c4; focus:ring-color: #6d4b3b; focus:border-color: #4B352A;"
-                           placeholder="Rechercher par N° Commande, N° externe, client, téléphone, ville, date, total, état...">
+                               placeholder="Rechercher par N° Commande, client, téléphone, ville...">
                         <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2" style="color: #6d4b3b;"></i>
-                    <button onclick="clearSearch()" id="clearSearchBtn" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 hidden">
-                        <i class="fas fa-times"></i>
-                    </button>
                     </div>
                 </div>
 
-            <!-- Bouton Nouvelle Commande au centre -->
-            <div class="flex justify-center">
+                <!-- Bouton Rechercher -->
+                <button type="submit" class="px-6 py-2 rounded-lg text-white font-medium transition-all shadow-md hover:shadow-lg transform hover:scale-105" style="background: linear-gradient(to right, #4B352A, #6d4b3b);">
+                    Rechercher
+                </button>
+
+                <!-- Bouton Réinitialiser -->
+                {% if search_query or date_filter or date_cmd_filter or sync_filter or request.GET.sync_date_start or request.GET.sync_date_end or order_by %}
+                <a href="?{% if current_tab %}tab={{ current_tab }}{% endif %}" class="px-6 py-2 rounded-lg bg-gray-500 text-white font-medium transition-all shadow-md hover:shadow-lg transform hover:scale-105">
+                    Réinitialiser
+                </a>
+                {% endif %}
+
+                <!-- Bouton Nouvelle Commande -->
                 <a href="{% url 'operatConfirme:creer_commande' %}" class="text-white px-6 py-2 rounded-lg font-medium transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105" style="background: linear-gradient(to right, #f7d9c4, #ede0d3); color: #4B352A;">
                     <i class="fas fa-plus mr-2"></i>Nouvelle Commande
                 </a>
-            </div>
 
-            <!-- Liens vers autres pages et compteur -->
-            <div class="flex items-center gap-4">
-                <div class="text-sm text-gray-600">
-                    <strong id="filteredCount">{{ commandes.count }}</strong> commande{{ commandes.count|pluralize }} à traiter
-                </div>
+                <!-- Lien Page Confirmation -->
                 <a href="{% url 'operatConfirme:confirmation' %}" class="text-white px-6 py-2 rounded-lg font-medium transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105" style="background: linear-gradient(to right, #4B352A, #6d4b3b);">
-                    <i class="fas fa-clipboard-check mr-2"></i> Page Confirmation
+                    <i class="fas fa-clipboard-check mr-2"></i> Confirmation
                 </a>
             </div>
-        </div>
+
+            <!-- Filtres réutilisables -->
+            {% include 'common/filters.html' %}
+        </form>
     </div>
 
     <!-- Message si aucun résultat -->
@@ -245,7 +257,7 @@
                     </td>
 
                     <td class="px-4 py-4 whitespace-nowrap text-center">
-                        <button class="text-blue-600 hover:text-blue-800" onclick="viewCart('{{ commande.id }}')">
+                        <button class="text-blue-600 hover:text-blue-800" onclick="viewCartOperatConfirme('{{ commande.id }}')">
                             <i class="fas fa-shopping-basket"></i>
                         </button>
                     </td>
@@ -297,6 +309,7 @@
 {{ block.super }}
 <script src="{% static 'js/operatConfirme/smart-search.js' %}"></script>
 <script src="{% static 'js/operatConfirme/smart-pagination.js' %}"></script>
+<script src="{% static 'js/commande_filters.js' %}"></script>
 <script>
 let currentCommandeId = null;
 
@@ -310,13 +323,11 @@ document.addEventListener('DOMContentLoaded', function() {
 // On crée une version wrapper qui utilise l'URL spécifique à operatConfirme
 const originalViewCart = typeof viewCart !== 'undefined' ? viewCart : null;
 
-function viewCart(commandeId) {
+function viewCartOperatConfirme(commandeId) {
     const customUrl = `/operateur-confirme/api/commande/${commandeId}/panier/`;
-    // Appeler la fonction du fichier panier.html avec l'URL personnalisée
     if (originalViewCart) {
         originalViewCart(commandeId, customUrl);
     }
 }
-
 </script>
 {% endblock %}

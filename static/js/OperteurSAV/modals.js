@@ -846,20 +846,30 @@ function genererArticlesHTML(paniers, commande) {
  */
 function initialiserModalLivraisonPartielle() {
     console.log('🔧 DEBUG: initialiserModalLivraisonPartielle appelée');
-    
+
+    // Initialiser la date de livraison avec la date d'aujourd'hui
+    const dateLivraisonInput = document.getElementById('dateLivraisonPartielle');
+    if (dateLivraisonInput) {
+        const today = new Date();
+        const formattedDate = today.toISOString().split('T')[0];
+        dateLivraisonInput.value = formattedDate;
+        dateLivraisonInput.max = formattedDate; // Empêcher de sélectionner une date future
+        console.log('✅ Date de livraison initialisée à:', formattedDate);
+    }
+
     // Réinitialiser tous les checkboxes à "coché" par défaut
     document.querySelectorAll('.article-livrer-checkbox').forEach(checkbox => {
         checkbox.checked = true;
     });
-    
+
     // Réinitialiser toutes les quantités à la quantité maximale
     document.querySelectorAll('.quantite-livrer-input').forEach(input => {
-        const maxQuantite = parseInt(input.dataset.panierId ? 
-            document.querySelector(`[data-panier-id="${input.dataset.panierId}"]`).dataset.quantiteMax : 
+        const maxQuantite = parseInt(input.dataset.panierId ?
+            document.querySelector(`[data-panier-id="${input.dataset.panierId}"]`).dataset.quantiteMax :
             input.max);
         input.value = maxQuantite;
     });
-    
+
     // Mettre à jour l'affichage initial
     mettreAJourSectionArticlesRenvoyes([]);
     mettreAJourResumeLivraisonPartielle();
@@ -1094,8 +1104,8 @@ function mettreAJourSectionArticlesRenvoyes(articlesRenvoyes = []) {
                     <div class="mt-2 text-xs text-orange-600 bg-orange-100 px-2 py-1 rounded-md">
                         <i class="fas fa-info-circle mr-1"></i>
                         Article retourné aux opérateurs de préparation
-                        ${article.is_upsell && article.compteur > 0 ? 
-                            ` • Prix upsell niveau ${article.compteur} appliqué` : ''}
+                        ${article.is_upsell && article.compteur > 0 ?
+                            ` • ${article.compteur >= 4 ? 'Prix Gros' : `Prix upsell ${article.compteur + 1}`} appliqué` : ''}
                     </div>
                 </div>
             </div>`;

@@ -6,7 +6,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from .views import home_redirect, custom_logout, get_csrf_token_view, check_csrf_status
 from . import views
-from commande.views import api_panier_commande
+from commande.views.views import api_panier_commande
 
 urlpatterns = [
     # Redirection de la page d'accueil vers login de l'application
@@ -45,7 +45,6 @@ urlpatterns = [
     path('operateur-logistique/', include('operatLogistic.urls')),
     path('operateur-preparation/', include('Prepacommande.urls')),
     path('Superpreparation/', include('Superpreparation.urls')),
-    path('livraison/', include('livraison.urls')),
     path('parametre/', include('parametre.urls')),
     path('synchronisation/', include('synchronisation.urls')),
     path('kpis/', include('kpis.urls')),

@@ -25,89 +25,8 @@
         </div>
     </div>
 
-    <!-- Filtre de temps personnalisable -->
-    <div class="bg-white rounded-xl shadow-md border p-6 mb-8" style="border-color: #e2e8f0;">
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div class="flex flex-col md:flex-row items-start md:items-center gap-4">
-                <label class="text-sm font-medium text-gray-700">PÉRIODE :</label>
-                <form method="get" class="flex flex-col md:flex-row items-start md:items-center gap-4">
-                    <!-- Conserver les paramètres d'onglet -->
-                    {% if current_tab %}
-                        <input type="hidden" name="tab" value="{{ current_tab }}">
-                    {% endif %}
-                    
-                    <select name="preset" class="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-offset-2 transition-all" 
-                            style="border-color: var(--logistic-border-accent); focus:ring-color: var(--logistic-primary);"
-                            onchange="this.form.submit()">
-                        <option value="">Sélectionner une période</option>
-                        <option value="today" {% if filter_preset == 'today' %}selected{% endif %}>Aujourd'hui</option>
-                        <option value="yesterday" {% if filter_preset == 'yesterday' %}selected{% endif %}>Hier</option>
-                        <option value="this_week" {% if filter_preset == 'this_week' %}selected{% endif %}>Cette semaine</option>
-                        <option value="last_week" {% if filter_preset == 'last_week' %}selected{% endif %}>Semaine dernière</option>
-                        <option value="this_month" {% if filter_preset == 'this_month' %}selected{% endif %}>Ce mois</option>
-                        <option value="last_month" {% if filter_preset == 'last_month' %}selected{% endif %}>Mois dernier</option>
-                        <option value="this_year" {% if filter_preset == 'this_year' %}selected{% endif %}>Cette année</option>
-                        <option value="last_year" {% if filter_preset == 'last_year' %}selected{% endif %}>Année dernière</option>
-                        <option value="custom" {% if filter_start_date and filter_end_date %}selected{% endif %}>Personnalisé</option>
-                    </select>
-                </form>
-            </div>
-            
-            <!-- Formulaire pour période personnalisée -->
-            <form method="get" class="flex flex-col md:flex-row items-start md:items-center gap-4">
-                <!-- Conserver les paramètres d'onglet -->
-                {% if current_tab %}
-                    <input type="hidden" name="tab" value="{{ current_tab }}">
-                {% endif %}
-                
-                <div class="flex flex-col md:flex-row items-start md:items-center gap-4">
-                    <div class="flex flex-col">
-                        <label class="text-sm font-medium text-gray-700 mb-1">DATE DÉBUT :</label>
-                        <input type="date" name="start_date" value="{{ filter_start_date|default:'' }}" 
-                               class="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-offset-2 transition-all"
-                               style="border-color: var(--logistic-border-accent); focus:ring-color: var(--logistic-primary);">
-                    </div>
-                    <div class="flex flex-col">
-                        <label class="text-sm font-medium text-gray-700 mb-1">DATE FIN :</label>
-                        <input type="date" name="end_date" value="{{ filter_end_date|default:'' }}" 
-                               class="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-offset-2 transition-all"
-                               style="border-color: var(--logistic-border-accent); focus:ring-color: var(--logistic-primary);">
-                    </div>
-                    <button type="submit" class="px-6 py-2 rounded-lg text-white font-medium transition-all shadow-md hover:shadow-lg transform hover:scale-105" 
-                            style="background-color: var(--logistic-primary);">
-                        <i class="fas fa-filter mr-2"></i>Appliquer
-                    </button>
-                </div>
-            </form>
-        </div>
-        
-        <!-- Affichage de la période active -->
-        {% if filter_start_date and filter_end_date %}
-        <div class="mt-4">
-            <div class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium" 
-                 style="background-color: var(--logistic-accent-color); color: white;">
-                <i class="fas fa-calendar-alt mr-2"></i>
-                {{ filter_start_date|date:"d/m/Y" }} - {{ filter_end_date|date:"d/m/Y" }}
-            </div>
-        </div>
-        {% elif filter_preset %}
-        <div class="mt-4">
-            <div class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium" 
-                 style="background-color: var(--logistic-accent-color); color: white;">
-                <i class="fas fa-calendar-alt mr-2"></i>
-                {% if filter_preset == 'today' %}Aujourd'hui
-                {% elif filter_preset == 'yesterday' %}Hier
-                {% elif filter_preset == 'this_week' %}Cette semaine
-                {% elif filter_preset == 'last_week' %}Semaine dernière
-                {% elif filter_preset == 'this_month' %}Ce mois
-                {% elif filter_preset == 'last_month' %}Mois dernier
-                {% elif filter_preset == 'this_year' %}Cette année
-                {% elif filter_preset == 'last_year' %}Année dernière
-                {% endif %}
-            </div>
-        </div>
-        {% endif %}
-    </div>
+    <!-- Filtres globaux de commandes -->
+    {% include 'common/commande-filters.html' %}
 
     <!-- Onglets de navigation -->
     <div class="mb-6 bg-white rounded-xl shadow-lg p-1">
@@ -1474,4 +1393,6 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- Inclusion de la modale de retour complet -->
 {% include 'operatLogistic/partials/_modal_retour_complet.html' %}
 
+<!-- Script pour les filtres globaux de commandes -->
+<script src="{% static 'js/common/commande-filters.js' %}"></script>
 {% endblock %}

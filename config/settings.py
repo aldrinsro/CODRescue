@@ -54,10 +54,10 @@ INSTALLED_APPS = [
     'django_browser_reload',
     
     # Applications locales
+    'common',  # Utilitaires réutilisables
     'commande',
     'article',
     'client',
-    'livraison',
     'parametre',
     'operatConfirme',
     'operatLogistic',

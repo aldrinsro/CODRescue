@@ -151,39 +151,121 @@
         </div>
     </div>
 
-    <!-- Barre de recherche et actions -->
+    <!-- Barre de recherche et filtres -->
     <div class="bg-white rounded-xl shadow-md border p-6 mb-8" style="border-color: var(--admin-light-accent);">
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div class="flex-grow flex gap-4">
+        <form method="get" class="w-full">
+            <!-- Recherche -->
+            <div class="flex flex-col md:flex-row gap-4 mb-6">
                 <div class="flex-grow">
                     <div class="relative">
-                        <input type="text" name="search" value="{{ search_query|default:'' }}" 
-                               class="w-full pl-10 pr-4 py-2 rounded-lg border focus:ring-2 focus:ring-offset-2 transition-all" 
+                        <input type="text" name="search" value="{{ search_query|default:'' }}"
+                               class="w-full pl-10 pr-4 py-2 rounded-lg border focus:ring-2 focus:ring-offset-2 transition-all"
                                style="border-color: var(--admin-accent-color); focus:ring-color: var(--admin-color);"
                                placeholder="Rechercher par N° commande, client, ville...">
                         <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
                     </div>
                 </div>
-                <button type="button" onclick="performSearch(document.querySelector('input[name=\"search\"]').value)" class="px-6 py-2 rounded-lg text-white font-medium transition-all shadow-md hover:shadow-lg transform hover:scale-105" 
+                <button type="submit" class="px-6 py-2 rounded-lg text-white font-medium transition-all shadow-md hover:shadow-lg transform hover:scale-105"
                         style="background-color: var(--admin-color);">
                     Rechercher
                 </button>
-                {% if search_query %}
-                <button type="button" onclick="performSearch('')" class="px-6 py-2 rounded-lg bg-gray-500 text-white font-medium transition-all shadow-md hover:shadow-lg transform hover:scale-105">
+                {% if search_query or date_filter or request.GET.date_start or request.GET.date_end or sync_filter or order_by %}
+                <a href="{% url 'commande:a_traiter' %}" class="px-6 py-2 rounded-lg bg-gray-500 text-white font-medium transition-all shadow-md hover:shadow-lg transform hover:scale-105">
                     Réinitialiser
-                </button>
+                </a>
                 {% endif %}
             </div>
 
-            <!-- Actions rapides -->
-            <div class="flex gap-2">
-                <a href="{% url 'commande:paniers' %}?etat=Doublon" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-sm">
-                    <i class="fas fa-copy mr-2"></i> Paniers doublons
-                </a>
-                <a href="{% url 'commande:paniers' %}?etat=Erronée" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-sm">
-                    <i class="fas fa-exclamation-circle mr-2"></i> Paniers erronés
-                </a>
+            <!-- Filtres spécifiques -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 border-t border-gray-200">
+
+                <!-- Filtre par date -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-calendar-alt mr-1"></i>Date de création
+                    </label>
+                    <select id="dateFilterSelect" name="date_filter" class="w-full px-3 py-2 rounded-md border border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 mb-2">
+                        <option value="">Toutes les dates</option>
+                        <option value="aujourd'hui" {% if date_filter == "aujourd'hui" %}selected{% endif %}>Aujourd'hui</option>
+                        <option value="hier" {% if date_filter == "hier" %}selected{% endif %}>Hier</option>
+                        <option value="cette semaine" {% if date_filter == "cette semaine" %}selected{% endif %}>Cette semaine</option>
+                        <option value="7 derniers jours" {% if date_filter == "7 derniers jours" %}selected{% endif %}>7 derniers jours</option>
+                        <option value="30 derniers jours" {% if date_filter == "30 derniers jours" %}selected{% endif %}>30 derniers jours</option>
+                        <option value="ce mois" {% if date_filter == "ce mois" %}selected{% endif %}>Ce mois</option>
+                        <option value="le mois dernier" {% if date_filter == "le mois dernier" %}selected{% endif %}>Le mois dernier</option>
+                        <option value="custom" {% if request.GET.date_start or request.GET.date_end %}selected{% endif %}>Intervalle personnalisé...</option>
+                    </select>
+
+                    <!-- Intervalle de dates personnalisé -->
+                    <div id="customDateRange" class="{% if not request.GET.date_start and not request.GET.date_end %}hidden{% endif %} space-y-2">
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-xs text-gray-600 mb-1">Du</label>
+                                <input type="date" name="date_start" value="{{ request.GET.date_start }}"
+                                       class="w-full px-3 py-2 rounded-md border border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-600 mb-1">Au</label>
+                                <input type="date" name="date_end" value="{{ request.GET.date_end }}"
+                                       class="w-full px-3 py-2 rounded-md border border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filtre Synchronisation -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-sync-alt mr-1"></i>Synchronisation
+                    </label>
+                    <select name="sync_filter" id="syncFilter" class="w-full px-3 py-2 rounded-md border border-gray-300 focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="">Toutes</option>
+                        <option value="last_minute" {% if sync_filter == 'last_minute' %}selected{% endif %}>Dernière minute</option>
+                        <option value="last_hour" {% if sync_filter == 'last_hour' %}selected{% endif %}>Dernière heure</option>
+                        <option value="today" {% if sync_filter == 'today' %}selected{% endif %}>Aujourd'hui</option>
+                        <option value="last_24_hours" {% if sync_filter == 'last_24_hours' %}selected{% endif %}>24 heures</option>
+                        <option value="last_7_days" {% if sync_filter == 'last_7_days' %}selected{% endif %}>7 jours</option>
+                        <option value="custom_date" {% if sync_filter == 'custom_date' %}selected{% endif %}>Personnalisée</option>
+                    </select>
+                    <input type="date" name="custom_sync_date" id="customSyncDate"
+                           value="{{ custom_sync_date|default:'' }}"
+                           class="w-full px-3 py-2 rounded-md border border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 mt-2 {% if sync_filter != 'custom_date' %}hidden{% endif %}">
+                </div>
+
+                <!-- Filtre Ordre/Tri -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-sort mr-1"></i>Trier par
+                    </label>
+                    <select name="order_by" class="w-full px-3 py-2 rounded-md border border-gray-300 focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="">Par défaut</option>
+                        <optgroup label="Date de création">
+                            <option value="-date_creation" {% if order_by == '-date_creation' %}selected{% endif %}>➜ Plus récent</option>
+                            <option value="date_creation" {% if order_by == 'date_creation' %}selected{% endif %}>➜ Plus ancien</option>
+                        </optgroup>
+                        <optgroup label="Total">
+                            <option value="-total_cmd" {% if order_by == '-total_cmd' %}selected{% endif %}>➜ Plus élevé</option>
+                            <option value="total_cmd" {% if order_by == 'total_cmd' %}selected{% endif %}>➜ Plus bas</option>
+                        </optgroup>
+                        <optgroup label="Autre">
+                            <option value="client__nom" {% if order_by == 'client__nom' %}selected{% endif %}>➜ Client A-Z</option>
+                            <option value="-client__nom" {% if order_by == '-client__nom' %}selected{% endif %}>➜ Client Z-A</option>
+                            <option value="id_yz" {% if order_by == 'id_yz' %}selected{% endif %}>➜ N° ID croissant</option>
+                            <option value="-id_yz" {% if order_by == '-id_yz' %}selected{% endif %}>➜ N° ID décroissant</option>
+                        </optgroup>
+                    </select>
+                </div>
             </div>
+        </form>
+
+        <!-- Actions rapides -->
+        <div class="flex gap-2 mt-6 pt-4 border-t border-gray-200">
+            <a href="{% url 'commande:paniers' %}?etat=Doublon" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-sm">
+                <i class="fas fa-copy mr-2"></i> Paniers doublons
+            </a>
+            <a href="{% url 'commande:paniers' %}?etat=Erronée" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-sm">
+                <i class="fas fa-exclamation-circle mr-2"></i> Paniers erronés
+            </a>
         </div>
     </div>
 
@@ -213,11 +295,12 @@
         <table class="min-w-full divide-y divide-gray-200">
             <thead style="background-color: var(--admin-color);">
                 <tr>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">N° Commande</th>         
+                    <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">N° Commande</th>
                     <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Client</th>
                     <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Téléphone</th>
                     <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Ville</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Date</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Date Création</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Date Sync</th>
                     <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Total</th>
                     <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Problème</th>
                     <th class="px-4 py-3 text-center text-xs font-medium text-white uppercase tracking-wider">Panier</th>
@@ -563,7 +646,74 @@ function handleSearchInput(event) {
 
 // Initialisation au chargement de la page
 document.addEventListener('DOMContentLoaded', function() {
-    attachEventListeners();
+    // Désactivation de l'AJAX pour permettre aux filtres de fonctionner
+    // attachEventListeners();
+
+    // Gestion des filtres avec soumission automatique du formulaire
+    const dateFilterSelect = document.getElementById('dateFilterSelect');
+    const customDateRange = document.getElementById('customDateRange');
+    const filterForm = document.querySelector('form[method="get"]');
+
+    if (dateFilterSelect && customDateRange) {
+        dateFilterSelect.addEventListener('change', function() {
+            if (this.value === 'custom') {
+                customDateRange.classList.remove('hidden');
+            } else {
+                customDateRange.classList.add('hidden');
+                if (filterForm) {
+                    filterForm.submit();
+                }
+            }
+        });
+    }
+
+    const syncFilter = document.getElementById('syncFilter');
+    const customSyncDate = document.getElementById('customSyncDate');
+
+    if (syncFilter && customSyncDate) {
+        syncFilter.addEventListener('change', function() {
+            if (this.value === 'custom_date') {
+                customSyncDate.classList.remove('hidden');
+            } else {
+                customSyncDate.classList.add('hidden');
+                if (filterForm) {
+                    filterForm.submit();
+                }
+            }
+        });
+    }
+
+    const dateStartInput = document.querySelector('input[name="date_start"]');
+    const dateEndInput = document.querySelector('input[name="date_end"]');
+
+    if (dateStartInput && dateEndInput && filterForm) {
+        dateStartInput.addEventListener('change', function() {
+            if (this.value && dateEndInput.value) {
+                filterForm.submit();
+            }
+        });
+
+        dateEndInput.addEventListener('change', function() {
+            if (this.value && dateStartInput.value) {
+                filterForm.submit();
+            }
+        });
+    }
+
+    if (customSyncDate && filterForm) {
+        customSyncDate.addEventListener('change', function() {
+            if (this.value) {
+                filterForm.submit();
+            }
+        });
+    }
+
+    const orderBySelect = document.querySelector('select[name="order_by"]');
+    if (orderBySelect && filterForm) {
+        orderBySelect.addEventListener('change', function() {
+            filterForm.submit();
+        });
+    }
 });
 
 

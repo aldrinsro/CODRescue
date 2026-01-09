@@ -6,21 +6,20 @@
     <td class="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900 border-r" style="border-color: var(--admin-light-accent);">
         {{ commande.id_yz }}
     </td>
-    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 border-r" style="border-color: var(--admin-light-accent);">
-        {{ commande.num_cmd|default:"-" }}
-    </td>
     <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900 border-r" style="border-color: var(--admin-light-accent);">
         {% if commande.client %}
             <div>
                 <div class="font-medium">{{ commande.client.nom }} {{ commande.client.prenom }}</div>
-                <div class="text-gray-500">{{ commande.client.numero_tel }}</div>
+               
             </div>
         {% else %}
             <span class="text-gray-400">Client non défini</span>
         {% endif %}
     </td>
     <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 border-r" style="border-color: var(--admin-light-accent);">
-        {{ commande.date_cmd|date:"d/m/Y" }}
+
+         <div class="text-gray-500">{{ commande.client.numero_tel }}</div>
+       
     </td>
     <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 border-r" style="border-color: var(--admin-light-accent);">
         {% if commande.ville %}
@@ -36,7 +35,7 @@
         {% if commande.etat_actuel %}
             <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
                 <i class="fas fa-check-circle mr-1"></i>
-                {{ commande.etat_actuel.enum_etat.libelle }}
+                {{ commande.etat_actuel.enum_etat.libelle }} le {{ commande.date_cmd|date:"d/m/Y" }}
             </span>
         {% else %}
             <span class="text-gray-400">Non défini</span>
@@ -57,19 +56,7 @@
             <span class="text-gray-400">Non affectée</span>
         {% endif %}
     </td>
-    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 border-r" style="border-color: var(--admin-light-accent);">
-        {% if commande.etat_actuel %}
-            <div class="flex items-center space-x-2">
-                <div class="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span class="text-green-600 font-medium">Prête pour livraison</span>
-            </div>
-        {% else %}
-            <div class="flex items-center space-x-2">
-                <div class="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                <span class="text-yellow-600 font-medium">En attente</span>
-            </div>
-        {% endif %}
-    </td>
+
     <td class="px-4 py-4 whitespace-nowrap text-center">
         <div class="flex justify-center space-x-2">
             <a href="{% url 'commande:detail' commande.pk %}" 

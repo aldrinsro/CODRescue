@@ -73,19 +73,15 @@ function soumettreRetourComplet() {
 
     // Validation de la raison du retour
     const raisonSelect = document.getElementById('raisonRetourComplet');
-    const commentaireComp = document.getElementById('commentaireComplementaireRetour');
 
-    if (!raisonSelect.value) {
+    if (!raisonSelect || !raisonSelect.value) {
         alert('⚠️ Veuillez sélectionner une raison pour le retour complet');
-        raisonSelect.focus();
+        if (raisonSelect) raisonSelect.focus();
         return;
     }
 
-    // Construire le commentaire final
-    let commentaireFinal = raisonSelect.value;
-    if (commentaireComp.value.trim()) {
-        commentaireFinal += ` - ${commentaireComp.value.trim()}`;
-    }
+    // Utiliser directement la raison sélectionnée comme commentaire
+    const commentaireFinal = raisonSelect.value;
 
     // Vérifier que l'ID de la commande est disponible
     if (!currentCommandeId) {

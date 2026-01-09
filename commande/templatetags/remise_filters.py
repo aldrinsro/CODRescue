@@ -40,14 +40,14 @@ def calculer_prix_unitaire_effectif(panier):
 
     # Article upsell avec compteur
     if hasattr(article, 'isUpsell') and article.isUpsell and commande.compteur > 0:
-        if commande.compteur == 1 and article.prix_upsell_1:
-            return Decimal(str(article.prix_upsell_1))
-        elif commande.compteur == 2 and article.prix_upsell_2:
+        if commande.compteur == 1 and article.prix_upsell_2:
             return Decimal(str(article.prix_upsell_2))
-        elif commande.compteur == 3 and article.prix_upsell_3:
+        elif commande.compteur == 2 and article.prix_upsell_3:
             return Decimal(str(article.prix_upsell_3))
-        elif commande.compteur >= 4 and article.prix_upsell_4:
+        elif commande.compteur == 3 and article.prix_upsell_4:
             return Decimal(str(article.prix_upsell_4))
+        elif commande.compteur >= 4 and article.prix_gros:
+            return Decimal(str(article.prix_gros))
 
     # Prix normal
     return Decimal(str(article.prix_actuel or article.prix_unitaire))
@@ -122,17 +122,17 @@ def get_prix_affichage_remise(article, quantite=1):
         if quantite <= 1:
             prix = article.prix_actuel or article.prix_unitaire
             libelle = 'Prix normal'
-        elif quantite >= 2 and hasattr(article, 'prix_upsell_1') and article.prix_upsell_1:
-            prix = article.prix_upsell_1
-            libelle = 'Prix upsell niveau 1'
-        elif quantite >= 3 and hasattr(article, 'prix_upsell_2') and article.prix_upsell_2:
+        elif quantite >= 2 and hasattr(article, 'prix_upsell_2') and article.prix_upsell_2:
             prix = article.prix_upsell_2
-            libelle = 'Prix upsell niveau 2'
-        elif quantite >= 4 and hasattr(article, 'prix_upsell_3') and article.prix_upsell_3:
+            libelle = 'Prix upsell 2'
+        elif quantite >= 3 and hasattr(article, 'prix_upsell_3') and article.prix_upsell_3:
             prix = article.prix_upsell_3
-            libelle = 'Prix upsell niveau 3'
-        elif quantite >= 5 and hasattr(article, 'prix_upsell_4') and article.prix_upsell_4:
+            libelle = 'Prix upsell 3'
+        elif quantite >= 4 and hasattr(article, 'prix_upsell_4') and article.prix_upsell_4:
             prix = article.prix_upsell_4
+            libelle = 'Prix upsell 4'
+        elif quantite >= 5 and hasattr(article, 'prix_gros') and article.prix_gros:
+            prix = article.prix_gros
             libelle = 'Prix Gros'
         else:
             prix = article.prix_actuel or article.prix_unitaire
@@ -156,61 +156,42 @@ def get_prix_affichage_remise(article, quantite=1):
         'type': 'normal'
     }
 
-@register.filter
-def get_prix_remise_applicable(article, niveau_remise):
-    """
-    Retourne le prix de remise selon le niveau spécifié.
-    
-    Args:
-        article: L'objet Article
-        niveau_remise: Le niveau de remise (1, 2, 3, 4 ou 'liquidation')
-        
-    Returns:
-        Decimal: Prix de remise ou None si non disponible
-    """
-    if not article:
-        return None
-        
-    if niveau_remise == 1:
-        return getattr(article, 'prix_remise_1', None)
-    elif niveau_remise == 2:
-        return getattr(article, 'prix_remise_2', None)
-    elif niveau_remise == 3:
-        return getattr(article, 'prix_remise_3', None)
-    elif niveau_remise == 4:
-        return getattr(article, 'prix_remise_4', None)
-    
-    return None
+# @register.filter
+# def get_prix_remise_applicable(article, niveau_remise):
+#     """
+#     FONCTION DÉSACTIVÉE - Les champs prix_remise ont été supprimés du modèle Article
+#     Retourne le prix de remise selon le niveau spécifié.
+#
+#     Args:
+#         article: L'objet Article
+#         niveau_remise: Le niveau de remise (1, 2, 3, 4 ou 'liquidation')
+#
+#     Returns:
+#         Decimal: Prix de remise ou None si non disponible
+#     """
+#     if not article:
+#         return None
+#
+#     # Les champs prix_remise_1, prix_remise_2, prix_remise_3, prix_remise_4 ont été supprimés
+#     return None
 
-@register.filter
-def calcul_economie_remise(article, prix_remise):
-    """
-    Calcule l'économie réalisée avec une remise.
-    
-    Args:
-        article: L'objet Article
-        prix_remise: Prix de la remise
-        
-    Returns:
-        dict: {
-            'economie': montant économisé,
-            'pourcentage': pourcentage d'économie
-        }
-    """
-    if not article or not prix_remise:
-        return {'economie': 0, 'pourcentage': 0}
-    
-    prix_normal = article.prix_actuel or article.prix_unitaire
-    if not prix_normal or prix_remise >= prix_normal:
-        return {'economie': 0, 'pourcentage': 0}
-    
-    economie = Decimal(str(prix_normal)) - Decimal(str(prix_remise))
-    pourcentage = (economie / Decimal(str(prix_normal)) * 100).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-    
-    return {
-        'economie': economie,
-        'pourcentage': pourcentage
-    }
+# @register.filter
+# def calcul_economie_remise(article, prix_remise):
+#     """
+#     FONCTION DÉSACTIVÉE - Les champs prix_remise ont été supprimés du modèle Article
+#     Calcule l'économie réalisée avec une remise.
+#
+#     Args:
+#         article: L'objet Article
+#         prix_remise: Prix de la remise
+#
+#     Returns:
+#         dict: {
+#             'economie': montant économisé,
+#             'pourcentage': pourcentage d'économie
+#         }
+#     """
+#     return {'economie': 0, 'pourcentage': 0}
 
 @register.filter
 def format_prix_avec_devise(prix, devise='DH'):
@@ -348,7 +329,8 @@ def get_prix_effectif_panier(panier):
         if compteur_actuel >= 4:
             libelle = 'Prix Gros'
         else:
-            libelle = f'Prix upsell niveau {compteur_actuel}'
+            # Ajuster le niveau affiché : compteur 1 → 2, compteur 2 → 3, compteur 3 → 4
+            libelle = f'Prix upsell {compteur_actuel + 1}'
         couleur_classe = 'text-green-600'
         icone = 'fas fa-arrow-up'
     else:
@@ -399,57 +381,24 @@ def get_libelle_prix_contextuel(article, panier=None):
     # Retour par défaut basé sur la phase de l'article
     return get_prix_affichage_remise(article, 1)
 
-@register.filter
-def has_prix_remise_disponible(article):
-    """
-    Vérifie si l'article a des prix de remise configurés.
-    
-    Returns:
-        bool: True si au moins un prix de remise est défini
-    """
-    if not article:
-        return False
-    
-    prix_remises = [
-        getattr(article, 'prix_remise_1', None),
-        getattr(article, 'prix_remise_2', None),
-        getattr(article, 'prix_remise_3', None),
-        getattr(article, 'prix_remise_4', None)
-    ]
-    
-    return any(prix for prix in prix_remises if prix and prix > 0)
+# @register.filter
+# def has_prix_remise_disponible(article):
+#     """
+#     FONCTION DÉSACTIVÉE - Les champs prix_remise ont été supprimés du modèle Article
+#     Vérifie si l'article a des prix de remise configurés.
+#
+#     Returns:
+#         bool: True si au moins un prix de remise est défini
+#     """
+#     return False
 
-@register.filter
-def get_meilleur_prix_remise(article):
-    """
-    Retourne le meilleur prix de remise disponible (le plus bas).
-    
-    Returns:
-        dict: Informations sur le meilleur prix de remise
-    """
-    if not article or not has_prix_remise_disponible(article):
-        return None
-    
-    prix_remises = []
-    
-    for niveau in [1, 2, 3, 4]:
-        prix = get_prix_remise_applicable(article, niveau)
-        if prix and prix > 0:
-            prix_remises.append({
-                'prix': prix,
-                'niveau': niveau,
-                'libelle': f'Prix remise {niveau}'
-            })
-    
-    
-    if not prix_remises:
-        return None
-    
-    # Retourner le prix le plus bas
-    meilleur_prix = min(prix_remises, key=lambda x: x['prix'])
-    
-    # Calculer l'économie
-    economie_info = calcul_economie_remise(article, meilleur_prix['prix'])
-    meilleur_prix.update(economie_info)
-    
-    return meilleur_prix
+# @register.filter
+# def get_meilleur_prix_remise(article):
+#     """
+#     FONCTION DÉSACTIVÉE - Les champs prix_remise ont été supprimés du modèle Article
+#     Retourne le meilleur prix de remise disponible (le plus bas).
+#
+#     Returns:
+#         dict: Informations sur le meilleur prix de remise
+#     """
+#     return None

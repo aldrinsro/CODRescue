@@ -598,8 +598,240 @@
 
     <form method="post" id="modification-form">
         {% csrf_token %}
+
+        <script>
+        // ⚠️ SUPPRIMÉ - Toutes les configurations ont été déplacées vers block extra_js
+        // - window.API_GET_VARIANTS_URL → window.urlGetVariants
+        // - window.commandeId → défini dans configuration globale
+        // - window.ouvrirModalAjoutArticle → fourni par module global gestion_articles.js
+
+        // ========== FONCTIONS GLOBALES POUR LA GESTION DES ARTICLES ==========
+        // Définies ici pour être accessibles AVANT le chargement du HTML des articles
+
+        window.supprimerArticle = function(panierId) {
+            if (!confirm('Êtes-vous sûr de vouloir supprimer cet article ?')) {
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('action', 'delete_article');
+            formData.append('panier_id', panierId);
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+            if (csrfToken) formData.append('csrfmiddlewaretoken', csrfToken.value);
+
+            fetch(`{% url 'Superpreparation:modifier_commande_superviseur' commande.id %}`, { method: 'POST', body: formData })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Article supprimé avec succès');
+                        window.location.reload();
+                    } else {
+                        alert('Erreur: ' + (data.error || 'Impossible de supprimer l\'article.'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur suppression:', error);
+                    alert('Erreur lors de la suppression de l\'article');
+                });
+        };
+
+        window.modifierQuantite = function(panierId, delta) {
+            const input = document.getElementById(`quantite-${panierId}`);
+            if (input) {
+                const currentValue = parseInt(input.value) || 0;
+                const newValue = Math.max(1, currentValue + delta);
+                input.value = newValue;
+                window.modifierQuantiteDirecte(panierId, newValue);
+            }
+        };
+
+        window.modifierQuantiteDirecte = function(panierId, nouvelleQuantite) {
+            const quantite = parseInt(nouvelleQuantite);
+
+            if (isNaN(quantite) || quantite < 1) {
+                const input = document.getElementById(`quantite-${panierId}`);
+                if (input) {
+                    input.value = input.getAttribute('data-previous-value') || 1;
+                }
+                alert('La quantité doit être au moins de 1.');
+                return;
+            }
+
+            const input = document.getElementById(`quantite-${panierId}`);
+            if (input) {
+                input.setAttribute('data-previous-value', input.value);
+            }
+
+            const formData = new FormData();
+            formData.append('action', 'modifier_quantite_directe');
+            formData.append('panier_id', panierId);
+            formData.append('nouvelle_quantite', quantite);
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+            if (csrfToken) formData.append('csrfmiddlewaretoken', csrfToken.value);
+
+            fetch(`{% url 'Superpreparation:modifier_commande_superviseur' commande.id %}`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    if (quantite === 0) {
+                        window.location.reload();
+                    } else {
+                        if (data.total_cmd) {
+                            const totalElement = document.getElementById('total-commande');
+                            if (totalElement) {
+                                totalElement.textContent = `${parseFloat(data.total_cmd).toFixed(2)} DH`;
+                            }
+                        }
+                    }
+                } else {
+                    if (input) {
+                        input.value = input.getAttribute('data-previous-value') || 1;
+                    }
+                    alert('Erreur: ' + (data.error || 'Impossible de modifier la quantité.'));
+                }
+            })
+            .catch(error => {
+                if (input) {
+                    input.value = input.getAttribute('data-previous-value') || 1;
+                }
+                console.error('Erreur modification quantité:', error);
+                alert('Erreur lors de la modification de la quantité');
+            });
+        };
+
+        window.ouvrirModalRemise = function(panierId) {
+            const typeRemise = prompt('Type de remise: Tapez "P" pour pourcentage ou "M" pour montant fixe');
+            if (!typeRemise) return;
+
+            const valeurRemise = prompt('Valeur de la remise:');
+            if (!valeurRemise || parseFloat(valeurRemise) <= 0) {
+                alert('Valeur invalide');
+                return;
+            }
+
+            const type = typeRemise.toUpperCase() === 'P' ? 'POURCENTAGE' : 'MONTANT';
+
+            const formData = new FormData();
+            formData.append('action', 'appliquer_remise');
+            formData.append('panier_id', panierId);
+            formData.append('type_remise', type);
+            formData.append('valeur_remise', valeurRemise);
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+            if (csrfToken) formData.append('csrfmiddlewaretoken', csrfToken.value);
+
+            fetch(`{% url 'Superpreparation:modifier_commande_superviseur' commande.id %}`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Remise appliquée avec succès');
+                    window.location.reload();
+                } else {
+                    alert('Erreur: ' + (data.error || 'Impossible d\'appliquer la remise.'));
+                }
+            })
+            .catch(error => {
+                console.error('Erreur application remise:', error);
+                alert('Erreur lors de l\'application de la remise');
+            });
+        };
+
+        window.retirerRemise = function(panierId) {
+            if (!confirm('Êtes-vous sûr de vouloir retirer cette remise ?')) {
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('action', 'retirer_remise');
+            formData.append('panier_id', panierId);
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+            if (csrfToken) formData.append('csrfmiddlewaretoken', csrfToken.value);
+
+            fetch(`{% url 'Superpreparation:modifier_commande_superviseur' commande.id %}`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Remise retirée avec succès');
+                    window.location.reload();
+                } else {
+                    alert('Erreur: ' + (data.error || 'Impossible de retirer la remise.'));
+                }
+            })
+            .catch(error => {
+                console.error('Erreur retrait remise:', error);
+                alert('Erreur lors du retrait de la remise');
+            });
+        };
+
+        // Fonction pour basculer les frais de livraison
+        window.toggleFraisLivraison = function() {
+            console.log('🔄 Toggle frais de livraison');
+
+            const button = document.getElementById('toggle-frais-livraison');
+            if (!button) {
+                console.error('❌ Bouton toggle-frais-livraison introuvable');
+                return;
+            }
+
+            const statusText = document.getElementById('frais-status-text');
+            const currentStatus = statusText ? statusText.textContent.trim() === 'Activés' : false;
+            const nouveauStatut = !currentStatus;
+
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Chargement...';
+
+            const formData = new FormData();
+            formData.append('action', 'toggle_frais_livraison');
+            formData.append('frais_livraison_actif', nouveauStatut.toString());
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+            if (csrfToken) formData.append('csrfmiddlewaretoken', csrfToken.value);
+
+            fetch(window.location.href, {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    if (statusText) {
+                        statusText.textContent = data.nouveau_statut ? 'Activés' : 'Désactivés';
+                    }
+
+                    // Mettre à jour les totaux si la fonction est disponible
+                    if (typeof window.mettreAJourTousLesTotaux === 'function') {
+                        data.frais_livraison_actif = data.nouveau_statut;
+                        window.mettreAJourTousLesTotaux(data);
+                    }
+
+                    alert(data.message || 'Frais de livraison mis à jour');
+                    window.location.reload();
+                } else {
+                    alert('Erreur: ' + (data.error || 'Erreur lors du changement du statut'));
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                alert('Erreur de connexion');
+            })
+            .finally(() => {
+                button.disabled = false;
+            });
+        };
+
+        console.log('✅ Fonctions de gestion des articles définies globalement');
+        </script>
+
         <div class="space-y-6">
-            
+
             <!-- Section Actions Rapides pour les commandes renvoyées -->
             {% if is_commande_renvoyee %}
                 <div class="modification-section rounded-lg p-4 animate-slideInUp">
@@ -607,7 +839,7 @@
                         <h3 class="text-base font-semibold text-blue-800">
                             <i class="fas fa-tools mr-2"></i>Actions Rapides
                         </h3>
-                        <button type="button" onclick="ouvrirModalAjoutArticle()" class="quick-action-btn bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                        <button type="button" onclick="1q()" class="quick-action-btn bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
                             <i class="fas fa-plus mr-2"></i>Ajouter Article
                         </button>
                     </div>
@@ -735,57 +967,16 @@
                 </div>
             </div>
 
-            <!-- Panier avec fonctionnalités améliorées et logique upsell -->
-            <div class="bg-white rounded-xl shadow-lg p-4 animate-slideInUp">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-lg font-semibold section-title">
-                    <i class="fas fa-box mr-3"></i>Articles du Panier
-                        <span class="text-sm font-normal text-gray-600 ml-2">
-                            (<span id="articles-count">{{ paniers.count }}</span> article<span id="articles-plural">{{ paniers.count|pluralize }}</span>)
-                        </span>
-                        {% if commande.compteur > 0 %}
-                        <span class="inline-flex items-center px-2 py-1 upsell-badge rounded-full text-sm font-medium ml-2">
-                            <i class="fas fa-arrow-up mr-1"></i>Upsell Niveau {{ commande.compteur }}
-                        </span>
-                        {% endif %}
-                        
-                </h3>
-                    <div class="flex gap-2">
-                        <button type="button" class="btn-prepa px-3 py-2 rounded text-sm" onclick="ouvrirModalAjoutArticle()">
-                            <i class="fas fa-plus mr-1"></i>Ajouter
-                        </button>
-                    </div>
-                </div>
-
-            <!-- Section des articles avec support des remises -->
-            {% include 'Superpreparation/partials/_articles_section.html' %}
+            {% include 'common/commande/section_articles.html' with commande=commande articles_partial='Superpreparation/partials/_articles_section.html' show_add_button=True animation_delay='0.8s' %}
 
 
-            <!-- Script pour la gestion des remises - Version Superviseur -->
-            <script src="{% static 'js/Superpreparation/Remise.js' %}"></script>
+            <!-- Script pour la gestion des remises - Module global -->
+            <script src="{% static 'js/Commande/remise.js' %}"></script>
 
 
                 
                 <div class="flex justify-between items-center mt-4 p-4 bg-gray-50 rounded-lg">
-                    <div class="text-sm text-gray-600">
-                        <i class="fas fa-info-circle mr-1"></i>
-                        <span id="articles-count-bottom">{{ paniers.count }}</span> article<span id="articles-plural-bottom">{{ paniers.count|pluralize }}</span> dans le panier
-                        {% if commande.compteur > 0 %}
-                            <span class="ml-2 text-purple-600 font-medium" id="upsell-badge-container">
-                                <i class="fas fa-arrow-up mr-1"></i>
-                                Upsell niveau <span id="niveau-upsell-dashboard">{{ commande.compteur }}</span>
-                            </span>
-                        {% endif %}
-                    </div>
-                    <div class="text-right">
-                        <div class="text-sm text-gray-600">Total articles</div>
-                        <div class="text-2xl font-bold text-blue-600 total-commande" id="sous-total-articles">{{ commande.sous_total_articles|floatformat:2 }} DH</div>
-                        {% if commande.frais_livraison %}
-                        <div class="text-sm text-gray-500 total-livraison" id="frais-livraison-display">+ {{ commande.ville.frais_livraison|default:0|floatformat:2 }} DH livraison</div>
-                        {% endif %}
-                        <div class="text-lg font-bold text-green-600 total-final-commande" id="total-commande">{{ commande.total_cmd|floatformat:2 }} DH</div>
-                        
-                    </div>
+                
                 </div>
             </div>
 
@@ -819,8 +1010,87 @@
     </form>
 </div>
 
-{% include 'composant_generale/modal_ajout_articles.html' %}
+{% include 'common/modal_ajout_articles.html' %}
 
+<!-- Modal de remise -->
+<div id="remiseModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 items-center justify-center z-50" style="backdrop-filter: blur(8px); display: none;">
+    <div class="bg-white rounded-xl p-6 w-full max-w-lg mx-4 shadow-2xl">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
+            <div class="flex items-center">
+                <i class="fas fa-tag text-green-500 mr-3"></i>
+                Appliquer une remise
+            </div>
+            <span class="text-gray-500 hover:text-gray-700 cursor-pointer transition-colors" onclick="fermerModalRemise()">
+                <i class="fas fa-times text-xl"></i>
+            </span>
+        </h3>
+
+        <div class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div class="text-sm text-gray-700">
+                <strong>Article:</strong> <span id="remiseArticleNom">-</span>
+            </div>
+            <div class="text-sm text-gray-700 mt-1">
+                <strong>Sous-total actuel:</strong> <span id="remiseSousTotalActuel">0.00</span> DH
+            </div>
+        </div>
+
+        <input type="hidden" id="remisePanierId" value="">
+
+        <div class="space-y-4">
+            <!-- Type de remise -->
+            <div>
+                <label for="typeRemise" class="block text-sm font-medium text-gray-700 mb-2">
+                    Type de remise
+                </label>
+                <select id="typeRemise" disabled onchange="calculerApercu()"
+                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                    <option value="POURCENTAGE">Pourcentage (%)</option>
+                </select>
+            </div>
+
+            <!-- Valeur de la remise -->
+            <div>
+                <label for="valeurRemise" class="block text-sm font-medium text-gray-700 mb-2">
+                    Valeur de la remise
+                </label>
+                <input type="number" id="valeurRemise" step="0.01" min="0.01" placeholder="Ex: 10"
+                       oninput="calculerApercu()"
+                       class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+            </div>
+
+            <!-- Raison de la remise (optionnel) -->
+            <div>
+                <label for="raisonRemise" class="block text-sm font-medium text-gray-700 mb-2">
+                    Raison de la remise (optionnel)
+                </label>
+                <select id="raisonRemise" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                    <option value="">-- Sélectionnez une raison --</option>
+                    <option value="Client fidèle">Client fidèle</option>
+                    <option value="Produit endommagé">Produit endommagé</option>
+                    <option value="Erreur de préparation">Erreur de préparation</option>
+                    <option value="Geste commercial">Geste commercial</option>
+                    <option value="Retard de livraison">Retard de livraison</option>
+                </select>
+            </div>
+
+            <!-- Aperçu de la remise -->
+            <div id="remisePreview" style="display: none;">
+                <!-- Le contenu sera généré dynamiquement par JavaScript -->
+            </div>
+        </div>
+
+        <div class="flex justify-end space-x-3 mt-6">
+            <button type="button" onclick="fermerModalRemise()"
+                    class="px-4 py-2 rounded-lg font-medium transition-all bg-gray-100 hover:bg-gray-200 text-gray-700">
+                <i class="fas fa-times mr-1"></i>Annuler
+            </button>
+            <button type="button" onclick="appliquerRemise()"
+                    class="px-4 py-2 rounded-lg font-medium transition-all bg-green-600 hover:bg-green-700 text-white">
+                <i class="fas fa-check mr-2"></i>Appliquer la remise
+            </button>
+        </div>
+    </div>
+</div>
 
 <!-- Modales d'information sur les calculs -->
 <div id="modalInfoPrix" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
@@ -916,7 +1186,7 @@
 
 
 
-{% include 'composant_generale/modal_confirmation_suppression.html' with modal_id='modalConfirmation' %}
+{% include 'common/modal_confirmation_suppression.html' with modal_id='modalConfirmation' %}
 
 <!-- Modal d'information sur la logique upsell -->
 <div id="modalInfoUpsell" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
@@ -1072,32 +1342,242 @@
 
 {% block extra_js %}
 {{ block.super }}
-<script src="{% static 'js/modal_ajout_articles.js' %}"></script>
+
+<!-- ✅ CONFIGURATION GLOBALE POUR LES JAVASCRIPT -->
+<script>
+    // Configuration pour les fichiers JavaScript globaux
+    window.commandeId = {{ commande.id }};
+    window.urlModifier = "{% url 'Superpreparation:modifier_commande_superviseur' commande.pk %}";
+
+    // APIs Articles
+    window.urlApiArticles = "{% url 'Superpreparation:api_articles_disponibles_prepa' %}";
+    window.urlGetVariants = "{% url 'Superpreparation:get_article_variants' article_id=0 %}".replace('/0/', '/{id}/');
+    window.urlRafraichir = '/Superpreparation/api/commande/{{ commande.id }}/rafraichir-articles/';
+
+    // APIs Remises
+    window.urlCalculerRemisePreview = '/Superpreparation/calculer-remise-preview/';
+    window.urlAppliquerRemise = '/Superpreparation/appliquer-remise/';
+    window.urlRetirerRemise = '/Superpreparation/retirer-remise/';
+
+    window.appName = 'Superpreparation';
+
+    // ========== FONCTIONS UTILITAIRES POUR LES FILTRES ==========
+
+    /**
+     * Vérifie si un article correspond au filtre spécifié
+     */
+    function correspondAuFiltre(article, typeFiltre) {
+        switch (typeFiltre) {
+            case 'promo':
+                return Boolean(article.has_promo_active);
+            case 'liquidation':
+                return article.phase === 'LIQUIDATION';
+            case 'test':
+                return article.phase === 'EN_TEST';
+            case 'upsell':
+                return Boolean(article.isUpsell);
+            case 'all':
+            default:
+                return true;
+        }
+    }
+
+    /**
+     * Compte le nombre d'articles par type de filtre
+     */
+    function compterArticlesParType(typeFiltre) {
+        if (!window.articlesDisponibles || window.articlesDisponibles.length === 0) {
+            return 0;
+        }
+
+        if (typeFiltre === 'all') {
+            return window.articlesDisponibles.length;
+        }
+
+        return window.articlesDisponibles.filter(article => correspondAuFiltre(article, typeFiltre)).length;
+    }
+
+    /**
+     * Met à jour les compteurs sur les badges de filtre
+     */
+    function mettreAJourCompteursFiltre() {
+        const types = ['all', 'promo', 'liquidation', 'test', 'upsell'];
+
+        types.forEach(type => {
+            const badge = document.getElementById(`filter-${type}`);
+            if (badge) {
+                const compteur = compterArticlesParType(type);
+
+                // Supprimer l'ancien compteur s'il existe
+                const ancienCompteur = badge.querySelector('.article-count');
+                if (ancienCompteur) {
+                    ancienCompteur.remove();
+                }
+
+                // Ajouter le nouveau compteur
+                if (compteur > 0) {
+                    const compteurElement = document.createElement('span');
+                    compteurElement.className = 'article-count';
+                    compteurElement.textContent = `(${compteur})`;
+                    badge.appendChild(compteurElement);
+                }
+            }
+        });
+    }
+</script>
+
+<!-- Module global de gestion des articles -->
+<script src="{% static 'js/Commande/gestion_articles.js' %}"></script>
+
+<script>
+// ========== ALIAS POUR COMPATIBILITÉ ==========
+// Créer un alias pour ouvrirModalAjoutArticle qui appelle la fonction globale
+window.ouvrirModalAjoutArticle = function() {
+    console.log('🔄 Redirection vers ajouterNouvelArticle (module global)');
+    if (typeof ajouterNouvelArticle === 'function') {
+        ajouterNouvelArticle();
+    } else {
+        console.error('❌ ajouterNouvelArticle non disponible');
+    }
+};
+console.log('✅ Alias ouvrirModalAjoutArticle → ajouterNouvelArticle créé');
+
+// ⚠️ DÉFINIR LA FONCTION AJAX APRÈS le chargement de gestion_articles.js
+// pour que afficherArticles soit disponible quand l'AJAX se termine
+console.log('🔧 Définition de window.chargerArticlesDisponibles (version AJAX)');
+window.chargerArticlesDisponibles = function(filterType = 'tous') {
+    console.log(`🔄 Chargement des articles avec filtre: ${filterType}`);
+
+    // Afficher le spinner pendant le chargement
+    const spinner = document.getElementById('articlesSpinner');
+    if (spinner) {
+        spinner.style.display = 'table-row';
+        console.log('🔄 Spinner affiché pour le chargement AJAX');
+    }
+
+    const url = new URL("{% url 'Superpreparation:api_articles_disponibles_prepa' %}", window.location.origin);
+    url.searchParams.set('filter', filterType);
+    console.log(`🌐 URL de l'API: ${url.toString()}`);
+
+    fetch(url)
+        .then(response => {
+            console.log(`📡 Réponse reçue, status: ${response.status}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('📥 Données brutes reçues:', data);
+
+            // Gestion des deux formats possibles
+            let articles = [];
+            if (Array.isArray(data)) {
+                articles = data;
+                console.log(`📦 ${articles.length} article(s) trouvé(s) (format tableau)`);
+            } else if (data.success && data.articles) {
+                articles = data.articles;
+                console.log(`📦 ${articles.length} article(s) trouvé(s) (format objet)`);
+            } else {
+                console.warn('⚠️ Format de données inattendu:', data);
+                return;
+            }
+
+            console.log(`🎯 Articles à afficher:`, articles);
+            window.articlesDisponibles = articles;
+            if (typeof window.afficherArticles === 'function') {
+                window.afficherArticles(articles);
+            } else {
+                console.error('❌ Fonction afficherArticles non trouvée');
+            }
+
+            // Calculer les statistiques
+            if (!data.stats) {
+                const stats = {
+                    'total': articles.length,
+                    'disponible': articles.filter(a => a.qte_disponible > 0).length,
+                    'upsell': articles.filter(a => a.isUpsell).length,
+                    'promo': articles.filter(a => a.has_reduction).length,
+                    'liquidation': articles.filter(a => a.phase === 'LIQUIDATION').length,
+                    'test': articles.filter(a => a.phase === 'EN_TEST').length
+                };
+                if (typeof window.mettreAJourStatistiques === 'function') {
+                    window.mettreAJourStatistiques(stats);
+                }
+            } else {
+                if (typeof window.mettreAJourStatistiques === 'function') {
+                    window.mettreAJourStatistiques(data.stats);
+                }
+            }
+
+            if (typeof window.mettreAJourFiltreActif === 'function') {
+                window.mettreAJourFiltreActif(filterType);
+            }
+        })
+        .catch(error => {
+            console.error('Erreur de chargement des articles:', error);
+            // Masquer le spinner en cas d'erreur
+            const spinner = document.getElementById('articlesSpinner');
+            if (spinner) {
+                spinner.style.display = 'none';
+            }
+            // Afficher un message d'erreur
+            const tbody = document.getElementById('articlesTableBody');
+            if (tbody) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="px-4 py-8 text-center text-red-500">
+                            <div class="flex flex-col items-center">
+                                <i class="fas fa-exclamation-triangle text-3xl mb-2"></i>
+                                <p>Erreur lors du chargement des articles</p>
+                                <p class="text-sm text-gray-500 mt-2">${error.message}</p>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }
+        });
+};
+console.log('✅ window.chargerArticlesDisponibles (AJAX) définie');
+</script>
 
 <script>
 // Fonctions globales pour les `onclick` - définies en dehors du DOMContentLoaded
-    window.ouvrirModalAjoutArticle = function(event) {
-        // Utiliser la version générique si dispo
-        if (typeof window.ouvrirModalAjouterArticle === 'function') {
-            return window.ouvrirModalAjouterArticle(event);
-        }
-        console.log('🔧 Fonction ouvrirModalAjoutArticle appelée');
-        const modal = document.getElementById('articleModal') || document.getElementById('modalAjoutArticle');
-        if (modal) {
-            modal.classList.remove('hidden');
-            // Forcer l'affichage type flex si nécessaire
-            if (modal.style) {
-                modal.style.display = 'flex';
-                modal.style.visibility = 'visible';
-                modal.style.opacity = '1';
+    console.log('🔍 DEBUG: Script inline chargé (extra_js)');
+    console.log('🔍 DEBUG: window.ouvrirModalAjouterArticle existe?', typeof window.ouvrirModalAjouterArticle);
+    console.log('🔍 DEBUG: window.ouvrirModalAjoutArticle existe?', typeof window.ouvrirModalAjoutArticle);
+
+    // NE PAS redéfinir si elle existe déjà (définie en haut du fichier)
+    if (typeof window.ouvrirModalAjoutArticle !== 'function') {
+        console.warn('⚠️ window.ouvrirModalAjoutArticle n\'existe pas, définition de secours');
+        window.ouvrirModalAjoutArticle = function(event) {
+            console.log('🔧 Fonction ouvrirModalAjoutArticle appelée (fallback)');
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
             }
-            if (typeof chargerArticlesDisponibles === 'function') {
-                chargerArticlesDisponibles();
+            // Utiliser la version générique si dispo
+            if (typeof window.ouvrirModalAjouterArticle === 'function') {
+                return window.ouvrirModalAjouterArticle(event);
             }
-        } else {
-            console.error('❌ Modal articleModal/modalAjoutArticle non trouvée');
-        }
-    };
+            const modal = document.getElementById('articleModal') || document.getElementById('modalAjoutArticle');
+            if (modal) {
+                modal.classList.remove('hidden');
+                if (modal.style) {
+                    modal.style.display = 'flex';
+                    modal.style.visibility = 'visible';
+                    modal.style.opacity = '1';
+                }
+                if (typeof chargerArticlesDisponibles === 'function') {
+                    chargerArticlesDisponibles();
+                }
+            } else {
+                console.error('❌ Modal articleModal/modalAjoutArticle non trouvée');
+            }
+        };
+    } else {
+        console.log('✅ window.ouvrirModalAjoutArticle déjà définie, on la garde');
+    }
 
     window.fermerModalAjoutArticle = function(event) {
         // Utiliser la version générique si dispo
@@ -1180,70 +1660,15 @@ window.changeQuantite = function(articleId, delta) {
     }
 };
 
-// Fonction pour charger les articles disponibles
-window.chargerArticlesDisponibles = function(filterType = 'tous') {
-    console.log(`🔄 Chargement des articles avec filtre: ${filterType}`);
-    const url = new URL("{% url 'Superpreparation:api_articles_disponibles_prepa' %}", window.location.origin);
-    url.searchParams.set('filter', filterType);
-    console.log(`🌐 URL de l'API: ${url.toString()}`);
-    
-    fetch(url)
-        .then(response => {
-            console.log(`📡 Réponse reçue, status: ${response.status}`);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            console.log('📥 Données brutes reçues:', data);
-            
-            // Gestion des deux formats possibles (tableau direct ou objet avec propriété articles)
-            let articles = [];
-            if (Array.isArray(data)) {
-                articles = data;
-                console.log(`📦 ${articles.length} article(s) trouvé(s) (format tableau)`);
-            } else if (data.success && data.articles) {
-                articles = data.articles;
-                console.log(`📦 ${articles.length} article(s) trouvé(s) (format objet)`);
-            } else {
-                console.warn('⚠️ Format de données inattendu:', data);
-                console.log('🔍 Propriétés disponibles:', Object.keys(data));
-                return;
-            }
-            
-            console.log(`🎯 Articles à afficher:`, articles);
-            window.articlesDisponibles = articles;
-            if (typeof window.afficherArticles === 'function') {
-                window.afficherArticles(articles);
-            } else {
-                console.error('❌ Fonction afficherArticles non trouvée');
-            }
-            
-            // Calculer les statistiques basiques si pas fournies
-            if (!data.stats) {
-                const stats = {
-                    'total': articles.length,
-                    'disponible': articles.filter(a => a.qte_disponible > 0).length,
-                    'upsell': articles.filter(a => a.isUpsell).length,
-                    'promo': articles.filter(a => a.has_reduction).length,
-                    'liquidation': articles.filter(a => a.phase === 'LIQUIDATION').length,
-                    'test': articles.filter(a => a.phase === 'EN_TEST').length
-                };
-                if (typeof window.mettreAJourStatistiques === 'function') {
-                    window.mettreAJourStatistiques(stats);
-                }
-            } else {
-                if (typeof window.mettreAJourStatistiques === 'function') {
-                    window.mettreAJourStatistiques(data.stats);
-                }
-            }
-            
-            if (typeof window.mettreAJourFiltreActif === 'function') {
-                window.mettreAJourFiltreActif(filterType);
-            }
-        }).catch(error => console.error('Erreur de chargement des articles:', error));
-};
+// ========== FONCTIONS GLOBALES POUR LES ARTICLES DYNAMIQUES ==========
+// ⚠️ NOTE: Ces fonctions sont maintenant définies EN HAUT du fichier (lignes ~644-807)
+// AVANT le chargement du HTML articles-container pour être immédiatement disponibles.
+// Cette section est conservée uniquement comme référence (fonctions commentées ci-dessous).
+
+// ⚠️ NOTE: window.chargerArticlesDisponibles est maintenant définie en HAUT du fichier
+// (ligne ~1113, AVANT le chargement de modal_ajout_articles.js)
+// Ne pas la redéfinir ici pour éviter d'écraser la version AJAX
+console.log('🔍 DEBUG: window.chargerArticlesDisponibles existe déjà?', typeof window.chargerArticlesDisponibles);
 
 document.addEventListener('DOMContentLoaded', function() {
     let commandeId = {{ commande.id }};
@@ -1862,6 +2287,9 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('✅ Tous les totaux mis à jour avec succès');
     }
 
+    // Exposer la fonction globalement pour qu'elle soit accessible depuis les scripts externes
+    window.mettreAJourTousLesTotaux = mettreAJourTousLesTotaux;
+
     // Fonction pour recalculer dynamiquement les prix upsell de tous les articles
     function recalculerPrixUpsellTousArticles(nouveauCompteur) {
         console.log(`🔄 Recalcul des prix upsell avec compteur = ${nouveauCompteur}`);
@@ -1919,7 +2347,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const prixLibelleElement = document.getElementById(`prix-libelle-${panierId}`);
                 if (prixLibelleElement) {
                     if (nouveauCompteur > 0) {
-                        prixLibelleElement.innerHTML = `<i class="fas fa-arrow-up mr-1"></i>Prix upsell niveau ${nouveauCompteur}`;
+                        prixLibelleElement.innerHTML = `<i class="fas fa-arrow-up mr-1"></i>Prix upsell ${nouveauCompteur}`;
                         prixLibelleElement.className = 'text-xs text-green-600 mt-1';
                     } else {
                         prixLibelleElement.innerHTML = `<i class="fas fa-tag mr-1"></i>Prix normal`;
@@ -2232,6 +2660,120 @@ document.addEventListener('DOMContentLoaded', function() {
                 input.value = input.getAttribute('data-previous-value') || 1;
             }
             handleError(error, 'modification de quantité');
+        });
+    };
+
+    // Fonction pour ouvrir le modal de remise
+    window.ouvrirModalRemise = function(panierId) {
+        console.log('📝 Ouverture modal remise pour panier:', panierId);
+        Swal.fire({
+            title: 'Appliquer une remise',
+            html: `
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Type de remise</label>
+                        <select id="type_remise" class="w-full border border-gray-300 rounded-lg p-2">
+                            <option value="POURCENTAGE">Pourcentage (%)</option>
+                            <option value="MONTANT">Montant fixe (DH)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Valeur de la remise</label>
+                        <input type="number" id="valeur_remise" class="w-full border border-gray-300 rounded-lg p-2" min="0" step="0.01" placeholder="Entrez la valeur">
+                    </div>
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: 'Appliquer',
+            cancelButtonText: 'Annuler',
+            preConfirm: () => {
+                const type = document.getElementById('type_remise').value;
+                const valeur = parseFloat(document.getElementById('valeur_remise').value);
+
+                if (!valeur || valeur <= 0) {
+                    Swal.showValidationMessage('Veuillez entrer une valeur valide');
+                    return false;
+                }
+
+                return { type, valeur };
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const { type, valeur } = result.value;
+                appliquerRemise(panierId, type, valeur);
+            }
+        });
+    };
+
+    // Fonction pour appliquer une remise
+    function appliquerRemise(panierId, typeRemise, valeurRemise) {
+        const formData = new FormData();
+        formData.append('action', 'appliquer_remise');
+        formData.append('panier_id', panierId);
+        formData.append('type_remise', typeRemise);
+        formData.append('valeur_remise', valeurRemise);
+
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (csrfToken) formData.append('csrfmiddlewaretoken', csrfToken.value);
+
+        fetch(`{% url 'Superpreparation:modifier_commande_superviseur' commande.id %}`, {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                showNotificationToast('Remise appliquée avec succès', 'success');
+                // Recharger la page pour voir la remise appliquée
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erreur',
+                    text: data.error || 'Impossible d\'appliquer la remise.'
+                });
+            }
+        })
+        .catch(error => {
+            handleError(error, 'application de remise');
+        });
+    }
+
+    // Fonction pour retirer une remise
+    window.retirerRemise = function(panierId) {
+        ouvrirModalConfirmation('Êtes-vous sûr de vouloir retirer cette remise ?', () => {
+            const formData = new FormData();
+            formData.append('action', 'retirer_remise');
+            formData.append('panier_id', panierId);
+
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+            if (csrfToken) formData.append('csrfmiddlewaretoken', csrfToken.value);
+
+            fetch(`{% url 'Superpreparation:modifier_commande_superviseur' commande.id %}`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showNotificationToast('Remise retirée avec succès', 'success');
+                    // Recharger la page
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Erreur',
+                        text: data.error || 'Impossible de retirer la remise.'
+                    });
+                }
+            })
+            .catch(error => {
+                handleError(error, 'retrait de remise');
+            });
         });
     };
 
@@ -2603,6 +3145,7 @@ window.ajouterArticleAuPanierDepuisBouton = function(articleId) {
     console.log('✅ ===== FIN ajouterArticleAuPanierDepuisBouton =====');
 };
 
+
 // Fonction pour afficher les articles
 window.afficherArticles = function(articles) {
         const container = document.getElementById('articlesTableBody');
@@ -2743,6 +3286,8 @@ window.afficherArticles = function(articles) {
 
     container.innerHTML = tableHTML;
 };
+
+}
     
     function creerCarteArticle(article, index) {
         const card = document.createElement('div');

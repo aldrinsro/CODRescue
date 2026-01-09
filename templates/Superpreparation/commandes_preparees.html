@@ -745,102 +745,102 @@
                 </div>
                 <div class="flex items-center space-x-2">
                     <div class="relative">
-                        <input type="text" id="smartSearch" 
-                           placeholder="Rechercher par N° Commande, client, téléphone..." 
+                        <input type="text" id="smartSearch"
+                           placeholder="Rechercher par N° Commande, client, téléphone..."
                                class="block px-4 py-2 pr-10 border border-gray-300 rounded shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm w-64 h-10"
                                autocomplete="off">
                         <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
                             <i class="fas fa-search text-gray-400"></i>
                         </div>
                     </div>
-                    <button onclick="clearSmartSearch()" 
+                    <button onclick="clearSmartSearch()"
                             class="inline-flex items-center px-3 py-2 bg-gray-500 hover:bg-gray-600 text-white text-sm font-medium rounded transition-colors h-10">
                         <i class="fas fa-times"></i>
                     </button>
-                    <button onclick="toggleAdvancedSearch()" 
+                    <button onclick="toggleAdvancedSearch()"
                             class="inline-flex items-center px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded transition-colors h-10">
                         <i class="fas fa-filter mr-2"></i>
                         Filtres
                     </button>
-                <button id="columnToggle" onclick="toggleColumnVisibility()" 
+                <button id="columnToggle" onclick="toggleColumnVisibility()"
                         class="inline-flex items-center px-3 py-2 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium rounded transition-colors h-10" title="Sélectionner les colonnes">
                     <i class="fas fa-columns mr-2 text-gray-500"></i>
                     Sélectionner les colonnes
                     </button>
                 </div>
-                
+
                 <!-- Filtres avancés -->
                 <div id="advancedSearch" class="hidden absolute top-full left-0 mt-2 bg-white border border-gray-300 rounded-md shadow-lg p-4 z-50 min-w-96">
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">N° Commande</label>
-                        <input type="text" id="filterIdYz" placeholder="Ex: 212268" 
+                        <input type="text" id="filterIdYz" placeholder="Ex: 212268"
                                    class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">N° Externe</label>
-                        <input type="text" id="filterNumCmd" placeholder="Ex: YCN-000290" 
+                        <input type="text" id="filterNumCmd" placeholder="Ex: YCN-000290"
                                    class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Client</label>
-                            <input type="text" id="filterClient" placeholder="Nom ou prénom..." 
+                            <input type="text" id="filterClient" placeholder="Nom ou prénom..."
                                    class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Téléphone</label>
-                            <input type="text" id="filterPhone" placeholder="N°..." 
+                            <input type="text" id="filterPhone" placeholder="N°..."
                                    class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
                         </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Adresse</label>
-                        <input type="text" id="filterAdresse" placeholder="Adresse client..." 
+                        <input type="text" id="filterAdresse" placeholder="Adresse client..."
                                class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                        <input type="email" id="filterEmail" placeholder="Email..." 
+                        <input type="email" id="filterEmail" placeholder="Email..."
                                class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Ville Client</label>
-                        <input type="text" id="filterVilleClient" placeholder="Ville client..." 
+                        <input type="text" id="filterVilleClient" placeholder="Ville client..."
                                class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Ville & Région</label>
-                        <input type="text" id="filterVilleRegion" placeholder="Ville/région..." 
+                        <input type="text" id="filterVilleRegion" placeholder="Ville/région..."
                                    class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Date Préparation</label>
-                            <input type="date" id="filterDatePreparation" 
+                            <input type="date" id="filterDatePreparation"
                                    class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Total Min</label>
-                            <input type="number" id="filterTotalMin" placeholder="0" 
+                            <input type="number" id="filterTotalMin" placeholder="0"
                                    class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Total Max</label>
-                            <input type="number" id="filterTotalMax" placeholder="1000" 
+                            <input type="number" id="filterTotalMax" placeholder="1000"
                                    class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Opérateur</label>
-                            <input type="text" id="filterOperateur" placeholder="Opérateur..." 
+                            <input type="text" id="filterOperateur" placeholder="Opérateur..."
                                    class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
                         </div>
                     </div>
                     <div class="mt-4 flex justify-between">
-                        <button onclick="applyFilters()" 
+                        <button onclick="applyFilters()"
                             class="inline-flex items-center px-4 py-2 text-white text-sm font-medium rounded transition-colors h-10"
                             style="background-color: var(--preparation-primary);">
                             <i class="fas fa-check mr-2"></i>
                             Appliquer
                         </button>
-                        <button onclick="clearFilters()" 
+                        <button onclick="clearFilters()"
                                 class="inline-flex items-center px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white text-sm font-medium rounded transition-colors h-10">
                             <i class="fas fa-eraser mr-2"></i>
                             Effacer
@@ -895,7 +895,6 @@
                             <input type="checkbox" id="selectAll" class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500">
                         </th>
                     <th class="px-3 py-2 text-left text-xs font-medium text-white uppercase tracking-wider">ID Commande</th>
-                    <th class="px-3 py-2 text-left text-xs font-medium text-white uppercase tracking-wider">N° Ext.</th>
                         <th class="px-3 py-2 text-left text-xs font-medium text-white uppercase tracking-wider">Client</th>
                         <th class="px-3 py-2 text-left text-xs font-medium text-white uppercase tracking-wider">Téléphone</th>
                         <th class="px-3 py-2 text-left text-xs font-medium text-white uppercase tracking-wider">Ville & Région</th>
@@ -909,7 +908,7 @@
                 </thead>
                 <tbody id="commandTableBody" class="bg-white divide-y divide-gray-200">
                     {% for commande in commandes_preparees %}
-                    <tr class="hover:bg-gray-50 transition-colors border-b border-gray-200 commande-row" 
+                    <tr class="hover:bg-gray-50 transition-colors border-b border-gray-200 commande-row"
                         data-id-yz="{{ commande.id_yz }}"
                         data-num-cmd="{{ commande.num_cmd|default:'' }}"
                         data-client="{{ commande.client.nom }} {{ commande.client.prenom }}"
@@ -1419,7 +1418,7 @@
     function performAdvancedFiltering(filters) {
         const results = allCommandes.filter(commande => {
             const data = commande.data;
-            
+
             // Filtres de texte
             if (filters.idYz && !data.idYz.toLowerCase().includes(filters.idYz.toLowerCase())) return false;
             if (filters.numCmd && !data.numCmd.toLowerCase().includes(filters.numCmd.toLowerCase())) return false;
@@ -1430,24 +1429,24 @@
             if (filters.villeClient && !(data.villeClient||'').toLowerCase().includes(filters.villeClient.toLowerCase())) return false;
             if (filters.villeRegion && !(data.villeRegion||'').toLowerCase().includes(filters.villeRegion.toLowerCase())) return false;
             if (filters.operateur && !data.operateur.toLowerCase().includes(filters.operateur.toLowerCase())) return false;
-            
+
             // Filtres numériques
             if (filters.totalMin > 0 && data.total < filters.totalMin) return false;
             if (filters.totalMax < Infinity && data.total > filters.totalMax) return false;
-            
+
             // Filtre de date
             if (filters.datePreparation && data.datePreparation) {
                 const filterDate = new Date(filters.datePreparation);
                 const commandeDate = new Date(data.datePreparation.split('/').reverse().join('-'));
                 if (commandeDate.toDateString() !== filterDate.toDateString()) return false;
             }
-            
+
             return true;
         });
 
         // Masquer toutes les lignes
         hideAllRows();
-        
+
         // Afficher seulement les résultats filtrés
         results.forEach(result => {
             result.element.style.display = '';
@@ -1465,7 +1464,7 @@
             'filterIdYz', 'filterNumCmd', 'filterClient', 'filterPhone',
             'filterDatePreparation', 'filterTotalMin', 'filterTotalMax', 'filterOperateur'
         ];
-        
+
         filterInputs.forEach(id => {
             const element = document.getElementById(id);
             if (element) element.value = '';
@@ -1473,7 +1472,7 @@
 
         // Réinitialiser les filtres actuels
         currentFilters = {};
-        
+
         // Afficher toutes les lignes
         showAllRows();
         hideSearchResults();
@@ -1761,6 +1760,6 @@ document.addEventListener('DOMContentLoaded', function() {
     if (typeof initSuiviCommandesSearch === 'function') {
         initSuiviCommandesSearch('generic');
     }
-    });
+});
 </script>
 {% endblock %}

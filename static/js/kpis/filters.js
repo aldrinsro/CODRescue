@@ -6,7 +6,8 @@
 class KPIFilters {
   constructor() {
     this.filters = {
-      periode: '30days',
+      periode: '30j',
+      periodePerformance: '30j', // Période spécifique pour Performance Commerciale
       region: 'all',
       categorie: 'all',
       zone: 'all',
@@ -84,7 +85,8 @@ class KPIFilters {
   resetAllFilters() {
     // Reset vers les valeurs par défaut
     this.filters = {
-      periode: '30days',
+      periode: '30j',
+      periodePerformance: '30j', // Période spécifique pour Performance Commerciale
       region: 'all',
       categorie: 'all',
       zone: 'all',

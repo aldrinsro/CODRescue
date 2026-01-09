@@ -109,7 +109,12 @@ function afficherPrixUpsellDynamiques(compteurActuel) {
         // Déterminer le libellé selon le compteur
         let libelle, couleurClasse;
         if (compteurActuel > 0) {
-            libelle = `Prix upsell niveau ${compteurActuel}`;
+            if (compteurActuel >= 4) {
+                libelle = 'Prix Gros';
+            } else {
+                // Ajuster le niveau affiché : compteur 1 → Niveau 2, compteur 2 → Niveau 3, compteur 3 → Niveau 4
+                libelle = `Prix upsell ${compteurActuel + 1}`;
+            }
             couleurClasse = 'text-green-600';
         } else {
             libelle = 'Prix normal';
@@ -170,18 +175,18 @@ function getPrixUpsellSelonCompteur(article, compteur) {
     if (compteur === 0) {
         // 0-1 articles upsell → prix normal
         return article.prix_actuel || article.prix_unitaire || 0;
-    } else if (compteur === 1 && article.prix_upsell_1) {
-        // 2 articles upsell → prix upsell 1
-        return article.prix_upsell_1;
-    } else if (compteur === 2 && article.prix_upsell_2) {
-        // 3 articles upsell → prix upsell 2
+    } else if (compteur === 1 && article.prix_upsell_2) {
+        // 2 articles upsell → prix upsell 2
         return article.prix_upsell_2;
-    } else if (compteur === 3 && article.prix_upsell_3) {
-        // 4 articles upsell → prix upsell 3
+    } else if (compteur === 2 && article.prix_upsell_3) {
+        // 3 articles upsell → prix upsell 3
         return article.prix_upsell_3;
-    } else if (compteur >= 4 && article.prix_upsell_4) {
-        // 5+ articles upsell → prix upsell 4
+    } else if (compteur === 3 && article.prix_upsell_4) {
+        // 4 articles upsell → prix upsell 4
         return article.prix_upsell_4;
+    } else if (compteur >= 4 && article.prix_gros) {
+        // 5+ articles upsell → prix gros
+        return article.prix_gros;
     } else {
         // Si pas de prix upsell défini pour ce niveau, utiliser le prix actuel
         return article.prix_actuel || article.prix_unitaire || 0;
@@ -2259,7 +2264,7 @@ function parseArticleData(dataArticleAttr, panierId) {
         }
         
         // Convertir les prix en nombres si nécessaire
-        const prixFields = ['prix_actuel', 'prix_unitaire', 'prix_upsell_1', 'prix_upsell_2', 'prix_upsell_3', 'prix_upsell_4'];
+        const prixFields = ['prix_actuel', 'prix_unitaire', 'prix_upsell_2', 'prix_upsell_3', 'prix_upsell_4', 'prix_gros', 'Prix_liquidation'];
         prixFields.forEach(field => {
             if (articleData[field] !== undefined && articleData[field] !== null) {
                 articleData[field] = parseFloat(articleData[field]) || 0;
@@ -2390,26 +2395,33 @@ function sontFraisLivraisonActives() {
 
 // Fonction pour mettre à jour l'affichage des frais de livraison dans le résumé
 function mettreAJourAffichageFraisResume() {
-    const fraisResumeElement = document.querySelector('#frais-display.font-medium.text-gray-800');
-    const fraisResumeContainer = fraisResumeElement ? fraisResumeElement.closest('.flex.justify-between.items-center') : null;
-    
+    const fraisActifsDiv = document.getElementById('frais-livraison-actifs');
+    const fraisInactifsDiv = document.getElementById('frais-livraison-inactifs');
+    const fraisDisplayResumeElement = document.getElementById('frais-display-resume');
+
     if (sontFraisLivraisonActives()) {
-        // Afficher la section des frais de livraison
-        if (fraisResumeContainer) {
-            fraisResumeContainer.style.display = 'flex';
+        // Afficher la section avec le montant des frais
+        if (fraisActifsDiv) {
+            fraisActifsDiv.style.display = 'flex';
         }
-        
+        if (fraisInactifsDiv) {
+            fraisInactifsDiv.style.display = 'none';
+        }
+
         // Mettre à jour le montant
         const fraisElement = document.getElementById('frais-display');
-        if (fraisElement && fraisResumeElement) {
+        if (fraisElement && fraisDisplayResumeElement) {
             const fraisText = fraisElement.value.replace(' DH', '').replace(',', '.');
             const fraisMontant = parseFloat(fraisText) || 0;
-            fraisResumeElement.textContent = `${fraisMontant.toFixed(2)} DH`;
+            fraisDisplayResumeElement.textContent = `${fraisMontant.toFixed(2)} DH`;
         }
     } else {
-        // Masquer la section des frais de livraison
-        if (fraisResumeContainer) {
-            fraisResumeContainer.style.display = 'none';
+        // Afficher la section "Non inclus"
+        if (fraisActifsDiv) {
+            fraisActifsDiv.style.display = 'none';
+        }
+        if (fraisInactifsDiv) {
+            fraisInactifsDiv.style.display = 'flex';
         }
     }
 }
@@ -2456,26 +2468,39 @@ function mettreAJourTotalCommande() {
 
     // Mettre à jour l'affichage des frais dans le résumé
     mettreAJourAffichageFraisResume();
-    
+
+    // Mettre à jour le sous-total du panier (sans frais)
+    const sousTotalPanierElement = document.getElementById('sous-total-panier');
+    if (sousTotalPanierElement) {
+        sousTotalPanierElement.textContent = `${sousTotal.toFixed(2)} DH`;
+    }
+
+    // Mettre à jour les frais de livraison dans le résumé
+    const fraisDisplayResumeElement = document.getElementById('frais-display-resume');
+    if (fraisDisplayResumeElement && sontFraisLivraisonActives()) {
+        fraisDisplayResumeElement.textContent = `${fraisLivraison.toFixed(2)} DH`;
+    }
+
+    // Mettre à jour le total final de la commande
     const totalElement = document.getElementById('total-commande');
     if (totalElement) {
         const ancienTotal = totalElement.textContent;
         totalElement.textContent = `${totalFinal.toFixed(2)} DH`;
-     
+
     }
     const totalElementHautPage = document.getElementById('total_commande_haut_page');
     if (totalElementHautPage) {
         const ancienTotal = totalElementHautPage.textContent;
         totalElementHautPage.textContent = `${totalFinal.toFixed(2)} DH`;
-       
+
     }
-    
+
     // Mettre à jour le sous-total des articles dans le détail si l'élément existe
     const sousTotalElement = document.getElementById('sous-total-articles');
     if (sousTotalElement) {
         const ancienSousTotal = sousTotalElement.textContent;
         sousTotalElement.textContent = `${sousTotal.toFixed(2)} DH`;
-       
+
     }
     
 }

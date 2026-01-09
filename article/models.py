@@ -267,15 +267,12 @@ class Article(models.Model):
     isUpsell = models.BooleanField(default=False, verbose_name="Est un upsell")
     
     # Prix de substitution (upsell)
-    prix_upsell_1 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Prix upsell 1")
-    prix_upsell_2 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Prix upsell 2")
-    prix_upsell_3 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Prix upsell 3")
-    prix_upsell_4 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Prix upsell 4")
+    prix_upsell_2 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Prix upsell 1")
+    prix_upsell_3 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Prix upsell 2")
+    prix_upsell_4 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Prix upsell 3")
+    prix_gros = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Prix upsell 4")
     Prix_liquidation = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Prix liquidation")
-    prix_remise_1 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Prix remise 1")
-    prix_remise_2 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Prix remise 2")
-    prix_remise_3 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Prix remise 3")
-    prix_remise_4 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Prix remise 4")
+
     class Meta:
         verbose_name = "Article"
         verbose_name_plural = "Articles"
@@ -322,29 +319,41 @@ class Article(models.Model):
                 raise ValidationError({
                     'prix_actuel': 'Assurez-vous qu\'il n\'y a pas plus de 2 chiffres après la virgule.'
                 })
-        
+
+        # Vérifier qu'un article upsell a au moins un prix upsell défini
+        if self.isUpsell:
+            if not any([self.prix_upsell_2, self.prix_upsell_3, self.prix_upsell_4, self.prix_gros]):
+                raise ValidationError({
+                    'isUpsell': 'Un article marqué comme upsell doit avoir au moins un prix upsell défini (prix upsell 2, 3, 4 ou prix gros).'
+                })
+
         # Désactiver automatiquement l'upsell pour les articles en liquidation seulement
         if self.isUpsell and self.phase in ['LIQUIDATION']:
             self.isUpsell = False
-            
+
         # Vérifier qu'un article en promotion n'est pas marqué comme upsell
         if self.isUpsell and self.has_promo_active:
             raise ValidationError("Un article ne peut pas être marqué comme 'upsell' s'il est en promotion.")
-        
+
         super().clean()
     
     def save(self, *args, **kwargs):
         # Toujours s'assurer que prix_actuel est défini
         if self.prix_actuel is None:
             self.prix_actuel = self.prix_unitaire
-        
+
         # Arrondir le prix actuel à 2 décimales si nécessaire
         self.prix_actuel = Decimal(str(self.prix_actuel)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-        
+
+        # Désactiver automatiquement l'upsell si aucun prix upsell n'est défini
+        if self.isUpsell:
+            if not any([self.prix_upsell_2, self.prix_upsell_3, self.prix_upsell_4, self.prix_gros]):
+                self.isUpsell = False
+
         # Désactiver automatiquement l'upsell si nécessaire
         if self.isUpsell and self.should_disable_upsell():
             self.isUpsell = False
-        
+
         super().save(*args, **kwargs)
     
     @property
@@ -406,14 +415,14 @@ class Article(models.Model):
     def get_all_prices(self):
         """Retourne tous les prix disponibles pour cet article (prix unitaire + upsells)"""
         prices = [self.prix_unitaire]
-        if self.prix_upsell_1 is not None:
-            prices.append(self.prix_upsell_1)
         if self.prix_upsell_2 is not None:
             prices.append(self.prix_upsell_2)
         if self.prix_upsell_3 is not None:
             prices.append(self.prix_upsell_3)
         if self.prix_upsell_4 is not None:
             prices.append(self.prix_upsell_4)
+        if self.prix_gros is not None:
+            prices.append(self.prix_gros)
         return prices
 
     @property
@@ -442,17 +451,17 @@ class Article(models.Model):
         """
         if not self.isUpsell:
             return self.prix_actuel if self.prix_actuel is not None else self.prix_unitaire
-            
+
         if quantite == 1:
             return self.prix_actuel if self.prix_actuel is not None else self.prix_unitaire
-        elif quantite == 2 and self.prix_upsell_1:
-            return self.prix_upsell_1
-        elif quantite == 3 and self.prix_upsell_2:
+        elif quantite == 2 and self.prix_upsell_2:
             return self.prix_upsell_2
-        elif quantite == 4 and self.prix_upsell_3:
+        elif quantite == 3 and self.prix_upsell_3:
             return self.prix_upsell_3
-        elif quantite > 4 and self.prix_upsell_4:
+        elif quantite == 4 and self.prix_upsell_4:
             return self.prix_upsell_4
+        elif quantite > 4 and self.prix_gros:
+            return self.prix_gros
         else:
             return self.prix_actuel if self.prix_actuel is not None else self.prix_unitaire
             
@@ -462,17 +471,17 @@ class Article(models.Model):
         """
         if not self.isUpsell:
             return 0
-            
+
         if quantite == 1:
             return 0
         elif quantite == 2:
-            return 1 if self.prix_upsell_1 else 0
+            return 1 if self.prix_upsell_2 else 0
         elif quantite == 3:
-            return 2 if self.prix_upsell_2 else 0
+            return 2 if self.prix_upsell_3 else 0
         elif quantite == 4:
-            return 3 if self.prix_upsell_3 else 0
+            return 3 if self.prix_upsell_4 else 0
         elif quantite > 4:
-            return 4 if self.prix_upsell_4 else 0
+            return 4 if self.prix_gros else 0
         return 0
 
     def get_variantes_disponibles(self):

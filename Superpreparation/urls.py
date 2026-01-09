@@ -1,6 +1,8 @@
 from django.urls import path
 from django.shortcuts import redirect
-from . import views, views_retournee,views_articles
+
+from .views import views_articles, views_retournee
+from .views import views
 from .barre_recherche_globale import views as search_views
 from operatConfirme import views as view_modif 
 
@@ -14,8 +16,7 @@ urlpatterns = [
     path('', views.home_view, name='home'),
     path('home/', views.home_view, name='home_redirect'),
 
-     #Gestion des commandes 
-    path('liste-prepa/', views.liste_prepa, name='liste_prepa'),
+  
     path('commandes-en-preparation/', views.commandes_en_preparation, name='commandes_en_preparation'),
     path('commandes-emballees/', views.commandes_emballees, name='commandes_emballees'),
     path('commandes-preparees/', views.commandes_preparees, name='commandes_preparees'),
@@ -69,7 +70,8 @@ urlpatterns = [
     path('commande/<int:commande_id>/prix-upsell/', views.api_prix_upsell_articles, name='api_prix_upsell_articles'),
     path('commande/<int:commande_id>/diagnostiquer-compteur/', views_articles.diagnostiquer_compteur, name='diagnostiquer_compteur'),
     path('api/article/<int:article_id>/variantes/', views.get_article_variants, name='get_article_variants'),
-    
+    path('commande/<int:commande_id>/ajouter-variantes-ajax/', views.ajouter_variantes_ajax, name='ajouter_variantes_ajax'),
+
 
 
 

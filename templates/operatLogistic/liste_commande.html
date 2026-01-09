@@ -98,124 +98,8 @@
         </div>
     </div>
 
-    <!-- Barre de recherche -->
-    <div class="bg-white rounded-xl shadow-md border p-6 mb-8" style="border-color: #e2e8f0;">
-        <div class="flex flex-col md:flex-row justify-between items-center gap-4">
-            <form method="get" class="flex-grow flex items-center gap-4">
-                <!-- Conserver les paramètres de filtre -->
-                {% if request.GET.start_date %}
-                    <input type="hidden" name="start_date" value="{{ request.GET.start_date }}">
-                {% endif %}
-                {% if request.GET.end_date %}
-                    <input type="hidden" name="end_date" value="{{ request.GET.end_date }}">
-                {% endif %}
-                {% if request.GET.preset %}
-                    <input type="hidden" name="preset" value="{{ request.GET.preset }}">
-                {% endif %}
-                
-                <div class="relative flex-grow">
-                    <input type="text" name="search" value="{{ search_query|default:'' }}" 
-                           class="w-full pl-10 pr-4 py-2 rounded-lg border focus:ring-2 focus:ring-offset-2 transition-all" 
-                           style="border-color: var(--logistic-border-accent); focus:ring-color: var(--logistic-primary);"
-                           placeholder="Rechercher par N° commande, client...">
-                    <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-                </div>
-                <button type="submit" class="px-6 py-2 rounded-lg text-white font-medium transition-all shadow-md hover:shadow-lg transform hover:scale-105" 
-                        style="background-color: var(--logistic-primary);">
-                    Rechercher
-                </button>
-                {% if search_query %}
-                <a href="{% url 'operatLogistic:liste_commandes' %}{% if request.GET.start_date %}?start_date={{ request.GET.start_date }}&end_date={{ request.GET.end_date }}&preset={{ request.GET.preset }}{% endif %}" class="px-4 py-2 rounded-lg bg-gray-500 text-white font-medium transition-all shadow-md hover:shadow-lg transform hover:scale-105">
-                    Réinitialiser
-                </a>
-                {% endif %}
-            </form>
-        </div>
-    </div>
-
-    <!-- Filtre de temps personnalisable -->
-    <div class="bg-white rounded-xl shadow-md border p-6 mb-8" style="border-color: #e2e8f0;">
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div class="flex flex-col md:flex-row items-start md:items-center gap-4">
-                <label class="text-sm font-medium text-gray-700">PÉRIODE :</label>
-                <form method="get" class="flex flex-col md:flex-row items-start md:items-center gap-4">
-                    <!-- Conserver les paramètres de recherche -->
-                    {% if search_query %}
-                        <input type="hidden" name="search" value="{{ search_query }}">
-                    {% endif %}
-                    
-                    <select name="preset" class="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-offset-2 transition-all" 
-                            style="border-color: var(--logistic-border-accent); focus:ring-color: var(--logistic-primary);"
-                            onchange="this.form.submit()">
-                        <option value="">Sélectionner une période</option>
-                        <option value="today" {% if filter_preset == 'today' %}selected{% endif %}>Aujourd'hui</option>
-                        <option value="yesterday" {% if filter_preset == 'yesterday' %}selected{% endif %}>Hier</option>
-                        <option value="this_week" {% if filter_preset == 'this_week' %}selected{% endif %}>Cette semaine</option>
-                        <option value="last_week" {% if filter_preset == 'last_week' %}selected{% endif %}>Semaine dernière</option>
-                        <option value="this_month" {% if filter_preset == 'this_month' %}selected{% endif %}>Ce mois</option>
-                        <option value="last_month" {% if filter_preset == 'last_month' %}selected{% endif %}>Mois dernier</option>
-                        <option value="this_year" {% if filter_preset == 'this_year' %}selected{% endif %}>Cette année</option>
-                        <option value="last_year" {% if filter_preset == 'last_year' %}selected{% endif %}>Année dernière</option>
-                        <option value="custom" {% if filter_start_date and filter_end_date %}selected{% endif %}>Personnalisé</option>
-                    </select>
-                </form>
-            </div>
-            
-            <!-- Formulaire pour période personnalisée -->
-            <form method="get" class="flex flex-col md:flex-row items-start md:items-center gap-4">
-                <!-- Conserver les paramètres de recherche -->
-                {% if search_query %}
-                    <input type="hidden" name="search" value="{{ search_query }}">
-                {% endif %}
-                
-                <div class="flex flex-col md:flex-row items-start md:items-center gap-4">
-                    <div class="flex flex-col">
-                        <label class="text-sm font-medium text-gray-700 mb-1">DATE DÉBUT :</label>
-                        <input type="date" name="start_date" value="{{ filter_start_date|default:'' }}" 
-                               class="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-offset-2 transition-all"
-                               style="border-color: var(--logistic-border-accent); focus:ring-color: var(--logistic-primary);">
-                    </div>
-                    <div class="flex flex-col">
-                        <label class="text-sm font-medium text-gray-700 mb-1">DATE FIN :</label>
-                        <input type="date" name="end_date" value="{{ filter_end_date|default:'' }}" 
-                               class="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-offset-2 transition-all"
-                               style="border-color: var(--logistic-border-accent); focus:ring-color: var(--logistic-primary);">
-                    </div>
-                    <button type="submit" class="px-6 py-2 rounded-lg text-white font-medium transition-all shadow-md hover:shadow-lg transform hover:scale-105" 
-                            style="background-color: var(--logistic-primary);">
-                        <i class="fas fa-filter mr-2"></i>Appliquer
-                    </button>
-                </div>
-            </form>
-        </div>
-        
-        <!-- Affichage de la période active -->
-        {% if filter_start_date and filter_end_date %}
-        <div class="mt-4">
-            <div class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium" 
-                 style="background-color: var(--logistic-accent-color); color: white;">
-                <i class="fas fa-calendar-alt mr-2"></i>
-                {{ filter_start_date|date:"d/m/Y" }} - {{ filter_end_date|date:"d/m/Y" }}
-            </div>
-        </div>
-        {% elif filter_preset %}
-        <div class="mt-4">
-            <div class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium" 
-                 style="background-color: var(--logistic-accent-color); color: white;">
-                <i class="fas fa-calendar-alt mr-2"></i>
-                {% if filter_preset == 'today' %}Aujourd'hui
-                {% elif filter_preset == 'yesterday' %}Hier
-                {% elif filter_preset == 'this_week' %}Cette semaine
-                {% elif filter_preset == 'last_week' %}Semaine dernière
-                {% elif filter_preset == 'this_month' %}Ce mois
-                {% elif filter_preset == 'last_month' %}Mois dernier
-                {% elif filter_preset == 'this_year' %}Cette année
-                {% elif filter_preset == 'last_year' %}Année dernière
-                {% endif %}
-            </div>
-        </div>
-        {% endif %}
-    </div>
+    <!-- Filtres globaux de commandes -->
+    {% include 'common/commande-filters.html' %}
 
     <!-- Message si aucun résultat -->
     {% if not page_obj.object_list %}
@@ -226,8 +110,8 @@
             </div>
             <div class="ml-3">
                 <p class="text-sm text-blue-700">
-                    {% if search_query %}
-                        Aucune commande trouvée pour la recherche "{{ search_query }}".
+                    {% if request.GET.search %}
+                        Aucune commande trouvée pour la recherche "{{ request.GET.search }}".
                     {% else %}
                         Aucune commande ne vous est actuellement affectée.
                         <br>Les commandes préparées qui vous seront affectées par l'admin apparaîtront ici.
@@ -341,7 +225,7 @@
             
             <!-- Grille des actions SAV -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <button onclick="openSavModal('Livrée', {{ commande.id }})" class="sav-action-card bg-green-50 hover:bg-green-100 border-2 border-green-200 hover:border-green-300 rounded-lg p-4 transition-all duration-200">
+                <button onclick="ouvrirModalLivree(currentCommandeId, currentCommandeIdYz)" class="sav-action-card bg-green-50 hover:bg-green-100 border-2 border-green-200 hover:border-green-300 rounded-lg p-4 transition-all duration-200">
                     <div class="flex flex-col items-center">
                         <i class="fas fa-check-circle text-3xl text-green-500 mb-2"></i>
                         <span class="font-semibold text-green-800">Livrée</span>
@@ -357,11 +241,11 @@
                         <span class="text-xs text-red-600 mt-1">Retourner la commande</span>
                     </div>
                 </button>
-                <button onclick="openSavModal('Reportée', {{ commande.id }})" class="sav-action-card bg-orange-50 hover:bg-orange-100 border-2 border-orange-200 hover:border-orange-300 rounded-lg p-4 transition-all duration-200">
+                <button onclick="ouvrirModalReporte(currentCommandeId, currentCommandeIdYz)" class="sav-action-card bg-orange-50 hover:bg-orange-100 border-2 border-orange-200 hover:border-orange-300 rounded-lg p-4 transition-all duration-200">
                     <div class="flex flex-col items-center">
-                        <i class="fas fa-times-circle text-3xl text-orange-500 mb-2"></i>
-                        <span class="font-semibold text-orange-500-800">Reportée (SAV)</span>
-                        <span class="text-xs text-orange-600 mt-1">Reportée </span>
+                        <i class="fas fa-calendar-alt text-3xl text-orange-500 mb-2"></i>
+                        <span class="font-semibold text-orange-800">Reportée (SAV)</span>
+                        <span class="text-xs text-orange-600 mt-1">Reporter la livraison</span>
                     </div>
                 </button>
             </div>
@@ -744,7 +628,16 @@ document.addEventListener('keydown', function(e) {
 // ================== FIN GESTION MODALE SAV ==================
 </script>
 
+<!-- Inclusion de la modale de livraison -->
+{% include 'operatLogistic/partials/modal_Livree.html' %}
+
+<!-- Inclusion de la modale de report -->
+{% include 'operatLogistic/partials/modal_reporte.html' %}
+
 <!-- Inclusion de la modale de retour complet -->
 {% include 'operatLogistic/partials/_modal_retour_complet.html' %}
+
+<!-- Script pour les filtres globaux de commandes -->
+<script src="{% static 'js/common/commande-filters.js' %}"></script>
 
 {% endblock %} 

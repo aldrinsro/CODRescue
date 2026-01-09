@@ -1,0 +1,270 @@
+<!-- Modale Commande Livrée -->
+<div id="livreeModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-20 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg leading-6 font-medium text-gray-900 flex items-center">
+                    <i class="fas fa-check-circle mr-2 text-green-600"></i>
+                    <span id="livreeModalTitle">Confirmer la livraison - Commande</span>
+                </h3>
+                <button onclick="fermerModalLivree()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <form id="livreeForm" action="" method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="nouvel_etat" value="Livrée">
+
+                <div class="mb-4">
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                        <div class="flex items-center mb-2">
+                            <i class="fas fa-info-circle text-green-600 mr-2"></i>
+                            <span class="font-semibold text-green-800">Information</span>
+                        </div>
+                        <p class="text-green-700 text-sm">
+                            Cette action va marquer la commande comme <strong>livrée</strong>.
+                            Veuillez confirmer la date de livraison et ajouter un commentaire.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Champ date de livraison -->
+                <div class="mb-4">
+                    <label for="date_livraison_modal" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-calendar-check mr-1 text-green-600"></i>
+                        Date de livraison effective <span class="text-red-500">*</span>
+                    </label>
+                    <div class="bg-green-50 p-3 rounded-lg">
+                        <input type="date"
+                               name="date_livraison"
+                               id="date_livraison_modal"
+                               class="w-full p-2 border border-green-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                               required>
+                        <p class="mt-2 text-xs text-gray-600">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            Indiquez la date à laquelle la commande a été effectivement livrée au client
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Commentaire -->
+                <div class="mb-4">
+                    <label for="commentaire_livree" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-comment mr-1"></i>
+                        Commentaire de livraison <span class="text-red-500">*</span>
+                    </label>
+                    <select name="commentaire"
+                            id="commentaire_livree"
+                            class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                            required>
+                        <option value="">Sélectionner un commentaire...</option>
+                        <option value="Commande livrée avec succès">Commande livrée avec succès</option>
+                        <option value="Livraison effectuée dans les délais">Livraison effectuée dans les délais</option>
+                        <option value="Client satisfait de la livraison">Client satisfait de la livraison</option>
+                        <option value="Livraison avec retard mineur">Livraison avec retard mineur</option>
+                        <option value="Client absent - livraison effectuée ultérieurement">Client absent - livraison effectuée ultérieurement</option>
+                        <option value="Livraison à une adresse alternative">Livraison à une adresse alternative</option>
+                        <option value="Autre motif - voir détails">Autre motif - voir détails</option>
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1">
+                        Ce commentaire sera enregistré avec la confirmation de livraison
+                    </p>
+                </div>
+
+                <!-- Champ de commentaire personnalisé (masqué par défaut) -->
+                <div id="commentairePersonnaliseLivree" class="mb-4 hidden">
+                    <label for="commentaireCustomLivree" class="block text-sm font-medium text-gray-700 mb-2">
+                        Commentaire personnalisé
+                    </label>
+                    <textarea name="commentaireCustom"
+                              id="commentaireCustomLivree"
+                              rows="3"
+                              class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                              placeholder="Décrivez les détails de la livraison..."></textarea>
+                </div>
+
+                <!-- Boutons d'action -->
+                <div class="flex items-center justify-end space-x-3 pt-4 border-t border-gray-200">
+                    <button type="button"
+                            onclick="fermerModalLivree()"
+                            class="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors">
+                        <i class="fas fa-times mr-2"></i>Annuler
+                    </button>
+                    <button type="button"
+                            id="confirmLivreeBtn"
+                            onclick="soumettreFormulaireLivree()"
+                            class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors">
+                        <i class="fas fa-check-circle mr-2"></i>Confirmer la Livraison
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Fonction pour ouvrir le modal de livraison
+function ouvrirModalLivree(commandeId, commandeIdYz) {
+    console.log('DEBUG: ouvrirModalLivree appelée avec:', { commandeId, commandeIdYz });
+
+    const modal = document.getElementById('livreeModal');
+    if (!modal) {
+        console.error('Modal livreeModal non trouvé');
+        return;
+    }
+
+    // Mettre à jour le titre avec le numéro de commande
+    const modalTitle = document.getElementById('livreeModalTitle');
+    if (modalTitle && commandeIdYz) {
+        modalTitle.textContent = `Confirmer la livraison - Commande ${commandeIdYz}`;
+    }
+
+    // Définir la date d'aujourd'hui par défaut
+    const dateInput = document.getElementById('date_livraison_modal');
+    if (dateInput) {
+        const today = new Date().toISOString().split('T')[0];
+        dateInput.value = today;
+    }
+
+    // Réinitialiser le formulaire
+    const form = document.getElementById('livreeForm');
+    if (form) {
+        // Mettre à jour l'URL d'action si on a un commandeId
+        if (commandeId) {
+            form.action = `/operateur-logistique/commande/${commandeId}/changer-etat-sav/`;
+        }
+    }
+
+    // Réinitialiser le select de commentaire
+    const commentaireSelect = document.getElementById('commentaire_livree');
+    if (commentaireSelect) {
+        commentaireSelect.value = '';
+    }
+
+    // Masquer le champ de commentaire personnalisé
+    const commentairePersonnalise = document.getElementById('commentairePersonnaliseLivree');
+    if (commentairePersonnalise) {
+        commentairePersonnalise.classList.add('hidden');
+    }
+
+    // Afficher le modal
+    modal.classList.remove('hidden');
+    console.log('Modal de livraison ouvert');
+}
+
+// Fonction pour fermer le modal de livraison
+function fermerModalLivree() {
+    const modal = document.getElementById('livreeModal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+
+    // Réinitialiser le formulaire
+    const form = document.getElementById('livreeForm');
+    if (form) {
+        form.reset();
+    }
+
+    // Masquer le champ de commentaire personnalisé
+    const commentairePersonnalise = document.getElementById('commentairePersonnaliseLivree');
+    if (commentairePersonnalise) {
+        commentairePersonnalise.classList.add('hidden');
+    }
+}
+
+// Fonction pour soumettre le formulaire de livraison
+function soumettreFormulaireLivree() {
+    const form = document.getElementById('livreeForm');
+    if (!form) {
+        alert('Erreur: Formulaire non trouvé');
+        return;
+    }
+
+    // Validation
+    const dateLivraison = document.getElementById('date_livraison_modal').value;
+    const commentaire = document.getElementById('commentaire_livree').value;
+
+    if (!dateLivraison) {
+        alert('La date de livraison est obligatoire');
+        return;
+    }
+
+    if (!commentaire) {
+        alert('Le commentaire est obligatoire');
+        return;
+    }
+
+    // Si "Autre motif" est sélectionné, vérifier le commentaire personnalisé
+    if (commentaire === 'Autre motif - voir détails') {
+        const commentaireCustom = document.getElementById('commentaireCustomLivree');
+        if (!commentaireCustom || !commentaireCustom.value.trim()) {
+            alert('Le commentaire personnalisé est obligatoire pour "Autre motif"');
+            return;
+        }
+    }
+
+    // Afficher un indicateur de chargement
+    const confirmBtn = document.getElementById('confirmLivreeBtn');
+    if (confirmBtn) {
+        confirmBtn.disabled = true;
+        confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Traitement...';
+    }
+
+    // Soumettre le formulaire via fetch
+    const formData = new FormData(form);
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    fetch(form.action, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken,
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(` ${data.message}`);
+            fermerModalLivree();
+            // Recharger la page pour voir les changements
+            window.location.reload();
+        } else {
+            alert(`L Erreur: ${data.error || 'Erreur inconnue'}`);
+        }
+    })
+    .catch(error => {
+        console.error('Erreur lors de la soumission:', error);
+        alert(`L Une erreur est survenue: ${error.message}`);
+    })
+    .finally(() => {
+        // Restaurer le bouton
+        if (confirmBtn) {
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = '<i class="fas fa-check-circle mr-2"></i>Confirmer la Livraison';
+        }
+    });
+}
+
+// Gérer l'affichage du champ de commentaire personnalisé
+document.addEventListener('DOMContentLoaded', function() {
+    const commentaireSelect = document.getElementById('commentaire_livree');
+    const commentairePersonnalise = document.getElementById('commentairePersonnaliseLivree');
+
+    if (commentaireSelect && commentairePersonnalise) {
+        commentaireSelect.addEventListener('change', function() {
+            if (this.value === 'Autre motif - voir détails') {
+                commentairePersonnalise.classList.remove('hidden');
+            } else {
+                commentairePersonnalise.classList.add('hidden');
+            }
+        });
+    }
+});
+
+// Exposer les fonctions globalement
+window.ouvrirModalLivree = ouvrirModalLivree;
+window.fermerModalLivree = fermerModalLivree;
+window.soumettreFormulaireLivree = soumettreFormulaireLivree;
+</script>

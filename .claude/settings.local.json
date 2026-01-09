@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(mkdir:*)",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "Bash(python:*)",
+      "Bash(mv:*)"
     ],
     "deny": [],
     "ask": []
