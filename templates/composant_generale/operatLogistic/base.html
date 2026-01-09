@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}YZ-CMD - Opérateur SAV{% endblock %}</title>
+    <title>{% block title %}COD$uite - Opérateur SAV{% endblock %}</title>
     
     {% tailwind_css %}
     
@@ -121,7 +121,14 @@
     </style>
     {% endblock %}
 </head>
-<body class="bg-gray-100 font-sans" style="
+<body class="bg-gray-100 font-sans"
+      data-interface="logistique"
+      {% if request.user.is_authenticated and request.user.profil_operateur %}
+      data-user-type="{{ request.user.profil_operateur.type_operateur }}"
+      data-user-name="{{ request.user.profil_operateur.nom_complet }}"
+      data-user-id="{{ request.user.id }}"
+      {% endif %}
+      style="
     --logistic-primary: #0B1D51;
     --logistic-dark: #07153a;
     --logistic-light: #1a3366;
@@ -131,6 +138,7 @@
     --logistic-gradient-start: #07153a;
     --logistic-gradient-end: #0B1D51;
     --logistic-accent-color: #a7c7fa; /* Un bleu clair et doux pour les accents */
+    --chatbot-color: #0B1D51;
 ">
     <div class="relative flex h-screen overflow-x-hidden">
         <!-- Sidebar -->
@@ -248,5 +256,9 @@
     
     {% block extra_js %}
     {% endblock %}
+
+    <!-- Modal Chatbot IA -->
+    {% include 'chatbot/modal.html' %}
+
 </body>
 </html>

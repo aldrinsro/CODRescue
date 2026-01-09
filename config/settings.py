@@ -1,3 +1,4 @@
+
 """
 Django settings for config project.
 
@@ -84,6 +85,23 @@ MIDDLEWARE = [
     'django_browser_reload.middleware.BrowserReloadMiddleware',
 ]
 
+# Middleware pour envoyer les évènements chatbot à n8n (doit venir après l'auth/session middleware)
+MIDDLEWARE.append('chatbot.middleware.N8nChatbotMiddleware')
+
+# settings.py - Optimisations chatbot
+CHATBOT_CONFIG = {
+    'MAX_RESPONSE_TIME': 30,
+    'ENABLE_SQL_ANALYSIS': True,
+    'MAX_SQL_RESULTS': 100,
+    'QUERY_CACHE_DURATION': 300,  # 5 minutes
+    'ENABLE_PERFORMANCE_MONITORING': True,
+}
+
+# Middleware optimisé
+MIDDLEWARE += [
+    'chatbot.middleware.N8nChatbotOptimizedMiddleware',
+]
+
 ROOT_URLCONF = 'config.urls'
 
 TEMPLATES = [
@@ -98,6 +116,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'django.template.context_processors.media',
+                'chatbot.context_processors.chatbot_context',  # Context processor chatbot
             ],
         },
     },
@@ -122,7 +141,7 @@ DATABASES = {
       'ENGINE': 'django.db.backends.postgresql',
         'NAME': config('DB_NAME', default='yzrescue_db'),
          'USER': config('DB_USER', default='postgres'),
-         'PASSWORD': config('DB_PASSWORD', default='postgres'),
+         'PASSWORD': config('DB_PASSWORD', default='admin'),
          'HOST': config('DB_HOST', default='localhost'),
          'PORT': config('DB_PORT', default='5432'),
      }
@@ -221,6 +240,15 @@ LOGGING = {
     },
 }
 
+# Configuration n8n (workflows / webhooks)
+# Utilisez un .env au même niveau que le docker-compose pour définir N8N_BASIC_AUTH_USER / N8N_BASIC_AUTH_PASSWORD / N8N_WEBHOOK_URL
+N8N_WEBHOOK_BASE = config('N8N_WEBHOOK_BASE', default='https://jax-cressier-nondevoutly.ngrok-free.dev')
+# Ancien webhook (conservé en commentaire pour historique):
+N8N_CHATBOT_WEBHOOK = config('N8N_CHATBOT_WEBHOOK', default='webhook/7bbe2dc3-8ee3-42ae-9daf-d876ab2049f0')
+# Nouveau webhook public fourni par l'utilisateur :
+N8N_BASIC_AUTH_USER = config('N8N_BASIC_AUTH_USER', default='')
+N8N_BASIC_AUTH_PASSWORD = config('N8N_BASIC_AUTH_PASSWORD', default='')
+
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
@@ -275,8 +303,8 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = False  # La session persiste même après ferm
 SESSION_COOKIE_NAME = 'yz_cmd_sessionid'  # Nom personnalisé du cookie de session
 
 # Protection CSRF renforcée
-CSRF_COOKIE_SECURE = True  # Cookie CSRF uniquement via HTTPS derrière le proxy
-CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_SECURE = False  # Mettre à True en production (HTTPS)
+CSRF_COOKIE_HTTPONLY = False # Mettre à True en production si le JS n'a pas besoin du cookie
 CSRF_COOKIE_SAMESITE = 'Lax'
 
 # Django derrière un proxy HTTPS (Cloudflare Workers/Tunnel)
@@ -381,4 +409,6 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 10485760  # 10 MB en octets
 
 
 
-NPM_BIN_PATH = "C:/Program Files/nodejs/npm.cmd"  # Chemin vers l'exécutable npm
+
+
+NPM_BIN_PATH = r"C:\Program Files\nodejs\npm.cmd"

@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}YZ-CMD - Superviseur de Préparation{% endblock %}</title>
+    <title>{% block title %}COD$uite - Superviseur de Préparation{% endblock %}</title>
     
     {% tailwind_css %}
     
@@ -24,6 +24,7 @@
             --preparation-text-light: #E6F0FF; /* Texte très clair */
             --preparation-border-accent: #1E3A8A; /* Accent (indigo) */
             --preparation-hover-bg: #0B1733; /* Arrière-plan au survol */
+            --chatbot-color: #070F2B; /* Couleur chatbot (même que primary) */
         }
 
         /* --- Sidebar --- */
@@ -123,7 +124,13 @@
     </style>
     {% endblock %}
 </head>
-<body class="bg-gray-100 font-sans">
+<body class="bg-gray-100 font-sans"
+      data-interface="supervision"
+      {% if request.user.is_authenticated and request.user.profil_operateur %}
+      data-user-type="{{ request.user.profil_operateur.type_operateur }}"
+      data-user-name="{{ request.user.profil_operateur.nom_complet }}"
+      data-user-id="{{ request.user.id }}"
+      {% endif %}>
     <div class="relative flex h-screen overflow-x-hidden">
         <!-- Sidebar -->
         {% include 'composant_generale/Superpreparation/sidebar.html' %}
@@ -363,6 +370,9 @@
 
     <!-- Overlay pour fermer les résultats -->
     <div id="searchOverlay" class="fixed inset-0 bg-black bg-opacity-25 hidden" style="z-index: 999998 !important; position: fixed !important;"></div>
+
+    <!-- Modal Chatbot IA -->
+    {% include 'chatbot/modal.html' %}
 
 </body>
 </html> 

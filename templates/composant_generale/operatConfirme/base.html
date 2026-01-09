@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token }}">
-    <title>{% block title %}YZ-CMD - Opérateur de Confirmation{% endblock %}</title>
+    <title>{% block title %}COD$uite - Opérateur de Confirmation{% endblock %}</title>
     
     {% tailwind_css %}
     
@@ -35,13 +35,21 @@
     </style>
     {% endblock %}
 </head>
-<body class="bg-gray-100 font-sans" style="
+<body class="bg-gray-100 font-sans"
+      data-interface="confirmation"
+      {% if request.user.is_authenticated and request.user.profil_operateur %}
+      data-user-type="{{ request.user.profil_operateur.type_operateur }}"
+      data-user-name="{{ request.user.profil_operateur.nom_complet }}"
+      data-user-id="{{ request.user.id }}"
+      {% endif %}
+      style="
     --confirmation-primary: #4B352A;
     --confirmation-dark: #37281f;
     --confirmation-light: #6a4c38;
     --confirmation-text-light: #ede6e0;
     --confirmation-border-accent: #8b6e5b;
     --confirmation-hover-bg: #5a4230;
+    --chatbot-color: #4B352A;
 ">
     <div class="relative flex h-screen overflow-x-hidden">
         <!-- Sidebar -->
@@ -141,6 +149,9 @@
     
     <!-- JavaScript pour les dropdowns de la sidebar (fichier séparé) -->
     <script src="{% static 'js/operatConfirme/sidebar-dropdowns.js' %}"></script>
+
+    <!-- Modal Chatbot IA -->
+    {% include 'chatbot/modal.html' %}
 
 </body>
 </html>

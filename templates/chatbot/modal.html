@@ -1,0 +1,1052 @@
+{# chatbot_extras n'existe pas dans cet environnement, ne pas le charger pour éviter TemplateSyntaxError #}
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chatbot Modal - {{ chatbot_interface }}</title>
+    <!-- Version avec microphone audio v2.0 -->
+
+    <style>
+        /* ====== STYLES DU CHATBOT ====== */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Bouton flottant */
+        #chatbot-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--chatbot-color, #4CAF50);
+            color: #fff;
+            padding: 14px 18px;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            z-index: 9999;
+        }
+
+        /* Overlay */
+        #chatbot-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 9998;
+        }
+
+        /* Modal */
+        #chatbot-modal {
+            display: none;
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            width: 350px;
+            height: 500px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            z-index: 10000;
+            overflow: hidden;
+            flex-direction: column;
+        }
+
+        #chatbot-header {
+            background: var(--chatbot-color, #4CAF50);
+            color: white;
+            padding: 12px 16px;
+            font-size: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #chatbot-header-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #chatbot-interface-badge {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+
+        #chatbot-messages {
+            flex: 1;
+            padding: 10px;
+            overflow-y: auto;
+            background: #f7f7f7;
+            line-height: 1.6;
+        }
+
+        .message-user {
+            margin-bottom: 10px;
+            text-align: right;
+        }
+
+        .message-bot {
+            margin-bottom: 10px;
+            text-align: left;
+        }
+
+        .message-bot-content {
+            display: inline-block;
+            max-width: 85%;
+            background: white;
+            padding: 10px 12px;
+            border-radius: 12px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        .message-user-content {
+            display: inline-block;
+            max-width: 85%;
+            background: var(--chatbot-color, #4CAF50);
+            color: white;
+            padding: 10px 12px;
+            border-radius: 12px;
+        }
+
+        .message-bot-content ul,
+        .message-bot-content ol {
+            margin: 8px 0;
+            padding-left: 20px;
+        }
+
+        .message-bot-content li {
+            margin: 4px 0;
+        }
+
+        .message-bot-content p {
+            margin: 8px 0;
+        }
+
+        .message-bot-content p:first-child {
+            margin-top: 0;
+        }
+
+        .message-bot-content p:last-child {
+            margin-bottom: 0;
+        }
+
+        .message-bot-content strong {
+            font-weight: 600;
+        }
+
+        .message-bot-content em {
+            font-style: italic;
+        }
+
+        .message-bot-content code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        #chatbot-input {
+            display: flex;
+            border-top: 1px solid #ddd;
+            align-items: center;
+            padding: 10px;
+            gap: 8px;
+            background: #fff;
+        }
+
+        #user-message {
+            flex: 1;
+            border: 1px solid #e0e0e0;
+            padding: 10px 12px;
+            font-size: 15px;
+            border-radius: 8px;
+            outline: none;
+            transition: border-color 0.2s ease;
+        }
+
+        #user-message:focus {
+            border-color: var(--chatbot-color, #4CAF50);
+        }
+
+        #mic-button {
+            width: 40px;
+            height: 40px;
+            border: none;
+            background: #f0f0f0;
+            color: #444;
+            cursor: pointer;
+            font-size: 18px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 8px;
+        }
+
+        #mic-button:hover {
+            background: #e0e0e0;
+            color: var(--chatbot-color, #4CAF50);
+            transform: scale(1.05);
+        }
+
+        #mic-button.recording {
+            background: #fee;
+            color: #f44336;
+            animation: pulse-recording 1.5s infinite;
+        }
+
+        #mic-button.recording:hover {
+            background: #fdd;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes pulse-recording {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.7);
+            }
+            50% {
+                box-shadow: 0 0 0 8px rgba(244, 67, 54, 0);
+            }
+        }
+
+        #send-message {
+            min-width: 80px;
+            height: 40px;
+            border: none;
+            background: var(--chatbot-color, #4CAF50);
+            color: #fff;
+            cursor: pointer;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        #send-message:hover {
+            background: var(--chatbot-color-dark, #45a049);
+            transform: scale(1.02);
+        }
+
+        #send-message:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        #mic-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .audio-recording-indicator {
+            display: none;
+            padding: 10px 16px;
+            background: linear-gradient(135deg, #f44336 0%, #e91e63 100%);
+            color: white;
+            border-radius: 24px;
+            font-size: 13px;
+            font-weight: 500;
+            margin: 10px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
+            animation: pulse 1.5s infinite;
+        }
+
+        .audio-recording-indicator.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .audio-recording-indicator::before {
+            content: '';
+            width: 10px;
+            height: 10px;
+            background: white;
+            border-radius: 50%;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+    </style>
+</head>
+
+<body data-interface="{{ chatbot_interface }}"
+      data-user-type="{{ chatbot_user_type }}"
+      data-user-name="{{ chatbot_user_name }}"
+      data-user-id="{{ chatbot_user_id }}"
+      data-operator-id="{{ chatbot_operator_id }}">
+
+    <div id="chatbot-button">💬 Assistant</div>
+
+    <div id="chatbot-overlay"></div>
+    {# Utiliser la variable CSS --chatbot-color définie dans chaque interface (base.html) #}
+    <div id="chatbot-modal">
+        <div id="chatbot-header">
+            <div id="chatbot-header-title">
+                <span>
+                    {% if chatbot_interface == 'ADMIN' %}Administration
+                    {% elif chatbot_interface == 'LOGISTIQUE' %}Logistique
+                    {% elif chatbot_interface == 'PREPARATION' or chatbot_interface == 'PREPA' %}Préparation
+                    {% elif chatbot_interface == 'CONFIRMATION' %}Confirmation
+                    {% elif chatbot_interface == 'SAV' %}SAV
+                    {% elif chatbot_interface == 'SUPERVISION' %}Supervision
+                    {% else %}{{ chatbot_interface|default:"Assistant" }}
+                    {% endif %} Assistant IA
+                </span>
+            </div>
+            <span id="chatbot-interface-badge">
+                {% if chatbot_interface == 'ADMIN' %}Administration
+                {% elif chatbot_interface == 'LOGISTIQUE' %}Logistique
+                {% elif chatbot_interface == 'PREPARATION' or chatbot_interface == 'PREPA' %}Préparation
+                {% elif chatbot_interface == 'CONFIRMATION' %}Confirmation
+                {% elif chatbot_interface == 'SAV' %}SAV
+                {% elif chatbot_interface == 'SUPERVISION' %}Supervision
+                {% else %}{{ chatbot_interface|default:"CHATBOT" }}
+                {% endif %}
+            </span>
+        </div>
+
+        <div id="chatbot-messages"></div>
+
+        <div class="audio-recording-indicator" id="recording-indicator">
+            Enregistrement en cours...
+        </div>
+
+        <div id="chatbot-input">
+            <input type="text" id="user-message" placeholder="Posez votre question..." />
+            <button id="mic-button" title="Enregistrer un message vocal">🎤</button>
+            <button id="send-message">Envoyer</button>
+        </div>
+    </div>
+
+
+    <script>
+        /* =========================
+            GESTION UI DU CHATBOT
+        ========================= */
+        const btn = document.getElementById("chatbot-button");
+        const modal = document.getElementById("chatbot-modal");
+        const overlay = document.getElementById("chatbot-overlay");
+        const sendBtn = document.getElementById("send-message");
+        const input = document.getElementById("user-message");
+        const messages = document.getElementById("chatbot-messages");
+        const micBtn = document.getElementById("mic-button");
+        const recordingIndicator = document.getElementById("recording-indicator");
+
+        // Ouvrir modal
+        btn.onclick = () => {
+            modal.style.display = "flex";
+            overlay.style.display = "block";
+        };
+
+        // Fermer modal en cliquant dehors
+        overlay.onclick = () => {
+            modal.style.display = "none";
+            overlay.style.display = "none";
+        };
+
+        /* SESSION ID CLIENT removed: do not store or send client session identifiers */
+
+        /* =========================
+            FORMATAGE MARKDOWN VERS HTML
+        ========================= */
+        function formatMarkdown(text) {
+            if (!text) return '';
+
+            // Échapper les caractères HTML pour la sécurité
+            let html = text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+
+            // Convertir les sauts de ligne en <br>
+            html = html.replace(/\n/g, '<br>');
+
+            // Convertir le texte en gras **texte** ou __texte__
+            html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            html = html.replace(/__(.+?)__/g, '<strong>$1</strong>');
+
+            // Convertir le texte en italique *texte* (mais pas **texte** qui est déjà en gras)
+            // On fait ça après le gras pour éviter les conflits
+            html = html.replace(/(?<!\*)\*([^*]+?)\*(?!\*)/g, '<em>$1</em>');
+
+            // Convertir les listes à puces (* ou -)
+            // D'abord, on divise par paragraphes
+            let paragraphs = html.split('<br>');
+            let inList = false;
+            let result = [];
+
+            for (let i = 0; i < paragraphs.length; i++) {
+                let para = paragraphs[i].trim();
+
+                // Détecter les items de liste (commencent par * ou -)
+                if (/^[\*\-\+]\s+(.+)$/.test(para)) {
+                    if (!inList) {
+                        result.push('<ul>');
+                        inList = true;
+                    }
+                    let content = para.replace(/^[\*\-\+]\s+/, '');
+                    // Formater le contenu (gras, etc.)
+                    result.push(`<li>${content}</li>`);
+                } else {
+                    if (inList) {
+                        result.push('</ul>');
+                        inList = false;
+                    }
+                    if (para) {
+                        result.push(`<p>${para}</p>`);
+                    } else {
+                        result.push('<br>');
+                    }
+                }
+            }
+
+            if (inList) {
+                result.push('</ul>');
+            }
+
+            html = result.join('');
+
+            // Convertir le code inline `code`
+            html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+            // Convertir les blocs de code ```code```
+            html = html.replace(/```(\w+)?\n?([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
+
+            return html;
+        }
+
+        /* =========================
+            RÉCUPÉRATION DES INFOS UTILISATEUR
+        ========================= */
+        function getUserContext() {
+            // Récupérer les infos depuis les data-attributes du body injectés par Django
+            const interfaceName = (document.body.dataset.interface || 'ADMIN').toString();
+            const userType = (document.body.dataset.userType || 'ANONYMOUS').toString();
+            const userName = document.body.dataset.userName || 'Invité';
+            const userId = document.body.dataset.userId || null;
+            const operatorId = document.body.dataset.operatorId || null;
+
+            // Normaliser certaines valeurs côté client pour éviter les incohérences (majuscule)
+            const interfaceNameNorm = interfaceName.toUpperCase();
+            const userTypeNorm = userType.toUpperCase();
+
+            console.log('📋 Contexte utilisateur détecté:', {
+                interface: interfaceNameNorm,
+                userType: userTypeNorm,
+                userName: userName,
+                userId: userId,
+                operatorId: operatorId
+            });
+
+            return {
+                // Valeurs normalisées (MAJUSCULES) utilisées pour la logique et l'envoi au webhook
+                interfaceType: interfaceNameNorm,
+                operatorType: userTypeNorm,
+                operatorName: userName,
+                operatorId: operatorId,
+                // Garder aussi les anciennes clés non-normalisées pour compatibilité si nécessaire
+                interface: interfaceName,
+                userType: userType,
+                userName: userName,
+                userId: userId
+            };
+        }
+
+        // Normalise un texte représentant un état/label en forme canonique
+        // -> retire les accents, met en minuscule, collapse les espaces
+        // -> tente de mapper les variantes courantes vers un statut canonique (MAJUSCULE)
+        function normalizeStatus(text) {
+            if (!text) return null;
+            let s = String(text).toLowerCase().trim();
+            // enlever les accents
+            s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            // garder seulement lettres chiffres et espaces
+            s = s.replace(/[^a-z0-9\s-]/g, '');
+            // collapse espaces
+            s = s.replace(/\s+/g, ' ');
+
+            const key = s.replace(/\s+/g, '_');
+
+            const aliasMap = {
+                'affectee': 'AFFECTEE', 'affecte': 'AFFECTEE', 'affectation': 'AFFECTEE',
+                'livree': 'LIVREE', 'livrer': 'LIVREE', 'livreee': 'LIVREE',
+                'preparation': 'PREPARATION', 'en_preparation': 'PREPARATION',
+                'annulee': 'ANNULEE', 'annule': 'ANNULEE',
+                'en_attente': 'EN_ATTENTE', 'attente': 'EN_ATTENTE',
+                'expediee': 'EXPEDIEE', 'expedier': 'EXPEDIEE',
+                'retournee': 'RETOURNEE', 'retour': 'RETOURNEE'
+            };
+
+            if (aliasMap[key]) return aliasMap[key];
+
+            // fallback: si la clé contient un des alias connus, retourner le mapping
+            for (const alias in aliasMap) {
+                if (key.includes(alias)) return aliasMap[alias];
+            }
+
+            // Rien de trouvé
+            return null;
+        }
+
+        /* =========================
+           GESTION AVANCÉE DES REQUÊTES
+        ========================= */
+        class ChatbotAdvancedManager {
+            constructor() {
+                this.conversationHistory = [];
+                this.performanceMetrics = [];
+                this.maxHistoryLength = 20;
+            }
+
+            // Méthodes utilitaires reliant la classe aux fonctions globales existantes
+            getUserContext() { return getUserContext(); }
+            getN8NUrl() { return "/chatbot/api/chatbot/"; }
+            getHeaders() {
+                return {
+                    "Content-Type": "application/json",
+                    "ngrok-skip-browser-warning": "true",
+                    "Accept": "application/json"
+                };
+            }
+
+            getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+
+            async sendMessageToN8N(text) {
+                const startTime = performance.now();
+                const userContext = this.getUserContext();
+
+                try {
+                    const systemPrompt = buildSystemPrompt(userContext);
+                    console.log('📤 [AdvancedManager] Sending systemPrompt to n8n (truncated):', systemPrompt.slice(0,200));
+                    const response = await fetch(this.getN8NUrl(), {
+                        method: "POST",
+                        headers: this.getHeaders(),
+                        body: JSON.stringify({
+                            question: text,  // Priorité à 'question' pour Django/N8N
+                            chatInput: text,  // Garder pour compatibilité
+                            // Nouvelles clés pour n8n
+                            interfaceType: userContext.interfaceType,
+                            operatorType: userContext.operatorType,
+                            operatorName: userContext.operatorName,
+                            operatorId: userContext.operatorId,
+                            // Normalisation côté client pour aider le moteur à reconnaître les états
+                            normalizedStatus: normalizeStatus(text),
+                            // Anciennes clés pour compatibilité
+                            interface: userContext.interface,
+                            userType: userContext.userType,
+                            userName: userContext.userName,
+                            userId: userContext.userId,
+                            conversationHistory: this.conversationHistory.slice(-5), // Contexte récent
+                            systemPrompt: systemPrompt,
+                            system_message: systemPrompt
+                        })
+                    });
+
+                    const endTime = performance.now();
+                    const responseTime = endTime - startTime;
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+                    }
+
+                    // Correction : toujours parser la réponse comme JSON une seule fois
+                    const contentType = response.headers.get('content-type');
+                    let data = null;
+                    if (contentType && contentType.includes('application/json')) {
+                        data = await response.json();
+                    } else {
+                        const responseText = await response.text();
+                        try {
+                            data = JSON.parse(responseText);
+                        } catch (e) {
+                            data = { output: responseText };
+                        }
+                    }
+
+                    // Métriques de performance
+                    this.performanceMetrics.push({
+                        timestamp: new Date().toISOString(),
+                        responseTime,
+                        intent: data.intent,
+                        confidence: data.confidence
+                    });
+
+                    // Historique de conversation
+                    this.addToHistory(text, data.output || data.answer);
+
+                    return data.output || data.answer || data.response;
+
+                } catch (error) {
+                    console.error("❌ Erreur avancée:", error);
+                    this.performanceMetrics.push({
+                        timestamp: new Date().toISOString(),
+                        error: error.message,
+                        responseTime: performance.now() - startTime
+                    });
+                    throw error;
+                }
+            }
+
+            async parseResponse(response) {
+                const contentType = response.headers.get('content-type');
+                const responseText = await response.text();
+
+                if (!responseText.trim()) {
+                    throw new Error("Réponse vide du serveur");
+                }
+
+                if (contentType?.includes('application/json')) {
+                    try {
+                        return JSON.parse(responseText);
+                    } catch (e) {
+                        console.error("❌ JSON parsing failed:", e);
+                        throw new Error("Format de réponse invalide");
+                    }
+                }
+
+                // Fallback pour autres formats
+                return { output: responseText };
+            }
+
+            addToHistory(question, answer) {
+                this.conversationHistory.push({
+                    timestamp: new Date().toISOString(),
+                    question,
+                    answer,
+                    userType: this.getUserContext().userType
+                });
+
+                // Garder seulement l'historique récent
+                if (this.conversationHistory.length > this.maxHistoryLength) {
+                    this.conversationHistory = this.conversationHistory.slice(-this.maxHistoryLength);
+                }
+            }
+
+            getPerformanceSummary() {
+                if (this.performanceMetrics.length === 0) return null;
+
+                const avgResponseTime = this.performanceMetrics.reduce((sum, m) => sum + m.responseTime, 0) / this.performanceMetrics.length;
+                const successRate = (this.performanceMetrics.filter(m => !m.error).length / this.performanceMetrics.length) * 100;
+
+                return {
+                    avgResponseTime: Math.round(avgResponseTime),
+                    successRate: Math.round(successRate),
+                    totalRequests: this.performanceMetrics.length
+                };
+            }
+        }
+
+        // Initialisation
+        const chatManager = new ChatbotAdvancedManager();
+
+        // Construire le system prompt envoyé au service d'IA (respecte le format fourni)
+        function buildSystemPrompt(userContext) {
+            const prompt = `IMPORTANT: Tu DOIS utiliser les outils disponibles pour chaque question. Ne réponds JAMAIS sans avoir d'abord consulté la base de données.
+
+    Tu es CODRescue Assistant, un assistant SQL intelligent pour l'analyse de données e-commerce.
+
+    === CONTEXTE UTILISATEUR ===
+    Session ID: ${userContext.userId || 'unknown'}
+    Interface active: ${userContext.interfaceType || 'ADMIN'} (CONFIRMATION, PREPARATION, LOGISTIQUE, SUPERVISION, ADMIN)
+    Type opérateur: ${userContext.operatorType || 'unknown'}
+    Nom opérateur: ${userContext.operatorName || 'unknown'}
+
+    ADAPTE TES RÉPONSES selon l'interface active :
+    - Interface CONFIRMATION → Focus sur commandes, clients, états
+    - Interface PREPARATION → Focus sur articles, stock, variantes, paniers
+    - Interface LOGISTIQUE → Focus sur livraisons, retours, envois
+    - Interface SUPERVISION → Focus sur KPIs, statistiques, performances
+    - Interface ADMIN → Accès complet à toutes les données
+
+    === OUTILS DISPONIBLES ===
+    - "Get schema Table" : Liste toutes les tables de la base de données
+    - "DB schema" : Affiche la structure d'une table (colonnes, types)
+    - "Get required Data" : Exécute une requête SQL SELECT
+
+    === PROCESSUS OBLIGATOIRE ===
+    1. Identifie l'interface active et adapte ta réponse
+    2. Si tu ne connais pas une table → utilise "Get schema Table"
+    3. Si tu as besoin de connaître les colonnes → utilise "DB schema"
+    4. Construis ta requête SQL SELECT adaptée au contexte
+    5. Exécute avec "Get required Data"
+    6. Réponds en français de manière CLAIRE, CONCISE et PERSONNALISÉE
+
+    === SCHÉMA DE BASE DE DONNÉES (résumé envoyé côté client) ===
+    - Clients: client_client (nom, prenom, numero_tel, email)
+    - Commandes: commande_commande (num_cmd, id_yz, date_cmd, total_cmd, adresse, client_id, ville_id, source, payement, frais_livraison)
+    - Articles: article_article (nom, reference, modele, prix_unitaire, prix_actuel, "Prix_liquidation")
+    - Variantes: article_variantearticle (article_id, couleur_id, pointure_id, qte_disponible, actif)
+    - Panier: commande_panier (commande_id, article_id, variante_id, quantite, prix_panier)
+    - États commande: commande_etatcommande (commande_id, enum_etat_id, date_debut, date_fin, operateur_id)
+    - Opérateurs: parametre_operateur (nom, prenom, type_operateur, actif)
+
+    === IMPORTANT ===
+    Toujours utiliser les outils (Get schema Table / DB schema / Get required Data) avant de répondre. Construis et exécute les requêtes SQL nécessaires.
+    `;
+            // For safety ensure interface indicator is uppercase
+            console.log('🔐 System prompt construit pour interface:', (userContext.interfaceType || 'ADMIN'));
+            console.log(prompt);
+            return prompt;
+        }
+
+        /* =========================
+            ENVOI À N8N (API webhook)
+        ========================= */
+        /* =========================
+            ENVOI À N8N (API webhook)
+        ========================= */
+        async function sendMessageToN8N(text) {
+            // ✅ CORRECTION: Utiliser le proxy Django au lieu d'appeler directement ngrok
+            const url = "/chatbot/api/chatbot/";
+            const userContext = getUserContext();
+
+            try {
+                const systemPrompt = buildSystemPrompt(userContext);
+                console.log("📤 Envoi au chatbot:", { text, userContext: userContext });
+                console.log('📤 [sendMessage] systemPrompt (truncated):', systemPrompt.slice(0,200));
+
+                const response = await fetch(url, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "ngrok-skip-browser-warning": "true",
+                        "Accept": "application/json"
+                    },
+                    body: JSON.stringify({
+                        question: text,  // Priorité à 'question' pour Django/N8N
+                        chatInput: text,  // Garder pour compatibilité
+                        // Nouvelles clés pour n8n
+                        interfaceType: userContext.interfaceType,
+                        operatorType: userContext.operatorType,
+                        operatorName: userContext.operatorName,
+                        operatorId: userContext.operatorId,
+                        // Normalisation côté client pour aider le moteur à reconnaître les états
+                        normalizedStatus: normalizeStatus(text),
+                        // Anciennes clés pour compatibilité
+                        interface: userContext.interface,
+                        userType: userContext.userType,
+                        userName: userContext.userName,
+                        userId: userContext.userId,
+                        systemPrompt: systemPrompt,
+                        system_message: systemPrompt
+                    })
+                });
+
+                console.log("📥 Statut de la réponse:", response.status, response.statusText);
+
+                if (!response.ok) {
+                    let errorText = "";
+                    try {
+                        errorText = await response.text();
+                        // Essayer de parser comme JSON pour un message plus clair
+                        try {
+                            const errorJson = JSON.parse(errorText);
+                            if (errorJson.message) {
+                                errorText = errorJson.message;
+                            }
+                        } catch (e) {
+                            // Ce n'est pas du JSON, on garde le texte brut
+                        }
+                    } catch (e) {
+                        errorText = "Impossible de lire le message d'erreur";
+                    }
+                    console.error("❌ Erreur HTTP:", response.status, errorText);
+
+                    if (response.status === 404) {
+                        throw new Error(`Service d'IA introuvable (HTTP 404). Vérifiez l'URL du webhook n8n et que le workflow est activé.`);
+                    }
+                    throw new Error(`Erreur HTTP ${response.status}: ${errorText || 'Service indisponible. Veuillez réessayer.'}`);
+                }
+
+                // Vérifier que la réponse est bien du JSON avant de parser
+                const contentType = response.headers.get('content-type');
+                const responseText = await response.text();
+                let data;
+
+                if (!responseText || responseText.trim() === '') {
+                    throw new Error("Réponse vide de n8n. Le workflow a peut-être échoué.");
+                }
+
+                if (contentType && contentType.includes('application/json')) {
+                    try {
+                        data = JSON.parse(responseText);
+                    } catch (parseError) {
+                        console.error("❌ Erreur de parsing JSON:", parseError);
+                        console.error("📄 Contenu reçu:", responseText.substring(0, 500));
+                        throw new Error(`Erreur de format de réponse n8n. Le workflow a peut-être échoué. Vérifiez les logs n8n.`);
+                    }
+                } else {
+                    // La réponse n'est pas du JSON
+                    console.error("❌ Réponse n'est pas du JSON. Content-Type:", contentType);
+                    console.error("📄 Contenu reçu:", responseText.substring(0, 500));
+                    throw new Error(`Le workflow n8n a retourné une réponse invalide (pas du JSON). Vérifiez que le workflow est correctement configuré.`);
+                }
+                console.log("📦 Données reçues de n8n:", data);
+                console.log("🔍 Clés disponibles:", Object.keys(data));
+
+                // La réponse n8n peut être dans différents formats selon la configuration
+                // Format 1: { output: "..." } - format standard n8n AI Agent
+                if (data.output && typeof data.output === 'string') {
+                    console.log("✅ Réponse trouvée dans 'output'");
+                    return data.output;
+                }
+                // Format 2: { answer: "..." } - format alternatif
+                if (data.answer && typeof data.answer === 'string') {
+                    console.log("✅ Réponse trouvée dans 'answer'");
+                    return data.answer;
+                }
+                // Format 3: { response: "..." } - format simple
+                if (data.response && typeof data.response === 'string') {
+                    console.log("✅ Réponse trouvée dans 'response'");
+                    return data.response;
+                }
+                // Format 4: réponse directement dans un tableau ou objet imbriqué
+                if (Array.isArray(data) && data.length > 0) {
+                    const firstItem = data[0];
+                    if (firstItem.output) return firstItem.output;
+                    if (firstItem.answer) return firstItem.answer;
+                    if (firstItem.response) return firstItem.response;
+                }
+
+                // Si aucune réponse trouvée, afficher les données pour débogage
+                console.warn("⚠️ Format de réponse non reconnu:", JSON.stringify(data, null, 2));
+                return "(Pas de réponse IA) - Format de réponse non reconnu. Vérifiez la console.";
+            } catch (error) {
+                console.error("❌ Erreur lors de l'envoi au chatbot:", error);
+                return `Erreur de connexion au chatbot: ${error.message}`;
+            }
+        }
+
+        /* =========================
+            GESTION ENREGISTREMENT AUDIO
+        ========================= */
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let isRecording = false;
+
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+
+                mediaRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                    await sendAudioToN8N(audioBlob);
+
+                    // Arrêter les pistes audio
+                    stream.getTracks().forEach(track => track.stop());
+                };
+
+                mediaRecorder.start();
+                isRecording = true;
+                micBtn.classList.add('recording');
+                recordingIndicator.classList.add('active');
+                console.log('🎤 Enregistrement démarré');
+            } catch (error) {
+                console.error('❌ Erreur accès microphone:', error);
+                alert('Impossible d\'accéder au microphone. Vérifiez les permissions.');
+            }
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && isRecording) {
+                mediaRecorder.stop();
+                isRecording = false;
+                micBtn.classList.remove('recording');
+                recordingIndicator.classList.remove('active');
+                console.log('🛑 Enregistrement arrêté');
+            }
+        }
+
+        // Toggle enregistrement au clic
+        micBtn.onclick = () => {
+            if (isRecording) {
+                stopRecording();
+            } else {
+                startRecording();
+            }
+        };
+
+        /* =========================
+            ENVOI AUDIO À N8N
+        ========================= */
+        async function sendAudioToN8N(audioBlob) {
+            const url = "/chatbot/api/chatbot/";
+            const userContext = getUserContext();
+
+            // Désactiver les boutons pendant l'envoi
+            sendBtn.disabled = true;
+            micBtn.disabled = true;
+
+            // Afficher un message dans le chat
+            const userMessageDiv = document.createElement('div');
+            userMessageDiv.className = 'message-user';
+            userMessageDiv.innerHTML = `<div class="message-user-content"><strong>Vous :</strong> 🎤 Message vocal envoyé</div>`;
+            messages.appendChild(userMessageDiv);
+
+            // Afficher un indicateur de chargement
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'message-bot';
+            loadingDiv.id = 'loading-message';
+            loadingDiv.innerHTML = `<div class="message-bot-content"><strong>Bot :</strong> <em>Transcription en cours...</em></div>`;
+            messages.appendChild(loadingDiv);
+            messages.scrollTop = messages.scrollHeight;
+
+            try {
+                // Convertir le blob audio en base64
+                const reader = new FileReader();
+                reader.readAsDataURL(audioBlob);
+
+                reader.onloadend = async () => {
+                    const base64Audio = reader.result;
+                    console.log('📤 Envoi audio au chatbot');
+
+                    const response = await fetch(url, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "ngrok-skip-browser-warning": "true",
+                            "Accept": "application/json"
+                        },
+                        body: JSON.stringify({
+                            file: base64Audio,
+                            contentType: "audio/wav",
+                            interfaceType: userContext.interfaceType,
+                            operatorType: userContext.operatorType,
+                            operatorName: userContext.operatorName,
+                            operatorId: userContext.operatorId
+                        })
+                    });
+
+                    let reply = "Pas de réponse";
+                    let formattedReply = "";
+                    try {
+                        const contentType = response.headers.get('content-type');
+                        const responseText = await response.text();
+                        let data = null;
+                        if (contentType && contentType.includes('application/json')) {
+                            data = JSON.parse(responseText);
+                        }
+                        if (data) {
+                            if (data.output && typeof data.output === 'string') reply = data.output;
+                            else if (data.answer && typeof data.answer === 'string') reply = data.answer;
+                            else if (data.response && typeof data.response === 'string') reply = data.response;
+                            else if (Array.isArray(data) && data.length > 0) {
+                                const firstItem = data[0];
+                                if (firstItem.output) reply = firstItem.output;
+                                else if (firstItem.answer) reply = firstItem.answer;
+                                else if (firstItem.response) reply = firstItem.response;
+                            }
+                            else reply = JSON.stringify(data);
+                        } else {
+                            reply = responseText;
+                        }
+                        formattedReply = formatMarkdown(reply);
+                    } catch (err) {
+                        console.error('❌ Erreur parsing réponse audio:', err);
+                        formattedReply = `<em>Erreur lors de la récupération de la réponse audio.</em>`;
+                    }
+                    loadingDiv.innerHTML = `<div class="message-bot-content"><strong>Bot :</strong> ${formattedReply}</div>`;
+                    loadingDiv.removeAttribute('id');
+                    messages.scrollTop = messages.scrollHeight;
+                    sendBtn.disabled = false;
+                    micBtn.disabled = false;
+                };
+            } catch (error) {
+                console.error('❌ Erreur envoi audio:', error);
+                loadingDiv.innerHTML = `<div class="message-bot-content"><strong>Bot :</strong> Erreur lors de la transcription audio.</div>`;
+                loadingDiv.removeAttribute('id');
+                sendBtn.disabled = false;
+                micBtn.disabled = false;
+            }
+        }
+
+        /* =========================
+            ENVOI DU MESSAGE UTILISATEUR
+        ========================= */
+        async function sendMessage() {
+            const text = input.value.trim();
+            if (!text) return;
+
+            // Désactiver le bouton et l'input pendant l'envoi
+            sendBtn.disabled = true;
+            input.disabled = true;
+
+            // Afficher le message utilisateur (échappé pour la sécurité)
+            const userMessageDiv = document.createElement('div');
+            userMessageDiv.className = 'message-user';
+            userMessageDiv.innerHTML = `<div class="message-user-content"><strong>Vous :</strong> ${text.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>`;
+            messages.appendChild(userMessageDiv);
+            input.value = "";
+
+            // Afficher un indicateur de chargement
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'message-bot';
+            loadingDiv.id = 'loading-message';
+            loadingDiv.innerHTML = `<div class="message-bot-content"><strong>Bot :</strong> <em>En cours...</em></div>`;
+            messages.appendChild(loadingDiv);
+            messages.scrollTop = messages.scrollHeight;
+
+            // Appeler N8N via le gestionnaire avancé
+            const reply = await chatManager.sendMessageToN8N(text);
+
+            // Remplacer l'indicateur de chargement par la réponse formatée
+            const formattedReply = formatMarkdown(reply);
+            loadingDiv.innerHTML = `<div class="message-bot-content"><strong>Bot :</strong> ${formattedReply}</div>`;
+            loadingDiv.removeAttribute('id');
+
+            messages.scrollTop = messages.scrollHeight;
+
+            // Réactiver le bouton et l'input
+            sendBtn.disabled = false;
+            input.disabled = false;
+            input.focus();
+        }
+
+        sendBtn.onclick = sendMessage;
+        input.addEventListener("keypress", e => { if (e.key === "Enter") sendMessage(); });
+    </script>
+</body>
+
+</html>

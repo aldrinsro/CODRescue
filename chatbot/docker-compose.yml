@@ -1,0 +1,74 @@
+services:
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:2.0.0
+    container_name: n8n
+    restart: unless-stopped
+    ports:
+      - "5779:5678"
+    environment:
+      # Configuration de base
+      - N8N_HOST=0.0.0.0
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - GENERIC_TIMEZONE=Africa/Casablanca
+      - TZ=Africa/Casablanca
+
+      # Authentification (définir dans .env)
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER:-admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD:-admin}
+
+      # URLs pour webhooks (définir dans .env si tunnel/ngrok)
+      - N8N_EDITOR_BASE_URL=${EDITOR_BASE_URL:-http://localhost:5779}
+      - WEBHOOK_URL=${WEBHOOK_URL:-http://localhost:5779}
+
+      # Sécurité et performance
+      - N8N_METRICS=false
+      - N8N_DIAGNOSTICS_ENABLED=false
+      - EXECUTIONS_DATA_PRUNE=true
+      - EXECUTIONS_DATA_MAX_AGE=168
+
+      # Base de données SQLite par défaut (recommandé pour démarrer)
+      - DB_TYPE=sqlite
+      - DB_SQLITE_DATABASE=/home/node/.n8n/database.sqlite
+
+    volumes:
+      - n8n_data:/home/node/.n8n
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5678/healthz || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  n8n_data:
+    name: n8n_data
+
+# ============================================
+# INSTRUCTIONS D'INSTALLATION
+# ============================================
+#
+# 1. Créer le fichier .env dans le même dossier :
+#    N8N_BASIC_AUTH_USER=admin
+#    N8N_BASIC_AUTH_PASSWORD=VotreMotDePasseSecurise
+#    EDITOR_BASE_URL=http://localhost:5779
+#    WEBHOOK_URL=http://localhost:5779
+#
+# 2. Lancer n8n :
+#    cd chatbot
+#    docker compose up -d
+#
+# 3. Accéder à n8n :
+#    http://localhost:5779
+#
+# 4. Voir les logs :
+#    docker compose logs -f n8n
+#
+# 5. Arrêter :
+#    docker compose down
+#
+# 6. Supprimer avec les données :
+#    docker compose down -v
+#
+# ============================================

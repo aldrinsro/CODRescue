@@ -358,19 +358,25 @@
             </div>
             <div class="banner">
                 <div class="banner-content">
-                    <h1 class="wel_text">Bienvenue <br /> YZ RESCUE</h1>
+                    <h1 class="wel_text">Bienvenue</h1>
                     <p class="para">Votre plateforme de gestion des commandes intelligente et efficace.</p>
                     <div style="display: flex; justify-content: center; margin-top: 1rem;">
-                        <div class="logo-ring" style="display: inline-block; padding: 12px 14px; border-radius: 20px; background: rgba(255,255,255,0.08); backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.25); box-shadow: 0 12px 32px rgba(0,0,0,0.35), inset 0 0 0 6px rgba(255,255,255,0.06);">
-                            <img src="{% static 'logo-tickets/loging_logo.png' %}" alt="Logo COD RESCUE" style="display: block; max-width: 180px; width: 100%; height: auto; border-radius: 12px;">
+                        <div class="logo-ring" style="display: inline-block; padding: 12px; border-radius: 18px; background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01)); border: 1px solid rgba(255,255,255,0.06); box-shadow: 0 12px 28px rgba(0,0,0,0.40), inset 0 0 0 4px rgba(255,255,255,0.02);">
+                            <div id="codsuite-logo" style="display: block; max-width: 140px; width: 100%; height: auto; border-radius: 10px;"></div>
                         </div>
                     </div>
-                    <p class="credits">Created by CODSuite Team with YZ-PRESTATION</p>
+                    <p class="credits">Created by COD$uite Team</p>
                     <p class="version" style="color: white;">V.1.0.0</p>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- React logo for COD$uite (rendered in #codsuite-logo) -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script type="text/babel" src="{% static 'js/codsuite_logo.jsx' %}"></script>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {

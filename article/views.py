@@ -255,8 +255,17 @@ def detail_article(request, id):
     
     # Préparer les données pour le tableau croisé
     # Récupérer toutes les pointures et couleurs uniques
-    pointures_uniques = sorted(set(v.pointure.pointure for v in variantes), key=int)
-    couleurs_uniques = sorted(set(v.couleur.nom for v in variantes))
+    def pointure_sort_key(pointure_value):
+        if pointure_value is None:
+            return (2, '')
+        try:
+            return (0, int(pointure_value))
+        except (TypeError, ValueError):
+            return (1, str(pointure_value))
+
+    pointure_values = {v.pointure.pointure for v in variantes if v.pointure}
+    pointures_uniques = sorted(pointure_values, key=pointure_sort_key)
+    couleurs_uniques = sorted({v.couleur.nom for v in variantes if v.couleur})
     
     # Créer la matrice du tableau croisé
     tableau_croise = {}
